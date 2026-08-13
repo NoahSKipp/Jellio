@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jellio</title>
+</head>
+
+<body>
+  <div data-role="page" id="jellioConfigurationPage" class="page type-interior pluginConfigurationPage">
+    <div data-role="content">
+      <div class="content-primary">
+        <form id="jellioForm">
+          <div class="verticalSection">
+            <div class="sectionTitleContainer flex align-items-center">
+              <h2 class="sectionTitle">Jellio Configuration</h2>
+            </div>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label>
+              <input is="emby-checkbox" type="checkbox" id="chkEnableReskin" />
+              <span>Enable reskin</span>
+            </label>
+            <div class="fieldDescription checkboxFieldDescription">
+              Patches the web client to load Jellio's own runtime. Turn this off to restore
+              the stock Jellyfin interface on next server start.
+            </div>
+          </div>
+
+          <div>
+            <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+              <span>Save</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    (function () {
+      const pluginId = 'f2937f08-0595-40d1-a74b-a44656cbc6de';
+
+      document
+        .querySelector('#jellioConfigurationPage')
+        .addEventListener('pageshow', function () {
+          Dashboard.showLoadingMsg();
+          window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            document.querySelector('#chkEnableReskin').checked = config.EnableReskin;
+            Dashboard.hideLoadingMsg();
+          });
+        });
+
+      document
+        .querySelector('#jellioForm')
+        .addEventListener('submit', function (e) {
+          e.preventDefault();
+          Dashboard.showLoadingMsg();
+          window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
+            window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+              Dashboard.processPluginConfigurationUpdateResult(result);
+            });
+          });
+          return false;
+        });
+    })();
+  </script>
+</body>
+
+</html>
