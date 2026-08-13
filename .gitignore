@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+node_modules/
+dist/
+artifacts/
+*.zip
+*.md5
+*.sha256
+*.asc

@@ -1,0 +1,18 @@
+---
+name: "Jellio"
+guid: "f2937f08-0595-40d1-a74b-a44656cbc6de"
+version: "0.1.0"
+targetAbi: "10.11.6.0"
+framework: "net9.0"
+owner: "NoahSKipp"
+artifacts:
+  - "Jellio.dll"
+overview: "Replaces the Jellyfin web client's own rendering with a Nuvio lookalike."
+description: >
+  Replaces the Jellyfin web client's own rendering with a Nuvio lookalike,
+  backed entirely by remote sources through Gelato. No local media is
+  assumed. Own auth/session runtime and directly rendered screens, not a
+  reskin of native jellyfin-web components.
+category: "General"
+changelog: >
+  Initial scaffold.
