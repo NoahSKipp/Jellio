@@ -1,0 +1,187 @@
+/* Design tokens carried over from the original Jellio codebase's own
+   tokens.css, itself ported from NuvioWeb css/base.css (GPL-3.0). Same
+   project, same values, this is not new third party IP. */
+:root {
+  --jellio-bg-color: #0d0d0d;
+  --jellio-bg-elevated: #1a1a1a;
+  --jellio-card-bg: #222222;
+  --jellio-secondary-color: #f5f5f5;
+  --jellio-secondary-variant: #e0e0e0;
+  --jellio-on-secondary: #111111;
+  --jellio-text-color: #ffffff;
+  --jellio-text-secondary: #b3b3b3;
+  --jellio-text-tertiary: #808080;
+  --jellio-border-color: #333333;
+  --jellio-font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --jellio-card-radius: clamp(10px, 0.9vw, 16px);
+  --jellio-safe-gutter: clamp(28px, 3vw, 56px);
+}
+
+/* Covers the native page rather than removing it: native jellyfin-web
+   keeps running underneath, unaware, so a screen this runtime has not
+   built yet can just stay hidden here and native rendering shows through
+   with nothing to reconcile. */
+#jellioRoot {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--jellio-bg-color);
+  font-family: var(--jellio-font-family);
+  color: var(--jellio-text-color);
+}
+
+#jellioRoot.jellio-root-visible {
+  display: block;
+}
+
+.jellio-shell {
+  display: flex;
+  height: 100vh;
+}
+
+.jellio-sidebar-mount {
+  flex: 0 0 auto;
+}
+
+.jellio-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.jellio-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: clamp(64px, 6vw, 96px);
+  height: 100%;
+  padding: 20px 8px;
+  background: var(--jellio-bg-elevated);
+  border-right: 1px solid var(--jellio-border-color);
+}
+
+.jellio-sidebar-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 0;
+  border-radius: var(--jellio-card-radius);
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.jellio-sidebar-link:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text-color);
+}
+
+.jellio-sidebar-link-active {
+  color: var(--jellio-text-color);
+  background: rgb(255 255 255 / 0.1);
+}
+
+.jellio-sidebar-icon-svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.jellio-sidebar-icon-svg-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.jellio-sidebar-link .material-icons {
+  font-size: 22px;
+}
+
+.jellio-sidebar-label {
+  font-size: 0.62rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.jellio-sidebar-divider {
+  height: 1px;
+  margin: 8px 6px;
+  background: var(--jellio-border-color);
+}
+
+.jellio-sidebar-spacer {
+  flex: 1 1 auto;
+}
+
+.jellio-home-header {
+  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
+}
+
+.jellio-home-greeting {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.2vw, 2rem);
+  font-weight: 700;
+}
+
+.jellio-rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2vw, 32px);
+  padding-bottom: clamp(32px, 4vw, 64px);
+}
+
+.jellio-row-title {
+  margin: 0 0 0.6em;
+  padding: 0 var(--jellio-safe-gutter);
+  font-size: clamp(1rem, 1.3vw, 1.3rem);
+  font-weight: 700;
+}
+
+.jellio-row-track {
+  display: flex;
+  gap: clamp(10px, 1vw, 16px);
+  overflow-x: auto;
+  padding: 0 var(--jellio-safe-gutter) 0.5em;
+  scrollbar-width: none;
+}
+
+.jellio-row-track::-webkit-scrollbar {
+  display: none;
+}
+
+.jellio-card {
+  flex: 0 0 auto;
+  width: clamp(120px, 11vw, 180px);
+}
+
+.jellio-card-image {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--jellio-card-radius);
+  object-fit: cover;
+  background: var(--jellio-card-bg);
+  display: block;
+}
+
+.jellio-card-image-empty {
+  background: var(--jellio-card-bg);
+}
+
+.jellio-card-title {
+  margin-top: 0.5em;
+  font-size: 0.85rem;
+  color: var(--jellio-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
