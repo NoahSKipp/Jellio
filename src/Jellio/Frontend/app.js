@@ -1,30 +1,41 @@
-// Bootstrap: mounts Jellio's own root container over the native page and
-// hands off to whichever screen owns the current route. An unmigrated
-// route (no entry in SCREENS) leaves native jellyfin-web showing
-// underneath, untouched, real fallback rather than a broken page.
+// Bootstrap: mounts Jellio's own root container over the native page,
+// renders the persistent sidebar alongside whichever screen owns the
+// current route. An unmigrated route (no entry in SCREENS) leaves native
+// jellyfin-web showing underneath, untouched, real fallback rather than a
+// broken page.
 import { isAuthenticated } from './runtime/auth.js';
 import { renderHome } from './screens/home.js';
+import { renderLibrary } from './screens/library.js';
+import { renderSidebar } from './components/sidebar.js';
+import { onRouteChange, parseRoute } from './runtime/router.js';
 
 const ROOT_ID = 'jellioRoot';
 
+// Every route path this runtime has a real screen for. Library routes
+// (movies/tv/music/books/homevideos/musicvideos, plus the generic list
+// fallback) are the same set components/sidebar.js's own LIBRARY_ROUTES
+// can produce, kept in sync by hand since there are only the two places.
 const SCREENS = {
   home: renderHome,
+  movies: renderLibrary,
+  tv: renderLibrary,
+  music: renderLibrary,
+  books: renderLibrary,
+  homevideos: renderLibrary,
+  musicvideos: renderLibrary,
+  list: renderLibrary,
 };
-
-function currentRouteKey() {
-  const hash = window.location.hash || '';
-  if (hash.indexOf('#/login') === 0) return null;
-  if (hash === '' || hash === '#/' || hash.indexOf('#/home') === 0) {
-    return 'home';
-  }
-  return null;
-}
 
 function getRoot() {
   let root = document.getElementById(ROOT_ID);
   if (!root) {
     root = document.createElement('div');
     root.id = ROOT_ID;
+    root.innerHTML =
+      '<div class="jellio-shell">' +
+      '<nav class="jellio-sidebar-mount"></nav>' +
+      '<main class="jellio-content"></main>' +
+      '</div>';
     document.body.appendChild(root);
   }
   return root;
@@ -34,14 +45,13 @@ function hide() {
   const root = document.getElementById(ROOT_ID);
   if (root) {
     root.classList.remove('jellio-root-visible');
-    root.textContent = '';
   }
 }
 
 async function sync() {
   try {
-    const routeKey = currentRouteKey();
-    const screen = routeKey && SCREENS[routeKey];
+    const route = parseRoute();
+    const screen = SCREENS[route.path];
 
     if (!screen || !isAuthenticated()) {
       hide();
@@ -50,27 +60,15 @@ async function sync() {
 
     const root = getRoot();
     root.classList.add('jellio-root-visible');
-    await screen(root);
+
+    const sidebarMount = root.querySelector('.jellio-sidebar-mount');
+    const content = root.querySelector('.jellio-content');
+
+    await Promise.all([renderSidebar(sidebarMount), screen(content, route.params)]);
   } catch (err) {
     console.warn('Jellio: screen render failed, falling back to native page', err);
     hide();
   }
 }
 
-let syncScheduled = false;
-function scheduleSync() {
-  if (syncScheduled) return;
-  syncScheduled = true;
-  window.requestAnimationFrame(function () {
-    syncScheduled = false;
-    sync();
-  });
-}
-
-window.addEventListener('hashchange', scheduleSync);
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', scheduleSync);
-} else {
-  scheduleSync();
-}
+onRouteChange(sync);
