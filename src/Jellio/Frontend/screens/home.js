@@ -41,7 +41,7 @@ function buildRow(title, items) {
 
 export async function renderHome(root) {
   root.textContent = '';
-  root.className = 'jellio-screen-home';
+  root.className = 'jellio-root-visible jellio-screen-home';
 
   const header = el('header', 'jellio-home-header');
   const [user] = await Promise.allSettled([getCurrentUser()]);
