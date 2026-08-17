@@ -26,6 +26,19 @@ export function getItem(itemId) {
   return getJson('/Users/' + userId + '/Items/' + itemId);
 }
 
+// A library grid's own getItem call gets whatever fields Jellyfin returns
+// by default, enough for a heading. A detail screen needs real metadata
+// (overview, genres, cast) that only comes back when explicitly asked for,
+// real Jellyfin API behaviour, not this runtime's own choice.
+export function getItemDetails(itemId) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    Fields: 'Overview,Genres,People,Studios,ProductionYear',
+  });
+  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString());
+}
+
 export function getCurrentUser() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -101,6 +114,26 @@ export function getLibraryItems(parentId, collectionType, options) {
     StartIndex: String(opts.startIndex || 0),
   });
   return getJson('/Users/' + userId + '/Items?' + params.toString());
+}
+
+// Real Jellyfin search pattern, the same /Items endpoint everything else
+// in this file already uses with a searchTerm added, not the older
+// /Search/Hints endpoint: keeps every item query in this runtime going
+// through one shape rather than two.
+export function searchItems(term, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  if (!term) return Promise.resolve([]);
+  const params = new URLSearchParams({
+    searchTerm: term,
+    Recursive: 'true',
+    IncludeItemTypes: 'Movie,Series',
+    Fields: 'PrimaryImageAspectRatio',
+    Limit: String(limit || 50),
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    return (result && result.Items) || [];
+  });
 }
 
 export function getImageUrl(itemId, type, options) {
