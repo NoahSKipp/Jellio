@@ -213,3 +213,125 @@
   width: auto;
   flex: none;
 }
+
+.jellio-search-header {
+  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(16px, 2vw, 28px);
+}
+
+.jellio-search-input {
+  width: min(100%, 32em);
+  padding: 0.7em 1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-card-bg);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 1rem;
+}
+
+.jellio-search-input:focus {
+  outline: none;
+  border-color: var(--jellio-secondary-color);
+}
+
+.jellio-detail-hero {
+  position: relative;
+  min-height: clamp(320px, 50vw, 560px);
+  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter);
+  display: flex;
+  align-items: flex-end;
+  background-color: var(--jellio-bg-elevated);
+  background-size: cover;
+  background-position: center;
+}
+
+.jellio-detail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(13 13 13 / 0.2) 0%, var(--jellio-bg-color) 100%);
+}
+
+.jellio-detail-hero-content {
+  position: relative;
+  max-width: 40em;
+}
+
+.jellio-detail-title {
+  margin: 0 0 0.3em;
+  font-size: clamp(1.8rem, 3.6vw, 3rem);
+  font-weight: 800;
+}
+
+.jellio-detail-meta {
+  display: flex;
+  gap: 0.8em;
+  margin-bottom: 0.6em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.9rem;
+}
+
+.jellio-detail-genres {
+  margin-bottom: 1em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.9rem;
+}
+
+.jellio-detail-play {
+  padding: 0.7em 2em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.jellio-detail-play:hover {
+  background: var(--jellio-secondary-variant);
+}
+
+.jellio-detail-overview {
+  max-width: 48em;
+  margin: clamp(16px, 2vw, 28px) var(--jellio-safe-gutter);
+  color: var(--jellio-text-secondary);
+  line-height: 1.6;
+}
+
+.jellio-cast-card {
+  flex: 0 0 auto;
+  width: clamp(90px, 8vw, 120px);
+}
+
+.jellio-cast-image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--jellio-card-bg);
+  display: block;
+}
+
+.jellio-cast-image-empty {
+  background: var(--jellio-card-bg);
+}
+
+.jellio-cast-name {
+  margin-top: 0.5em;
+  font-size: 0.8rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-cast-role {
+  font-size: 0.75rem;
+  color: var(--jellio-text-tertiary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

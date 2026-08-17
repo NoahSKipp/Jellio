@@ -27,11 +27,14 @@ export function buildCard(item) {
   title.textContent = item.Name || '';
   card.appendChild(title);
 
-  // No detail screen built yet (that is its own, later piece of this
-  // rebuild), so a card click falls back to the same real route native
-  // jellyfin-web's own item detail page already answers to.
+  // #/item rather than native's own #/details: screens/detail.js's own
+  // Play button hands off to the real #/details route for actual
+  // playback (playbackManager.play() is a plain ES module export, never
+  // reachable from here, see that file's own header), so this runtime's
+  // own detail screen has to live at a route native does not already
+  // own, or the two would collide on the same hash.
   card.addEventListener('click', function () {
-    navigateTo('#/details?id=' + item.Id);
+    navigateTo('#/item?id=' + item.Id);
   });
 
   return card;

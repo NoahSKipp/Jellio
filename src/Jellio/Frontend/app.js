@@ -6,6 +6,8 @@
 import { isAuthenticated } from './runtime/auth.js';
 import { renderHome } from './screens/home.js';
 import { renderLibrary } from './screens/library.js';
+import { renderSearch } from './screens/search.js';
+import { renderDetail } from './screens/detail.js';
 import { renderSidebar } from './components/sidebar.js';
 import { onRouteChange, parseRoute } from './runtime/router.js';
 
@@ -17,6 +19,8 @@ const ROOT_ID = 'jellioRoot';
 // can produce, kept in sync by hand since there are only the two places.
 const SCREENS = {
   home: renderHome,
+  search: renderSearch,
+  item: renderDetail,
   movies: renderLibrary,
   tv: renderLibrary,
   music: renderLibrary,
