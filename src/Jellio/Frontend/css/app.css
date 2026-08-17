@@ -26,7 +26,6 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  overflow-y: auto;
   background: var(--jellio-bg-color);
   font-family: var(--jellio-font-family);
   color: var(--jellio-text-color);
@@ -34,6 +33,94 @@
 
 #jellioRoot.jellio-root-visible {
   display: block;
+}
+
+.jellio-shell {
+  display: flex;
+  height: 100vh;
+}
+
+.jellio-sidebar-mount {
+  flex: 0 0 auto;
+}
+
+.jellio-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.jellio-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: clamp(64px, 6vw, 96px);
+  height: 100%;
+  padding: 20px 8px;
+  background: var(--jellio-bg-elevated);
+  border-right: 1px solid var(--jellio-border-color);
+}
+
+.jellio-sidebar-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 0;
+  border-radius: var(--jellio-card-radius);
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.jellio-sidebar-link:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text-color);
+}
+
+.jellio-sidebar-link-active {
+  color: var(--jellio-text-color);
+  background: rgb(255 255 255 / 0.1);
+}
+
+.jellio-sidebar-icon-svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.jellio-sidebar-icon-svg-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.jellio-sidebar-link .material-icons {
+  font-size: 22px;
+}
+
+.jellio-sidebar-label {
+  font-size: 0.62rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.jellio-sidebar-divider {
+  height: 1px;
+  margin: 8px 6px;
+  background: var(--jellio-border-color);
+}
+
+.jellio-sidebar-spacer {
+  flex: 1 1 auto;
 }
 
 .jellio-home-header {
@@ -75,6 +162,7 @@
 .jellio-card {
   flex: 0 0 auto;
   width: clamp(120px, 11vw, 180px);
+  cursor: pointer;
 }
 
 .jellio-card-image {
@@ -97,4 +185,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.jellio-card:hover .jellio-card-image {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 2px;
+}
+
+.jellio-library-header {
+  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
+}
+
+.jellio-library-title {
+  margin: 0;
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
+  font-weight: 700;
+}
+
+.jellio-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: clamp(14px, 1.4vw, 22px);
+  padding: 0 var(--jellio-safe-gutter) clamp(32px, 4vw, 64px);
+}
+
+.jellio-library-grid .jellio-card {
+  width: auto;
+  flex: none;
 }

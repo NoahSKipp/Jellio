@@ -2,29 +2,14 @@
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
 // read or waited on. Deliberately minimal (no hero yet, no per row scroll
 // buttons) until the pattern this establishes is worth repeating elsewhere.
-import { getCurrentUser, getUserViews, getResumeItems, getLatestItems, getImageUrl } from '../runtime/api.js';
+import { getCurrentUser, getUserViews, getResumeItems, getLatestItems } from '../runtime/api.js';
+import { buildCard } from '../components/card.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text != null) node.textContent = text;
   return node;
-}
-
-function buildCard(item) {
-  const card = el('div', 'jellio-card');
-  const imageTag = item.ImageTags && item.ImageTags.Primary;
-  if (imageTag) {
-    const img = el('img', 'jellio-card-image');
-    img.src = getImageUrl(item.Id, 'Primary', { tag: imageTag, maxWidth: 400 });
-    img.alt = item.Name || '';
-    img.loading = 'lazy';
-    card.appendChild(img);
-  } else {
-    card.appendChild(el('div', 'jellio-card-image jellio-card-image-empty'));
-  }
-  card.appendChild(el('div', 'jellio-card-title', item.Name || ''));
-  return card;
 }
 
 function buildRow(title, items) {
@@ -41,7 +26,7 @@ function buildRow(title, items) {
 
 export async function renderHome(root) {
   root.textContent = '';
-  root.className = 'jellio-root-visible jellio-screen-home';
+  root.className = 'jellio-screen-home';
 
   const header = el('header', 'jellio-home-header');
   const [user] = await Promise.allSettled([getCurrentUser()]);

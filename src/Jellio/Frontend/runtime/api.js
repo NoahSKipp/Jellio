@@ -20,6 +20,12 @@ export function getSystemInfo() {
   return getJson('/System/Info');
 }
 
+export function getItem(itemId) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  return getJson('/Users/' + userId + '/Items/' + itemId);
+}
+
 export function getCurrentUser() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -66,6 +72,35 @@ export function getLatestItems(parentId, limit) {
     (limit || 16) +
     '&Fields=PrimaryImageAspectRatio';
   return getJson(query);
+}
+
+// Real, confirmed against the original Jellio codebase's own
+// libraryBrowse.js: a BoxSet mixed into a movie/series catalog by an addon
+// import has no stream of its own and should never render as a browsable
+// card in a movie or show grid.
+export function itemTypesForKind(collectionType) {
+  return collectionType === 'movies' ? 'Movie' : 'Series';
+}
+
+// The full grid for one library, real endpoint (GET /Users/{id}/Items),
+// the same query shape libraryBrowse.js's own row builders already use:
+// Recursive so a show's own seasons/episodes never surface as top level
+// cards, IncludeItemTypes scoped to the library's real kind.
+export function getLibraryItems(parentId, collectionType, options) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const opts = options || {};
+  const params = new URLSearchParams({
+    ParentId: parentId,
+    Recursive: 'true',
+    IncludeItemTypes: itemTypesForKind(collectionType),
+    SortBy: opts.sortBy || 'SortName',
+    SortOrder: opts.sortOrder || 'Ascending',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear',
+    Limit: String(opts.limit || 100),
+    StartIndex: String(opts.startIndex || 0),
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString());
 }
 
 export function getImageUrl(itemId, type, options) {
