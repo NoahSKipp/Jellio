@@ -26,19 +26,6 @@ export function getItem(itemId) {
   return getJson('/Users/' + userId + '/Items/' + itemId);
 }
 
-// A library grid's own getItem call gets whatever fields Jellyfin returns
-// by default, enough for a heading. A detail screen needs real metadata
-// (overview, genres, cast) that only comes back when explicitly asked for,
-// real Jellyfin API behaviour, not this runtime's own choice.
-export function getItemDetails(itemId) {
-  const userId = getCurrentUserId();
-  if (!userId) return Promise.reject(new Error('Not signed in'));
-  const params = new URLSearchParams({
-    Fields: 'Overview,Genres,People,Studios,ProductionYear',
-  });
-  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString());
-}
-
 export function getCurrentUser() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
