@@ -8,6 +8,9 @@ export function buildCard(item) {
   const card = document.createElement('div');
   card.className = 'jellio-card';
 
+  const imageWrap = document.createElement('div');
+  imageWrap.className = 'jellio-card-image-wrap';
+
   const imageTag = item.ImageTags && item.ImageTags.Primary;
   if (imageTag) {
     const img = document.createElement('img');
@@ -15,23 +18,44 @@ export function buildCard(item) {
     img.src = getImageUrl(item.Id, 'Primary', { tag: imageTag, maxWidth: 400 });
     img.alt = item.Name || '';
     img.loading = 'lazy';
-    card.appendChild(img);
+    imageWrap.appendChild(img);
   } else {
     const placeholder = document.createElement('div');
     placeholder.className = 'jellio-card-image jellio-card-image-empty';
-    card.appendChild(placeholder);
+    imageWrap.appendChild(placeholder);
   }
+
+  const userData = item.UserData || {};
+  if (userData.Played) {
+    const badge = document.createElement('span');
+    badge.className = 'jellio-card-watched material-icons check';
+    badge.setAttribute('aria-hidden', 'true');
+    imageWrap.appendChild(badge);
+  } else if (userData.PlayedPercentage > 0) {
+    const progress = document.createElement('div');
+    progress.className = 'jellio-card-progress';
+    const fill = document.createElement('div');
+    fill.className = 'jellio-card-progress-fill';
+    fill.style.width = Math.min(100, userData.PlayedPercentage) + '%';
+    progress.appendChild(fill);
+    imageWrap.appendChild(progress);
+  }
+
+  card.appendChild(imageWrap);
 
   const title = document.createElement('div');
   title.className = 'jellio-card-title';
   title.textContent = item.Name || '';
   card.appendChild(title);
 
-  // No detail screen built yet (that is its own, later piece of this
-  // rebuild), so a card click falls back to the same real route native
-  // jellyfin-web's own item detail page already answers to.
+  // #/item rather than native's own #/details: screens/detail.js's own
+  // Play button hands off to the real #/details route for actual
+  // playback (playbackManager.play() is a plain ES module export, never
+  // reachable from here, see that file's own header), so this runtime's
+  // own detail screen has to live at a route native does not already
+  // own, or the two would collide on the same hash.
   card.addEventListener('click', function () {
-    navigateTo('#/details?id=' + item.Id);
+    navigateTo('#/item?id=' + item.Id);
   });
 
   return card;

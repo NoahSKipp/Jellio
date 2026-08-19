@@ -2,7 +2,7 @@
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
 // read or waited on. Deliberately minimal (no hero yet, no per row scroll
 // buttons) until the pattern this establishes is worth repeating elsewhere.
-import { getCurrentUser, getUserViews, getResumeItems, getLatestItems } from '../runtime/api.js';
+import { getCurrentUser, getUserViews, getResumeItems, getLatestItems, getFavoriteItems } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
 
 function el(tag, className, text) {
@@ -24,9 +24,35 @@ function buildRow(title, items) {
   return section;
 }
 
-export async function renderHome(root) {
+// #/home?tab=1, the same hash the sidebar's own Favorites link and the
+// original Jellio codebase's own NAV_LINKS both already point at, rather
+// than a separate #/favorites route.
+async function renderFavorites(root) {
+  const header = el('header', 'jellio-home-header');
+  header.appendChild(el('h1', 'jellio-home-greeting', 'Favorites'));
+  root.appendChild(header);
+
+  const grid = el('div', 'jellio-library-grid');
+  root.appendChild(grid);
+
+  try {
+    const items = await getFavoriteItems();
+    items.forEach(function (item) {
+      grid.appendChild(buildCard(item));
+    });
+  } catch (err) {
+    console.warn('Jellio: could not load favorites', err);
+  }
+}
+
+export async function renderHome(root, params) {
   root.textContent = '';
   root.className = 'jellio-screen-home';
+
+  if (params && params.get('tab') === '1') {
+    await renderFavorites(root);
+    return;
+  }
 
   const header = el('header', 'jellio-home-header');
   const [user] = await Promise.allSettled([getCurrentUser()]);
