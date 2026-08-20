@@ -303,6 +303,27 @@ export function reportPlaybackStopped(itemId, mediaSourceId, positionTicks) {
   });
 }
 
+// Jellio's own real endpoints (Controllers/SleepTimerController.cs), not
+// a Jellyfin API. Server side, backed by SleepTimerService's own
+// background loop and a real ISessionManager.SendPlaystateCommand(Stop),
+// so this works with no client side player hooking at all, unlike
+// anything that would have needed jellyfin-web's own playbackManager.
+export function startSleepTimer(minutes) {
+  return postJson('/Jellio/sleep-timer/start', { Minutes: minutes });
+}
+
+export async function cancelSleepTimer() {
+  const response = await fetch(getServerAddress() + '/Jellio/sleep-timer/cancel', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return response.ok;
+}
+
+export function getSleepTimerStatus() {
+  return getJson('/Jellio/sleep-timer/status');
+}
+
 export function getImageUrl(itemId, type, options) {
   const opts = options || {};
   const params = new URLSearchParams();

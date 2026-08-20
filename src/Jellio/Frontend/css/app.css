@@ -572,3 +572,57 @@
   min-width: 0;
   accent-color: var(--jellio-secondary-color);
 }
+
+.jellio-player-sleep {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4em;
+  height: 2.4em;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.jellio-player-sleep:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.jellio-player-sleep-active {
+  color: var(--jellio-secondary-color);
+}
+
+.jellio-player-sleep-menu {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  bottom: 4.5em;
+  display: flex;
+  flex-direction: column;
+  min-width: 8em;
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-bg-elevated);
+  border: 1px solid var(--jellio-border-color);
+  overflow: hidden;
+}
+
+.jellio-player-sleep-menu-hidden {
+  display: none;
+}
+
+.jellio-player-sleep-option {
+  padding: 0.6em 1em;
+  border: 0;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-player-sleep-option:hover {
+  background: rgb(255 255 255 / 0.08);
+}

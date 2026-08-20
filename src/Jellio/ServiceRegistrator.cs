@@ -12,5 +12,11 @@ public class ServiceRegistrator : IPluginServiceRegistrator
     {
         services.AddHostedService<StartupDiagnosticsService>();
         services.AddHostedService<IndexHtmlPatchService>();
+
+        // Registered as itself first, both the background loop and the
+        // controller need the same instance, one holding the timers, the
+        // other reading/writing them.
+        services.AddSingleton<SleepTimerService>();
+        services.AddHostedService(sp => sp.GetRequiredService<SleepTimerService>());
     }
 }

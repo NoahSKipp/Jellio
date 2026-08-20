@@ -9,11 +9,15 @@ import {
   reportPlaybackStart,
   reportPlaybackProgress,
   reportPlaybackStopped,
+  startSleepTimer,
+  cancelSleepTimer,
+  getSleepTimerStatus,
   TICKS_PER_SECOND,
 } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
 const PROGRESS_REPORT_MS = 5000;
+const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -109,10 +113,53 @@ export async function renderPlayer(root, params) {
     else video.pause();
   });
 
+  const sleepButton = el('button', 'jellio-player-sleep');
+  sleepButton.type = 'button';
+  sleepButton.setAttribute('aria-label', 'Sleep timer');
+  const sleepIcon = el('span', 'material-icons bedtime');
+  sleepIcon.setAttribute('aria-hidden', 'true');
+  sleepButton.appendChild(sleepIcon);
+
+  const sleepMenu = el('div', 'jellio-player-sleep-menu jellio-player-sleep-menu-hidden');
+  const cancelOption = el('button', 'jellio-player-sleep-option', 'Cancel timer');
+  cancelOption.type = 'button';
+  cancelOption.addEventListener('click', function () {
+    cancelSleepTimer().then(function () {
+      sleepButton.classList.remove('jellio-player-sleep-active');
+      sleepMenu.classList.add('jellio-player-sleep-menu-hidden');
+    });
+  });
+  sleepMenu.appendChild(cancelOption);
+  SLEEP_TIMER_OPTIONS.forEach(function (minutes) {
+    const option = el('button', 'jellio-player-sleep-option', minutes + ' min');
+    option.type = 'button';
+    option.addEventListener('click', function () {
+      startSleepTimer(minutes).then(function () {
+        sleepButton.classList.add('jellio-player-sleep-active');
+        sleepMenu.classList.add('jellio-player-sleep-menu-hidden');
+      });
+    });
+    sleepMenu.appendChild(option);
+  });
+
+  sleepButton.addEventListener('click', function () {
+    sleepMenu.classList.toggle('jellio-player-sleep-menu-hidden');
+  });
+
+  getSleepTimerStatus()
+    .then(function (status) {
+      if (status && status.Active) sleepButton.classList.add('jellio-player-sleep-active');
+    })
+    .catch(function () {
+      // No status yet is not an error worth surfacing here.
+    });
+
   controls.appendChild(backButton);
   controls.appendChild(title);
   controls.appendChild(seekRow);
   controls.appendChild(playPauseButton);
+  controls.appendChild(sleepButton);
+  controls.appendChild(sleepMenu);
 
   root.appendChild(video);
   root.appendChild(controls);
