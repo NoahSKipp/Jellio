@@ -1,11 +1,8 @@
 // Metadata view for one item: backdrop, title, overview, genres, cast.
-// Play hands off to the real native detail route rather than faking a
-// button that does nothing: jellyfin-web's own actual playback trigger,
-// playbackManager.play() (apps/legacy/controllers/itemDetails/index.js,
-// real source, confirmed before writing this), is a plain ES module
-// export, never put on window the way ApiClient is, so nothing outside
-// jellyfin-web's own bundle can call it directly. Real player chrome for
-// this runtime is its own later piece of work, not guessed at here.
+// Play opens this runtime's own player at #/play, real playback
+// (PlaybackInfo negotiation plus a bare <video> element, see
+// screens/player.js's own header for why that needed no access to
+// jellyfin-web's own playbackManager at all).
 import { getItemDetails, getImageUrl, getSeasons, getEpisodes, setFavorite } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
@@ -157,12 +154,18 @@ export async function renderDetail(root, params) {
 
   const actions = el('div', 'jellio-detail-actions');
 
-  const playButton = el('button', 'jellio-detail-play', 'Play');
-  playButton.type = 'button';
-  playButton.addEventListener('click', function () {
-    navigateTo('#/details?id=' + itemId);
-  });
-  actions.appendChild(playButton);
+  // A series has no video of its own, only its episodes do (each already
+  // opens this same screen at its own item id, with its own working Play
+  // button), so this one is skipped entirely here rather than pointing at
+  // nothing playable.
+  if (item.Type !== 'Series') {
+    const playButton = el('button', 'jellio-detail-play', 'Play');
+    playButton.type = 'button';
+    playButton.addEventListener('click', function () {
+      navigateTo('#/play?id=' + itemId);
+    });
+    actions.appendChild(playButton);
+  }
 
   const isFavorite = !!(item.UserData && item.UserData.IsFavorite);
   const favoriteButton = el(
