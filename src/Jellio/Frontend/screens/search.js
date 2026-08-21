@@ -10,7 +10,7 @@ const DEBOUNCE_MS = 300;
 
 export async function renderSearch(root) {
   root.textContent = '';
-  root.className = 'jellio-screen-search';
+  root.className = 'jellio-content jellio-screen-search';
 
   const header = document.createElement('header');
   header.className = 'jellio-search-header';
@@ -19,6 +19,7 @@ export async function renderSearch(root) {
   input.type = 'search';
   input.className = 'jellio-search-input';
   input.placeholder = 'Search movies and shows';
+  input.setAttribute('aria-label', 'Search movies and shows');
   input.autofocus = true;
   header.appendChild(input);
   root.appendChild(header);

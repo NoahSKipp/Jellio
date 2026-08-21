@@ -7,6 +7,9 @@ import { navigateTo } from '../runtime/router.js';
 export function buildCard(item) {
   const card = document.createElement('div');
   card.className = 'jellio-card';
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', item.Name || '');
 
   const imageWrap = document.createElement('div');
   imageWrap.className = 'jellio-card-image-wrap';
@@ -56,6 +59,12 @@ export function buildCard(item) {
   // own, or the two would collide on the same hash.
   card.addEventListener('click', function () {
     navigateTo('#/item?id=' + item.Id);
+  });
+  card.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      navigateTo('#/item?id=' + item.Id);
+    }
   });
 
   return card;
