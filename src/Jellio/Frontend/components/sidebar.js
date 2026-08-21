@@ -5,8 +5,9 @@
 // (originally sourced from Harbor, harborstremio/harbor, MIT, and
 // NuvioMobile's own real vector drawables, see that file's own header for
 // the full provenance), not re-derived here.
-import { getUserViews } from '../runtime/api.js';
+import { getUserViews, getCollections, getCurrentUser, getUserImageUrl } from '../runtime/api.js';
 import { navigateTo, currentHash } from '../runtime/router.js';
+import { toggleNowPlayingPanel, nowPlayingCount } from './nowPlaying.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -57,18 +58,42 @@ function libraryHash(view) {
   return '#/list?parentId=' + view.Id;
 }
 
+// Anime's own link is Shows' own hash with '&jellioKind=anime' appended
+// (libraryHash() + that marker), so Shows' hash is a literal string
+// prefix of Anime's. A plain prefix check lit up both buttons the
+// moment Anime was the active route, reported live. Requiring the same
+// jellioKind presence on both sides before trusting a prefix keeps the
+// two apart without needing every caller to change what it passes in.
 function isActive(hash) {
   const current = currentHash();
   if (hash === '#/home') return current === '#/home' || current === '#/' || current === '';
-  return current.indexOf(hash) === 0;
+  if (current === hash) return true;
+  if (current.indexOf(hash) !== 0) return false;
+  const rest = current.slice(hash.length);
+  if (rest && rest[0] !== '&' && rest[0] !== '?') return false;
+  const hashHasKind = hash.indexOf('jellioKind=') !== -1;
+  const currentHasKind = current.indexOf('jellioKind=') !== -1;
+  return hashHasKind === currentHasKind;
 }
 
+// Tagged with its own hash so updateActiveLinks() can find it again
+// without rebuilding it: real feedback was that the whole rail
+// visibly flickered on every navigation, traced to renderSidebar
+// destroying and rebuilding every icon on every single call, cache
+// warm or not, awaiting getUserViews/getCollections/getCurrentUser in
+// between meant at least one empty or half built frame paints every
+// time. The set of links a session sees rarely changes at all, so
+// only the active one moving needs a per navigation cost, not the
+// whole rail.
 function buildLink(icon, label, hash) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'jellio-sidebar-link' + (isActive(hash) ? ' jellio-sidebar-link-active' : '');
+  button.dataset.jellioHash = hash;
+  const active = isActive(hash);
+  button.className = 'jellio-sidebar-link' + (active ? ' jellio-sidebar-link-active' : '');
   button.title = label;
   button.setAttribute('aria-label', label);
+  if (active) button.setAttribute('aria-current', 'page');
 
   const svgDef = SVG_ICONS[icon];
   let iconEl;
@@ -96,7 +121,179 @@ function buildLink(icon, label, hash) {
   return button;
 }
 
+function updateActiveLinks(container) {
+  container.querySelectorAll('[data-jellio-hash]').forEach(function (link) {
+    const active = isActive(link.dataset.jellioHash);
+    link.classList.toggle('jellio-sidebar-link-active', active);
+    if (active) {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+  });
+}
+
+// Native jellyfin-web keeps running underneath this runtime's own
+// overlay, unaware (app.js's own getRoot() only ever covers it, never
+// removes it), so its classic-skin header buttons are still real,
+// still bound and still clickable, just painted under display:none.
+// libraryMenu.js's own .headerSyncButton already opens the real
+// groupSelectionMenu (onSyncButtonClicked), so Group Watch is a
+// forwarded click rather than a UI this runtime has to build itself,
+// same technique the original codebase's own persistentSidebar.js
+// uses for the same button.
+function clickNative(selector) {
+  const el = document.querySelector(selector);
+  if (el) el.click();
+  return Boolean(el);
+}
+
+function buildGroupWatchButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'jellio-sidebar-link jellio-sidebar-groupwatch';
+  button.title = 'Group Watch';
+  button.setAttribute('aria-label', 'Group Watch');
+
+  const icon = document.createElement('span');
+  icon.className = 'material-icons groups';
+  icon.setAttribute('aria-hidden', 'true');
+  button.appendChild(icon);
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'jellio-sidebar-label';
+  labelEl.textContent = 'Group Watch';
+  button.appendChild(labelEl);
+
+  button.addEventListener('click', function () {
+    if (!clickNative('.headerSyncButton')) {
+      console.warn('Jellio: .headerSyncButton not found, native SyncPlay menu could not open');
+    }
+  });
+
+  return button;
+}
+
+// Labelled "Playing" rather than "Now playing": every other row on the
+// rail is a single word, matching the original codebase's own real
+// feedback based reasoning for the same button.
+function buildNowPlayingButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'jellio-sidebar-link jellio-sidebar-now-playing';
+  button.title = 'Playing';
+  button.setAttribute('aria-label', 'Now playing');
+  button.setAttribute('aria-haspopup', 'true');
+  button.setAttribute('aria-expanded', 'false');
+  if (nowPlayingCount() > 0) button.classList.add('jellio-sidebar-now-playing-active');
+
+  const icon = document.createElement('span');
+  icon.className = 'material-icons play_circle';
+  icon.setAttribute('aria-hidden', 'true');
+  button.appendChild(icon);
+
+  const badge = document.createElement('span');
+  badge.className = 'jellio-sidebar-now-playing-badge';
+  badge.textContent = String(nowPlayingCount());
+  button.appendChild(badge);
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'jellio-sidebar-label';
+  labelEl.textContent = 'Playing';
+  button.appendChild(labelEl);
+
+  button.addEventListener('click', function () {
+    toggleNowPlayingPanel();
+  });
+  return button;
+}
+
+async function paintAvatar(iconMount) {
+  iconMount.textContent = '';
+  let user = null;
+  try {
+    user = await getCurrentUser();
+  } catch (err) {
+    console.warn('Jellio: sidebar could not load current user', err);
+  }
+
+  const imageTag = user && user.PrimaryImageTag;
+  if (user && imageTag) {
+    const img = document.createElement('img');
+    img.className = 'jellio-sidebar-avatar';
+    img.src = getUserImageUrl(user.Id, imageTag, { maxWidth: 80 });
+    img.alt = '';
+    iconMount.appendChild(img);
+  } else {
+    const icon = document.createElement('span');
+    icon.className = 'material-icons account_circle';
+    icon.setAttribute('aria-hidden', 'true');
+    iconMount.appendChild(icon);
+  }
+}
+
+// renderSidebar() below only paints the rail once per real session now
+// (see its own header), so a changed avatar has no future rebuild left
+// to pick it up on its own. components/avatarPicker.js's own onChanged
+// callback calls this directly instead, the same live requery pattern
+// nowPlaying.js already uses for its own badge rather than something
+// that waits on a rebuild that no longer routinely happens.
+export function refreshProfileAvatar() {
+  const mount = document.querySelector('.jellio-sidebar-avatar-mount');
+  if (mount) paintAvatar(mount);
+}
+
+async function buildProfileButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'jellio-sidebar-link jellio-sidebar-profile';
+  button.title = 'Profile';
+  button.setAttribute('aria-label', 'Profile');
+
+  const iconMount = document.createElement('span');
+  iconMount.className = 'jellio-sidebar-avatar-mount';
+  button.appendChild(iconMount);
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'jellio-sidebar-label';
+  labelEl.textContent = 'Profile';
+  button.appendChild(labelEl);
+
+  await paintAvatar(iconMount);
+
+  // Opens the real account screen (password, sleep timer, avatar, sign
+  // out, screens/settings.js) rather than the avatar picker directly.
+  // The picker used to be this button's only destination, indistinguishable
+  // from the separate Account nav link that opened the same screen, real
+  // feedback asked for one button doing a real job instead of two doing
+  // an overlapping one. The picker is still one click away from there.
+  button.addEventListener('click', function () {
+    navigateTo('#/account');
+  });
+
+  return button;
+}
+
+// Built once per real container and left alone after that, rather than
+// destroyed and rebuilt on every navigation: this and app.js's own
+// getRoot() (which used to unconditionally rebuild the shell, sidebar
+// mount included, on every call) were together the real cause of the
+// icons visibly flickering on every click, reported live. app.js now
+// only hands this a fresh container when the mount was genuinely
+// missing (its own self-heal case), so the same container coming back
+// on the very next navigation is the normal case, not the rare one,
+// and a dataset marker is enough to tell the two apart. Everything
+// that can change after the initial build without a full rebuild
+// (which link is active, the now playing badge, the profile avatar)
+// already has, or now has, its own live update path instead of relying
+// on one: updateActiveLinks() below, nowPlaying.js's own render(), and
+// refreshProfileAvatar() above.
 export async function renderSidebar(container) {
+  if (container.dataset.jellioBuilt === '1') {
+    updateActiveLinks(container);
+    return;
+  }
+  container.dataset.jellioBuilt = '1';
   container.textContent = '';
   container.className = 'jellio-sidebar';
 
@@ -108,27 +305,64 @@ export async function renderSidebar(container) {
   divider.className = 'jellio-sidebar-divider';
   container.appendChild(divider);
 
+  let views = [];
   try {
-    const views = await getUserViews();
-    views.forEach(function (view) {
-      const isKnown = view.CollectionType && LIBRARY_ROUTES[view.CollectionType];
-      const icon =
-        view.CollectionType === 'movies'
-          ? 'movies'
-          : view.CollectionType === 'tvshows'
-            ? 'shows'
-            : 'library';
-      if (isKnown || view.CollectionType) {
-        container.appendChild(buildLink(icon, view.Name, libraryHash(view)));
-      }
-    });
+    views = await getUserViews();
   } catch (err) {
     console.warn('Jellio: sidebar could not load libraries', err);
   }
+
+  const moviesView = views.filter(function (view) {
+    return view.CollectionType === 'movies';
+  })[0];
+  const tvView = views.filter(function (view) {
+    return view.CollectionType === 'tvshows';
+  })[0];
+  const realAnimeView = views.filter(function (view) {
+    return /anime/i.test(view.Name || '');
+  })[0];
+
+  if (moviesView) container.appendChild(buildLink('movies', 'Movies', libraryHash(moviesView)));
+  if (tvView) container.appendChild(buildLink('shows', 'Shows', libraryHash(tvView)));
+
+  // Anime has no real Jellyfin library of its own: Gelato resolves one
+  // global SeriesPath for every series import (GelatoManager.TryGetSeriesFolder),
+  // so AniList titles physically live in the TV library. A real Anime view
+  // wins if one was made by hand; otherwise fall back to the TV library
+  // tagged with &jellioKind=anime, the same marker screens/library.js
+  // reads, and only when there is really something to show behind it (a
+  // real anime/anilist catalog among the user's own collections). Ported
+  // from the original codebase's own persistentSidebar.js, not
+  // re-derived.
+  if (realAnimeView) {
+    container.appendChild(buildLink('anime', 'Anime', libraryHash(realAnimeView)));
+  } else if (tvView) {
+    try {
+      const collections = await getCollections();
+      const hasAnimeCatalogs = collections.some(function (item) {
+        return /anime|anilist/i.test(item.Name || '');
+      });
+      if (hasAnimeCatalogs) {
+        container.appendChild(buildLink('anime', 'Anime', libraryHash(tvView) + '&jellioKind=anime'));
+      }
+    } catch (err) {
+      // No anime entry without a confirmed catalog behind it, not fatal
+      // to the rest of the rail.
+    }
+  }
+
+  views.forEach(function (view) {
+    if (view === moviesView || view === tvView || view === realAnimeView) return;
+    if (!view.CollectionType) return;
+    container.appendChild(buildLink('library', view.Name, libraryHash(view)));
+  });
 
   const spacer = document.createElement('div');
   spacer.className = 'jellio-sidebar-spacer';
   container.appendChild(spacer);
 
+  container.appendChild(buildGroupWatchButton());
+  container.appendChild(buildNowPlayingButton());
+  container.appendChild(await buildProfileButton());
   container.appendChild(buildLink('settings', 'Settings', '#/mypreferencesmenu'));
 }

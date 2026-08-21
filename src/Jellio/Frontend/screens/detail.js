@@ -15,6 +15,9 @@ function el(tag, className, text) {
 
 function buildEpisodeCard(episode) {
   const card = el('div', 'jellio-episode-card');
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', episode.Name || '');
   const thumbTag =
     (episode.ImageTags && episode.ImageTags.Primary) ||
     (episode.ParentThumbImageTag && episode.ParentThumbImageTag);
@@ -33,6 +36,12 @@ function buildEpisodeCard(episode) {
   }
   card.addEventListener('click', function () {
     navigateTo('#/item?id=' + episode.Id);
+  });
+  card.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      navigateTo('#/item?id=' + episode.Id);
+    }
   });
   return card;
 }
@@ -55,6 +64,7 @@ async function buildSeasonsSection(seriesId) {
   section.appendChild(el('h2', 'jellio-row-title', 'Episodes'));
 
   const tabs = el('div', 'jellio-season-tabs');
+  tabs.setAttribute('role', 'tablist');
   const track = el('div', 'jellio-episode-track');
   section.appendChild(tabs);
   section.appendChild(track);
@@ -62,8 +72,10 @@ async function buildSeasonsSection(seriesId) {
   function selectSeason(season, tabButton) {
     Array.prototype.forEach.call(tabs.children, function (child) {
       child.classList.remove('jellio-season-tab-selected');
+      child.setAttribute('aria-selected', 'false');
     });
     tabButton.classList.add('jellio-season-tab-selected');
+    tabButton.setAttribute('aria-selected', 'true');
     track.textContent = '';
     getEpisodes(seriesId, season.Id)
       .then(function (episodes) {
@@ -79,6 +91,8 @@ async function buildSeasonsSection(seriesId) {
   seasons.forEach(function (season, index) {
     const tab = el('button', 'jellio-season-tab', season.Name || '');
     tab.type = 'button';
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', 'false');
     tab.addEventListener('click', function () {
       selectSeason(season, tab);
     });
@@ -100,6 +114,9 @@ function buildCastRow(people) {
   const track = el('div', 'jellio-row-track');
   cast.slice(0, 20).forEach(function (person) {
     const card = el('div', 'jellio-cast-card');
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', person.Name || '');
     if (person.PrimaryImageTag) {
       const img = el('img', 'jellio-cast-image');
       img.src = getImageUrl(person.Id, 'Primary', { tag: person.PrimaryImageTag, maxWidth: 200 });
@@ -111,6 +128,15 @@ function buildCastRow(people) {
     }
     card.appendChild(el('div', 'jellio-cast-name', person.Name || ''));
     if (person.Role) card.appendChild(el('div', 'jellio-cast-role', person.Role));
+    card.addEventListener('click', function () {
+      navigateTo('#/person?id=' + person.Id);
+    });
+    card.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        navigateTo('#/person?id=' + person.Id);
+      }
+    });
     track.appendChild(card);
   });
   section.appendChild(track);
@@ -119,7 +145,7 @@ function buildCastRow(people) {
 
 export async function renderDetail(root, params) {
   root.textContent = '';
-  root.className = 'jellio-screen-detail';
+  root.className = 'jellio-content jellio-screen-detail';
 
   const itemId = params.get('id');
   if (!itemId) return;
@@ -132,10 +158,26 @@ export async function renderDetail(root, params) {
     return;
   }
 
+  // A title reached straight from a search result carries a synthetic
+  // placeholder id, not a real library one, confirmed against Gelato's
+  // own real source: SearchActionFilter's own ConvertMetasToDtos sets
+  // dto.Id to a Stremio URI hash and only saves the real metadata for
+  // later insertion. The very first request under that id (this one)
+  // is what actually triggers the insert, and the response above
+  // already describes the real, canonical item, real id included, so
+  // every request this screen makes from here on addresses that one
+  // directly rather than the placeholder still sitting in params. The
+  // original codebase's own canonicalItemId.js exists for the same
+  // reason (its own header documents the same mechanism, several
+  // follow up requests otherwise all racing the same in-progress
+  // insert under the same placeholder).
+  const canonicalId = item.Id || itemId;
+
   const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
   const hero = el('div', 'jellio-detail-hero');
   if (backdropTag) {
-    hero.style.backgroundImage = 'url(' + getImageUrl(itemId, 'Backdrop', { tag: backdropTag, maxWidth: 1600 }) + ')';
+    hero.style.backgroundImage =
+      'url(' + getImageUrl(canonicalId, 'Backdrop', { tag: backdropTag, maxWidth: 1600 }) + ')';
   }
 
   const heroContent = el('div', 'jellio-detail-hero-content');
@@ -162,7 +204,7 @@ export async function renderDetail(root, params) {
     const playButton = el('button', 'jellio-detail-play', 'Play');
     playButton.type = 'button';
     playButton.addEventListener('click', function () {
-      navigateTo('#/play?id=' + itemId);
+      navigateTo('#/play?id=' + canonicalId);
     });
     actions.appendChild(playButton);
   }
@@ -177,7 +219,7 @@ export async function renderDetail(root, params) {
   favoriteButton.addEventListener('click', function () {
     const nextState = !favoriteButton.classList.contains('jellio-detail-favorite-active');
     favoriteButton.disabled = true;
-    setFavorite(itemId, nextState)
+    setFavorite(canonicalId, nextState)
       .then(function (userData) {
         const active = !!(userData && userData.IsFavorite);
         favoriteButton.classList.toggle('jellio-detail-favorite-active', active);
@@ -202,7 +244,7 @@ export async function renderDetail(root, params) {
   }
 
   if (item.Type === 'Series') {
-    const seasonsSection = await buildSeasonsSection(itemId);
+    const seasonsSection = await buildSeasonsSection(canonicalId);
     if (seasonsSection) root.appendChild(seasonsSection);
   }
 
