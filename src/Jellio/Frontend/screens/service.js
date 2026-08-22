@@ -132,7 +132,7 @@ function applyFilter(rowsMount, filter) {
 
 export async function renderService(root, params) {
   root.textContent = '';
-  root.className = 'jellio-content jellio-screen-service';
+  root.className = 'jellio-screen-service';
 
   const service = params.get('name');
   if (!service) return;

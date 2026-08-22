@@ -101,124 +101,6 @@ export function setSession(accessToken, user) {
     ts: Date.now(),
   });
   writeJson(SERVER_ADDRESS_KEY, getServerAddress());
-  rememberUser(accessToken, user);
-}
-
-// This runtime's own {userId: {accessToken, name, primaryImageTag, ts}}
-// map, separate from the one slot SESSION_KEY holds for whoever is
-// currently signed in. Real architecture reference: JMSFusion
-// (Resources/slider/modules/profileChooser.js), read before writing this,
-// not guessed at. Native jellyfin-web's own credential store only ever
-// holds one user per server too, so remembering more than one on a
-// shared device needs a second store regardless of which runtime does
-// it.
-const REMEMBERED_PREFIX = STORAGE_PREFIX + 'remembered::';
-
-function rememberedKey() {
-  return REMEMBERED_PREFIX + getServerAddress();
-}
-
-function readRemembered() {
-  return readJson(rememberedKey()) || {};
-}
-
-function writeRemembered(map) {
-  writeJson(rememberedKey(), map);
-}
-
-export function getRememberedUsers() {
-  return readRemembered();
-}
-
-export function rememberUser(accessToken, user) {
-  if (!accessToken || !user || !user.Id) return;
-  const remembered = readRemembered();
-  remembered[user.Id] = {
-    accessToken: accessToken,
-    name: user.Name || (remembered[user.Id] && remembered[user.Id].name) || '',
-    primaryImageTag: user.PrimaryImageTag || null,
-    ts: Date.now(),
-  };
-  writeRemembered(remembered);
-}
-
-export function forgetRememberedUser(userId) {
-  const remembered = readRemembered();
-  delete remembered[userId];
-  writeRemembered(remembered);
-}
-
-function buildAuthHeaderForToken(token) {
-  const parts = [
-    'Client="' + CLIENT_NAME + '"',
-    'Device="Browser"',
-    'DeviceId="' + getDeviceId() + '"',
-    'Version="' + CLIENT_VERSION + '"',
-  ];
-  if (token) parts.push('Token="' + token + '"');
-  return 'MediaBrowser ' + parts.join(', ');
-}
-
-// screens/login.js only covers real username/password sign in, the one
-// case every server has. Quick Connect, a no-password public user grid
-// and "forgot password" are all real native login page features it
-// does not reimplement, so a way back to native's own login page stays
-// available rather than stranding anyone who needs one of those behind
-// a screen that cannot help them, the same native fallback discipline
-// every unmigrated route already gets. sessionStorage rather than this
-// module's own localStorage: the point is only to skip the custom
-// screen for the rest of this tab's life, not to remember the choice
-// on the next real visit.
-const BYPASS_KEY = STORAGE_PREFIX + 'loginBypass';
-
-export function bypassLoginScreen() {
-  try {
-    window.sessionStorage.setItem(BYPASS_KEY, '1');
-  } catch (err) {
-    // Not remembered, the caller still stops rendering the custom
-    // screen for this one call either way.
-  }
-}
-
-export function loginScreenBypassed() {
-  try {
-    return window.sessionStorage.getItem(BYPASS_KEY) === '1';
-  } catch (err) {
-    return false;
-  }
-}
-
-// Quick sign-in: reuse a remembered AccessToken an earlier real login on
-// this device already produced, no password asked again. The original
-// codebase's own version of this trusted a remembered token blindly and
-// leaned on a native reload to find out, live, whether it still worked,
-// which is the exact mechanism that later got pulled ("keeps bouncing
-// back to the login screen") once that reload turned out to send a bare
-// legacy header a real deployment rejected. This runtime has no such
-// reload step and no native validateAuthentication() in the path at
-// all, so instead it spends one real GET on the candidate token first:
-// a revoked or expired token is caught here and the remembered entry is
-// dropped, rather than silently committing a session that the very next
-// request would fail.
-export async function quickSignIn(userId) {
-  const remembered = readRemembered();
-  const entry = remembered[userId];
-  if (!entry) throw new Error('No remembered session for this user');
-
-  const response = await fetch(getServerAddress() + '/Users/' + userId, {
-    headers: { Accept: 'application/json', Authorization: buildAuthHeaderForToken(entry.accessToken) },
-  });
-  if (!response.ok) {
-    delete remembered[userId];
-    writeRemembered(remembered);
-    const err = new Error('Remembered session is no longer valid');
-    err.status = response.status;
-    throw err;
-  }
-
-  const user = await response.json();
-  setSession(entry.accessToken, user);
-  return user;
 }
 
 export function clearSession() {
@@ -295,19 +177,48 @@ export function logout() {
   window.location.reload();
 }
 
-// The console.log interception this runtime used to install here was
-// always too late to matter: jellyfin-apiclient-javascript's own
-// Credentials.initialize() logs "Stored JSON credentials: {...}" exactly
-// once, synchronously, during the one real ConnectionManager construction
-// that happens inside jellyfin-web's own main bundle, itself a deferred
-// script. This bootstrap module is also deferred and sits last in the
-// document (IndexHtmlPatchService's own injected block), so by the time
-// any code in this file ever ran, that log had already fired and was
-// gone. Real bug, found on a live install: this whole runtime silently
-// never saw a session, ever, on every load. The capture now happens in a
-// plain (non-deferred, non-module) inline script IndexHtmlPatchService
-// injects ahead of this one, which always runs first regardless of
-// document position, writing the same session shape setSession below
-// does. Nothing here needs to read jellyfin_credentials or hook
-// console.log itself anymore, only find what that earlier script already
-// wrote.
+// Fallback capture path: if a real login ever happens through native
+// jellyfin-web instead of this runtime's own authenticateByName (a stock
+// login screen shown while this codebase has not migrated that route yet),
+// jellyfin-apiclient-javascript's own Credentials.initialize() logs
+// "Stored JSON credentials: {...}" on every boot, real source
+// (lib/jellyfin-apiclient's own credentials.js), confirmed during the
+// reskin codebase's own login work, not guessed at. Real technique,
+// confirmed against JMSFusion's own real source (RuntimeModules/auth.js),
+// not invented here: intercepting console.log is the only way an injected
+// script reaches that value, jellyfin-apiclient-javascript's own module
+// internals are never exposed on window.
+(function interceptNativeCredentialLog() {
+  const marker = 'Stored JSON credentials:';
+  const originalLog = console.log;
+  console.log = function () {
+    try {
+      for (let i = 0; i < arguments.length; i++) {
+        const arg = arguments[i];
+        if (typeof arg === 'string' && arg.indexOf(marker) === 0) {
+          const parsed = JSON.parse(arg.slice(marker.length).trim());
+          const server =
+            parsed && parsed.Servers && parsed.Servers[0];
+          if (server && server.AccessToken && server.UserId) {
+            fetch(getServerAddress() + '/Users/' + server.UserId, {
+              headers: { 'X-Emby-Token': server.AccessToken },
+            })
+              .then(function (res) {
+                return res.ok ? res.json() : null;
+              })
+              .then(function (user) {
+                if (user) setSession(server.AccessToken, user);
+              })
+              .catch(function () {
+                // A failed capture just means native login's own token
+                // stays out of this runtime's session, not a crash.
+              });
+          }
+        }
+      }
+    } catch (err) {
+      // Never let a parsing failure here break console.log itself.
+    }
+    return originalLog.apply(console, arguments);
+  };
+})();
