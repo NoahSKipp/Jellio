@@ -7,7 +7,6 @@
 import { getCurrentUser, updateUserPassword, getSleepTimerStatus, cancelSleepTimer } from '../runtime/api.js';
 import { logout } from '../runtime/auth.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
-import { refreshProfileAvatar } from '../components/sidebar.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -114,7 +113,7 @@ async function buildSleepTimerSection() {
 
 export async function renderSettings(root) {
   root.textContent = '';
-  root.className = 'jellio-content jellio-screen-settings';
+  root.className = 'jellio-screen-settings';
 
   const header = el('header', 'jellio-settings-header');
   header.appendChild(el('h1', 'jellio-settings-title', 'Account'));
@@ -136,12 +135,7 @@ export async function renderSettings(root) {
   const avatarButton = el('button', 'jellio-settings-button', 'Change avatar');
   avatarButton.type = 'button';
   avatarButton.addEventListener('click', function () {
-    // The sidebar's own avatar used to pick this up for free on the
-    // next navigation's own full rebuild; it no longer rebuilds at
-    // all past its first real render (components/sidebar.js's own
-    // renderSidebar), so a changed avatar needs this live nudge or it
-    // never appears until the next reload.
-    openAvatarPicker(refreshProfileAvatar);
+    openAvatarPicker(function () {});
   });
   profile.appendChild(avatarButton);
   root.appendChild(profile);
