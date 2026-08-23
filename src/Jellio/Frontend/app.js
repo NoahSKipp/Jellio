@@ -11,7 +11,9 @@ import { renderDetail } from './screens/detail.js';
 import { renderPlayer } from './screens/player.js';
 import { renderService } from './screens/service.js';
 import { renderSettings } from './screens/settings.js';
+import { renderPerson } from './screens/person.js';
 import { renderSidebar } from './components/sidebar.js';
+import { startNowPlaying } from './components/nowPlaying.js';
 import { onRouteChange, parseRoute } from './runtime/router.js';
 
 const ROOT_ID = 'jellioRoot';
@@ -27,6 +29,7 @@ const SCREENS = {
   play: renderPlayer,
   service: renderService,
   account: renderSettings,
+  person: renderPerson,
   movies: renderLibrary,
   tv: renderLibrary,
   music: renderLibrary,
@@ -40,18 +43,37 @@ const SCREENS = {
 // with video controls for space or attention.
 const FULLSCREEN_ROUTES = new Set(['play']);
 
+// The inner shell used to be built only at the moment #jellioRoot itself
+// was first created, on the assumption a node already in the document
+// keeps whatever it was given. Reported live, twice: on a real install,
+// a later render found #jellioRoot still present but its sidebar mount
+// gone (something outside this codebase's own DOM writes clears it,
+// every write this codebase makes to that structure was checked, none
+// of them remove it), and renderSidebar crashed reading
+// null.textContent on the missing node. sync()'s own catch-all then
+// treated that crash as a real reason to fall back to native, so the
+// whole reskin dropped out from under a signed-in session. A first fix
+// only rebuilt the shell when .jellio-shell itself was gone, which
+// missed the case seen live a second time: the .jellio-shell wrapper
+// survived while just the sidebar mount and content div inside it did
+// not, so that check still found "a shell" and skipped rebuilding.
+// Rebuilding the inner structure on every call sidesteps having to know
+// which element vanishes: every screen and renderSidebar already clear
+// and repopulate their own container the moment they run, so handing
+// them a freshly built empty one each time costs nothing real, and
+// there is no in between paint for a rebuild to visibly flash.
 function getRoot() {
   let root = document.getElementById(ROOT_ID);
   if (!root) {
     root = document.createElement('div');
     root.id = ROOT_ID;
-    root.innerHTML =
-      '<div class="jellio-shell">' +
-      '<nav class="jellio-sidebar-mount"></nav>' +
-      '<main class="jellio-content"></main>' +
-      '</div>';
     document.body.appendChild(root);
   }
+  root.innerHTML =
+    '<div class="jellio-shell">' +
+    '<nav class="jellio-sidebar-mount"></nav>' +
+    '<main class="jellio-content"></main>' +
+    '</div>';
   return root;
 }
 
@@ -79,7 +101,40 @@ function teardownActiveScreen() {
   }
 }
 
+// jellio:session-captured can fire a second sync() while an
+// already-authenticated visit's own initial sync() is still awaiting its
+// screen's data (real case: a returning user, since the credential log
+// this event chases fires on every load, not only fresh logins, see
+// Services/IndexHtmlPatchService.cs). Both calls share the same content
+// element, so an overlapping second call's own root.textContent = ''
+// wipes whatever the first call already inserted, while the first call
+// keeps appending into the DOM node it originally grabbed a reference
+// to, now detached and invisible. Real bug: on a returning user this
+// left the page showing only whatever had rendered before the second
+// wipe (the greeting, quick) with every row still populating an orphaned
+// element. Queueing keeps exactly one sync() body running at a time and
+// coalesces any call that arrives mid-render into a single rerun after,
+// rather than letting two renders interleave into the same DOM.
+let syncRunning = false;
+let syncQueued = false;
+
 async function sync() {
+  if (syncRunning) {
+    syncQueued = true;
+    return;
+  }
+  syncRunning = true;
+  try {
+    do {
+      syncQueued = false;
+      await runSync();
+    } while (syncQueued);
+  } finally {
+    syncRunning = false;
+  }
+}
+
+async function runSync() {
   try {
     const route = parseRoute();
     const screen = SCREENS[route.path];
@@ -91,6 +146,7 @@ async function sync() {
     }
 
     teardownActiveScreen();
+    startNowPlaying();
 
     const root = getRoot();
     root.classList.add('jellio-root-visible');
@@ -116,6 +172,15 @@ async function sync() {
 }
 
 onRouteChange(sync);
+
+// The early inline script IndexHtmlPatchService injects ahead of this
+// module captures a native login's own token synchronously, but still
+// resolves the full user object with its own async fetch, which can
+// still be in flight when this module's own first sync() call already
+// ran and found no session yet. This event fires once that fetch
+// finishes, so the very first render happens as soon as a session is
+// real rather than waiting on a hashchange that may never come.
+document.addEventListener('jellio:session-captured', sync);
 
 // Best effort: a report sent from here can still be dropped by the
 // browser before it lands, the same real limitation every other Jellyfin

@@ -495,3 +495,174 @@ export function buildSubtitleUrl(itemId, mediaSourceId, stream) {
     (token ? '?ApiKey=' + encodeURIComponent(token) : '')
   );
 }
+
+// Real endpoint, GET /Jellio/now-playing (Controllers/NowPlayingController.cs,
+// ported verbatim), reads Jellyfin's own real ISessionManager server side,
+// every active session with NowPlayingItem set, any signed in user, this
+// is a shared "who is watching what" surface by design.
+export function getNowPlayingSessions() {
+  return getJson('/Jellio/now-playing');
+}
+
+// The next episode after this one, for the player's own up-next overlay.
+// No native jellyfin-web up next dialog to reskin here (that only exists
+// in jellyfin-web's own player bundle, unreachable from this runtime, see
+// screens/player.js's own header), so this runtime finds it itself from
+// data already fetched elsewhere: the current season's own episode list,
+// falling back to the next season's first episode at a season boundary.
+export async function getNextEpisode(item) {
+  if (!item || item.Type !== 'Episode' || !item.SeriesId) return null;
+
+  if (item.SeasonId) {
+    const episodes = await getEpisodes(item.SeriesId, item.SeasonId);
+    const index = episodes.findIndex(function (episode) {
+      return episode.Id === item.Id;
+    });
+    if (index !== -1 && index + 1 < episodes.length) {
+      return episodes[index + 1];
+    }
+  }
+
+  const seasons = await getSeasons(item.SeriesId);
+  const seasonIndex = seasons.findIndex(function (season) {
+    return season.Id === item.SeasonId;
+  });
+  const nextSeason = seasonIndex !== -1 ? seasons[seasonIndex + 1] : null;
+  if (!nextSeason) return null;
+
+  const nextEpisodes = await getEpisodes(item.SeriesId, nextSeason.Id);
+  return nextEpisodes.length ? nextEpisodes[0] : null;
+}
+
+// Random, not DateCreated: Gelato stamps DateCreated as the import
+// instant (Services/CatalogImportService.cs), the same for every title a
+// catalog import brought in at once, so sorting by it means "whichever
+// page happened to sort first among several hundred titles stamped the
+// same second", not "newest". Confirmed against the original Jellio
+// codebase's own heroCarousel.js before porting the same choice here.
+export function getHeroCandidates(limit, options) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const opts = options || {};
+  const params = new URLSearchParams({
+    SortBy: 'Random',
+    Recursive: 'true',
+    IncludeItemTypes: opts.itemTypes || 'Movie,Series',
+    Limit: String(limit || 8),
+    Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating',
+  });
+  if (opts.parentId) params.set('ParentId', opts.parentId);
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
+// Which genres a library actually has enough of to be worth a row,
+// ported from the original codebase's own libraryBrowse.js
+// discoverGenres(): counted from a random sample rather than asked of
+// /Genres, since that endpoint answers which genre names exist, not
+// which carry enough titles for a row worth scrolling. A genre with
+// fewer than 8 titles in the sample is dropped, same threshold, same
+// reasoning, not re-derived.
+export function discoverGenres(parentId, itemType, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    ParentId: parentId,
+    Recursive: 'true',
+    IncludeItemTypes: itemType,
+    Limit: '300',
+    Fields: 'Genres',
+    SortBy: 'Random',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString())
+    .then(function (result) {
+      const items = (result && result.Items) || [];
+      const counts = {};
+      items.forEach(function (item) {
+        (item.Genres || []).forEach(function (genre) {
+          counts[genre] = (counts[genre] || 0) + 1;
+        });
+      });
+      return Object.keys(counts)
+        .filter(function (genre) {
+          return counts[genre] >= 8;
+        })
+        .sort(function (a, b) {
+          return counts[b] - counts[a];
+        })
+        .slice(0, limit || 6);
+    })
+    .catch(function () {
+      return [];
+    });
+}
+
+export function getGenreItems(parentId, itemType, genre, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    ParentId: parentId,
+    Recursive: 'true',
+    IncludeItemTypes: itemType,
+    Genres: genre,
+    Limit: String(limit || 20),
+    Fields: 'ProductionYear,CommunityRating',
+    SortBy: 'CommunityRating',
+    SortOrder: 'Descending',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
+// Soft dependency on the community Intro Skipper plugin
+// (github.com/intro-skipper/intro-skipper). Real endpoint confirmed
+// against its own SkipIntroController.cs before writing this: GET
+// /Episode/{id}/Timestamps, despite the route name it works for both
+// Episode and Movie items. A segment with no real detection comes back
+// as Start: 0, End: 0, the server's own Segment.Valid rule is End > 0,
+// not something this runtime invents. Any failure (plugin not
+// installed, unknown item) resolves to an empty object rather than
+// throwing, since this is a soft dependency: no segments is a normal
+// outcome, not an error worth surfacing.
+export async function getIntroSkipperSegments(itemId) {
+  try {
+    const result = await getJson('/Episode/' + itemId + '/Timestamps');
+    return result || {};
+  } catch (err) {
+    return {};
+  }
+}
+
+// A person's own real item DTO (name, overview, image tag), the same
+// generic GET /Users/{id}/Items/{itemId} every other item detail lookup
+// in this file already uses, works for a Person item exactly like it
+// does for a Movie or Series.
+export function getPerson(personId) {
+  return getItem(personId);
+}
+
+// A person's filmography, real endpoint confirmed against
+// Jellyfin.Api.Controllers.ItemsController.cs before writing this:
+// GET /Items?personIds=X, a real, documented query param (comma
+// delimited, lowercase in the query string despite PascalCase
+// everywhere else in this file, confirmed from the controller's own
+// parameter binding), not guessed from the Filters pattern this file
+// uses elsewhere.
+export function getPersonFilmography(personId, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    personIds: personId,
+    Recursive: 'true',
+    IncludeItemTypes: 'Movie,Series',
+    SortBy: 'PremiereDate',
+    SortOrder: 'Descending',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear',
+    Limit: String(limit || 50),
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}

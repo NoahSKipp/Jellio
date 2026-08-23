@@ -113,7 +113,7 @@ async function buildSleepTimerSection() {
 
 export async function renderSettings(root) {
   root.textContent = '';
-  root.className = 'jellio-screen-settings';
+  root.className = 'jellio-content jellio-screen-settings';
 
   const header = el('header', 'jellio-settings-header');
   header.appendChild(el('h1', 'jellio-settings-title', 'Account'));
