@@ -1,10 +1,10 @@
 // First real screen, proof of the whole architecture end to end: its own
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
-// read or waited on. Deliberately minimal (no hero yet, no per row scroll
-// buttons) until the pattern this establishes is worth repeating elsewhere.
+// read or waited on.
 import { getCurrentUser, getUserViews, getResumeItems, getLatestItems, getFavoriteItems, getCollections } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
 import { groupByService, logoSlug } from '../components/services.js';
+import { buildHeroCarousel } from '../components/heroCarousel.js';
 import { navigateTo } from '../runtime/router.js';
 
 function el(tag, className, text) {
@@ -106,12 +106,15 @@ async function renderFavorites(root) {
 
 export async function renderHome(root, params) {
   root.textContent = '';
-  root.className = 'jellio-screen-home';
+  root.className = 'jellio-content jellio-screen-home';
 
   if (params && params.get('tab') === '1') {
     await renderFavorites(root);
-    return;
+    return undefined;
   }
+
+  const hero = buildHeroCarousel();
+  root.appendChild(hero.element);
 
   const header = el('header', 'jellio-home-header');
   const [user] = await Promise.allSettled([getCurrentUser()]);
@@ -154,4 +157,6 @@ export async function renderHome(root, params) {
       }
     });
   }
+
+  return hero.destroy;
 }
