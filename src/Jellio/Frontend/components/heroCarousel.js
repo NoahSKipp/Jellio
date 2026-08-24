@@ -9,6 +9,7 @@
 // non-Series item also gets a real Play button straight into #/play.
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
+import { openStreamPicker } from './streamPicker.js';
 
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
@@ -61,7 +62,7 @@ function crossfadeBackdrop(container, url) {
 }
 
 export function buildHeroCarousel(options) {
-  const root = el('div', 'jellio-hero');
+  const root = el('div', 'jellio-hero jellio-hero-loading');
   const backdrop = el('div', 'jellio-hero-backdrop');
   const scrim = el('div', 'jellio-hero-scrim');
   const content = el('div', 'jellio-hero-content');
@@ -120,6 +121,7 @@ export function buildHeroCarousel(options) {
     if (!items.length) return;
     const item = items[index];
 
+    root.classList.remove('jellio-hero-loading');
     crossfadeBackdrop(backdrop, getImageUrl(item.Id, 'Backdrop', { maxWidth: 1600 }));
 
     logo.classList.remove('jellio-hero-logo-hidden');
@@ -146,7 +148,7 @@ export function buildHeroCarousel(options) {
 
   playButton.addEventListener('click', function () {
     if (!items.length) return;
-    navigateTo('#/play?id=' + items[index].Id);
+    openStreamPicker(items[index]);
   });
   infoButton.addEventListener('click', function () {
     if (!items.length) return;
@@ -171,7 +173,10 @@ export function buildHeroCarousel(options) {
 
   getHeroCandidates(CANDIDATE_LIMIT, options)
     .then(function (result) {
-      if (!result.length) return;
+      if (!result.length) {
+        root.classList.remove('jellio-hero-loading');
+        return;
+      }
       items = result;
       index = 0;
       render();
@@ -187,6 +192,7 @@ export function buildHeroCarousel(options) {
     })
     .catch(function (err) {
       console.warn('Jellio: hero carousel could not load candidates', err);
+      root.classList.remove('jellio-hero-loading');
     });
 
   return {

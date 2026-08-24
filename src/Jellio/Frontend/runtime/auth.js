@@ -16,6 +16,7 @@ const STORAGE_PREFIX = 'jellio_auth::';
 const SERVER_ADDRESS_KEY = STORAGE_PREFIX + 'serverAddress';
 const DEVICE_ID_KEY = STORAGE_PREFIX + 'deviceId';
 const SESSION_KEY = STORAGE_PREFIX + 'session';
+const NATIVE_CREDENTIALS_KEY = 'jellyfin_credentials';
 
 const CLIENT_NAME = 'Jellio';
 const CLIENT_VERSION = '0.1.0';
@@ -88,6 +89,81 @@ export function getCurrentUser() {
   return session ? session.user || null : null;
 }
 
+// A login this runtime's own authenticateByName/quickSignIn handles
+// never touches native jellyfin-web's own ApiClient at all (this
+// file's own header explains why), which left native with no session
+// of its own: the very next unmigrated route, or a plain reload before
+// this runtime's own bootstrap took over, found native's own
+// 'jellyfin_credentials' store empty and asked to sign in a second
+// time, reported live on a cold cache. Real shape, read from
+// jellyfin-apiclient-javascript's own credentials.js (addOrUpdateServer)
+// before writing this, not guessed at: a Servers array keyed by each
+// server's own real Id, AccessToken/UserId making an entry "signed in"
+// the moment connectionManager.connect() finds it. Best effort: a
+// failed /System/Info/Public call here only loses native's own free
+// ride, not this runtime's own real session, which setSession below
+// has already committed by the time this runs.
+async function syncNativeCredentials(accessToken, user) {
+  try {
+    const response = await fetch(getServerAddress() + '/System/Info/Public');
+    if (!response.ok) return;
+    const info = await response.json();
+    if (!info || !info.Id) return;
+
+    const existing = readJson(NATIVE_CREDENTIALS_KEY);
+    const servers = (existing && Array.isArray(existing.Servers) ? existing.Servers : []).filter(function (
+      server,
+    ) {
+      return server.Id !== info.Id;
+    });
+    servers.push({
+      Id: info.Id,
+      AccessToken: accessToken,
+      UserId: user.Id,
+      ManualAddress: getServerAddress(),
+      LocalAddress: getServerAddress(),
+      Name: info.ServerName || '',
+      DateLastAccessed: Date.now(),
+      UserLinkType: 'Linked',
+    });
+    writeJson(NATIVE_CREDENTIALS_KEY, { Servers: servers });
+  } catch (err) {
+    // Best effort, see header above.
+  }
+}
+
+// syncNativeCredentials above only ever helps a native reconnect that
+// has not happened yet: real jellyfin-apiclient-javascript source
+// (src/apiClient.js), read before writing this, keeps its own actual
+// "am I logged in" state in a plain in-memory flag on the ApiClient
+// instance itself (_loggedIn, set by setAuthenticationInfo), read once
+// at that instance's own construction and never re-polled from
+// localStorage afterward. Writing jellyfin_credentials after the fact
+// changes nothing about a native ApiClient instance already sitting in
+// memory since this page's own load, real bug found live: signing in
+// here still bounced straight into native's own login/select-user
+// screen on the very next real navigation, since window.Emby.Page.show()
+// (runtime/router.js's own navigateTo, used for every real navigation
+// so native's own click handlers still work) runs through native's own
+// route guard, which reads that same stale in-memory flag, not
+// anything this runtime writes to storage. setAuthenticationInfo is a
+// plain property assignment, no network request, so this carries none
+// of the real risk a full native reconnect already showed on this
+// exact codebase's own prior attempt at this (this file's own header,
+// "the exact mechanism that later got pulled"): that risk was
+// specifically in re-running validateAuthentication() over the
+// network, which this never does.
+function syncNativeApiClientState(accessToken, user) {
+  try {
+    if (window.ApiClient && typeof window.ApiClient.setAuthenticationInfo === 'function') {
+      window.ApiClient.setAuthenticationInfo(accessToken, user.Id);
+    }
+  } catch (err) {
+    // Native's own guard stays wrong for the rest of this page's life
+    // if this fails, not this runtime's own real session.
+  }
+}
+
 // The one real completion signal a login can give this runtime: a
 // server response carrying a fresh AccessToken and User. Called either
 // after this runtime's own direct authenticateByName call, or by the
@@ -102,6 +178,8 @@ export function setSession(accessToken, user) {
   });
   writeJson(SERVER_ADDRESS_KEY, getServerAddress());
   rememberUser(accessToken, user);
+  syncNativeCredentials(accessToken, user);
+  syncNativeApiClientState(accessToken, user);
 }
 
 // This runtime's own {userId: {accessToken, name, primaryImageTag, ts}}
@@ -255,6 +333,25 @@ export function getAuthHeaders() {
   return { Authorization: buildAuthHeader() };
 }
 
+// Real, unauthenticated Jellyfin endpoint (GET /Users/Public,
+// Jellyfin.Api/Controllers/UserController.cs's own GetPublicUsers,
+// read before writing this): a real admin's own per-user "Display
+// this user on the login screen" toggle (UserPolicy.IsHidden) is
+// already enforced server side, this runtime only has to render
+// whatever comes back, not filter anything itself. The one real case
+// this covers that remembered sign-in cannot: a device that has never
+// signed in here before still gets a real profile grid instead of a
+// bare username field, the same first-run experience native's own
+// login page already gives every user who opted into it.
+export async function getPublicUsers() {
+  const response = await fetch(getServerAddress() + '/Users/Public', {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) return [];
+  const result = await response.json();
+  return Array.isArray(result) ? result : [];
+}
+
 // Real Jellyfin endpoint, checked against apps/legacy/controllers/session/
 // login/index.js before writing this: POST /Users/AuthenticateByName with
 // {Username, Pw}, response carries {AccessToken, User}. No native ApiClient
@@ -278,6 +375,67 @@ export async function authenticateByName(username, password) {
   const result = await response.json();
   setSession(result.AccessToken, result.User);
   return result;
+}
+
+// Real Jellyfin endpoint, checked against Jellyfin.Api/Controllers/
+// UserController.cs's own ForgotPassword action before writing this:
+// POST /Users/ForgotPassword with {EnteredUsername}. The real
+// response's own Action field (ForgotPasswordAction, real source
+// again) is deliberately the same PinCode value whether or not the
+// username exists at all, ContactAdmin/InNetworkRequired are both
+// marked Obsolete on the server's own side over exactly that "returning
+// different actions represents a security concern", so this runtime
+// has to give the same generic "check your email" message regardless
+// of the real result too, or it would leak back out the exact thing
+// the server itself stopped leaking. A real pin file only gets written
+// server side when the account is real; jfa-go (already configured
+// server side, real reference: github.com/hrfee/jfa-go's own
+// pwreset.go, validatePWR watches for exactly that file) is what
+// turns a real one into a real email, no separate jfa-go API call
+// from here at all.
+export async function requestPasswordReset(username) {
+  const response = await fetch(getServerAddress() + '/Users/ForgotPassword', {
+    method: 'POST',
+    headers: Object.assign(
+      { 'Content-Type': 'application/json', Accept: 'application/json' },
+      getAuthHeaders(),
+    ),
+    body: JSON.stringify({ EnteredUsername: username }),
+  });
+  if (!response.ok) {
+    const err = new Error('Could not request a password reset');
+    err.status = response.status;
+    throw err;
+  }
+  return response.json();
+}
+
+// Real Jellyfin endpoint, checked against the same controller's own
+// ForgotPasswordPin action: POST /Users/ForgotPassword/Pin with {Pin},
+// response carries a real Success boolean (PinRedeemResult, real
+// source, no guessed field name). A real redeem clears the account's
+// own password server side rather than setting the one this runtime
+// would want it to end on, real Jellyfin behaviour, not a choice made
+// here: screens/login.js's own forgot password flow signs back in
+// with a blank password immediately after a real Success, then calls
+// updateUserPassword to set the reader's own real new one, the same
+// two real calls the stock profile page's own "forgot password" flow
+// already makes for the same reason.
+export async function redeemPasswordResetPin(pin) {
+  const response = await fetch(getServerAddress() + '/Users/ForgotPassword/Pin', {
+    method: 'POST',
+    headers: Object.assign(
+      { 'Content-Type': 'application/json', Accept: 'application/json' },
+      getAuthHeaders(),
+    ),
+    body: JSON.stringify({ Pin: pin }),
+  });
+  if (!response.ok) {
+    const err = new Error('Could not redeem the reset code');
+    err.status = response.status;
+    throw err;
+  }
+  return response.json();
 }
 
 // Clears this runtime's own session and native jellyfin-web's own
