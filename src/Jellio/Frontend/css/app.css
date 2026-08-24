@@ -3,11 +3,8 @@
    project, same values, this is not new third party IP. */
 :root {
   --jellio-bg-color: #0d0d0d;
-  --jellio-bg-color-rgb: 13 13 13;
   --jellio-bg-elevated: #1a1a1a;
-  --jellio-bg-elevated-rgb: 26 26 26;
   --jellio-card-bg: #222222;
-  --jellio-card-bg-rgb: 34 34 34;
   --jellio-secondary-color: #f5f5f5;
   --jellio-secondary-variant: #e0e0e0;
   --jellio-on-secondary: #111111;
@@ -16,36 +13,14 @@
   --jellio-text-tertiary: #808080;
   --jellio-border-color: #333333;
   --jellio-font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  --jellio-card-radius: clamp(14px, 1.1vw, 22px);
-  --jellio-card-gap: clamp(12px, 1vw, 18px);
-  --jellio-focus-color-rgb: 255 255 255;
+  --jellio-card-radius: clamp(10px, 0.9vw, 16px);
   --jellio-safe-gutter: clamp(28px, 3vw, 56px);
-  /* A fixed width on purpose, not a clamp against vw: a persistent rail
-     that resizes itself on every real viewport change (a tablet
-     rotating, a browser's own address bar collapsing on scroll, split
-     screen multitasking) reads as broken, not responsive, real feedback
-     reported directly as "the sidebar keeps changing size". em still
-     scales it with a reader's own font-size preference, the one axis
-     worth tracking; vw never bought anything this rail actually needed. */
-  --jellio-sidebar-width: 15em;
 }
 
 /* Covers the native page rather than removing it: native jellyfin-web
    keeps running underneath, unaware, so a screen this runtime has not
    built yet can just stay hidden here and native rendering shows through
-   with nothing to reconcile.
-   font-size pinned here on purpose: jellyfin-web's own fonts.sized.scss
-   sets the real <html> element's own font-size from a min-height media
-   query (20px at 720px, 27px at 1000px), live, not just at load, so
-   every em in this file was quietly resizing with it, the sidebar rail
-   the most visible of them (its own width is an em based clamp) but
-   never the only one. Every em anywhere in this file now resolves
-   against this fixed local root instead of that moving one, real
-   feedback reported directly as the rail changing size on its own.
-   rem could not fix this on its own (rem always means the true page
-   root's own font-size, this override or not), so every rem in this
-   file was converted to em alongside this: same value, now anchored
-   here instead of drifting with jellyfin-web's own breakpoints. */
+   with nothing to reconcile. */
 #jellioRoot {
   display: none;
   position: fixed;
@@ -53,7 +28,6 @@
   z-index: 9999;
   background: var(--jellio-bg-color);
   font-family: var(--jellio-font-family);
-  font-size: 16px;
   color: var(--jellio-text-color);
 }
 
@@ -61,52 +35,13 @@
   display: block;
 }
 
-/* 100vh alone is the one thing every position: absolute; bottom: 0
-   control anywhere in this codebase (screens/player.js's own
-   controls bar chief among them) ultimately measures itself against,
-   and on a real mobile browser it is not the same number as the real
-   visible viewport: a real address bar showing or hiding changes how
-   much of the screen is actually visible without changing 100vh at
-   all, which real mobile browsers instead define against the
-   largest the viewport could ever be, address bar hidden. Reported
-   live as the player's own controls sometimes rendering correctly
-   and sometimes not on the exact same real device, no different
-   screen, no different route, matching this exactly: whichever state
-   the real address bar happened to be in decided whether 100vh's own
-   real number for that load actually matched what a reader could
-   really see. 100dvh (dynamic viewport height, a real CSS unit built
-   for exactly this, not this codebase's own invention) tracks the
-   real visible viewport as that real address bar shows or hides
-   instead, kept as a second declaration rather than a replacement so
-   a real browser too old to know dvh at all still gets the 100vh
-   fallback above it rather than an unset height. */
 .jellio-shell {
   display: flex;
   height: 100vh;
-  height: 100dvh;
 }
 
-/* Matches .jellio-sidebar's own width below rather than flex: 0 0 auto,
-   which sized this mount off its own children instead. getRoot()
-   rebuilds the shell's inner HTML on every render (self-heal fix,
-   app.js), so this mount sits briefly empty before renderSidebar()'s
-   own async work repopulates it, and an auto flex-basis collapsed an
-   empty mount to near nothing before snapping back once content
-   landed, a real visible size flash on every navigation, reported
-   live. A fixed basis reserves the final width immediately regardless
-   of what has loaded into it yet. */
 .jellio-sidebar-mount {
-  flex: 0 0 var(--jellio-sidebar-width);
-}
-
-/* Hidden rather than emptied: app.js's own runSync() used to clear
-   this mount's own content outright for the player route, which left
-   components/sidebar.js's own "already built" marker on a now empty
-   container, and the next real navigation found nothing left to
-   update. The built rail sits here unrendered instead, so leaving the
-   player needs no rebuild either. */
-.jellio-root-fullscreen .jellio-sidebar-mount {
-  display: none;
+  flex: 0 0 auto;
 }
 
 .jellio-content {
@@ -120,29 +55,21 @@
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
-  width: var(--jellio-sidebar-width);
+  width: clamp(64px, 6vw, 96px);
   height: 100%;
-  padding: 20px 12px 32px;
-  overflow-y: auto;
+  padding: 20px 8px;
   background: var(--jellio-bg-elevated);
   border-right: 1px solid var(--jellio-border-color);
 }
 
-/* Row layout, icon beside the label rather than stacked above it,
-   matching the original codebase's own persistent-sidebar.css. The
-   stacked layout this rail shipped with first sized the rail itself
-   off a narrow clamp(64px, 6vw, 96px) that left no room for a real
-   label, truncating "Settings" to a few letters, reported live
-   directly against a screenshot. */
 .jellio-sidebar-link {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: 0.9em;
-  height: 2.75em;
-  padding: 0 0.85em;
+  gap: 4px;
+  padding: 10px 4px;
   border: 0;
-  border-radius: 0.75em;
+  border-radius: var(--jellio-card-radius);
   background: transparent;
   color: var(--jellio-text-secondary);
   cursor: pointer;
@@ -156,22 +83,16 @@
 
 .jellio-sidebar-link-active {
   color: var(--jellio-text-color);
-  background: rgb(255 255 255 / 0.12);
+  background: rgb(255 255 255 / 0.1);
 }
 
-/* Shared between the sidebar rail and the mobile pill bar
-   (components/navShared.js's own buildIconElement builds both from the
-   same icon data), em based so either one sizes with its own font
-   scale rather than a viewport fraction independent of the row
-   around it. */
-.jellio-nav-icon-svg {
-  width: 1.75em;
-  height: 1.75em;
+.jellio-sidebar-icon-svg {
+  width: 22px;
+  height: 22px;
   fill: currentColor;
-  flex: 0 0 auto;
 }
 
-.jellio-nav-icon-svg-stroke {
+.jellio-sidebar-icon-svg-stroke {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.6;
@@ -180,18 +101,16 @@
 }
 
 .jellio-sidebar-link .material-icons {
-  font-size: 1.75em;
-  flex: 0 0 auto;
+  font-size: 22px;
 }
 
 .jellio-sidebar-label {
-  font-size: 0.92em;
-  font-weight: 500;
-  text-align: left;
+  font-size: 0.62rem;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
+  max-width: 100%;
 }
 
 .jellio-sidebar-divider {
@@ -204,186 +123,13 @@
   flex: 1 1 auto;
 }
 
-/* Floating pill for a real phone width, components/mobileNav.js's own
-   mount. Hidden by default (the sidebar rail is the default for every
-   tablet/desktop width), shown only inside the mobile breakpoint below,
-   and hidden again under .jellio-root-fullscreen the same way the
-   sidebar rail already is, real feedback specifically distinguishing
-   "mobile" from a tablet's own narrower-but-still-a-rail width. */
-.jellio-mobile-nav-mount {
-  display: none;
-}
-
-.jellio-root-fullscreen .jellio-mobile-nav-mount {
-  display: none;
-}
-
-/* pointer:coarse, not a width threshold: a real tablet's own CSS
-   viewport can sit well past any width worth calling "mobile" (some
-   report native pixel width directly, no virtual viewport scaling),
-   so no width value this project picked ever reliably caught every
-   real tablet, confirmed live twice over on two different width
-   thresholds. This asks the real question instead: is the primary
-   input a finger, not a mouse. The width clause stays only for a real
-   desktop window resized down narrow by hand, still mouse-driven, the
-   one case pointer:coarse cannot cover by itself. app.js's own
-   applyResponsiveNav() enforces the same switch again in inline
-   style, this rule is the fallback for whatever renders before that
-   runs. */
-@media (pointer: coarse), (max-width: 47.99em) {
-  .jellio-sidebar-mount {
-    display: none;
-  }
-
-  .jellio-mobile-nav-mount {
-    display: flex;
-  }
-
-  .jellio-content {
-    /* Room for the floating pill so the last real row on any screen
-       does not sit underneath it. */
-    padding-bottom: 6em;
-  }
-}
-
-@keyframes jellio-mobile-nav-enter {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(16px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-.jellio-mobile-nav {
-  /* Every size below is em against this, so bumping it once here
-     scales icons, labels and padding together rather than a dozen
-     separate values: real feedback called the whole pill "way too
-     small", not any one part of it, once a real tablet's own width
-     started reaching this bar instead of only a phone's. */
-  font-size: 19px;
-  position: fixed;
-  left: 50%;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
-  z-index: 9998;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  max-width: calc(100vw - 2 * var(--jellio-safe-gutter));
-  padding: 0.6em 0.7em;
-  border-radius: 999px;
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
-  transition: padding 220ms cubic-bezier(0.4, 0, 0.2, 1);
-  animation: jellio-mobile-nav-enter 360ms cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-/* "Slightly more compact", real feedback's own words: padding tightens
-   a little rather than the pill changing shape outright. */
-.jellio-mobile-nav-compact {
-  padding: 0.4em 0.5em;
-}
-
-.jellio-mobile-nav-scroll {
-  display: flex;
-  align-items: center;
-  gap: 0.15em;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.jellio-mobile-nav-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.jellio-mobile-nav-link {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2em;
-  flex: 0 0 auto;
-  min-width: 3.4em;
-  padding: 0.45em 0.55em;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--jellio-text-secondary);
-  cursor: pointer;
-  transition: background-color 180ms ease, color 180ms ease, transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-mobile-nav-link:active {
-  transform: scale(0.9);
-}
-
-.jellio-mobile-nav-link-active {
-  color: var(--jellio-text-color);
-  background: rgb(255 255 255 / 0.12);
-}
-
-.jellio-mobile-nav-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5em;
-  height: 1.5em;
-}
-
-.jellio-mobile-nav-icon .jellio-nav-icon-svg {
-  width: 1.5em;
-  height: 1.5em;
-}
-
-.jellio-mobile-nav-icon .material-icons {
-  font-size: 1.5em;
-}
-
-.jellio-mobile-nav-icon .jellio-nav-avatar-mount,
-.jellio-mobile-nav-icon .jellio-nav-avatar {
-  width: 1.5em;
-  height: 1.5em;
-}
-
-/* Collapses smoothly rather than snapping away, real feedback asked
-   for "fast reactive nice": max-height/opacity both animate, so the
-   row beneath settles into the freed space at the same pace the text
-   fades rather than jumping the instant scroll crosses the threshold. */
-.jellio-mobile-nav-label {
-  max-height: 1.2em;
-  margin-top: 0;
-  opacity: 1;
-  font-size: 0.66em;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  max-width: 4.4em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: max-height 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 160ms ease,
-    margin-top 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-mobile-nav-compact .jellio-mobile-nav-label {
-  max-height: 0;
-  margin-top: -0.15em;
-  opacity: 0;
-}
-
 .jellio-home-header {
   padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
 }
 
 .jellio-home-greeting {
   margin: 0;
-  font-size: clamp(1.4em, 2.2vw, 2em);
+  font-size: clamp(1.4rem, 2.2vw, 2rem);
   font-weight: 700;
 }
 
@@ -397,92 +143,15 @@
 .jellio-row-title {
   margin: 0 0 0.6em;
   padding: 0 var(--jellio-safe-gutter);
-  font-size: clamp(1em, 1.3vw, 1.3em);
+  font-size: clamp(1rem, 1.3vw, 1.3rem);
   font-weight: 700;
-}
-
-/* Nuvio's own real HomeSkeletonLoading (features/home/components/
-   HomeSkeletonLoading.kt, confirmed against its real source before
-   writing this): a 1200ms diagonal shimmer sweep, generic enough to
-   reuse anywhere a shape needs to read as "still loading" rather than
-   just sitting there gray. components/homeSkeleton.js's own row/card
-   placeholders below apply it, jellio-hero-loading further down does
-   the same over the hero's own real backdrop while it has nothing
-   real to show yet.
-
-   Animates transform on a pseudo-element overlay, not background-
-   position on the element itself: real feedback live was that
-   everything on screen got slower the moment this shipped, traced to
-   background-position forcing a real repaint on every animation frame,
-   on every one of these elements at once (up to two dozen, hero
-   included), competing with the very JS work this was supposed to
-   make feel faster. transform runs on the compositor instead, real
-   cost close to free no matter how many of these are animating at
-   once. */
-@keyframes jellio-shimmer-sweep {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-.jellio-shimmer {
-  position: relative;
-  overflow: hidden;
-  background: rgb(255 255 255 / 0.04);
-}
-
-.jellio-shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    100deg,
-    transparent 30%,
-    rgb(255 255 255 / 0.14) 45%,
-    transparent 60%
-  );
-  animation: jellio-shimmer-sweep 1200ms linear infinite;
-}
-
-.jellio-home-skeleton-row-title {
-  margin: 0 0 0.6em;
-  margin-left: var(--jellio-safe-gutter);
-  width: 8em;
-  height: 1.1em;
-  border-radius: 4px;
-}
-
-.jellio-home-skeleton-row-track {
-  display: flex;
-  gap: var(--jellio-card-gap);
-  padding: 14px var(--jellio-safe-gutter) 0.5em;
-  overflow: hidden;
-}
-
-.jellio-home-skeleton-card {
-  flex: 0 0 auto;
-  width: clamp(120px, 11vw, 180px);
-  aspect-ratio: 2 / 3;
-  border-radius: var(--jellio-card-radius);
 }
 
 .jellio-row-track {
   display: flex;
-  gap: var(--jellio-card-gap);
+  gap: clamp(10px, 1vw, 16px);
   overflow-x: auto;
-  /* overflow-x: auto forces overflow-y to compute as auto too (a
-     visible axis paired with a non-visible one always does), so a
-     hovered card's own scale transform and outline get clipped by this
-     track the instant either exceeds its box. Real feedback: the hover
-     enlarge this codebase's own cards.css had ("Cards don't enlarge on
-     hover anymore") wasn't lost, this track just never had the vertical
-     room to show it, clipping the outline too. Padding-top gives the
-     scaled-up card somewhere to grow into. */
-  padding: 14px var(--jellio-safe-gutter) 0.5em;
+  padding: 0 var(--jellio-safe-gutter) 0.5em;
   scrollbar-width: none;
 }
 
@@ -490,87 +159,10 @@
   display: none;
 }
 
-.jellio-row-track-wrap {
-  position: relative;
-}
-
-/* Hidden by default and revealed on hover rather than always shown:
-   ported from Harbor's own arrowed-scroll-row.tsx idea (a hover
-   revealed control that pages the track), a row with no visible way
-   to move it except a drag or a trackpad swipe was the real gap, real
-   feedback asked for more animation "where it fits". jellio-row-arrow-
-   visible is toggled by components/row.js's own scroll listener, on
-   whether that direction still has anywhere left to go, not just on
-   hover: an arrow sitting there doing nothing at the row's own end is
-   worse than no arrow. */
-.jellio-row-arrow {
-  position: absolute;
-  top: calc(50% + 7px);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: clamp(34px, 2.8vw, 46px);
-  height: clamp(34px, 2.8vw, 46px);
-  border: 0;
-  border-radius: 50%;
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--jellio-text-color);
-  font-size: 1.5em;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%) scale(0.85);
-  transition:
-    opacity 200ms ease,
-    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 160ms ease;
-}
-
-.jellio-row-track-wrap:hover .jellio-row-arrow-visible,
-.jellio-row-arrow-visible:focus-visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(-50%) scale(1);
-}
-
-.jellio-row-arrow:hover {
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.95);
-}
-
-.jellio-row-arrow:focus-visible {
-  outline: 2px solid rgb(var(--jellio-focus-color-rgb) / 0.9);
-  outline-offset: 2px;
-}
-
-.jellio-row-arrow-prev {
-  left: calc(var(--jellio-safe-gutter) - 1.3em);
-}
-
-.jellio-row-arrow-next {
-  right: calc(var(--jellio-safe-gutter) - 1.3em);
-}
-
 .jellio-card {
   flex: 0 0 auto;
   width: clamp(120px, 11vw, 180px);
   cursor: pointer;
-}
-
-/* components/cardOptionsMenu.js's own animateCardRemoval(): a Continue
-   Watching card leaving that row for good (Remove from Continue
-   Watching) fades, shrinks and blurs out in place rather than just
-   vanishing or sitting there under a repainted badge, the closest a
-   web target gets to Nuvio's own real spring-collapse removal without
-   a haptic channel to fire alongside it. */
-.jellio-card-removing {
-  transition: opacity 260ms ease, transform 260ms ease, filter 260ms ease;
-  opacity: 0;
-  transform: scale(0.82);
-  filter: blur(6px);
-  pointer-events: none;
 }
 
 .jellio-card-image-wrap {
@@ -584,36 +176,15 @@
   object-fit: cover;
   background: var(--jellio-card-bg);
   display: block;
-  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jellio-card-image-empty {
   background: var(--jellio-card-bg);
 }
 
-/* Title carries the primary text colour rather than the secondary one:
-   the original codebase's own cards.css puts .cardText (the card's own
-   title line) in --jellio-text-color, the same weight as the rest of
-   the app's own copy, not the dimmer secondary tone. */
 .jellio-card-title {
   margin-top: 0.5em;
-  font-size: 0.85em;
-  color: var(--jellio-text-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Up Next/Continue Watching only, components/card.js's own
-   episodeSubtitle(): the series name alone (jellio-card-title above)
-   does not say where in it a given episode sits, real feedback was
-   there was no way to tell a bare episode thumbnail and title apart
-   from any other row's. Secondary text colour and a touch smaller,
-   same relationship the title/subtitle pairing already has on
-   screens/detail.js's own header. */
-.jellio-card-subtitle {
-  margin-top: 0.15em;
-  font-size: 0.76em;
+  font-size: 0.85rem;
   color: var(--jellio-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -622,12 +193,8 @@
 
 .jellio-card:hover .jellio-card-image,
 .jellio-card:focus-visible .jellio-card-image {
-  transform: scale(1.06);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
-}
-
-.jellio-card:focus-visible .jellio-card-image {
-  box-shadow: 0 0 0 2px rgb(var(--jellio-focus-color-rgb) / 0.9);
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 2px;
 }
 
 .jellio-card:focus-visible {
@@ -646,7 +213,7 @@
   border-radius: 50%;
   background: var(--jellio-secondary-color);
   color: var(--jellio-on-secondary);
-  font-size: 1em;
+  font-size: 1rem;
 }
 
 .jellio-card-progress {
@@ -665,75 +232,20 @@
   background: var(--jellio-secondary-color);
 }
 
-.jellio-card-options-menu {
-  position: fixed;
-  z-index: 10002;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
-  padding: 0.4em;
-  border-radius: var(--jellio-card-radius);
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.9);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.5);
-}
-
-.jellio-card-options-item {
-  padding: 0.7em 0.9em;
-  border: 0;
-  border-radius: calc(var(--jellio-card-radius) / 2);
-  background: transparent;
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.9em;
-  text-align: left;
-  cursor: pointer;
-}
-
-.jellio-card-options-item:hover,
-.jellio-card-options-item:focus-visible {
-  background: rgb(255 255 255 / 0.08);
-  outline: none;
-}
-
 .jellio-library-header {
   padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
 }
 
 .jellio-library-title {
   margin: 0;
-  font-size: clamp(1.3em, 2vw, 1.8em);
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
   font-weight: 700;
-}
-
-.jellio-library-filters {
-  display: flex;
-  gap: 0.6em;
-  padding: 0 var(--jellio-safe-gutter) clamp(12px, 1.6vw, 20px);
-}
-
-.jellio-library-filter-select {
-  padding: 0.5em 0.9em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: 999px;
-  background: var(--jellio-bg-elevated);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.85em;
-  cursor: pointer;
-}
-
-.jellio-library-filter-select:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .jellio-library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--jellio-card-gap);
+  gap: clamp(14px, 1.4vw, 22px);
   padding: 0 var(--jellio-safe-gutter) clamp(32px, 4vw, 64px);
 }
 
@@ -754,16 +266,12 @@
   background: var(--jellio-card-bg);
   color: var(--jellio-text-color);
   font-family: var(--jellio-font-family);
-  font-size: 1em;
+  font-size: 1rem;
 }
 
 .jellio-search-input:focus {
   outline: none;
   border-color: var(--jellio-secondary-color);
-}
-
-.jellio-search-status {
-  padding-top: 0;
 }
 
 .jellio-detail-hero {
@@ -791,33 +299,8 @@
 
 .jellio-detail-title {
   margin: 0 0 0.3em;
-  font-size: clamp(1.8em, 3.6vw, 3em);
+  font-size: clamp(1.8rem, 3.6vw, 3rem);
   font-weight: 800;
-}
-
-/* screens/detail.js's own real back-to-series link, an Episode item
-   only: sits above the title as a plain eyebrow rather than another
-   action button, styled to read as where the reader already is,
-   clickable to actually leave it. */
-.jellio-detail-series-link {
-  display: inline-block;
-  margin: 0 0 0.4em;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(0.85em, 1.1vw, 1em);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-
-.jellio-detail-series-link:hover,
-.jellio-detail-series-link:focus-visible {
-  color: var(--jellio-text-color);
-  text-decoration: underline;
 }
 
 .jellio-detail-meta {
@@ -825,13 +308,13 @@
   gap: 0.8em;
   margin-bottom: 0.6em;
   color: var(--jellio-text-secondary);
-  font-size: 0.9em;
+  font-size: 0.9rem;
 }
 
 .jellio-detail-genres {
   margin-bottom: 1em;
   color: var(--jellio-text-secondary);
-  font-size: 0.9em;
+  font-size: 0.9rem;
 }
 
 .jellio-detail-actions {
@@ -847,7 +330,7 @@
   color: var(--jellio-on-secondary);
   font-family: var(--jellio-font-family);
   font-weight: 700;
-  font-size: 1em;
+  font-size: 1rem;
   cursor: pointer;
 }
 
@@ -855,8 +338,7 @@
   background: var(--jellio-secondary-variant);
 }
 
-.jellio-detail-watchlist,
-.jellio-detail-change-stream {
+.jellio-detail-favorite {
   padding: 0.7em 1.6em;
   border: 1px solid var(--jellio-border-color);
   border-radius: 999px;
@@ -864,21 +346,20 @@
   color: var(--jellio-text-color);
   font-family: var(--jellio-font-family);
   font-weight: 700;
-  font-size: 1em;
+  font-size: 1rem;
   cursor: pointer;
 }
 
-.jellio-detail-watchlist:hover,
-.jellio-detail-change-stream:hover {
+.jellio-detail-favorite:hover {
   background: rgb(255 255 255 / 0.08);
 }
 
-.jellio-detail-watchlist:disabled {
+.jellio-detail-favorite:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.jellio-detail-watchlist-active {
+.jellio-detail-favorite-active {
   border-color: var(--jellio-secondary-color);
   color: var(--jellio-secondary-color);
 }
@@ -893,16 +374,6 @@
 .jellio-cast-card {
   flex: 0 0 auto;
   width: clamp(90px, 8vw, 120px);
-  cursor: pointer;
-}
-
-.jellio-cast-card:focus-visible .jellio-cast-image {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: 2px;
-}
-
-.jellio-cast-card:focus-visible {
-  outline: none;
 }
 
 .jellio-cast-image {
@@ -920,7 +391,7 @@
 
 .jellio-cast-name {
   margin-top: 0.5em;
-  font-size: 0.8em;
+  font-size: 0.8rem;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -928,7 +399,7 @@
 }
 
 .jellio-cast-role {
-  font-size: 0.75em;
+  font-size: 0.75rem;
   color: var(--jellio-text-tertiary);
   text-align: center;
   overflow: hidden;
@@ -1014,7 +485,7 @@
   border-radius: 0.4em;
   background: rgb(0 0 0 / 0.6);
   color: var(--jellio-text-color);
-  font-size: 0.75em;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -1027,7 +498,7 @@
 }
 
 .jellio-episode-overview {
-  font-size: 0.82em;
+  font-size: 0.82rem;
   color: var(--jellio-text-secondary);
   line-height: 1.4;
   display: -webkit-box;
@@ -1036,29 +507,8 @@
   overflow: hidden;
 }
 
-/* Real, reproducible layout bug, confirmed live: the mobile media
-   query below's own .jellio-content padding-bottom: 6em (96px, real
-   room for components/mobileNav.js's own floating pill on any
-   ordinary screen) still applied here too, on a real width match
-   alone, with no pointer: coarse needed, since the player route hides
-   that same pill entirely rather than ever actually using the room.
-   With no global box-sizing: border-box reset, that real padding
-   still added straight onto .jellio-content's own height: 100%
-   instead of eating into it, so this box's own padding edge, the
-   real containing block screens/player.js's own position: absolute;
-   bottom: 0 controls and pause overlay both resolve against, sat 96px
-   below the actual viewport, not at its real bottom edge at all.
-   Reported live as no play/pause or any other control visible at
-   all and the screen not reacting to a real tap anywhere: they were
-   there, just pushed below the fold on a screen with nothing
-   suggesting it could ever need to scroll in the first place.
-   padding-bottom: 0 here, at a real two class selector already more
-   specific than that one plain class media query rule, cancels it
-   out for this one real route without touching the pill nav's own
-   real room everywhere else. */
 .jellio-root-fullscreen .jellio-content {
   overflow: hidden;
-  padding-bottom: 0;
 }
 
 .jellio-screen-player {
@@ -1068,136 +518,11 @@
   background: #000;
 }
 
-.jellio-player-error {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1em;
-  text-align: center;
-  padding: 0 clamp(16px, 3vw, 40px);
-}
-
-.jellio-player-error-back,
-.jellio-detail-error-back {
-  padding: 0.6em 1.6em;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.1);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.9em;
-  cursor: pointer;
-}
-
-.jellio-player-error-back:hover,
-.jellio-detail-error-back:hover {
-  background: rgb(255 255 255 / 0.18);
-}
-
-/* screens/detail.js's own renderDetailError(): a series episode card
-   navigates straight to #/item, so a failed lookup here left a
-   reader looking at exactly nothing, same real shape the player
-   error state above already fixed, not a fullscreen route like that
-   one though, so this centers in the ordinary scrollable content
-   area instead of claiming the whole viewport height. */
-.jellio-detail-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1em;
-  text-align: center;
-  padding: clamp(80px, 20vh, 160px) var(--jellio-safe-gutter);
-}
-
-/* components/networkState.js's own renderLoading()/renderRetry(): a
-   generic version of the same shape .jellio-detail-error above already
-   uses, shown the instant a screen starts fetching (renderLoading)
-   rather than a blank content area, and swapped for the real content
-   or, on a real failure, this same retry state once that fetch settles. */
-.jellio-screen-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
-  padding: clamp(60px, 16vh, 140px) 0;
-}
-
-.jellio-screen-spinner {
-  width: 2em;
-  height: 2em;
-  border-radius: 50%;
-  border: 3px solid rgb(255 255 255 / 0.16);
-  border-top-color: var(--jellio-secondary-color);
-  animation: jellio-splash-spin 800ms linear infinite;
-}
-
-.jellio-screen-retry {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1em;
-  text-align: center;
-  min-height: 40vh;
-  padding: clamp(60px, 16vh, 140px) var(--jellio-safe-gutter);
-}
-
-.jellio-screen-retry-actions {
-  display: flex;
-  gap: 0.6em;
-}
-
-/* screens/player.js's own switchSource() and attemptPlay() real
-   failure paths, a stream that stopped resolving or a play() call a
-   real browser rejected: the player itself still has something worth
-   looking at behind it, unlike the three blank routes into this
-   screen .jellio-player-error covers above, so a toast that reads and
-   then gets out of the way is enough here. */
-.jellio-player-toast {
-  position: absolute;
-  left: 50%;
-  bottom: 6.5em;
-  transform: translate(-50%, 0.5em);
-  max-width: calc(100vw - 2 * clamp(16px, 3vw, 40px));
-  padding: 0.7em 1.2em;
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-bg-elevated);
-  border: 1px solid var(--jellio-border-color);
-  color: var(--jellio-text-color);
-  font-size: 0.85em;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 4;
-}
-
-.jellio-player-toast-visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 .jellio-player-video {
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: #000;
-  --jellio-subtitle-size: 1.3em;
-  --jellio-subtitle-bg: rgb(0 0 0 / 0.5);
-}
-
-/* Real WebVTT rendering, styled through the two custom properties
-   screens/player.js's own applySubtitleStyle() sets directly on this
-   element: ::cue inherits custom properties down from the element it
-   renders on top of, the same real Chromium/Firefox behaviour every
-   other subtitle style picker on the web already relies on, not a
-   guess this runtime is making on its own. */
-.jellio-player-video::cue {
-  font-size: var(--jellio-subtitle-size);
-  background-color: var(--jellio-subtitle-bg);
 }
 
 .jellio-player-pause-overlay {
@@ -1230,14 +555,8 @@
   color: var(--jellio-text-color);
 }
 
-.jellio-player-pause-eyebrow {
-  font-size: 0.85em;
-  color: var(--jellio-text-secondary);
-  margin-bottom: 0.3em;
-}
-
 .jellio-player-pause-title {
-  font-size: clamp(1.4em, 3vw, 2.2em);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
   font-weight: 700;
   margin-bottom: 0.4em;
 }
@@ -1249,18 +568,6 @@
   margin-bottom: 0.6em;
 }
 
-.jellio-player-pause-episode-code {
-  font-size: 0.85em;
-  color: var(--jellio-text-secondary);
-  margin-bottom: 0.2em;
-}
-
-.jellio-player-pause-episode-title {
-  font-size: 1.1em;
-  font-weight: 700;
-  margin-bottom: 0.4em;
-}
-
 .jellio-player-pause-overview {
   color: var(--jellio-text-secondary);
   line-height: 1.5;
@@ -1270,78 +577,21 @@
   overflow: hidden;
 }
 
-/* Whole redesigned player chrome, ported from the real Nuvio player
-   screenshots: an auto hiding shell (topbar, center transport, seek
-   row, floating pill) rather than the old single control bar, faded
-   out together on jellio-player-shell-idle the same way every
-   mainstream streaming app's own chrome already hides itself mid
-   playback. */
-.jellio-player-shell {
+.jellio-player-controls {
   position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-
-.jellio-player-shell > * {
-  pointer-events: auto;
-}
-
-.jellio-player-shell-idle {
-  opacity: 0;
-}
-
-.jellio-player-shell-idle > * {
-  pointer-events: none;
-}
-
-.jellio-player-topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1em;
-  padding: clamp(16px, 3vw, 40px) clamp(16px, 3vw, 40px) 0;
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.7) 0%, transparent 100%);
-}
-
-.jellio-player-topbar-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2em;
-  min-width: 0;
-}
-
-.jellio-player-topbar-title {
-  font-weight: 700;
-  font-size: 1.1em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: min(60vw, 30em);
-}
-
-.jellio-player-topbar-episode,
-.jellio-player-topbar-meta {
-  font-size: 0.8em;
-  color: var(--jellio-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: min(60vw, 30em);
-}
-
-.jellio-player-topbar-actions {
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
-  gap: 0.6em;
-  flex: 0 0 auto;
+  gap: 1em;
+  padding: 1em clamp(16px, 3vw, 40px);
+  background: linear-gradient(0deg, rgb(0 0 0 / 0.75) 0%, transparent 100%);
+  color: var(--jellio-text-color);
 }
 
-.jellio-player-back {
+.jellio-player-back,
+.jellio-player-playpause {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1352,59 +602,33 @@
   background: rgb(255 255 255 / 0.1);
   color: var(--jellio-text-color);
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
-.jellio-player-back:hover {
+.jellio-player-back:hover,
+.jellio-player-playpause:hover {
   background: rgb(255 255 255 / 0.2);
 }
 
-.jellio-player-center-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(24px, 6vw, 56px);
-  margin: auto 0;
-}
-
-.jellio-player-transport {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.6em;
-  height: 2.6em;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--jellio-text-color);
-  cursor: pointer;
-  font-size: 1.4em;
-}
-
-.jellio-player-transport:hover {
-  background: rgb(255 255 255 / 0.12);
-}
-
-.jellio-player-playpause-center {
-  width: 3.4em;
-  height: 3.4em;
-  font-size: 1.9em;
-  background: rgb(255 255 255 / 0.12);
-}
-
-.jellio-player-playpause-center:hover {
-  background: rgb(255 255 255 / 0.22);
+.jellio-player-title {
+  flex: 0 1 auto;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 16em;
 }
 
 .jellio-player-seek-row {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 0.6em;
-  padding: 0 clamp(16px, 3vw, 40px);
   min-width: 0;
 }
 
 .jellio-player-time {
-  font-size: 0.8em;
+  font-size: 0.8rem;
   color: var(--jellio-text-secondary);
   flex: 0 0 auto;
 }
@@ -1415,92 +639,47 @@
   accent-color: var(--jellio-secondary-color);
 }
 
-.jellio-player-pill {
+.jellio-player-sleep {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3em;
-  margin: 0.8em auto clamp(16px, 3vw, 40px);
-  padding: 0.4em;
-  border-radius: 999px;
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  max-width: calc(100vw - 2 * clamp(16px, 3vw, 40px));
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.jellio-player-pill::-webkit-scrollbar {
-  display: none;
-}
-
-.jellio-player-pill-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2em;
-  min-width: 4.2em;
-  padding: 0.5em 0.8em;
+  width: 2.4em;
+  height: 2.4em;
   border: 0;
-  border-radius: 999px;
-  background: transparent;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
   color: var(--jellio-text-color);
   cursor: pointer;
-  font-family: var(--jellio-font-family);
+  flex: 0 0 auto;
 }
 
-.jellio-player-pill-btn:hover {
-  background: rgb(255 255 255 / 0.1);
+.jellio-player-sleep:hover {
+  background: rgb(255 255 255 / 0.2);
 }
 
-.jellio-player-pill-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.jellio-player-pill-btn-active {
+.jellio-player-sleep-active {
   color: var(--jellio-secondary-color);
 }
 
-.jellio-player-pill-btn-label {
-  font-size: 0.7em;
-  white-space: nowrap;
-}
-
-.jellio-player-popover {
+.jellio-player-sleep-menu {
   position: absolute;
   right: clamp(16px, 3vw, 40px);
-  bottom: 6.5em;
+  bottom: 4.5em;
   display: flex;
   flex-direction: column;
-  min-width: 12em;
-  max-width: calc(100vw - 2 * clamp(16px, 3vw, 40px));
-  max-height: min(60vh, 24em);
-  overflow-x: hidden;
-  overflow-y: auto;
+  min-width: 8em;
   border-radius: var(--jellio-card-radius);
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.92);
+  background: var(--jellio-bg-elevated);
   border: 1px solid var(--jellio-border-color);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  overflow: hidden;
 }
 
-.jellio-player-popover-hidden {
+.jellio-player-sleep-menu-hidden {
   display: none;
 }
 
-.jellio-player-popover-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.jellio-player-popover-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1em;
+.jellio-player-sleep-option {
   padding: 0.6em 1em;
   border: 0;
   background: transparent;
@@ -1510,294 +689,15 @@
   cursor: pointer;
 }
 
-.jellio-player-popover-option:hover {
-  background: rgb(255 255 255 / 0.08);
-}
-
-.jellio-player-popover-option-active {
-  color: var(--jellio-secondary-color);
-}
-
-.jellio-player-popover-option-active::after {
-  content: '\2713';
-  flex: 0 0 auto;
-}
-
-/* Subtitles/audio real feedback: the plain right anchored popover
-   above read as a tiny corner dropdown next to Nuvio's own real
-   Untertitel/Tonspuren screenshots, a real centred panel wide enough
-   to read a release's own full track description on one line rather
-   than one this small forced onto two. Centred over the pill rather
-   than right anchored for the same reason: a wide panel pinned to the
-   right edge would run past the left edge of a narrow viewport
-   instead of sitting under where the reader's own thumb already is. */
-.jellio-player-popover-large {
-  right: auto;
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 26em;
-  max-width: min(34em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-}
-
-.jellio-player-popover-large .jellio-player-popover-option {
-  padding: 0.75em 1.2em;
-  font-size: 0.95em;
-}
-
-.jellio-player-popover-columns {
-  display: flex;
-  min-height: 0;
-}
-
-.jellio-player-popover-languages {
-  flex: 0 0 9em;
-  border-right: 1px solid var(--jellio-border-color);
-  overflow-y: auto;
-  max-height: min(50vh, 20em);
-}
-
-.jellio-player-popover-tracks {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  max-height: min(50vh, 20em);
-  min-width: 0;
-}
-
-@media (max-width: 47.99em) {
-  .jellio-player-popover-large {
-    min-width: min(22em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-  }
-
-  .jellio-player-popover-languages {
-    flex-basis: 7em;
-  }
-}
-
-.jellio-player-popover-style {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8em;
-  padding: 0.8em;
-  border-top: 1px solid var(--jellio-border-color);
-}
-
-.jellio-player-style-group-label {
-  padding: 0 0.4em 0.4em;
-  color: var(--jellio-text-secondary);
-  font-size: 0.75em;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.jellio-player-style-group-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4em;
-}
-
-.jellio-player-style-group-options .jellio-player-popover-option {
-  padding: 0.4em 0.8em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: 999px;
-}
-
-.jellio-player-style-group-options .jellio-player-popover-option-active {
-  border-color: var(--jellio-secondary-color);
-}
-
-/* Full height right side panel, real shape ported from the Nuvio
-   Quellen/Episoden screenshots: a solid edge rather than the popovers'
-   own floating glass, sliding the same width in from the right the
-   pre playback stream picker's own panel (components/streamPicker.js)
-   already established for the same real "a lot to browse" case. */
-.jellio-player-sidepanel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(24em, 100vw);
-  display: flex;
-  flex-direction: column;
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.96);
-  border-left: 1px solid var(--jellio-border-color);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  transform: translateX(0);
-  transition: transform 0.25s ease;
-  overflow: hidden;
-}
-
-.jellio-player-sidepanel-hidden {
-  transform: translateX(100%);
-}
-
-.jellio-player-sidepanel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: clamp(16px, 3vw, 32px) 1.2em 0.8em;
-}
-
-.jellio-player-sidepanel-title {
-  font-weight: 700;
-  font-size: 1.1em;
-}
-
-.jellio-player-sidepanel-close {
-  padding: 0.4em 0.9em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  cursor: pointer;
-}
-
-.jellio-player-sidepanel-close:hover {
-  background: rgb(255 255 255 / 0.08);
-}
-
-.jellio-player-sidepanel-tabs {
-  display: flex;
-  gap: 0.4em;
-  padding: 0 1.2em 0.8em;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.jellio-player-sidepanel-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.jellio-player-sidepanel-tab {
-  flex: 0 0 auto;
-  padding: 0.4em 0.9em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  cursor: pointer;
-}
-
-.jellio-player-sidepanel-tab-active {
-  border-color: var(--jellio-secondary-color);
-  color: var(--jellio-text-color);
-}
-
-.jellio-player-sidepanel-list {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding: 0 1.2em 1.2em;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8em;
-}
-
-.jellio-player-episode-row {
-  display: flex;
-  gap: 0.8em;
-  padding: 0.6em;
-  border: 1px solid transparent;
-  border-radius: var(--jellio-card-radius);
-  background: rgb(255 255 255 / 0.04);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  text-align: left;
-  cursor: pointer;
-}
-
-.jellio-player-episode-row:hover {
-  background: rgb(255 255 255 / 0.08);
-}
-
-.jellio-player-episode-row-active {
-  border-color: var(--jellio-text-color);
-}
-
-.jellio-player-episode-thumb {
-  position: relative;
-  flex: 0 0 auto;
-  width: 7em;
-  aspect-ratio: 16 / 9;
-  border-radius: calc(var(--jellio-card-radius) - 4px);
-  background-color: var(--jellio-card-bg);
-  background-size: cover;
-  background-position: center;
-}
-
-.jellio-player-episode-rating {
-  position: absolute;
-  top: 0.3em;
-  left: 0.3em;
-  padding: 0.1em 0.4em;
-  border-radius: 4px;
-  background: rgb(0 0 0 / 0.6);
-  font-size: 0.7em;
-  font-weight: 600;
-}
-
-.jellio-player-episode-code {
-  position: absolute;
-  bottom: 0.3em;
-  left: 0.3em;
-  padding: 0.1em 0.4em;
-  border-radius: 4px;
-  background: rgb(0 0 0 / 0.6);
-  font-size: 0.7em;
-}
-
-.jellio-player-episode-body {
-  min-width: 0;
-}
-
-.jellio-player-episode-title {
-  font-weight: 600;
-  font-size: 0.9em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.jellio-player-episode-overview {
-  margin: 0.3em 0 0;
-  font-size: 0.8em;
-  color: var(--jellio-text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-@media (max-width: 47.99em) {
-  .jellio-player-center-controls {
-    gap: clamp(20px, 12vw, 40px);
-  }
-
-  .jellio-player-sidepanel {
-    width: 100vw;
-  }
-
-  .jellio-player-pill-btn-label {
-    display: none;
-  }
-
-  .jellio-player-pill-btn {
-    min-width: 2.6em;
-    padding: 0.6em;
-  }
-}
-
-.jellio-nav-avatar-mount {
+.jellio-sidebar-avatar-mount {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
 }
 
-.jellio-nav-avatar {
-  width: 1.9em;
-  height: 1.9em;
+.jellio-sidebar-avatar {
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
@@ -1811,31 +711,21 @@
   align-items: center;
   justify-content: center;
   background: rgb(0 0 0 / 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
-/* Glass rather than a flat panel, ported from NuvioWeb's own real
-   pattern (css/components.css's own .modern-sidebar-panel/
-   .series-stream-panel: a translucent tinted background layered under
-   backdrop-filter blur, a hairline light border rather than the
-   card's own solid one) for a floating panel over real content,
-   distinct from a page's own background beneath it. */
 .jellio-avatar-picker-panel {
   width: min(90vw, 40em);
   max-height: 80vh;
   overflow-y: auto;
   padding: clamp(20px, 2.4vw, 32px);
   border-radius: var(--jellio-card-radius);
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  background: var(--jellio-bg-elevated);
+  border: 1px solid var(--jellio-border-color);
 }
 
 .jellio-avatar-picker-title {
   margin: 0 0 1em;
-  font-size: 1.2em;
+  font-size: 1.2rem;
   font-weight: 700;
 }
 
@@ -1874,7 +764,11 @@
 .jellio-avatar-picker-status {
   margin: 1em 0 0;
   color: var(--jellio-text-secondary);
-  font-size: 0.85em;
+  font-size: 0.85rem;
+}
+
+.jellio-player-sleep-option:hover {
+  background: rgb(255 255 255 / 0.08);
 }
 
 .jellio-hub-tiles {
@@ -1919,7 +813,7 @@
 }
 
 .jellio-hub-tile-name {
-  font-size: clamp(0.78em, 0.9vw, 1em);
+  font-size: clamp(0.78rem, 0.9vw, 1rem);
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -1929,21 +823,13 @@
    to white here rather than trusting whatever the file declares.
    brightness(0) flattens any colour to black first, invert lifts it to
    white, holding for a mark of any original colour. */
-/* height alone, with width left to auto, let each logo's own aspect
-   ratio decide its rendered size: a wide wordmark (Prime Video's own
-   SVG is far wider than it is tall next to Disney+'s or Apple TV's
-   squarer marks) hit max-width and got constrained down in both
-   dimensions to stay inside it, rendering visibly smaller than every
-   other tile. Setting both width and height turns this into a real
-   fixed box for object-fit: contain to fit each logo into, so a wide
-   mark uses the full width and a tall one the full height, the same
-   apparent scale across every service regardless of its own shape. */
 .jellio-hub-tile-logo {
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 82%;
   height: 54%;
+  width: auto;
+  max-width: 82%;
   object-fit: contain;
   filter: brightness(0) invert(1);
 }
@@ -1967,7 +853,7 @@
 
 .jellio-service-eyebrow {
   color: var(--jellio-text-tertiary);
-  font-size: clamp(0.58em, 0.66vw, 0.72em);
+  font-size: clamp(0.58rem, 0.66vw, 0.72rem);
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1979,7 +865,7 @@
   align-items: center;
   gap: 0.4em;
   margin: 0.15em 0 0;
-  font-size: clamp(1.9em, 3.4vw, 3.6em);
+  font-size: clamp(1.9rem, 3.4vw, 3.6rem);
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -1996,7 +882,7 @@
 .jellio-service-blurb {
   margin: 0.7em 0 0;
   color: var(--jellio-text-secondary);
-  font-size: clamp(0.76em, 0.85vw, 0.92em);
+  font-size: clamp(0.76rem, 0.85vw, 0.92rem);
 }
 
 .jellio-service-empty {
@@ -2004,7 +890,7 @@
   padding: 0 var(--jellio-safe-gutter) clamp(24px, 3vw, 60px);
   max-width: 46em;
   color: var(--jellio-text-secondary);
-  font-size: clamp(0.8em, 0.9vw, 0.98em);
+  font-size: clamp(0.8rem, 0.9vw, 0.98rem);
   line-height: 1.6;
 }
 
@@ -2028,7 +914,7 @@
   border-radius: 999px;
   background: rgb(255 255 255 / 0.08);
   color: var(--jellio-text-secondary);
-  font-size: clamp(0.7em, 0.78vw, 0.84em);
+  font-size: clamp(0.7rem, 0.78vw, 0.84rem);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -2049,1486 +935,4 @@
 .jellio-service-chip:focus-visible {
   outline: 2px solid var(--jellio-secondary-color);
   outline-offset: 2px;
-}
-
-.jellio-settings-header {
-  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
-}
-
-.jellio-settings-title {
-  margin: 0;
-  font-size: clamp(1.4em, 2.2vw, 2em);
-  font-weight: 700;
-}
-
-.jellio-settings-section {
-  max-width: 40em;
-  padding: 0 var(--jellio-safe-gutter) clamp(24px, 3vw, 40px);
-}
-
-.jellio-settings-section-title {
-  margin: 0 0 0.8em;
-  font-size: clamp(1.05em, 1.4vw, 1.3em);
-  font-weight: 700;
-}
-
-.jellio-settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7em;
-}
-
-.jellio-settings-input {
-  width: 100%;
-  padding: 0.7em 1em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-card-bg);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(0.9em, 1.1vw, 1.05em);
-  box-sizing: border-box;
-}
-
-.jellio-settings-input:focus {
-  outline: none;
-  border-color: var(--jellio-secondary-color);
-}
-
-.jellio-settings-status {
-  margin: 0;
-  color: var(--jellio-text-secondary);
-  font-size: clamp(0.85em, 1vw, 1em);
-}
-
-/* Remember my stream choice, screens/settings.js's own Playback
-   section: this codebase's first real toggle switch, a plain hidden
-   checkbox driving a styled sibling track/thumb, the standard
-   accessible pattern for one rather than a div with a click handler
-   pretending to be one. */
-.jellio-settings-toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 0.8em;
-  margin-bottom: 0.8em;
-  cursor: pointer;
-}
-
-.jellio-settings-toggle-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
-.jellio-settings-toggle-track {
-  position: relative;
-  flex: 0 0 auto;
-  width: 2.6em;
-  height: 1.5em;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.14);
-  transition: background-color 160ms ease;
-}
-
-.jellio-settings-toggle-track::before {
-  content: '';
-  position: absolute;
-  top: 0.15em;
-  left: 0.15em;
-  width: 1.2em;
-  height: 1.2em;
-  border-radius: 50%;
-  background: var(--jellio-text-color);
-  transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-settings-toggle-input:checked + .jellio-settings-toggle-track {
-  background: var(--jellio-secondary-color);
-}
-
-.jellio-settings-toggle-input:checked + .jellio-settings-toggle-track::before {
-  transform: translateX(1.1em);
-  background: var(--jellio-on-secondary);
-}
-
-.jellio-settings-toggle-input:focus-visible + .jellio-settings-toggle-track {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: 2px;
-}
-
-.jellio-settings-toggle-label {
-  color: var(--jellio-text-color);
-  font-weight: 500;
-}
-
-.jellio-settings-button {
-  align-self: flex-start;
-  padding: 0.6em 1.6em;
-  border: 0;
-  border-radius: 999px;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  font-family: var(--jellio-font-family);
-  font-weight: 700;
-  font-size: clamp(0.85em, 1vw, 1em);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.jellio-settings-button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.jellio-settings-button-danger {
-  background: rgb(255 255 255 / 0.08);
-  color: var(--jellio-text-color);
-}
-
-.jellio-sidebar-now-playing {
-  position: relative;
-}
-
-.jellio-sidebar-now-playing-badge {
-  position: absolute;
-  top: 0.3em;
-  left: 1.9em;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  border-radius: 999px;
-  min-width: 1.2em;
-  height: 1.2em;
-  padding: 0 0.3em;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65em;
-  font-weight: 700;
-}
-
-.jellio-sidebar-now-playing-active .jellio-sidebar-now-playing-badge {
-  display: inline-flex;
-}
-
-/* left/width used to be pinned to the sidebar's own old, narrow
-   clamp(64px, 6vw, 96px) directly rather than reading the same
-   --jellio-sidebar-width token .jellio-sidebar itself now uses, so
-   this panel drifted out of sync (still tucked against where the rail
-   used to end) the moment that rail widened to a labeled row layout.
-   Reading the same token keeps the two from drifting apart again the
-   next time either changes.
-   Glass rather than the flat gradient panel it shipped with, the same
-   real NuvioWeb pattern the avatar picker's own panel now uses just
-   above: a floating surface over real content reads as an overlay,
-   not another card. */
-.jellio-now-playing-panel {
-  position: fixed;
-  left: calc(var(--jellio-sidebar-width) + 0.75em);
-  bottom: 1.5em;
-  z-index: 10001;
-  display: none;
-  flex-direction: column;
-  gap: 0.5em;
-  width: min(24em, calc(100vw - var(--jellio-sidebar-width) - 2 * var(--jellio-safe-gutter)));
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 0.75em;
-  border-radius: var(--jellio-card-radius);
-  background: linear-gradient(
-    180deg,
-    rgb(var(--jellio-bg-elevated-rgb) / 0.82),
-    rgb(var(--jellio-card-bg-rgb) / 0.82)
-  );
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-}
-
-.jellio-now-playing-panel.jellio-now-playing-panel-visible {
-  display: flex;
-}
-
-.jellio-now-playing-row {
-  display: flex;
-  gap: 0.75em;
-  align-items: center;
-  padding: 0.5em;
-  border-radius: var(--jellio-card-radius);
-}
-
-.jellio-now-playing-row-poster {
-  width: 3em;
-  height: 4.2em;
-  flex-shrink: 0;
-  border-radius: calc(var(--jellio-card-radius) / 2);
-  background-color: var(--jellio-card-bg);
-  background-size: cover;
-  background-position: center;
-}
-
-.jellio-now-playing-row-title {
-  color: var(--jellio-text-color);
-  font-weight: 600;
-  margin: 0 0 0.15em;
-}
-
-.jellio-now-playing-row-meta {
-  color: var(--jellio-text-secondary);
-  font-size: 0.85em;
-  margin: 0;
-}
-
-.jellio-now-playing-empty {
-  color: var(--jellio-text-secondary);
-  text-align: center;
-  padding: 1em;
-}
-
-/* Glass, the same real NuvioWeb pattern the now-playing panel and
-   avatar picker use, ported here too for one consistent floating
-   panel treatment across the app rather than three different ones. */
-.jellio-player-upnext {
-  position: absolute;
-  right: clamp(16px, 3vw, 40px);
-  bottom: 6.5em;
-  z-index: 2;
-  display: flex;
-  width: min(24em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-  overflow: hidden;
-  border-radius: var(--jellio-card-radius);
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  box-shadow: 0 0.5em 2em rgb(0 0 0 / 0.45);
-  opacity: 1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.jellio-player-upnext-hidden {
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
-}
-
-.jellio-player-upnext-thumb {
-  width: 7em;
-  flex: 0 0 auto;
-  background-color: var(--jellio-card-bg);
-  background-size: cover;
-  background-position: center;
-}
-
-.jellio-player-upnext-body {
-  flex: 1 1 auto;
-  padding: 0.9em 1em;
-  min-width: 0;
-}
-
-.jellio-player-upnext-eyebrow {
-  color: var(--jellio-text-tertiary);
-  font-size: 0.68em;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.jellio-player-upnext-title {
-  margin: 0.3em 0 0.7em;
-  color: var(--jellio-text-color);
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.jellio-player-upnext-actions {
-  display: flex;
-  gap: 0.5em;
-}
-
-.jellio-player-upnext-play {
-  padding: 0.5em 1.1em;
-  border: 0;
-  border-radius: 999px;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  font-family: var(--jellio-font-family);
-  font-weight: 700;
-  font-size: 0.8em;
-  cursor: pointer;
-}
-
-.jellio-player-upnext-dismiss {
-  padding: 0.5em 1em;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.08);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.8em;
-  cursor: pointer;
-}
-
-/* Centred over the paused frame at the saved position rather than
-   anchored to a corner the way the up next card is: this is the very
-   first thing a reader sees on open, not something surfacing over
-   playback already running. */
-.jellio-player-resume-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(0 0 0 / 0.45);
-}
-
-.jellio-player-resume-panel {
-  padding: clamp(20px, 2.4vw, 32px) clamp(24px, 3vw, 40px);
-  border-radius: var(--jellio-card-radius);
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  box-shadow: 0 0.5em 2em rgb(0 0 0 / 0.45);
-  text-align: center;
-}
-
-.jellio-player-resume-title {
-  font-size: 1.3em;
-  font-weight: 700;
-}
-
-.jellio-player-resume-subtitle {
-  margin-top: 0.4em;
-  color: var(--jellio-text-secondary);
-  font-size: 0.85em;
-}
-
-.jellio-player-resume-actions {
-  display: flex;
-  gap: 0.6em;
-  justify-content: center;
-  margin-top: 1.2em;
-}
-
-.jellio-player-resume-play {
-  padding: 0.6em 1.6em;
-  border: 0;
-  border-radius: 999px;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  font-family: var(--jellio-font-family);
-  font-weight: 700;
-  font-size: 0.9em;
-  cursor: pointer;
-}
-
-.jellio-player-resume-restart {
-  padding: 0.6em 1.6em;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.1);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.9em;
-  cursor: pointer;
-}
-
-.jellio-player-resume-play:hover {
-  background: var(--jellio-secondary-variant);
-}
-
-.jellio-player-resume-restart:hover {
-  background: rgb(255 255 255 / 0.18);
-}
-
-.jellio-player-skip {
-  position: absolute;
-  right: clamp(16px, 3vw, 40px);
-  bottom: 6.5em;
-  z-index: 2;
-  padding: 0.6em 1.4em;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-weight: 700;
-  font-size: 0.85em;
-  cursor: pointer;
-  opacity: 1;
-  transition: opacity 0.2s ease;
-}
-
-.jellio-player-skip:hover {
-  background: rgb(255 255 255 / 0.2);
-}
-
-.jellio-player-skip-hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.jellio-hero {
-  position: relative;
-  width: 100%;
-  height: 85vh;
-  min-height: 32em;
-  max-height: 56em;
-  overflow: hidden;
-  margin-bottom: clamp(16px, 2vw, 32px);
-}
-
-.jellio-hero-backdrop {
-  position: absolute;
-  inset: 0;
-  background-color: var(--jellio-bg-color);
-}
-
-/* components/heroCarousel.js's own real loading state, class present
-   from mount and removed the moment its own real getHeroCandidates()
-   call resolves and render() actually runs: the same shimmer
-   .jellio-shimmer already gives home's own row skeletons below, over
-   the hero's own backdrop specifically rather than the plain empty
-   background color that sat there before. */
-.jellio-hero-loading .jellio-hero-backdrop {
-  overflow: hidden;
-}
-
-.jellio-hero-loading .jellio-hero-backdrop::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    100deg,
-    transparent 30%,
-    rgb(255 255 255 / 0.08) 45%,
-    transparent 60%
-  );
-  animation: jellio-shimmer-sweep 1200ms linear infinite;
-}
-
-.jellio-hero-backdrop-layer {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center 20%;
-  opacity: 0;
-  transition: opacity 800ms ease-in-out;
-}
-
-.jellio-hero-backdrop-layer-visible {
-  opacity: 1;
-}
-
-.jellio-hero-nav {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.5em;
-  border: none;
-  background: transparent;
-  color: var(--jellio-text-color);
-  cursor: pointer;
-  opacity: 0.35;
-  transition: opacity 180ms ease, background-color 180ms ease;
-}
-
-.jellio-hero:hover .jellio-hero-nav,
-.jellio-hero-nav:focus-visible {
-  opacity: 1;
-}
-
-.jellio-hero-nav:hover {
-  background: rgb(13 13 13 / 0.3);
-}
-
-.jellio-hero-nav .material-icons {
-  font-size: 2.5em;
-}
-
-.jellio-hero-nav-prev {
-  left: 0;
-}
-
-.jellio-hero-nav-next {
-  right: 0;
-}
-
-.jellio-hero-scrim {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgb(13 13 13 / 0.85) 0%, rgb(13 13 13 / 0.15) 55%, transparent 80%),
-    linear-gradient(0deg, var(--jellio-bg-color) 0%, transparent 45%);
-}
-
-.jellio-hero-content {
-  position: absolute;
-  left: var(--jellio-safe-gutter);
-  right: var(--jellio-safe-gutter);
-  bottom: 3.5em;
-  max-width: 34em;
-  z-index: 1;
-}
-
-.jellio-hero-logo {
-  display: block;
-  max-height: 5.5em;
-  max-width: 100%;
-  width: auto;
-  margin: 0 0 0.6em;
-  object-fit: contain;
-  object-position: left;
-}
-
-.jellio-hero-logo-hidden {
-  display: none;
-}
-
-.jellio-hero-title {
-  display: none;
-  color: var(--jellio-text-color);
-  font-size: 2.4em;
-  font-weight: 700;
-  margin: 0 0 0.3em;
-}
-
-.jellio-hero-logo-hidden ~ .jellio-hero-title {
-  display: block;
-}
-
-.jellio-hero-meta {
-  color: var(--jellio-text-secondary);
-  margin: 0 0 0.6em;
-}
-
-.jellio-hero-overview {
-  color: var(--jellio-text-color);
-  opacity: 0.85;
-  line-height: 1.5;
-  margin: 0 0 1.2em;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-
-.jellio-hero-actions {
-  display: flex;
-  gap: 0.75em;
-}
-
-.jellio-hero-action {
-  border: none;
-  border-radius: 999px;
-  padding: 0.75em 1.75em;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  font-family: var(--jellio-font-family);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 180ms ease;
-}
-
-.jellio-hero-action:hover {
-  background: var(--jellio-secondary-variant);
-}
-
-.jellio-hero-action-secondary {
-  background: rgb(255 255 255 / 0.1);
-  color: var(--jellio-text-color);
-}
-
-.jellio-hero-action-secondary:hover {
-  background: rgb(255 255 255 / 0.18);
-}
-
-.jellio-hero-dots {
-  position: absolute;
-  left: var(--jellio-safe-gutter);
-  bottom: 1.5em;
-  z-index: 1;
-  display: flex;
-  gap: 0.5em;
-}
-
-.jellio-hero-dot {
-  width: 0.5em;
-  height: 0.5em;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.35);
-  cursor: pointer;
-  transition: background-color 180ms ease;
-}
-
-.jellio-hero-dot-active {
-  background: var(--jellio-secondary-color);
-}
-
-.jellio-person-header {
-  display: flex;
-  gap: clamp(20px, 3vw, 40px);
-  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(16px, 2vw, 28px);
-}
-
-.jellio-person-photo {
-  flex: 0 0 auto;
-  width: clamp(140px, 16vw, 220px);
-  aspect-ratio: 2 / 3;
-  border-radius: var(--jellio-card-radius);
-  object-fit: cover;
-  background: var(--jellio-card-bg);
-}
-
-.jellio-person-photo-empty {
-  background: var(--jellio-card-bg);
-}
-
-.jellio-person-info {
-  max-width: 48em;
-}
-
-.jellio-person-name {
-  margin: 0 0 0.5em;
-  font-size: clamp(1.6em, 2.6vw, 2.4em);
-  font-weight: 800;
-}
-
-.jellio-person-overview {
-  color: var(--jellio-text-secondary);
-  line-height: 1.6;
-}
-
-.jellio-person-filmography {
-  padding-top: 0.5em;
-}
-
-/* Coverflow carousel for the library pages, ported from the original
-   codebase's own library-coverflow.css: three wide cards, the middle
-   one lit and carrying the title's own art, logo, meta and actions, the
-   two beside it dimmed, scaled back and tucked slightly under it. Real
-   feedback asked directly for this shape on library pages rather than
-   the home screen's own hero-carousel treatment above, kept as a
-   second component rather than a mode of that one for the same reason
-   this file's own upstream keeps them separate: a full-bleed backdrop
-   and a track of discrete cards share nothing but both advancing on a
-   timer. The reduced-motion block this file's own upstream carries is
-   dropped here: the * { transition-duration: 0.001ms !important; }
-   rule at the end of this file already covers every transition this
-   component declares. */
-.jellio-coverflow {
-  position: relative;
-  margin-bottom: clamp(20px, 1.8vw, 38px);
-  padding: clamp(14px, 1.4vw, 28px) 0 0;
-  overflow: hidden;
-}
-
-.jellio-coverflow-stage {
-  position: relative;
-  height: calc(clamp(320px, 34vw, 780px) / 2.2);
-}
-
-.jellio-coverflow-slide {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: clamp(320px, 34vw, 780px);
-  height: 100%;
-  margin-left: calc(clamp(320px, 34vw, 780px) / -2);
-  border-radius: clamp(10px, 0.9vw, 18px);
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform 520ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 520ms cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform, opacity;
-}
-
-.jellio-coverflow-slide-near {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(calc(var(--jellio-cf-offset) * 72%)) scale(0.88);
-  z-index: 5;
-}
-
-.jellio-coverflow-slide-current {
-  transform: translateX(0) scale(1);
-  z-index: 6;
-  box-shadow:
-    0 1.4em 3.2em rgb(0 0 0 / 0.55),
-    0 0 0 1px rgb(255 255 255 / 0.06);
-}
-
-.jellio-coverflow-slide-far {
-  opacity: 0;
-  transform: translateX(calc(var(--jellio-cf-offset) * 72%)) scale(0.86);
-  z-index: 0;
-}
-
-.jellio-coverflow-art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background-color: var(--jellio-card-bg);
-}
-
-.jellio-coverflow-scrim {
-  position: absolute;
-  inset: 0;
-  background: rgb(var(--jellio-bg-color-rgb) / 0.68);
-  opacity: 1;
-  transition: opacity 520ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.jellio-coverflow-slide-current .jellio-coverflow-scrim {
-  opacity: 1;
-  background: linear-gradient(
-    90deg,
-    rgb(var(--jellio-bg-color-rgb) / 0.75) 0%,
-    rgb(var(--jellio-bg-color-rgb) / 0.35) 45%,
-    rgb(var(--jellio-bg-color-rgb) / 0.05) 100%
-  );
-}
-
-.jellio-coverflow-info {
-  position: absolute;
-  left: clamp(16px, 1.8vw, 40px);
-  bottom: clamp(14px, 1.6vw, 34px);
-  right: clamp(16px, 1.8vw, 40px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: clamp(6px, 0.6vw, 12px);
-  opacity: 0;
-  transition: opacity 320ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-coverflow-slide-current .jellio-coverflow-info {
-  opacity: 1;
-}
-
-.jellio-coverflow-logo {
-  max-width: min(56%, 15em);
-  max-height: clamp(34px, 3.4vw, 74px);
-  object-fit: contain;
-  object-position: left bottom;
-}
-
-.jellio-coverflow-title {
-  margin: 0;
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(1.2em, 2vw, 2.1em);
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.jellio-coverflow-meta {
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(0.62em, 0.72vw, 0.78em);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.jellio-coverflow-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6em;
-  margin-top: clamp(2px, 0.3vw, 8px);
-}
-
-.jellio-coverflow-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  padding: 0.55em 1.15em;
-  border: 0;
-  border-radius: 999px;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(0.72em, 0.8vw, 0.9em);
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 160ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-coverflow-button-secondary {
-  background: rgb(255 255 255 / 0.14);
-  color: var(--jellio-text-color);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
-}
-
-.jellio-coverflow-button:hover {
-  transform: translateY(-1px);
-}
-
-.jellio-coverflow-button:focus-visible {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: 2px;
-}
-
-.jellio-coverflow-dots {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.45em;
-  margin-top: clamp(10px, 1vw, 20px);
-}
-
-.jellio-coverflow-dot {
-  width: 0.4em;
-  height: 0.4em;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.28);
-  cursor: pointer;
-  transition:
-    width 320ms cubic-bezier(0.32, 0.72, 0, 1),
-    background-color 320ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-coverflow-dot-active {
-  width: 1.5em;
-  background: var(--jellio-secondary-color);
-}
-
-.jellio-coverflow-dot:focus-visible {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: 3px;
-}
-
-@media (max-width: 56.24em) {
-  .jellio-coverflow-slide {
-    width: min(86vw, 520px);
-    margin-left: calc(min(86vw, 520px) / -2);
-  }
-
-  .jellio-coverflow-stage {
-    height: calc(min(86vw, 520px) / 1.9);
-  }
-
-  .jellio-coverflow-slide-near {
-    transform: translateX(calc(var(--jellio-cf-offset) * 96%)) scale(0.92);
-  }
-
-  .jellio-coverflow-slide-current {
-    transform: translateX(0) scale(1);
-  }
-}
-
-/* This runtime's own login screen, ported from the original codebase's
-   own login.css/login-profiles.css (before that project pulled its own
-   quick sign-in, see runtime/auth.js's own header for why theirs broke
-   and this one does not), without the html.jellio-active/#loginPage
-   scoping either file needed: those existed only because that codebase
-   injects onto native's own login page DOM, this one is a real screen
-   of its own inside #jellioRoot, no native page underneath to avoid
-   colliding with. */
-.jellio-screen-login {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-  padding: var(--jellio-safe-gutter);
-  background: radial-gradient(ellipse at center, var(--jellio-bg-elevated) 0%, var(--jellio-bg-color) 72%);
-}
-
-@keyframes jellio-login-profiles-enter {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.jellio-login-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 64em;
-  animation: jellio-login-profiles-enter 420ms ease-out both;
-}
-
-.jellio-login-heading {
-  margin: 0 0 clamp(20px, 2.4vw, 40px);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(1.6em, 2.6vw, 2.6em);
-  font-weight: 700;
-  text-align: center;
-}
-
-.jellio-login-profile-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: clamp(18px, 2.2vw, 36px);
-}
-
-@keyframes jellio-login-profile-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.72);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* --jellio-stagger-delay is set per tile by screens/login.js's own
-   applyStagger(), reading order (left to right, top to bottom), so
-   each profile appears and scales up a beat after the one before it
-   rather than the whole row landing at once, real feedback asked for
-   directly against Nuvio's own "one after another" profile picker. */
-.jellio-login-profile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: clamp(96px, 9vw, 148px);
-  animation: jellio-login-profile-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: var(--jellio-stagger-delay, 0ms);
-}
-
-.jellio-login-profile-avatar-wrap {
-  position: relative;
-  width: 100%;
-}
-
-.jellio-login-profile-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  aspect-ratio: 1;
-  border: 0;
-  border-radius: var(--jellio-card-radius, 16px);
-  background-color: var(--jellio-card-bg);
-  background-position: center center;
-  background-size: cover;
-  background-repeat: no-repeat;
-  color: var(--jellio-text-secondary);
-  cursor: pointer;
-  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-login-profile-avatar:hover,
-.jellio-login-profile-avatar:focus-visible {
-  transform: scale(1.06);
-  box-shadow: 0 0 0 3px rgb(var(--jellio-focus-color-rgb, 255 255 255) / 0.9);
-  outline: none;
-}
-
-.jellio-login-profile-avatar:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.jellio-login-profile-avatar-add {
-  background-color: rgb(255 255 255 / 0.06);
-  border: 1px dashed rgb(255 255 255 / 0.24);
-}
-
-.jellio-login-profile-icon,
-.jellio-login-profile-avatar-add .material-icons {
-  font-size: clamp(2em, 3vw, 3em);
-}
-
-.jellio-login-profile-name {
-  display: block;
-  max-width: 100%;
-  margin-top: 0.6em;
-  overflow: hidden;
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(0.82em, 0.95vw, 1em);
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  text-align: center;
-  transition: color 180ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-login-profile:hover .jellio-login-profile-name {
-  color: var(--jellio-text-color);
-}
-
-.jellio-login-profile-remove {
-  position: absolute;
-  top: -0.4em;
-  right: -0.4em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7em;
-  height: 1.7em;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(0 0 0 / 0.7);
-  color: var(--jellio-text-color);
-  font-size: 1em;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 160ms cubic-bezier(0.4, 0, 0.2, 1), background-color 160ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-login-profile-avatar-wrap:hover .jellio-login-profile-remove,
-.jellio-login-profile-avatar-wrap:focus-within .jellio-login-profile-remove {
-  opacity: 1;
-}
-
-.jellio-login-profile-remove:hover {
-  background: rgb(0 0 0 / 0.9);
-}
-
-.jellio-login-form {
-  display: flex;
-  flex-direction: column;
-  width: min(26em, 100%);
-}
-
-.jellio-login-input {
-  width: 100%;
-  margin: 0.55em 0;
-  padding: 0.85em 1em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-card-bg);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 1em;
-}
-
-.jellio-login-input:focus {
-  border-color: var(--jellio-secondary-color);
-  outline: none;
-}
-
-.jellio-login-status {
-  min-height: 1.4em;
-  margin: 0.4em 0;
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: 0.85em;
-  text-align: center;
-}
-
-.jellio-login-submit {
-  margin-top: 0.4em;
-  padding: 0.85em 1em;
-  border: 0;
-  border-radius: 999px;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: 1em;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 160ms ease;
-}
-
-.jellio-login-submit:hover {
-  background: var(--jellio-secondary-variant);
-}
-
-.jellio-login-submit:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.jellio-login-cancel {
-  margin-top: 0.8em;
-  padding: 0.4em;
-  border: 0;
-  background: transparent;
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.jellio-login-cancel:hover {
-  color: var(--jellio-text-color);
-}
-
-/* screens/login.js's own real forgot password flow (POST
-   /Users/ForgotPassword, /Users/ForgotPassword/Pin, both real
-   Jellyfin endpoints), real feedback asked for it to replace bouncing
-   to native's own login page for the same. A real link rather than
-   jellio-login-cancel's own button weight: this one starts a real new
-   flow, not a step back out of the current one. */
-.jellio-login-forgot {
-  align-self: center;
-  margin-top: 0.6em;
-  padding: 0.2em;
-  border: 0;
-  background: transparent;
-  color: var(--jellio-secondary-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.85em;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.jellio-login-forgot:hover {
-  text-decoration: underline;
-}
-
-/* components/splash.js's own overlay. z-index above #jellioRoot's own
-   9999 (app.css's own token for that), so this covers the shell while
-   it is still empty rather than sitting behind it. */
-#jellioSplash {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(20px, 2.4vw, 36px);
-  background: var(--jellio-bg-color);
-  opacity: 1;
-  transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-#jellioSplash.jellio-splash-hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.jellio-splash-mark {
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(1.8em, 3vw, 2.8em);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.jellio-splash-spinner {
-  width: clamp(28px, 2.6vw, 40px);
-  height: clamp(28px, 2.6vw, 40px);
-  border-radius: 50%;
-  border: 3px solid rgb(255 255 255 / 0.16);
-  border-top-color: var(--jellio-secondary-color);
-  animation: jellio-splash-spin 800ms linear infinite;
-}
-
-@keyframes jellio-splash-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.jellio-splash-progress-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.7em;
-  width: min(80vw, 22em);
-}
-
-.jellio-splash-progress {
-  width: 100%;
-  height: 4px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-  overflow: hidden;
-}
-
-.jellio-splash-progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--jellio-secondary-color);
-  width: 0%;
-  transition: width 240ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-splash-status {
-  color: var(--jellio-text-secondary);
-  font-family: var(--jellio-font-family);
-  font-size: 0.82em;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-/* Tactile press feedback, ported nowhere from the original codebase
-   since neither this nor jellio-login-submit's own hover state existed
-   there either: added directly, real feedback asked for "more
-   animations where it fits", and a primary action button with no
-   response to being pressed was the plainest gap to close. */
-.jellio-settings-button,
-.jellio-login-submit {
-  transition: background-color 160ms ease, transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.jellio-settings-button:active,
-.jellio-login-submit:active {
-  transform: scale(0.97);
-}
-
-/* Pre-playback stream picker, components/streamPicker.js. Structure
-   and naming pattern ported from NuvioWeb's own real
-   css/components.css (.series-stream-overlay/-panel/-left/-right/
-   -list/-card, the same real source the avatar picker's own glass
-   panel already credits, read before writing this, not guessed at):
-   a dim backdrop of the item's own art behind a floating glass panel,
-   poster/title on one side, a scrollable source list on the other.
-   NuvioWeb's own version is a fixed two column grid with no narrower
-   layout at all; the two column split only earns its place once
-   there is real width for both sides to breathe, so it collapses to
-   a single stacked column below that, poster/title first, list
-   underneath, the one real layout choice this component made that
-   NuvioWeb's own real source did not have to. */
-.jellio-stream-picker-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10001;
-  background: var(--jellio-bg-color) center center / cover no-repeat;
-  font-family: var(--jellio-font-family);
-  color: var(--jellio-text-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--jellio-safe-gutter);
-  box-sizing: border-box;
-}
-
-.jellio-stream-picker-dim {
-  position: absolute;
-  inset: 0;
-  background: rgb(var(--jellio-bg-color-rgb) / 0.7);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-.jellio-stream-picker-panel {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 72em);
-  max-height: min(90vh, 44em);
-  display: flex;
-  gap: 1.6em;
-  border-radius: var(--jellio-card-radius);
-  border: 1px solid rgb(255 255 255 / 0.12);
-  background: rgb(var(--jellio-bg-elevated-rgb) / 0.86);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  box-shadow: 0 20px 60px rgb(0 0 0 / 0.5);
-  padding: 1.6em;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.jellio-stream-picker-close {
-  position: absolute;
-  top: 0.9em;
-  right: 0.9em;
-  z-index: 2;
-  width: 2.2em;
-  height: 2.2em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.1);
-  color: var(--jellio-text-color);
-  cursor: pointer;
-}
-
-.jellio-stream-picker-close:hover {
-  background: rgb(255 255 255 / 0.2);
-}
-
-.jellio-stream-picker-left {
-  flex: 0 0 15em;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.jellio-stream-picker-poster {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-card-bg) center center / cover no-repeat;
-  margin-bottom: 1em;
-}
-
-.jellio-stream-picker-heading {
-  font-size: 1.3em;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.jellio-stream-picker-episode {
-  margin-top: 0.4em;
-  font-size: 1.1em;
-  font-weight: 700;
-  color: var(--jellio-secondary-color);
-}
-
-.jellio-stream-picker-episode-title {
-  margin-top: 0.2em;
-  color: var(--jellio-text-secondary);
-  line-height: 1.3;
-}
-
-.jellio-stream-picker-right {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.jellio-stream-picker-count {
-  margin-bottom: 0.8em;
-  font-size: 0.85em;
-  color: var(--jellio-text-secondary);
-}
-
-.jellio-stream-picker-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7em;
-  padding-right: 0.4em;
-}
-
-.jellio-stream-picker-card {
-  text-align: left;
-  padding: 0.9em 1em;
-  border-radius: 0.9em;
-  border: 1px solid rgb(255 255 255 / 0.08);
-  background: rgb(255 255 255 / 0.04);
-  color: var(--jellio-text-color);
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease;
-}
-
-.jellio-stream-picker-card:hover,
-.jellio-stream-picker-card:focus-visible {
-  background: rgb(255 255 255 / 0.09);
-  border-color: var(--jellio-secondary-color);
-  outline: none;
-}
-
-.jellio-stream-picker-card-active {
-  border-color: var(--jellio-secondary-color);
-  background: rgb(255 255 255 / 0.07);
-}
-
-/* No clamp, real feedback: a 2 line cap here was hiding real,
-   decision relevant information deeper in Gelato's own dense release
-   name strings (language, codec, encode group), not just a long
-   title running on. Left to wrap to its own full real height instead,
-   same as the card list around it is already built to scroll for. */
-.jellio-stream-picker-card-title {
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.jellio-stream-picker-card-desc {
-  margin-top: 0.3em;
-  font-size: 0.85em;
-  color: var(--jellio-text-secondary);
-  line-height: 1.3;
-}
-
-.jellio-stream-picker-card-tags {
-  margin-top: 0.5em;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4em;
-}
-
-.jellio-stream-picker-card-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 1.6em;
-  padding: 0 0.7em;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.14);
-  color: var(--jellio-text-color);
-  font-size: 0.72em;
-  font-weight: 700;
-}
-
-/* Real feedback: could not see this at all on a phone. NuvioWeb's own
-   real source has no narrower layout to fall back to (a fixed grid,
-   10-foot UI only), so this breakpoint and everything in it is this
-   component's own real addition, not a port: the two column split
-   collapses into one stacked column, poster/title first so the
-   picker still reads as "which title is this for" before the list
-   underneath answers "which stream", the same top-to-bottom order
-   the two column layout already put them in left to right. */
-@media (max-width: 47.99em) {
-  .jellio-stream-picker-panel {
-    flex-direction: column;
-    max-height: min(92vh, 44em);
-    padding: 1.2em;
-  }
-
-  .jellio-stream-picker-left {
-    flex: 0 0 auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.9em;
-  }
-
-  .jellio-stream-picker-left-text {
-    min-width: 0;
-  }
-
-  .jellio-stream-picker-poster {
-    width: 3.6em;
-    flex: 0 0 auto;
-    margin-bottom: 0;
-  }
-
-  .jellio-stream-picker-heading {
-    font-size: 1.1em;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 0.001ms !important;
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-  }
 }

@@ -6,9 +6,6 @@
 import { getCollections, getCollectionItems, collectionKind } from '../runtime/api.js';
 import { groupByService, logoSlug, rowTitle } from '../components/services.js';
 import { buildCard } from '../components/card.js';
-import { renderLoading, renderRetry } from '../components/networkState.js';
-import { navigateTo } from '../runtime/router.js';
-import { describeNetworkFailure } from '../runtime/network.js';
 
 const ROW_LIMIT = 24;
 
@@ -135,25 +132,18 @@ function applyFilter(rowsMount, filter) {
 
 export async function renderService(root, params) {
   root.textContent = '';
-  root.className = 'jellio-content jellio-screen-service';
+  root.className = 'jellio-screen-service';
 
   const service = params.get('name');
   if (!service) return;
-
-  renderLoading(root);
 
   let collections;
   try {
     collections = await getCollections();
   } catch (err) {
     console.warn('Jellio: could not load streaming hub collections', err);
-    renderRetry(root, describeNetworkFailure(service, err), function () {
-      renderService(root, params);
-    }, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
     return;
   }
-
-  root.textContent = '';
 
   const matching = (groupByService(collections)[service] || []).map(function (collection) {
     const kind = collectionKind(collection);
@@ -166,28 +156,8 @@ export async function renderService(root, params) {
     return;
   }
 
-  renderLoading(root);
-
-  // Not awaited: app.js's own sync() queue only starts the next real
-  // navigation once this function's own returned promise resolves, and
-  // this fetch is one real request per matched catalog, several on a
-  // real streaming hub tile. Awaiting it here meant a reader could not
-  // leave a slow-loading service page for anywhere else until every
-  // one of those had either resolved or timed out, same real bug
-  // screens/library.js's own genre rows and screens/home.js's own
-  // catalog rows already document and fix the same way. Unlike those
-  // two, the real content this callback builds replaces root's own
-  // top level content wholesale rather than filling in a shell this
-  // function already returned control past, so a late arrival after
-  // the reader has already left this screen needs an explicit guard
-  // here, the same real shape screens/player.js's own screenTornDown
-  // already uses for its error screen: without it, a slow response
-  // still landing after a real navigation elsewhere would wipe out
-  // whatever that next screen had already rendered into the same root.
-  let tornDown = false;
-
   const filled = [];
-  Promise.all(
+  await Promise.all(
     matching.map(function (entry) {
       return getCollectionItems(entry.collection.Id, entry.kind, ROW_LIMIT)
         .then(function (items) {
@@ -197,41 +167,34 @@ export async function renderService(root, params) {
           console.warn('Jellio: could not load service catalog', err);
         });
     }),
-  ).then(function () {
-    if (tornDown) return;
-    root.textContent = '';
+  );
 
-    // Every catalog for this service came back empty. Jellyfin's
-    // CleanupCollectionAndPlaylistPathsTask empties every Gelato collection
-    // on each restart, since their items are virtual and carry no path for
-    // it to find, so this is a real state a server sits in, not a bug to
-    // paper over with a blank page.
-    if (!filled.length) {
-      root.appendChild(buildHeader(service, 0));
-      root.appendChild(
-        el(
-          'p',
-          'jellio-service-empty',
-          'Nothing imported for ' +
-            service +
-            ' yet. Run the Gelato catalog import, and check that the catalogs for this service have Collection enabled.',
-        ),
-      );
-      return;
-    }
+  // Every catalog for this service came back empty. Jellyfin's
+  // CleanupCollectionAndPlaylistPathsTask empties every Gelato collection
+  // on each restart, since their items are virtual and carry no path for
+  // it to find, so this is a real state a server sits in, not a bug to
+  // paper over with a blank page.
+  if (!filled.length) {
+    root.appendChild(buildHeader(service, 0));
+    root.appendChild(
+      el(
+        'p',
+        'jellio-service-empty',
+        'Nothing imported for ' +
+          service +
+          ' yet. Run the Gelato catalog import, and check that the catalogs for this service have Collection enabled.',
+      ),
+    );
+    return;
+  }
 
-    root.appendChild(buildHeader(service, filled.length));
-    const rowsMount = el('div', 'jellio-rows');
-    root.appendChild(buildChips(topGenres(filled, 10), function (filter) {
-      applyFilter(rowsMount, filter);
-    }));
-    filled.forEach(function (row) {
-      rowsMount.appendChild(buildRowSection(row));
-    });
-    root.appendChild(rowsMount);
+  root.appendChild(buildHeader(service, filled.length));
+  const rowsMount = el('div', 'jellio-rows');
+  root.appendChild(buildChips(topGenres(filled, 10), function (filter) {
+    applyFilter(rowsMount, filter);
+  }));
+  filled.forEach(function (row) {
+    rowsMount.appendChild(buildRowSection(row));
   });
-
-  return function () {
-    tornDown = true;
-  };
+  root.appendChild(rowsMount);
 }
