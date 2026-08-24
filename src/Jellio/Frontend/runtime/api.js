@@ -4,37 +4,127 @@
 // jellyfin-web's own request/cache state, only on a real HTTP response.
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId } from './auth.js';
 
-async function getJson(path) {
-  const response = await fetch(getServerAddress() + path, {
-    headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+// Nuvio's own real AddonPlatform HTTP clients (OkHttp on Android, Ktor's
+// own HttpTimeout plugin on iOS, both confirmed against real source
+// before writing this) cap every addon call at 60s rather than leaving
+// it open ended: a request this runtime cannot get an answer to inside
+// a real, generous window is a request worth surfacing as failed
+// rather than one left hanging forever with nothing telling the reader
+// it is even still trying.
+//
+// Real bug, found live after shipping one flat 30s timeout for every
+// call here: a browser caps concurrent connections per origin (6 on
+// plain HTTP/1.1, still a real limit under a lot of self hosted
+// reverse proxies), and library/home screens fire a real handful of
+// these in parallel (catalog rows, genre rows, coverflow, ...). On a
+// slow connection every one of those used to just sit there for the
+// full 30s before failing, holding that many connection slots hostage
+// the whole time, so image tags for the very same rows, and any other
+// screen's own next real navigation, had nowhere left to open a
+// connection at all: reported live as rows and titles loading but
+// never their real images, and the whole app going unresponsive to
+// further navigation right behind it, worse than the silent hang this
+// was meant to fix in the first place. DEFAULT_TIMEOUT_MS is short
+// enough now that one slow request frees its own slot back up quickly;
+// getPlaybackInfo below is the one real exception, a single real call,
+// never running alongside a pile of others the way every list screen's
+// own calls do, and Gelato resolving a real debrid/usenet source
+// behind it can legitimately take longer than a plain metadata list
+// ever should.
+const DEFAULT_TIMEOUT_MS = 10000;
+const NEGOTIATION_TIMEOUT_MS = 30000;
+
+function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(function () {
+    controller.abort();
+  }, timeoutMs);
+  return fetch(url, Object.assign({}, options, { signal: controller.signal })).finally(function () {
+    window.clearTimeout(timer);
   });
+}
+
+async function requestJson(url, options, path, timeoutMs) {
+  let response;
+  try {
+    response = await fetchWithTimeout(url, options, timeoutMs);
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      const timeoutErr = new Error('Request timed out: ' + path);
+      timeoutErr.timedOut = true;
+      throw timeoutErr;
+    }
+    throw err;
+  }
   if (!response.ok) {
     const err = new Error('Request failed: ' + path);
     err.status = response.status;
     throw err;
   }
+  return response;
+}
+
+async function getJson(path, timeoutMs) {
+  const response = await requestJson(
+    getServerAddress() + path,
+    { headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()) },
+    path,
+    timeoutMs || DEFAULT_TIMEOUT_MS,
+  );
   return response.json();
 }
 
 // Fire and forget by design: a session report failing should never break
 // playback itself, only leave resume position slightly stale, the same
 // tradeoff every other real Jellyfin client already makes for these calls.
-async function postJson(path, body) {
-  const response = await fetch(getServerAddress() + path, {
-    method: 'POST',
-    headers: Object.assign(
-      { 'Content-Type': 'application/json', Accept: 'application/json' },
-      getAuthHeaders(),
-    ),
-    body: JSON.stringify(body || {}),
-  });
-  if (!response.ok) {
-    const err = new Error('Request failed: ' + path);
-    err.status = response.status;
-    throw err;
-  }
+async function postJson(path, body, timeoutMs) {
+  const response = await requestJson(
+    getServerAddress() + path,
+    {
+      method: 'POST',
+      headers: Object.assign(
+        { 'Content-Type': 'application/json', Accept: 'application/json' },
+        getAuthHeaders(),
+      ),
+      body: JSON.stringify(body || {}),
+    },
+    path,
+    timeoutMs || DEFAULT_TIMEOUT_MS,
+  );
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+// Small in-memory cache for the handful of calls every single screen
+// touches through the sidebar (views, collections, the current user):
+// renderSidebar re-runs on every navigation, real feedback was that
+// switching between libraries did not feel smooth, and a fresh round
+// trip for data that is the same as it was three seconds ago is
+// exactly why. Caches the in-flight promise, not just the resolved
+// value, so two calls that land while the first request is still out
+// (a real case here: app.js's own preload and the sidebar's first
+// render can both ask for the same thing within the same tick) share
+// one request instead of firing two. Nothing here persists past a
+// reload, same as the rest of this runtime's own state, and logout()
+// already reloads the page, so there is no separate invalidation path
+// to build for that case, only for the one real case where cached data
+// can go stale sooner than the TTL: invalidateUser() below.
+const CACHE_TTL_MS = 60000;
+const cache = new Map();
+
+function cached(key, fetcher) {
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit.promise;
+  const promise = fetcher().catch(function (err) {
+    cache.delete(key);
+    throw err;
+  });
+  cache.set(key, { promise: promise, ts: Date.now() });
+  return promise;
+}
+
+function invalidateCache(key) {
+  cache.delete(key);
 }
 
 export function getSystemInfo() {
@@ -44,7 +134,9 @@ export function getSystemInfo() {
 export function getItem(itemId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  return getJson('/Users/' + userId + '/Items/' + itemId);
+  return cached('item:' + itemId, function () {
+    return getJson('/Users/' + userId + '/Items/' + itemId);
+  });
 }
 
 // A library grid's own getItem call gets whatever fields Jellyfin returns
@@ -63,7 +155,19 @@ export function getItemDetails(itemId) {
 export function getCurrentUser() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  return getJson('/Users/' + userId);
+  return cached('user:' + userId, function () {
+    return getJson('/Users/' + userId);
+  });
+}
+
+// The one place cached user data can go visibly stale sooner than the
+// TTL: an avatar the reader just picked should show up in the sidebar
+// on the very next render, not up to a minute later. setUserAvatar
+// below calls this itself rather than leaving it to every caller to
+// remember.
+function invalidateCurrentUser() {
+  const userId = getCurrentUserId();
+  if (userId) invalidateCache('user:' + userId);
 }
 
 // A user's own libraries, the same list the native sidebar and home screen
@@ -71,8 +175,10 @@ export function getCurrentUser() {
 export function getUserViews() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  return getJson('/Users/' + userId + '/Views').then(function (result) {
-    return (result && result.Items) || [];
+  return cached('views:' + userId, function () {
+    return getJson('/Users/' + userId + '/Views').then(function (result) {
+      return (result && result.Items) || [];
+    });
   });
 }
 
@@ -92,21 +198,116 @@ export function getResumeItems(limit) {
   });
 }
 
-// Latest items for one library, the same data the native home screen's own
-// per-library "Latest in X" row reads (GET /Users/{id}/Items/Latest).
-export function getLatestItems(parentId, limit) {
+// Real endpoint, GET /Shows/NextUp (Jellyfin.Api's own TvShowsController,
+// route "Shows", confirmed against real source before writing this): the
+// next unwatched episode for every series the reader is partway through,
+// distinct from getResumeItems above (an episode or movie actually
+// stopped mid playback). Based on watch state, not DateCreated, so it
+// does not have the same "means nothing on a Gelato server" problem the
+// rest of this file's own header documents for a plain recency sort.
+export function getNextUp(limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const query =
+  const params = new URLSearchParams({
+    userId: userId,
+    Limit: String(limit || 20),
+    Fields: 'PrimaryImageAspectRatio',
+  });
+  return getJson('/Shows/NextUp?' + params.toString()).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
+// Seeds for "Because you watched": the reader's own most recently
+// completed titles. IsPlayed is Jellyfin's own definition of finished
+// (every episode, for a series), ported from the original codebase's
+// own recommend.js, real endpoint and real filter, not re-derived.
+export function getRecentlyCompleted(limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    Recursive: 'true',
+    IncludeItemTypes: 'Movie,Series',
+    Filters: 'IsPlayed',
+    SortBy: 'DatePlayed',
+    SortOrder: 'Descending',
+    Limit: String(limit),
+    Fields: 'Genres,People,ProductionYear,CommunityRating',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
+// One seed's own candidate pool for runtime/recommend.js's own scorer:
+// its own genres and its own top billed cast/director, each a
+// separate query narrowed server side rather than scoring the whole
+// library client side to fill one row, same reasoning the original
+// codebase's own candidatePool() documents. Entries carrying a
+// PersonIds hit are tagged viaPerson so the scorer can weight a shared
+// actor without a second People fetch per candidate.
+export async function getRecommendationCandidates(seed, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return [];
+
+  const genres = seed.Genres || [];
+  const people = (seed.People || [])
+    .filter(function (person) {
+      return person.Id && (person.Type === 'Actor' || person.Type === 'Director');
+    })
+    .slice(0, 5);
+
+  const base =
     '/Users/' +
     userId +
-    '/Items/Latest?ParentId=' +
-    encodeURIComponent(parentId) +
-    '&Limit=' +
-    (limit || 16) +
-    '&Fields=PrimaryImageAspectRatio';
-  return getJson(query);
+    '/Items?Recursive=true&IncludeItemTypes=Movie,Series&Limit=' +
+    (limit || 100) +
+    '&Fields=Genres,ProductionYear,CommunityRating&SortBy=Random';
+
+  const jobs = [];
+  if (genres.length) {
+    jobs.push(
+      getJson(base + '&Genres=' + encodeURIComponent(genres.join('|')))
+        .then(function (result) {
+          return { tag: 'genre', items: (result && result.Items) || [] };
+        })
+        .catch(function () {
+          return { tag: 'genre', items: [] };
+        }),
+    );
+  }
+  if (people.length) {
+    const personIds = people
+      .map(function (person) {
+        return person.Id;
+      })
+      .join(',');
+    jobs.push(
+      getJson(base + '&PersonIds=' + personIds)
+        .then(function (result) {
+          return { tag: 'person', items: (result && result.Items) || [] };
+        })
+        .catch(function () {
+          return { tag: 'person', items: [] };
+        }),
+    );
+  }
+  if (!jobs.length) return [];
+
+  const results = await Promise.all(jobs);
+  const byId = {};
+  results.forEach(function (result) {
+    result.items.forEach(function (item) {
+      let entry = byId[item.Id];
+      if (!entry) entry = byId[item.Id] = { item: item, viaPerson: false };
+      if (result.tag === 'person') entry.viaPerson = true;
+    });
+  });
+  return Object.keys(byId).map(function (id) {
+    return byId[id];
+  });
 }
+
 
 // Real, confirmed against the original Jellio codebase's own
 // libraryBrowse.js: a BoxSet mixed into a movie/series catalog by an addon
@@ -134,7 +335,11 @@ export function getLibraryItems(parentId, collectionType, options) {
     Limit: String(opts.limit || 100),
     StartIndex: String(opts.startIndex || 0),
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString());
+  if (opts.genre) params.set('Genres', opts.genre);
+  const path = '/Users/' + userId + '/Items?' + params.toString();
+  return cached(path, function () {
+    return getJson(path);
+  });
 }
 
 // Real endpoints, GET /Shows/{id}/Seasons and GET /Shows/{id}/Episodes,
@@ -182,11 +387,12 @@ export function searchItems(term, limit) {
   });
 }
 
-// Every favorited item, real endpoint (GET /Users/{id}/Items with
-// Filters=IsFavorite), the same #/home?tab=1 route the sidebar's own
-// Favorites link and the original Jellio codebase's own NAV_LINKS both
-// already point at.
-export function getFavoriteItems(limit) {
+// Every watchlisted item, real endpoint (GET /Users/{id}/Items with
+// Filters=IsFavorite, Jellyfin's own real favorites concept underneath
+// this app's own Watchlist wording), the same #/home?tab=1 route the
+// sidebar's own Watchlist link and the original Jellio codebase's own
+// NAV_LINKS both already point at.
+export function getWatchlistItems(limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -201,17 +407,41 @@ export function getFavoriteItems(limit) {
   });
 }
 
-// Real endpoint pair, POST/DELETE /Users/{id}/FavoriteItems/{itemId},
-// returns the item's own updated UserItemDataDto (IsFavorite reflects
-// what actually happened server side rather than this runtime assuming
-// the request succeeded).
-export async function setFavorite(itemId, isFavorite) {
+// Real endpoint pair, POST/DELETE /Users/{id}/PlayedItems/{itemId}
+// (PlaystateController.cs), the same call the stock UI's own "mark
+// watched" toggle makes. Returns the item's own updated
+// UserItemDataDto, same shape setWatchlist below already returns.
+export async function setPlayed(itemId, isPlayed) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const response = await fetch(
+    getServerAddress() + '/Users/' + userId + '/PlayedItems/' + itemId,
+    {
+      method: isPlayed ? 'POST' : 'DELETE',
+      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+    },
+  );
+  if (!response.ok) {
+    const err = new Error('Request failed: PlayedItems');
+    err.status = response.status;
+    throw err;
+  }
+  return response.json();
+}
+
+// Real endpoint pair, POST/DELETE /Users/{id}/FavoriteItems/{itemId}
+// (this app's own Watchlist is Jellyfin's own real favorites concept
+// under a different label, not a separate state), returns the item's
+// own updated UserItemDataDto (IsFavorite reflects what actually
+// happened server side rather than this runtime assuming the request
+// succeeded).
+export async function setWatchlist(itemId, isWatchlisted) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const response = await fetch(
     getServerAddress() + '/Users/' + userId + '/FavoriteItems/' + itemId,
     {
-      method: isFavorite ? 'POST' : 'DELETE',
+      method: isWatchlisted ? 'POST' : 'DELETE',
       headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
     },
   );
@@ -231,17 +461,63 @@ export async function setFavorite(itemId, isFavorite) {
 // can just set as its src, no playbackManager involved at all. That
 // module export only orchestrates native's own OSD/queue UI on top of
 // exactly this same real HTTP flow.
-export function getPlaybackInfo(itemId, startTimeTicks) {
+export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStreamIndex, subtitleStreamIndex) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  return postJson('/Items/' + itemId + '/PlaybackInfo', {
+  const body = {
     UserId: userId,
     StartTimeTicks: startTimeTicks || 0,
     EnableDirectPlay: true,
     EnableDirectStream: true,
     EnableTranscoding: true,
     AutoOpenLiveStream: true,
-  });
+  };
+  // Real field on PlaybackInfoDto (Jellyfin.Api's own
+  // Models/MediaInfoDtos/PlaybackInfoDto.cs): omitted, the negotiation
+  // picks whichever source GetPlaybackMediaSources defaults to; passed,
+  // it re-negotiates that exact one instead, the same call a source
+  // switch in the player makes with the id the reader just picked.
+  if (mediaSourceId) body.MediaSourceId = mediaSourceId;
+  // Also a real field on the same DTO. Real feedback, chased through a
+  // real server log all the way down: a bare GET against the existing
+  // /Videos/stream endpoint with a different AudioStreamIndex query
+  // param, reusing the same PlaySessionId the title already opened on,
+  // never once produced a genuinely new transcode job server side, no
+  // matter how correctly that URL was built or how long a real gap sat
+  // between it and the old session's own stop report. A source switch
+  // right below never had that problem, and the one real thing it does
+  // differently is exactly this: a fresh PlaybackInfo negotiation,
+  // handing back a fresh PlaySessionId of its own, the same real
+  // mechanism jellyfin-web's own playbackmanager.js uses for a track
+  // switch too (confirmed against its source before writing this), not
+  // a query param bolted onto whichever stream URL was already live.
+  if (audioStreamIndex != null) body.AudioStreamIndex = audioStreamIndex;
+  // Same real field, same real reason: a burned in subtitle switch is
+  // the exact same kind of same MediaSourceId, different stream index
+  // request an audio track switch already needed this real
+  // renegotiation for, real feedback already traced all the way down
+  // to a real server log why a bare GET alone was never enough.
+  if (subtitleStreamIndex != null) body.SubtitleStreamIndex = subtitleStreamIndex;
+  return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
+}
+
+// The item's own full list of real alternate sources (every stream
+// Gelato resolved for it, not just the one PlaybackInfo negotiates),
+// confirmed against DtoService.cs before writing this: MediaSources on
+// a fetched item DTO only populates when ItemFields.MediaSources is
+// explicitly requested, backed by the same GetStaticMediaSources() a
+// stream switcher needs to list from, distinct from
+// GetPlaybackMediaSources (what getPlaybackInfo above negotiates),
+// which always narrows to one.
+export function getMediaSources(itemId) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({ Fields: 'MediaSources' });
+  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString()).then(
+    function (result) {
+      return (result && result.MediaSources) || [];
+    },
+  );
 }
 
 // 1 second = 10,000,000 ticks, real .NET TimeSpan tick length every
@@ -249,16 +525,163 @@ export function getPlaybackInfo(itemId, startTimeTicks) {
 // already uses.
 export const TICKS_PER_SECOND = 10000000;
 
-export function buildStreamUrl(itemId, mediaSource, startTimeTicks) {
+// getPlaybackInfo() above sends no real DeviceProfile at all, so its
+// own real MediaSourceInfo.SupportsDirectPlay is not a real answer
+// about whether this browser specifically can decode the source: with
+// nothing telling the server what a bare <video> element here can
+// actually play, real Jellyfin negotiation has nothing to evaluate
+// compatibility against, confirmed live as still landing on a dead
+// player after trusting that same flag first. TranscodingUrl carries
+// the same real blind spot, and even a correctly populated one is
+// routinely an HLS master playlist (MediaSourceInfo's own
+// TranscodingSubProtocol, "hls" far more often than "http" on a real
+// negotiation with no profile guiding it toward progressive output),
+// which a bare <video> element cannot parse at all outside Safari, no
+// different a dead end than the Static bug this already replaced.
+// Deciding this client side instead, against the source's own real
+// Container and MediaStreams codecs, is the one answer that does not
+// depend on any of that: a browser's own real decode support is fixed
+// and well known, not something any server side negotiation is needed
+// to discover. Not direct playable, the fallback is a real forced
+// progressive transcode (VideoCodec=h264&AudioCodec=aac, Static
+// omitted so the server actually transcodes rather than serving the
+// source's own real bytes as is), never HLS, so this always stays
+// something a bare <video> element can play with no shim of its own.
+const DIRECT_PLAY_CONTAINERS = new Set(['mp4', 'webm', 'm4v']);
+const DIRECT_PLAY_VIDEO_CODECS = new Set(['h264', 'vp8', 'vp9', 'av1']);
+const DIRECT_PLAY_AUDIO_CODECS = new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac']);
+
+export function canBrowserDirectPlay(mediaSource) {
+  if (!mediaSource) return false;
+  if (mediaSource.SupportsDirectPlay === false && mediaSource.SupportsDirectStream === false) {
+    return false;
+  }
+  const container = String(mediaSource.Container || '').toLowerCase();
+  if (!DIRECT_PLAY_CONTAINERS.has(container)) return false;
+
+  const streams = mediaSource.MediaStreams || [];
+  const video = streams.filter(function (stream) {
+    return stream.Type === 'Video';
+  })[0];
+  const audio = streams.filter(function (stream) {
+    return stream.Type === 'Audio';
+  })[0];
+  if (video && !DIRECT_PLAY_VIDEO_CODECS.has(String(video.Codec || '').toLowerCase())) return false;
+  if (audio && !DIRECT_PLAY_AUDIO_CODECS.has(String(audio.Codec || '').toLowerCase())) return false;
+  return true;
+}
+
+// Leaving VideoBitRate unset on the forced transcode fallback above
+// let the server fall back to its own real default, reported live as
+// every transcoded stream coming back noticeably, incorrectly low
+// quality regardless of the source's own real resolution. The
+// source's own real per-stream MediaStream.BitRate (or, absent that,
+// MediaSourceInfo's own real overall Bitrate) is the one real number
+// already describing what this exact title actually needs, a real
+// floor under it only for a source with no real bitrate reported at
+// all, not a guess replacing a real one that is there.
+const FALLBACK_VIDEO_BITRATE = 20000000;
+
+function estimateVideoBitrate(mediaSource) {
+  const streams = (mediaSource && mediaSource.MediaStreams) || [];
+  const video = streams.filter(function (stream) {
+    return stream.Type === 'Video';
+  })[0];
+  if (video && video.BitRate) return video.BitRate;
+  if (mediaSource && mediaSource.Bitrate) return mediaSource.Bitrate;
+  return FALLBACK_VIDEO_BITRATE;
+}
+
+// Every real embedded audio track this source carries, the same
+// MediaStreams array components/streamPicker.js's own quality badges
+// and getSubtitleStreams above already read, just filtered to the
+// other real Type value on it.
+export function getAudioStreams(mediaSource) {
+  return (mediaSource.MediaStreams || []).filter(function (stream) {
+    return stream.Type === 'Audio';
+  });
+}
+
+// audioStreamIndex, when given, asks for a specific embedded audio
+// track by its own real MediaStreams index instead of whichever one
+// Jellyfin defaults to. Static=true serves the whole file's bytes as
+// is, every embedded track included, with no way to tell the server
+// which one to hand the browser: real Jellyfin behaviour, confirmed
+// against jellyfin-web's own playbackmanager.js before writing this,
+// is that picking a non default audio track forces a real transcode
+// even on an otherwise direct playable file, so a real
+// AudioStreamIndex can actually take effect server side.
+//
+// options.forceTranscode exists for the same real reason a seek needs
+// it: StartTimeTicks on a Static=true request is real Jellyfin syntax
+// for a local file's own server side seek, but every source this
+// runtime ever plays is a live Gelato proxy in front of a debrid or
+// usenet host, never a local file (this whole plugin's own header says
+// as much), and not every one of those honours an HTTP Range request
+// against it. Real feedback found this live: seeking moved the
+// reader's own displayed time and then quietly landed back at 0:00.
+// A forced transcode's own StartTimeTicks is real ffmpeg -ss instead,
+// seeking the source itself before a single byte is ever encoded,
+// proven reliable here already (this is exactly what an audio track
+// switch, or landing this screen already forced into a transcode by
+// canBrowserDirectPlay's own veto, already relies on).
+//
+// options.playSessionId is the one PlaybackInfo negotiation actually
+// hands back (real field on Jellyfin's own PlaybackInfoResponse) and
+// real feedback traced an actual server log to prove out: without it
+// on the stream URL, Jellyfin's own TranscodingJobHelper has no real
+// way to tell a mid-playback audio track switch apart from the exact
+// same request arriving twice, and real Jellyfin logs showed exactly
+// that live, an audio switch's own new request never spinning up a
+// new real ffmpeg process at all, only the old one winding down on its
+// own, the switch itself silently never taking effect. Every real
+// jellyfin-web session already keeps this same one real id for the
+// whole time a title stays open, this runtime's own real session now
+// does too.
+export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
+  const opts = options || {};
   const token = getAccessToken();
-  const container = (mediaSource && mediaSource.Container) || 'mp4';
+  const mediaSourceId = (mediaSource && mediaSource.Id) || itemId;
+  // burnInSubtitleStreamIndex forces the same real transcode an
+  // AudioStreamIndex switch already does, for the same real reason: an
+  // image based subtitle (PGS, VobSub) has no WebVTT form to hand a
+  // <track> element, nothing this runtime's own <video> can render on
+  // its own, so the only way this runtime can show one at all is
+  // asking Jellyfin's own real transcoder to draw it directly into the
+  // video, real SubtitleStreamIndex/SubtitleMethod=Encode params
+  // confirmed against MediaEncoding/EncodingHelper.cs's own real
+  // subtitle burn in path before writing this, not guessed at.
+  const forceTranscode =
+    !!opts.forceTranscode ||
+    opts.burnInSubtitleStreamIndex != null ||
+    (opts.audioStreamIndex != null && opts.audioStreamIndex !== mediaSource.DefaultAudioStreamIndex);
+  const directPlay = !forceTranscode && canBrowserDirectPlay(mediaSource);
+  const container = directPlay ? (mediaSource && mediaSource.Container) || 'mp4' : 'mp4';
+
   const params = new URLSearchParams({
-    Static: 'true',
-    MediaSourceId: (mediaSource && mediaSource.Id) || itemId,
+    MediaSourceId: mediaSourceId,
     DeviceId: getDeviceId(),
     api_key: token || '',
     StartTimeTicks: String(startTimeTicks || 0),
   });
+  if (opts.playSessionId) {
+    params.set('PlaySessionId', opts.playSessionId);
+  }
+  if (directPlay) {
+    params.set('Static', 'true');
+  } else {
+    params.set('VideoCodec', 'h264');
+    params.set('AudioCodec', 'aac');
+    params.set('VideoBitRate', String(estimateVideoBitrate(mediaSource)));
+    params.set('AudioBitRate', '192000');
+  }
+  if (opts.audioStreamIndex != null) {
+    params.set('AudioStreamIndex', String(opts.audioStreamIndex));
+  }
+  if (opts.burnInSubtitleStreamIndex != null) {
+    params.set('SubtitleStreamIndex', String(opts.burnInSubtitleStreamIndex));
+    params.set('SubtitleMethod', 'Encode');
+  }
   return getServerAddress() + '/Videos/' + itemId + '/stream.' + container + '?' + params.toString();
 }
 
@@ -398,6 +821,7 @@ export async function setUserAvatar(presetId) {
     err.status = response.status;
     throw err;
   }
+  invalidateCurrentUser();
 }
 
 // Streaming service hub: which catalog collections a server really has,
@@ -410,15 +834,22 @@ export async function setUserAvatar(presetId) {
 export function getCollections() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const params = new URLSearchParams({
-    IncludeItemTypes: 'BoxSet',
-    Recursive: 'true',
-    SortBy: 'SortName',
-    Limit: '100',
-    Fields: 'ProviderIds',
-  });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
-    return (result && result.Items) || [];
+  return cached('collections:' + userId, function () {
+    const params = new URLSearchParams({
+      IncludeItemTypes: 'BoxSet',
+      Recursive: 'true',
+      SortBy: 'SortName',
+      Limit: '100',
+      // ChildCount is not part of a BoxSet's default field set, and
+      // screens/home.js's own catalog rows filter on it (a catalog
+      // with fewer than three real items is not worth a row): without
+      // asking for it explicitly every collection reads back as 0
+      // children and buildCatalogRows drops all of them, silently.
+      Fields: 'ProviderIds,ChildCount',
+    });
+    return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+      return (result && result.Items) || [];
+    });
   });
 }
 
@@ -448,7 +879,10 @@ export function getCollectionItems(collectionId, kind, limit) {
     Fields: 'ProductionYear,CommunityRating,Genres',
     SortBy: 'SortName',
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  const path = '/Users/' + userId + '/Items?' + params.toString();
+  return cached(path, function () {
+    return getJson(path);
+  }).then(function (result) {
     return (result && result.Items) || [];
   });
 }
@@ -466,13 +900,16 @@ export function updateUserPassword(currentPassword, newPassword) {
   });
 }
 
-// A subtitle stream not in text form (PGS, VobSub, any image based
-// format) has no WebVTT representation to hand a <track> element, real
-// distinction confirmed against MediaStream.cs's own IsTextSubtitleStream
-// before writing this: only checked, never guessed at from Codec alone.
+// Every real subtitle stream, text and image based (PGS, VobSub) both:
+// screens/player.js's own subtitle menu decides what to do with each
+// one from its own real IsTextSubtitleStream field (confirmed against
+// MediaStream.cs before writing this, only checked, never guessed at
+// from Codec alone), a text stream getting the plain WebVTT <track>
+// below, an image one needing a real burned in transcode instead,
+// nothing this runtime's own <video> element can render on its own.
 export function getSubtitleStreams(mediaSource) {
   return (mediaSource.MediaStreams || []).filter(function (stream) {
-    return stream.Type === 'Subtitle' && stream.IsTextSubtitleStream;
+    return stream.Type === 'Subtitle';
   });
 }
 
@@ -540,20 +977,31 @@ export async function getNextEpisode(item) {
 // page happened to sort first among several hundred titles stamped the
 // same second", not "newest". Confirmed against the original Jellio
 // codebase's own heroCarousel.js before porting the same choice here.
+// Cached the same way views/collections/the current user are: SortBy
+// Random means an uncached second call inside the same TTL window
+// returns a different set, which would defeat app.js's own splash
+// preload (its whole point is warming the exact images the home
+// screen's real heroCarousel.js call renders a moment later, not a
+// different random eight). A minute of "random" staying put is not
+// something a reader can notice on their own.
 export function getHeroCandidates(limit, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const opts = options || {};
-  const params = new URLSearchParams({
-    SortBy: 'Random',
-    Recursive: 'true',
-    IncludeItemTypes: opts.itemTypes || 'Movie,Series',
-    Limit: String(limit || 8),
-    Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating',
-  });
-  if (opts.parentId) params.set('ParentId', opts.parentId);
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
-    return (result && result.Items) || [];
+  const itemTypes = opts.itemTypes || 'Movie,Series';
+  const key = 'hero:' + userId + ':' + (opts.parentId || '') + ':' + itemTypes + ':' + (limit || 8);
+  return cached(key, function () {
+    const params = new URLSearchParams({
+      SortBy: 'Random',
+      Recursive: 'true',
+      IncludeItemTypes: itemTypes,
+      Limit: String(limit || 8),
+      Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating',
+    });
+    if (opts.parentId) params.set('ParentId', opts.parentId);
+    return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+      return (result && result.Items) || [];
+    });
   });
 }
 
@@ -563,19 +1011,24 @@ export function getHeroCandidates(limit, options) {
 // /Genres, since that endpoint answers which genre names exist, not
 // which carry enough titles for a row worth scrolling. A genre with
 // fewer than 8 titles in the sample is dropped, same threshold, same
-// reasoning, not re-derived.
+// reasoning, not re-derived. parentId is optional: the home screen's
+// own genre rows sample the whole server the same way the original
+// codebase's own homeRows.js discoverGenres() does, not one library.
 export function discoverGenres(parentId, itemType, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
-    ParentId: parentId,
     Recursive: 'true',
     IncludeItemTypes: itemType,
     Limit: '300',
     Fields: 'Genres',
     SortBy: 'Random',
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString())
+  if (parentId) params.set('ParentId', parentId);
+  const path = '/Users/' + userId + '/Items?' + params.toString();
+  return cached(path, function () {
+    return getJson(path);
+  })
     .then(function (result) {
       const items = (result && result.Items) || [];
       const counts = {};
@@ -602,7 +1055,6 @@ export function getGenreItems(parentId, itemType, genre, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
-    ParentId: parentId,
     Recursive: 'true',
     IncludeItemTypes: itemType,
     Genres: genre,
@@ -611,7 +1063,11 @@ export function getGenreItems(parentId, itemType, genre, limit) {
     SortBy: 'CommunityRating',
     SortOrder: 'Descending',
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  if (parentId) params.set('ParentId', parentId);
+  const path = '/Users/' + userId + '/Items?' + params.toString();
+  return cached(path, function () {
+    return getJson(path);
+  }).then(function (result) {
     return (result && result.Items) || [];
   });
 }
