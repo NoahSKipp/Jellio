@@ -7,38 +7,12 @@
 // through navigate() as a pop, indistinguishable from a real back press,
 // which misbehaves on any route this runtime has not taken over yet.
 // Falls back to the raw assignment only if the real router is not there.
-//
-// Real bug, found live from the player screen specifically: Emby.Page.show()
-// runs through native's own route guard (auth.js's own header explains
-// why), and that guard's own internal "where am I" state can be out of
-// sync with the real address bar on a route only this runtime ever
-// took over, since native never itself ran a real transition into it.
-// show() throwing there used to abort navigateTo entirely with nothing
-// falling back, reported live as Back doing nothing at all, not even
-// the address bar moving. Same real philosophy the history patch below
-// already uses: losing native's own route guard integration for the
-// one real route it does not recognize is an acceptable degradation,
-// leaving the reader stuck on a dead screen is not.
-// Real target, not just "did window.location.hash change at all": a
-// route guard declining the transition can also leave the address bar
-// exactly where navigateTo's own caller already was, a real case a
-// plain equality check against the hash before this call would read
-// as "it worked" for.
-function normalizedHash(value) {
-  return (value || '').replace(/^#\/?/, '');
-}
-
 export function navigateTo(hash) {
   if (window.Emby && window.Emby.Page && typeof window.Emby.Page.show === 'function') {
-    try {
-      window.Emby.Page.show(hash);
-      if (normalizedHash(window.location.hash) === normalizedHash(hash)) return;
-      console.warn('Jellio: Emby.Page.show() did not navigate, falling back to a plain hash change');
-    } catch (err) {
-      console.warn('Jellio: Emby.Page.show() failed, falling back to a plain hash change', err);
-    }
+    window.Emby.Page.show(hash);
+  } else {
+    window.location.hash = hash;
   }
-  window.location.hash = hash;
 }
 
 export function currentHash() {
@@ -73,44 +47,6 @@ function notify() {
 }
 
 window.addEventListener('hashchange', notify);
-window.addEventListener('popstate', notify);
-
-// navigateTo's own real Emby.Page.show() call above lands on react-router's
-// own history object (components/router/routerHistory.ts's own push(),
-// confirmed real before writing this), which navigates through
-// window.history.pushState()/replaceState(), never a bare hash
-// assignment. pushState/replaceState never fire hashchange, only a
-// user's own back/forward press or a direct location.hash write do, so
-// every native-routed click this runtime hands off to Emby.Page.show()
-// changed the address bar and never reached this router at all. Real
-// bug, found live: Movies, Shows, Search, Watchlist and every card's
-// own click handler visibly changed the URL and rendered nothing.
-// Patching both, the same technique any analytics script already uses
-// to see SPA navigation it did not initiate itself, is the only way to
-// hear a pushState call fire without owning the router that makes it.
-// try/catch around the assignment itself, not just its call: this file
-// is an ES module, always strict mode, and a strict-mode assignment to
-// a non-writable property throws instead of failing silently. If
-// window.history[method] is ever locked down (a frozen history object,
-// some embedding this codebase has not seen), that throw happened at
-// top-level module evaluation, aborting this whole module's own
-// execution before it reached a single addEventListener call below,
-// and everything that imports it with it: reported live as the reskin
-// not loading at all. Losing pushState detection on a client where
-// this cannot be patched is a real, acceptable degradation; losing the
-// entire runtime over it is not.
-['pushState', 'replaceState'].forEach(function (method) {
-  try {
-    const original = window.history[method];
-    window.history[method] = function () {
-      const result = original.apply(this, arguments);
-      notify();
-      return result;
-    };
-  } catch (err) {
-    console.warn('Jellio: could not patch history.' + method, err);
-  }
-});
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', notify);
