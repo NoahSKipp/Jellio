@@ -3,6 +3,7 @@
    project, same values, this is not new third party IP. */
 :root {
   --jellio-bg-color: #0d0d0d;
+  --jellio-bg-color-rgb: 13 13 13;
   --jellio-bg-elevated: #1a1a1a;
   --jellio-card-bg: #222222;
   --jellio-secondary-color: #f5f5f5;
@@ -13,7 +14,9 @@
   --jellio-text-tertiary: #808080;
   --jellio-border-color: #333333;
   --jellio-font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  --jellio-card-radius: clamp(10px, 0.9vw, 16px);
+  --jellio-card-radius: clamp(14px, 1.1vw, 22px);
+  --jellio-card-gap: clamp(12px, 1vw, 18px);
+  --jellio-focus-color-rgb: 255 255 255;
   --jellio-safe-gutter: clamp(28px, 3vw, 56px);
 }
 
@@ -40,8 +43,17 @@
   height: 100vh;
 }
 
+/* Matches .jellio-sidebar's own width below rather than flex: 0 0 auto,
+   which sized this mount off its own children instead. getRoot()
+   rebuilds the shell's inner HTML on every render (self-heal fix,
+   app.js), so this mount sits briefly empty before renderSidebar()'s
+   own async work repopulates it, and an auto flex-basis collapsed an
+   empty mount to near nothing before snapping back once content
+   landed, a real visible size flash on every navigation, reported
+   live. A fixed basis reserves the final width immediately regardless
+   of what has loaded into it yet. */
 .jellio-sidebar-mount {
-  flex: 0 0 auto;
+  flex: 0 0 clamp(13.5em, 15vw, 16.5em);
 }
 
 .jellio-content {
@@ -55,21 +67,28 @@
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
-  width: clamp(64px, 6vw, 96px);
+  width: clamp(13.5em, 15vw, 16.5em);
   height: 100%;
-  padding: 20px 8px;
+  padding: 20px 12px;
   background: var(--jellio-bg-elevated);
   border-right: 1px solid var(--jellio-border-color);
 }
 
+/* Row layout, icon beside the label rather than stacked above it,
+   matching the original codebase's own persistent-sidebar.css. The
+   stacked layout this rail shipped with first sized the rail itself
+   off a narrow clamp(64px, 6vw, 96px) that left no room for a real
+   label, truncating "Settings" to a few letters, reported live
+   directly against a screenshot. */
 .jellio-sidebar-link {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
-  padding: 10px 4px;
+  gap: 0.9em;
+  height: 2.75em;
+  padding: 0 0.85em;
   border: 0;
-  border-radius: var(--jellio-card-radius);
+  border-radius: 0.75em;
   background: transparent;
   color: var(--jellio-text-secondary);
   cursor: pointer;
@@ -83,13 +102,18 @@
 
 .jellio-sidebar-link-active {
   color: var(--jellio-text-color);
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.12);
 }
 
+/* em based rather than the earlier fixed px/vw clamp: the rail's own
+   width is now an em based clamp too (line 68), so the icon sizes
+   with it and stays proportionate at any width instead of being
+   pinned to a viewport fraction independent of the rail around it. */
 .jellio-sidebar-icon-svg {
-  width: 22px;
-  height: 22px;
+  width: 1.75em;
+  height: 1.75em;
   fill: currentColor;
+  flex: 0 0 auto;
 }
 
 .jellio-sidebar-icon-svg-stroke {
@@ -101,16 +125,18 @@
 }
 
 .jellio-sidebar-link .material-icons {
-  font-size: 22px;
+  font-size: 1.75em;
+  flex: 0 0 auto;
 }
 
 .jellio-sidebar-label {
-  font-size: 0.62rem;
-  text-align: center;
+  font-size: 0.92em;
+  font-weight: 500;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
+  min-width: 0;
 }
 
 .jellio-sidebar-divider {
@@ -149,9 +175,17 @@
 
 .jellio-row-track {
   display: flex;
-  gap: clamp(10px, 1vw, 16px);
+  gap: var(--jellio-card-gap);
   overflow-x: auto;
-  padding: 0 var(--jellio-safe-gutter) 0.5em;
+  /* overflow-x: auto forces overflow-y to compute as auto too (a
+     visible axis paired with a non-visible one always does), so a
+     hovered card's own scale transform and outline get clipped by this
+     track the instant either exceeds its box. Real feedback: the hover
+     enlarge this codebase's own cards.css had ("Cards don't enlarge on
+     hover anymore") wasn't lost, this track just never had the vertical
+     room to show it, clipping the outline too. Padding-top gives the
+     scaled-up card somewhere to grow into. */
+  padding: 14px var(--jellio-safe-gutter) 0.5em;
   scrollbar-width: none;
 }
 
@@ -176,16 +210,21 @@
   object-fit: cover;
   background: var(--jellio-card-bg);
   display: block;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jellio-card-image-empty {
   background: var(--jellio-card-bg);
 }
 
+/* Title carries the primary text colour rather than the secondary one:
+   the original codebase's own cards.css puts .cardText (the card's own
+   title line) in --jellio-text-color, the same weight as the rest of
+   the app's own copy, not the dimmer secondary tone. */
 .jellio-card-title {
   margin-top: 0.5em;
   font-size: 0.85rem;
-  color: var(--jellio-text-secondary);
+  color: var(--jellio-text-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -193,8 +232,12 @@
 
 .jellio-card:hover .jellio-card-image,
 .jellio-card:focus-visible .jellio-card-image {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: 2px;
+  transform: scale(1.06);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+}
+
+.jellio-card:focus-visible .jellio-card-image {
+  box-shadow: 0 0 0 2px rgb(var(--jellio-focus-color-rgb) / 0.9);
 }
 
 .jellio-card:focus-visible {
@@ -245,7 +288,7 @@
 .jellio-library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: clamp(14px, 1.4vw, 22px);
+  gap: var(--jellio-card-gap);
   padding: 0 var(--jellio-safe-gutter) clamp(32px, 4vw, 64px);
 }
 
@@ -374,6 +417,16 @@
 .jellio-cast-card {
   flex: 0 0 auto;
   width: clamp(90px, 8vw, 120px);
+  cursor: pointer;
+}
+
+.jellio-cast-card:focus-visible .jellio-cast-image {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 2px;
+}
+
+.jellio-cast-card:focus-visible {
+  outline: none;
 }
 
 .jellio-cast-image {
@@ -639,7 +692,8 @@
   accent-color: var(--jellio-secondary-color);
 }
 
-.jellio-player-sleep {
+.jellio-player-sleep,
+.jellio-player-subtitles {
   position: relative;
   display: flex;
   align-items: center;
@@ -654,8 +708,14 @@
   flex: 0 0 auto;
 }
 
-.jellio-player-sleep:hover {
+.jellio-player-sleep:hover,
+.jellio-player-subtitles:hover {
   background: rgb(255 255 255 / 0.2);
+}
+
+.jellio-player-subtitles:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .jellio-player-sleep-active {
@@ -689,15 +749,20 @@
   cursor: pointer;
 }
 
+.jellio-player-sleep-option-active {
+  color: var(--jellio-secondary-color);
+}
+
 .jellio-sidebar-avatar-mount {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
 }
 
 .jellio-sidebar-avatar {
-  width: 22px;
-  height: 22px;
+  width: 1.9em;
+  height: 1.9em;
   border-radius: 50%;
   object-fit: cover;
   display: block;
@@ -823,13 +888,21 @@
    to white here rather than trusting whatever the file declares.
    brightness(0) flattens any colour to black first, invert lifts it to
    white, holding for a mark of any original colour. */
+/* height alone, with width left to auto, let each logo's own aspect
+   ratio decide its rendered size: a wide wordmark (Prime Video's own
+   SVG is far wider than it is tall next to Disney+'s or Apple TV's
+   squarer marks) hit max-width and got constrained down in both
+   dimensions to stay inside it, rendering visibly smaller than every
+   other tile. Setting both width and height turns this into a real
+   fixed box for object-fit: contain to fit each logo into, so a wide
+   mark uses the full width and a tall one the full height, the same
+   apparent scale across every service regardless of its own shape. */
 .jellio-hub-tile-logo {
   position: absolute;
   inset: 0;
   margin: auto;
+  width: 82%;
   height: 54%;
-  width: auto;
-  max-width: 82%;
   object-fit: contain;
   filter: brightness(0) invert(1);
 }
@@ -935,4 +1008,999 @@
 .jellio-service-chip:focus-visible {
   outline: 2px solid var(--jellio-secondary-color);
   outline-offset: 2px;
+}
+
+.jellio-settings-header {
+  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
+}
+
+.jellio-settings-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.2vw, 2rem);
+  font-weight: 700;
+}
+
+.jellio-settings-section {
+  max-width: 40em;
+  padding: 0 var(--jellio-safe-gutter) clamp(24px, 3vw, 40px);
+}
+
+.jellio-settings-section-title {
+  margin: 0 0 0.8em;
+  font-size: clamp(1.05rem, 1.4vw, 1.3rem);
+  font-weight: 700;
+}
+
+.jellio-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+}
+
+.jellio-settings-input {
+  width: 100%;
+  padding: 0.7em 1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-card-bg);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(0.9rem, 1.1vw, 1.05rem);
+  box-sizing: border-box;
+}
+
+.jellio-settings-input:focus {
+  outline: none;
+  border-color: var(--jellio-secondary-color);
+}
+
+.jellio-settings-status {
+  margin: 0;
+  color: var(--jellio-text-secondary);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+}
+
+.jellio-settings-button {
+  align-self: flex-start;
+  padding: 0.6em 1.6em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.jellio-settings-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.jellio-settings-button-danger {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--jellio-text-color);
+}
+
+.jellio-sidebar-now-playing {
+  position: relative;
+}
+
+.jellio-sidebar-now-playing-badge {
+  position: absolute;
+  top: 0.3em;
+  left: 1.9em;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  border-radius: 999px;
+  min-width: 1.2em;
+  height: 1.2em;
+  padding: 0 0.3em;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65em;
+  font-weight: 700;
+}
+
+.jellio-sidebar-now-playing-active .jellio-sidebar-now-playing-badge {
+  display: inline-flex;
+}
+
+.jellio-now-playing-panel {
+  position: fixed;
+  left: calc(clamp(64px, 6vw, 96px) + 0.75em);
+  bottom: 1.5em;
+  z-index: 10001;
+  display: none;
+  flex-direction: column;
+  gap: 0.5em;
+  width: min(24em, calc(100vw - clamp(64px, 6vw, 96px) - 2 * var(--jellio-safe-gutter)));
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.75em;
+  border-radius: var(--jellio-card-radius);
+  background: linear-gradient(180deg, var(--jellio-bg-elevated), var(--jellio-card-bg));
+  border: 1px solid var(--jellio-border-color);
+}
+
+.jellio-now-playing-panel.jellio-now-playing-panel-visible {
+  display: flex;
+}
+
+.jellio-now-playing-row {
+  display: flex;
+  gap: 0.75em;
+  align-items: center;
+  padding: 0.5em;
+  border-radius: var(--jellio-card-radius);
+}
+
+.jellio-now-playing-row-poster {
+  width: 3em;
+  height: 4.2em;
+  flex-shrink: 0;
+  border-radius: calc(var(--jellio-card-radius) / 2);
+  background-color: var(--jellio-card-bg);
+  background-size: cover;
+  background-position: center;
+}
+
+.jellio-now-playing-row-title {
+  color: var(--jellio-text-color);
+  font-weight: 600;
+  margin: 0 0 0.15em;
+}
+
+.jellio-now-playing-row-meta {
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+  margin: 0;
+}
+
+.jellio-now-playing-empty {
+  color: var(--jellio-text-secondary);
+  text-align: center;
+  padding: 1em;
+}
+
+.jellio-player-upnext {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  bottom: 6.5em;
+  z-index: 2;
+  display: flex;
+  width: min(24em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
+  overflow: hidden;
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-bg-elevated);
+  border: 1px solid var(--jellio-border-color);
+  box-shadow: 0 0.5em 2em rgb(0 0 0 / 0.45);
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.jellio-player-upnext-hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.jellio-player-upnext-thumb {
+  width: 7em;
+  flex: 0 0 auto;
+  background-color: var(--jellio-card-bg);
+  background-size: cover;
+  background-position: center;
+}
+
+.jellio-player-upnext-body {
+  flex: 1 1 auto;
+  padding: 0.9em 1em;
+  min-width: 0;
+}
+
+.jellio-player-upnext-eyebrow {
+  color: var(--jellio-text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.jellio-player-upnext-title {
+  margin: 0.3em 0 0.7em;
+  color: var(--jellio-text-color);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-player-upnext-actions {
+  display: flex;
+  gap: 0.5em;
+}
+
+.jellio-player-upnext-play {
+  padding: 0.5em 1.1em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.jellio-player-upnext-dismiss {
+  padding: 0.5em 1em;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.jellio-player-skip {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  bottom: 6.5em;
+  z-index: 2;
+  padding: 0.6em 1.4em;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.jellio-player-skip:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.jellio-player-skip-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.jellio-hero {
+  position: relative;
+  width: 100%;
+  height: 85vh;
+  min-height: 32em;
+  max-height: 56em;
+  overflow: hidden;
+  margin-bottom: clamp(16px, 2vw, 32px);
+}
+
+.jellio-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: var(--jellio-bg-color);
+}
+
+.jellio-hero-backdrop-layer {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center 20%;
+  opacity: 0;
+  transition: opacity 800ms ease-in-out;
+}
+
+.jellio-hero-backdrop-layer-visible {
+  opacity: 1;
+}
+
+.jellio-hero-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5em;
+  border: none;
+  background: transparent;
+  color: var(--jellio-text-color);
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 180ms ease, background-color 180ms ease;
+}
+
+.jellio-hero:hover .jellio-hero-nav,
+.jellio-hero-nav:focus-visible {
+  opacity: 1;
+}
+
+.jellio-hero-nav:hover {
+  background: rgb(13 13 13 / 0.3);
+}
+
+.jellio-hero-nav .material-icons {
+  font-size: 2.5em;
+}
+
+.jellio-hero-nav-prev {
+  left: 0;
+}
+
+.jellio-hero-nav-next {
+  right: 0;
+}
+
+.jellio-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(13 13 13 / 0.85) 0%, rgb(13 13 13 / 0.15) 55%, transparent 80%),
+    linear-gradient(0deg, var(--jellio-bg-color) 0%, transparent 45%);
+}
+
+.jellio-hero-content {
+  position: absolute;
+  left: var(--jellio-safe-gutter);
+  right: var(--jellio-safe-gutter);
+  bottom: 3.5em;
+  max-width: 34em;
+  z-index: 1;
+}
+
+.jellio-hero-logo {
+  display: block;
+  max-height: 5.5em;
+  max-width: 100%;
+  width: auto;
+  margin: 0 0 0.6em;
+  object-fit: contain;
+  object-position: left;
+}
+
+.jellio-hero-logo-hidden {
+  display: none;
+}
+
+.jellio-hero-title {
+  display: none;
+  color: var(--jellio-text-color);
+  font-size: 2.4em;
+  font-weight: 700;
+  margin: 0 0 0.3em;
+}
+
+.jellio-hero-logo-hidden ~ .jellio-hero-title {
+  display: block;
+}
+
+.jellio-hero-meta {
+  color: var(--jellio-text-secondary);
+  margin: 0 0 0.6em;
+}
+
+.jellio-hero-overview {
+  color: var(--jellio-text-color);
+  opacity: 0.85;
+  line-height: 1.5;
+  margin: 0 0 1.2em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.jellio-hero-actions {
+  display: flex;
+  gap: 0.75em;
+}
+
+.jellio-hero-action {
+  border: none;
+  border-radius: 999px;
+  padding: 0.75em 1.75em;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.jellio-hero-action:hover {
+  background: var(--jellio-secondary-variant);
+}
+
+.jellio-hero-action-secondary {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--jellio-text-color);
+}
+
+.jellio-hero-action-secondary:hover {
+  background: rgb(255 255 255 / 0.18);
+}
+
+.jellio-hero-dots {
+  position: absolute;
+  left: var(--jellio-safe-gutter);
+  bottom: 1.5em;
+  z-index: 1;
+  display: flex;
+  gap: 0.5em;
+}
+
+.jellio-hero-dot {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.35);
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.jellio-hero-dot-active {
+  background: var(--jellio-secondary-color);
+}
+
+.jellio-person-header {
+  display: flex;
+  gap: clamp(20px, 3vw, 40px);
+  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(16px, 2vw, 28px);
+}
+
+.jellio-person-photo {
+  flex: 0 0 auto;
+  width: clamp(140px, 16vw, 220px);
+  aspect-ratio: 2 / 3;
+  border-radius: var(--jellio-card-radius);
+  object-fit: cover;
+  background: var(--jellio-card-bg);
+}
+
+.jellio-person-photo-empty {
+  background: var(--jellio-card-bg);
+}
+
+.jellio-person-info {
+  max-width: 48em;
+}
+
+.jellio-person-name {
+  margin: 0 0 0.5em;
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+  font-weight: 800;
+}
+
+.jellio-person-overview {
+  color: var(--jellio-text-secondary);
+  line-height: 1.6;
+}
+
+.jellio-person-filmography {
+  padding-top: 0.5em;
+}
+
+/* Coverflow carousel for the library pages, ported from the original
+   codebase's own library-coverflow.css: three wide cards, the middle
+   one lit and carrying the title's own art, logo, meta and actions, the
+   two beside it dimmed, scaled back and tucked slightly under it. Real
+   feedback asked directly for this shape on library pages rather than
+   the home screen's own hero-carousel treatment above, kept as a
+   second component rather than a mode of that one for the same reason
+   this file's own upstream keeps them separate: a full-bleed backdrop
+   and a track of discrete cards share nothing but both advancing on a
+   timer. The reduced-motion block this file's own upstream carries is
+   dropped here: the * { transition-duration: 0.001ms !important; }
+   rule at the end of this file already covers every transition this
+   component declares. */
+.jellio-coverflow {
+  position: relative;
+  margin-bottom: clamp(20px, 1.8vw, 38px);
+  padding: clamp(14px, 1.4vw, 28px) 0 0;
+  overflow: hidden;
+}
+
+.jellio-coverflow-stage {
+  position: relative;
+  height: calc(clamp(320px, 34vw, 780px) / 2.2);
+}
+
+.jellio-coverflow-slide {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: clamp(320px, 34vw, 780px);
+  height: 100%;
+  margin-left: calc(clamp(320px, 34vw, 780px) / -2);
+  border-radius: clamp(10px, 0.9vw, 18px);
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 520ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 520ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform, opacity;
+}
+
+.jellio-coverflow-slide-near {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(calc(var(--jellio-cf-offset) * 72%)) scale(0.88);
+  z-index: 5;
+}
+
+.jellio-coverflow-slide-current {
+  transform: translateX(0) scale(1);
+  z-index: 6;
+  box-shadow:
+    0 1.4em 3.2em rgb(0 0 0 / 0.55),
+    0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+.jellio-coverflow-slide-far {
+  opacity: 0;
+  transform: translateX(calc(var(--jellio-cf-offset) * 72%)) scale(0.86);
+  z-index: 0;
+}
+
+.jellio-coverflow-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: var(--jellio-card-bg);
+}
+
+.jellio-coverflow-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--jellio-bg-color-rgb) / 0.68);
+  opacity: 1;
+  transition: opacity 520ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.jellio-coverflow-slide-current .jellio-coverflow-scrim {
+  opacity: 1;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--jellio-bg-color-rgb) / 0.75) 0%,
+    rgb(var(--jellio-bg-color-rgb) / 0.35) 45%,
+    rgb(var(--jellio-bg-color-rgb) / 0.05) 100%
+  );
+}
+
+.jellio-coverflow-info {
+  position: absolute;
+  left: clamp(16px, 1.8vw, 40px);
+  bottom: clamp(14px, 1.6vw, 34px);
+  right: clamp(16px, 1.8vw, 40px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(6px, 0.6vw, 12px);
+  opacity: 0;
+  transition: opacity 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-coverflow-slide-current .jellio-coverflow-info {
+  opacity: 1;
+}
+
+.jellio-coverflow-logo {
+  max-width: min(56%, 15em);
+  max-height: clamp(34px, 3.4vw, 74px);
+  object-fit: contain;
+  object-position: left bottom;
+}
+
+.jellio-coverflow-title {
+  margin: 0;
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(1.2rem, 2vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.jellio-coverflow-meta {
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(0.62rem, 0.72vw, 0.78rem);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.jellio-coverflow-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin-top: clamp(2px, 0.3vw, 8px);
+}
+
+.jellio-coverflow-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.55em 1.15em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(0.72rem, 0.8vw, 0.9rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-coverflow-button-secondary {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--jellio-text-color);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+
+.jellio-coverflow-button:hover {
+  transform: translateY(-1px);
+}
+
+.jellio-coverflow-button:focus-visible {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 2px;
+}
+
+.jellio-coverflow-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45em;
+  margin-top: clamp(10px, 1vw, 20px);
+}
+
+.jellio-coverflow-dot {
+  width: 0.4em;
+  height: 0.4em;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.28);
+  cursor: pointer;
+  transition:
+    width 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    background-color 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-coverflow-dot-active {
+  width: 1.5em;
+  background: var(--jellio-secondary-color);
+}
+
+.jellio-coverflow-dot:focus-visible {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 3px;
+}
+
+@media (max-width: 56.24em) {
+  .jellio-coverflow-slide {
+    width: min(86vw, 520px);
+    margin-left: calc(min(86vw, 520px) / -2);
+  }
+
+  .jellio-coverflow-stage {
+    height: calc(min(86vw, 520px) / 1.9);
+  }
+
+  .jellio-coverflow-slide-near {
+    transform: translateX(calc(var(--jellio-cf-offset) * 96%)) scale(0.92);
+  }
+
+  .jellio-coverflow-slide-current {
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* This runtime's own login screen, ported from the original codebase's
+   own login.css/login-profiles.css (before that project pulled its own
+   quick sign-in, see runtime/auth.js's own header for why theirs broke
+   and this one does not), without the html.jellio-active/#loginPage
+   scoping either file needed: those existed only because that codebase
+   injects onto native's own login page DOM, this one is a real screen
+   of its own inside #jellioRoot, no native page underneath to avoid
+   colliding with. */
+.jellio-screen-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--jellio-safe-gutter);
+  background: radial-gradient(ellipse at center, var(--jellio-bg-elevated) 0%, var(--jellio-bg-color) 72%);
+}
+
+@keyframes jellio-login-profiles-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.jellio-login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 64em;
+  animation: jellio-login-profiles-enter 420ms ease-out both;
+}
+
+.jellio-login-heading {
+  margin: 0 0 clamp(20px, 2.4vw, 40px);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(1.6rem, 2.6vw, 2.6rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+.jellio-login-profile-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(18px, 2.2vw, 36px);
+}
+
+.jellio-login-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: clamp(96px, 9vw, 148px);
+}
+
+.jellio-login-profile-avatar-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.jellio-login-profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: var(--jellio-card-radius, 16px);
+  background-color: var(--jellio-card-bg);
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-login-profile-avatar:hover,
+.jellio-login-profile-avatar:focus-visible {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 3px rgb(var(--jellio-focus-color-rgb, 255 255 255) / 0.9);
+  outline: none;
+}
+
+.jellio-login-profile-avatar:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.jellio-login-profile-avatar-add {
+  background-color: rgb(255 255 255 / 0.06);
+  border: 1px dashed rgb(255 255 255 / 0.24);
+}
+
+.jellio-login-profile-icon,
+.jellio-login-profile-avatar-add .material-icons {
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.jellio-login-profile-name {
+  display: block;
+  max-width: 100%;
+  margin-top: 0.6em;
+  overflow: hidden;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(0.82rem, 0.95vw, 1rem);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  transition: color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-login-profile:hover .jellio-login-profile-name {
+  color: var(--jellio-text-color);
+}
+
+.jellio-login-profile-remove {
+  position: absolute;
+  top: -0.4em;
+  right: -0.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7em;
+  height: 1.7em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.7);
+  color: var(--jellio-text-color);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.4, 0, 0.2, 1), background-color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-login-profile-avatar-wrap:hover .jellio-login-profile-remove,
+.jellio-login-profile-avatar-wrap:focus-within .jellio-login-profile-remove {
+  opacity: 1;
+}
+
+.jellio-login-profile-remove:hover {
+  background: rgb(0 0 0 / 0.9);
+}
+
+.jellio-login-form {
+  display: flex;
+  flex-direction: column;
+  width: min(26em, 100%);
+}
+
+.jellio-login-input {
+  width: 100%;
+  margin: 0.55em 0;
+  padding: 0.85em 1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-card-bg);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 1rem;
+}
+
+.jellio-login-input:focus {
+  border-color: var(--jellio-secondary-color);
+  outline: none;
+}
+
+.jellio-login-status {
+  min-height: 1.4em;
+  margin: 0.4em 0;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.jellio-login-submit {
+  margin-top: 0.4em;
+  padding: 0.85em 1em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.jellio-login-submit:hover {
+  background: var(--jellio-secondary-variant);
+}
+
+.jellio-login-submit:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.jellio-login-cancel {
+  margin-top: 0.8em;
+  padding: 0.4em;
+  border: 0;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-login-cancel:hover {
+  color: var(--jellio-text-color);
+}
+
+/* components/splash.js's own overlay. z-index above #jellioRoot's own
+   9999 (app.css's own token for that), so this covers the shell while
+   it is still empty rather than sitting behind it. */
+#jellioSplash {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 2.4vw, 36px);
+  background: var(--jellio-bg-color);
+  opacity: 1;
+  transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#jellioSplash.jellio-splash-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.jellio-splash-mark {
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.jellio-splash-spinner {
+  width: clamp(28px, 2.6vw, 40px);
+  height: clamp(28px, 2.6vw, 40px);
+  border-radius: 50%;
+  border: 3px solid rgb(255 255 255 / 0.16);
+  border-top-color: var(--jellio-secondary-color);
+  animation: jellio-splash-spin 800ms linear infinite;
+}
+
+@keyframes jellio-splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Tactile press feedback, ported nowhere from the original codebase
+   since neither this nor jellio-login-submit's own hover state existed
+   there either: added directly, real feedback asked for "more
+   animations where it fits", and a primary action button with no
+   response to being pressed was the plainest gap to close. */
+.jellio-settings-button,
+.jellio-login-submit {
+  transition: background-color 160ms ease, transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jellio-settings-button:active,
+.jellio-login-submit:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

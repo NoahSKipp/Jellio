@@ -2,8 +2,17 @@
 // real session reporting, the same mechanism JMSFusion's own player uses
 // (confirmed against its real source before writing any of this), not
 // jellyfin-web's own playbackManager, which this runtime cannot reach.
-// Also owns a pause screen overlay (Jellyfin-PauseScreen's technique),
-// buildable directly here since this runtime owns the <video> element.
+// Also owns a pause screen overlay (Jellyfin-PauseScreen's technique), an
+// up next episode preview (no native jellyfin-web up next dialog to
+// reskin the way the original Jellio codebase's own InPlayer Episode
+// Preview slice could, that dialog only exists inside jellyfin-web's own
+// player bundle, unreachable from a runtime with its own <video>
+// element, so this is a real overlay built from scratch instead), and a
+// skip intro/credits button, a soft dependency on the community Intro
+// Skipper plugin's own real REST API (confirmed against its source
+// before writing this, see runtime/api.js's own getIntroSkipperSegments)
+// rather than jellyfin-web's own player chrome hooks, unreachable here
+// for the same reason as everything else in this file.
 import {
   getItemDetails,
   getPlaybackInfo,
@@ -15,18 +24,58 @@ import {
   cancelSleepTimer,
   getSleepTimerStatus,
   getImageUrl,
+  getSubtitleStreams,
+  buildSubtitleUrl,
+  getNextEpisode,
+  getIntroSkipperSegments,
   TICKS_PER_SECOND,
 } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
 const PROGRESS_REPORT_MS = 5000;
 const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
+const UPNEXT_TRIGGER_SECONDS = 30;
+const UPNEXT_COUNTDOWN_SECONDS = 15;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text != null) node.textContent = text;
   return node;
+}
+
+function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
+  const overlay = el('div', 'jellio-player-upnext jellio-player-upnext-hidden');
+
+  const thumbTag = (episode.ImageTags && episode.ImageTags.Primary) || episode.ParentThumbImageTag;
+  const thumb = el('div', 'jellio-player-upnext-thumb');
+  if (thumbTag) {
+    thumb.style.backgroundImage = 'url(' + getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }) + ')';
+  }
+  overlay.appendChild(thumb);
+
+  const body = el('div', 'jellio-player-upnext-body');
+  body.appendChild(el('div', 'jellio-player-upnext-eyebrow', 'Next Episode'));
+  const epLabel =
+    episode.IndexNumber != null && episode.ParentIndexNumber != null
+      ? 'S' + episode.ParentIndexNumber + ' E' + episode.IndexNumber + ' · '
+      : '';
+  body.appendChild(el('div', 'jellio-player-upnext-title', epLabel + (episode.Name || '')));
+
+  const actions = el('div', 'jellio-player-upnext-actions');
+  const playButton = el('button', 'jellio-player-upnext-play', 'Play now');
+  playButton.type = 'button';
+  playButton.addEventListener('click', onPlayNow);
+  const dismissButton = el('button', 'jellio-player-upnext-dismiss', 'Dismiss');
+  dismissButton.type = 'button';
+  dismissButton.setAttribute('aria-label', 'Dismiss next episode preview');
+  dismissButton.addEventListener('click', onDismiss);
+  actions.appendChild(playButton);
+  actions.appendChild(dismissButton);
+  body.appendChild(actions);
+  overlay.appendChild(body);
+
+  return { overlay: overlay, playButton: playButton };
 }
 
 function formatTime(seconds) {
@@ -42,7 +91,7 @@ function formatTime(seconds) {
 
 export async function renderPlayer(root, params) {
   root.textContent = '';
-  root.className = 'jellio-screen-player';
+  root.className = 'jellio-content jellio-screen-player';
 
   const itemId = params.get('id');
   if (!itemId) return undefined;
@@ -122,6 +171,8 @@ export async function renderPlayer(root, params) {
   const sleepButton = el('button', 'jellio-player-sleep');
   sleepButton.type = 'button';
   sleepButton.setAttribute('aria-label', 'Sleep timer');
+  sleepButton.setAttribute('aria-haspopup', 'true');
+  sleepButton.setAttribute('aria-expanded', 'false');
   const sleepIcon = el('span', 'material-icons bedtime');
   sleepIcon.setAttribute('aria-hidden', 'true');
   sleepButton.appendChild(sleepIcon);
@@ -133,6 +184,7 @@ export async function renderPlayer(root, params) {
     cancelSleepTimer().then(function () {
       sleepButton.classList.remove('jellio-player-sleep-active');
       sleepMenu.classList.add('jellio-player-sleep-menu-hidden');
+      sleepButton.setAttribute('aria-expanded', 'false');
     });
   });
   sleepMenu.appendChild(cancelOption);
@@ -143,13 +195,17 @@ export async function renderPlayer(root, params) {
       startSleepTimer(minutes).then(function () {
         sleepButton.classList.add('jellio-player-sleep-active');
         sleepMenu.classList.add('jellio-player-sleep-menu-hidden');
+        sleepButton.setAttribute('aria-expanded', 'false');
       });
     });
     sleepMenu.appendChild(option);
   });
 
   sleepButton.addEventListener('click', function () {
-    sleepMenu.classList.toggle('jellio-player-sleep-menu-hidden');
+    subtitleMenu.classList.add('jellio-player-sleep-menu-hidden');
+    subtitleButton.setAttribute('aria-expanded', 'false');
+    const nowHidden = sleepMenu.classList.toggle('jellio-player-sleep-menu-hidden');
+    sleepButton.setAttribute('aria-expanded', String(!nowHidden));
   });
 
   getSleepTimerStatus()
@@ -160,10 +216,80 @@ export async function renderPlayer(root, params) {
       // No status yet is not an error worth surfacing here.
     });
 
+  const subtitleStreams = getSubtitleStreams(mediaSource);
+  const subtitleButton = el('button', 'jellio-player-subtitles');
+  subtitleButton.type = 'button';
+  subtitleButton.setAttribute('aria-label', 'Subtitles');
+  subtitleButton.setAttribute('aria-haspopup', 'true');
+  subtitleButton.setAttribute('aria-expanded', 'false');
+  const subtitleIcon = el('span', 'material-icons subtitles');
+  subtitleIcon.setAttribute('aria-hidden', 'true');
+  subtitleButton.appendChild(subtitleIcon);
+
+  const subtitleMenu = el('div', 'jellio-player-sleep-menu jellio-player-sleep-menu-hidden');
+  let activeTrack = null;
+
+  function selectSubtitle(stream, optionButton) {
+    if (activeTrack) {
+      activeTrack.remove();
+      activeTrack = null;
+    }
+    Array.prototype.forEach.call(subtitleMenu.children, function (child) {
+      child.classList.remove('jellio-player-sleep-option-active');
+    });
+    if (optionButton) optionButton.classList.add('jellio-player-sleep-option-active');
+    subtitleButton.classList.toggle('jellio-player-sleep-active', !!stream);
+    if (!stream) {
+      subtitleMenu.classList.add('jellio-player-sleep-menu-hidden');
+      subtitleButton.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.label = stream.DisplayTitle || stream.Language || 'Subtitle';
+    track.srclang = stream.Language || '';
+    track.src = buildSubtitleUrl(itemId, mediaSource.Id, stream);
+    track.default = true;
+    video.appendChild(track);
+    activeTrack = track;
+    track.addEventListener('load', function () {
+      if (track.track) track.track.mode = 'showing';
+    });
+    subtitleMenu.classList.add('jellio-player-sleep-menu-hidden');
+    subtitleButton.setAttribute('aria-expanded', 'false');
+  }
+
+  if (subtitleStreams.length) {
+    const offOption = el('button', 'jellio-player-sleep-option jellio-player-sleep-option-active', 'Off');
+    offOption.type = 'button';
+    offOption.addEventListener('click', function () {
+      selectSubtitle(null, offOption);
+    });
+    subtitleMenu.appendChild(offOption);
+    subtitleStreams.forEach(function (stream) {
+      const option = el('button', 'jellio-player-sleep-option', stream.DisplayTitle || stream.Language || 'Subtitle');
+      option.type = 'button';
+      option.addEventListener('click', function () {
+        selectSubtitle(stream, option);
+      });
+      subtitleMenu.appendChild(option);
+    });
+    subtitleButton.addEventListener('click', function () {
+      sleepMenu.classList.add('jellio-player-sleep-menu-hidden');
+      sleepButton.setAttribute('aria-expanded', 'false');
+      const nowHidden = subtitleMenu.classList.toggle('jellio-player-sleep-menu-hidden');
+      subtitleButton.setAttribute('aria-expanded', String(!nowHidden));
+    });
+  } else {
+    subtitleButton.disabled = true;
+  }
+
   controls.appendChild(backButton);
   controls.appendChild(title);
   controls.appendChild(seekRow);
   controls.appendChild(playPauseButton);
+  controls.appendChild(subtitleButton);
+  controls.appendChild(subtitleMenu);
   controls.appendChild(sleepButton);
   controls.appendChild(sleepMenu);
 
@@ -184,9 +310,98 @@ export async function renderPlayer(root, params) {
   }
   pauseOverlay.appendChild(pauseContent);
 
+  const skipButton = el('button', 'jellio-player-skip jellio-player-skip-hidden', 'Skip Intro');
+  skipButton.type = 'button';
+  let skipSegments = null;
+  let skipTargetSeconds = 0;
+
+  function activeSkipSegment(currentTime) {
+    if (!skipSegments) return null;
+    const intro = skipSegments.Introduction;
+    if (intro && intro.End > 0 && currentTime >= intro.Start && currentTime < intro.End) {
+      return { label: 'Skip Intro', target: intro.End };
+    }
+    const credits = skipSegments.Credits;
+    if (credits && credits.End > 0 && currentTime >= credits.Start && currentTime < credits.End) {
+      return { label: 'Skip Credits', target: credits.End };
+    }
+    return null;
+  }
+
+  skipButton.addEventListener('click', function () {
+    video.currentTime = skipTargetSeconds;
+  });
+
+  getIntroSkipperSegments(itemId).then(function (result) {
+    if (result && (result.Introduction || result.Credits)) skipSegments = result;
+  });
+
   root.appendChild(video);
   root.appendChild(pauseOverlay);
+  root.appendChild(skipButton);
   root.appendChild(controls);
+
+  let nextEpisode = null;
+  let upNextOverlay = null;
+  let upNextPlayButton = null;
+  let upNextShown = false;
+  let upNextDismissed = false;
+  let upNextCountdownInterval = null;
+  let upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
+
+  function playNextEpisode() {
+    if (upNextCountdownInterval) {
+      window.clearInterval(upNextCountdownInterval);
+      upNextCountdownInterval = null;
+    }
+    if (nextEpisode) navigateTo('#/play?id=' + nextEpisode.Id);
+  }
+
+  function updateUpNextCountdown() {
+    if (upNextPlayButton) upNextPlayButton.textContent = 'Play now (' + upNextCountdownRemaining + ')';
+  }
+
+  function showUpNext() {
+    if (upNextShown || upNextDismissed || !upNextOverlay) return;
+    upNextShown = true;
+    upNextOverlay.classList.remove('jellio-player-upnext-hidden');
+    upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
+    updateUpNextCountdown();
+    upNextCountdownInterval = window.setInterval(function () {
+      upNextCountdownRemaining -= 1;
+      updateUpNextCountdown();
+      if (upNextCountdownRemaining <= 0) playNextEpisode();
+    }, 1000);
+  }
+
+  function hideUpNext() {
+    if (upNextCountdownInterval) {
+      window.clearInterval(upNextCountdownInterval);
+      upNextCountdownInterval = null;
+    }
+    upNextShown = false;
+    if (upNextOverlay) upNextOverlay.classList.add('jellio-player-upnext-hidden');
+  }
+
+  function dismissUpNext() {
+    hideUpNext();
+    upNextDismissed = true;
+  }
+
+  if (item.Type === 'Episode') {
+    getNextEpisode(item)
+      .then(function (result) {
+        if (!result) return;
+        nextEpisode = result;
+        const built = buildUpNextOverlay(result, playNextEpisode, dismissUpNext);
+        upNextOverlay = built.overlay;
+        upNextPlayButton = built.playButton;
+        root.appendChild(upNextOverlay);
+      })
+      .catch(function (err) {
+        console.warn('Jellio: could not resolve next episode', err);
+      });
+  }
 
   let hasReportedStart = false;
   let seeking = false;
@@ -213,6 +428,19 @@ export async function renderPlayer(root, params) {
     if (!hasReportedStart) {
       hasReportedStart = true;
       reportPlaybackStart(itemId, mediaSource.Id, currentPositionTicks());
+    }
+
+    if (nextEpisode && !upNextDismissed && video.duration && video.duration - video.currentTime <= UPNEXT_TRIGGER_SECONDS) {
+      showUpNext();
+    }
+
+    const activeSegment = activeSkipSegment(video.currentTime);
+    if (activeSegment) {
+      skipTargetSeconds = activeSegment.target;
+      skipButton.textContent = activeSegment.label;
+      skipButton.classList.remove('jellio-player-skip-hidden');
+    } else {
+      skipButton.classList.add('jellio-player-skip-hidden');
     }
   });
 
@@ -253,6 +481,7 @@ export async function renderPlayer(root, params) {
 
   return function cleanup() {
     window.clearInterval(progressInterval);
+    if (upNextCountdownInterval) window.clearInterval(upNextCountdownInterval);
     if (hasReportedStart) {
       reportPlaybackStopped(itemId, mediaSource.Id, currentPositionTicks());
     }
