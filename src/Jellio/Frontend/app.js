@@ -3,9 +3,7 @@
 // current route. An unmigrated route (no entry in SCREENS) leaves native
 // jellyfin-web showing underneath, untouched, real fallback rather than a
 // broken page.
-import { isAuthenticated, loginScreenBypassed } from './runtime/auth.js';
-import { getUserViews, getCollections, getCurrentUser } from './runtime/api.js';
-import { renderLogin } from './screens/login.js';
+import { isAuthenticated } from './runtime/auth.js';
 import { renderHome } from './screens/home.js';
 import { renderLibrary } from './screens/library.js';
 import { renderSearch } from './screens/search.js';
@@ -16,35 +14,9 @@ import { renderSettings } from './screens/settings.js';
 import { renderPerson } from './screens/person.js';
 import { renderSidebar } from './components/sidebar.js';
 import { startNowPlaying } from './components/nowPlaying.js';
-import { showSplash, hideSplash } from './components/splash.js';
 import { onRouteChange, parseRoute } from './runtime/router.js';
 
 const ROOT_ID = 'jellioRoot';
-
-// Content fades in on every screen swap, ported as a real feature
-// rather than the "not smooth" real feedback left it: getRoot() below
-// already rebuilds .jellio-content fresh on every navigation, so this
-// is imperative (content.animate(), the Web Animations API) rather
-// than a CSS class, since a screen's own render function always
-// overwrites content.className wholesale (root.className = 'jellio-
-// content jellio-screen-home', for one real example) the instant it
-// runs, which would wipe a class added here before ever painting.
-// matchMedia is read once at module load rather than kept reactive:
-// this app does not need to notice an OS setting flip mid session, and
-// prefers-reduced-motion changing back and forth inside one is not a
-// real case to design around.
-const REDUCED_MOTION = Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-
-function fadeInContent(content) {
-  if (REDUCED_MOTION || !content || typeof content.animate !== 'function') return;
-  content.animate(
-    [
-      { opacity: 0, transform: 'translateY(10px)' },
-      { opacity: 1, transform: 'translateY(0)' },
-    ],
-    { duration: 260, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-  );
-}
 
 // Every route path this runtime has a real screen for. Library routes
 // (movies/tv/music/books/homevideos/musicvideos, plus the generic list
@@ -162,87 +134,12 @@ async function sync() {
   }
 }
 
-// Not authenticated is this runtime's own login screen now, real
-// endpoints only (auth.js's own authenticateByName/quickSignIn), not a
-// fall back to native's login page: unlike a route this codebase has
-// simply not migrated yet, there is nothing native could do here that
-// this runtime cannot already do itself, and staying on native's own
-// login page is what the previous codebase's quick sign-in work was
-// actually trying to route around in the first place.
-async function renderUnauthenticated() {
-  teardownActiveScreen();
-
-  const root = getRoot();
-  root.classList.add('jellio-root-visible', 'jellio-root-fullscreen');
-
-  const sidebarMount = root.querySelector('.jellio-sidebar-mount');
-  sidebarMount.textContent = '';
-  sidebarMount.className = 'jellio-sidebar-mount';
-
-  const content = root.querySelector('.jellio-content');
-  const result = await renderLogin(content);
-  activeCleanup = typeof result === 'function' ? result : null;
-  fadeInContent(content);
-}
-
-// Every screen's own real cost, on this run and every one after it, is
-// the sidebar's own three calls (runtime/api.js's own cache makes the
-// after-this-one cost free): shown once, right after a real session is
-// confirmed, so the very first authenticated paint already has warm
-// data instead of the sidebar and the first screen both racing the
-// network cold. A hard cap keeps a slow network from holding the
-// reader on a blank splash indefinitely: showing the app with a cold
-// cache is a worse first paint than what came before this, but still
-// better than one that never arrives.
-const PRELOAD_TIMEOUT_MS = 4000;
-let preloaded = false;
-
-function withTimeout(promise, ms) {
-  return new Promise(function (resolve) {
-    const timer = window.setTimeout(resolve, ms);
-    promise.then(
-      function () {
-        window.clearTimeout(timer);
-        resolve();
-      },
-      function () {
-        window.clearTimeout(timer);
-        resolve();
-      },
-    );
-  });
-}
-
-async function preloadInitialData() {
-  showSplash();
-  await withTimeout(
-    Promise.all([getUserViews(), getCollections(), getCurrentUser()]),
-    PRELOAD_TIMEOUT_MS,
-  );
-  hideSplash();
-}
-
 async function runSync() {
   try {
-    if (!isAuthenticated()) {
-      if (loginScreenBypassed()) {
-        teardownActiveScreen();
-        hide();
-        return;
-      }
-      await renderUnauthenticated();
-      return;
-    }
-
-    if (!preloaded) {
-      preloaded = true;
-      await preloadInitialData();
-    }
-
     const route = parseRoute();
     const screen = SCREENS[route.path];
 
-    if (!screen) {
+    if (!screen || !isAuthenticated()) {
       teardownActiveScreen();
       hide();
       return;
@@ -268,7 +165,6 @@ async function runSync() {
 
     const results = await Promise.all(tasks);
     activeCleanup = typeof results[0] === 'function' ? results[0] : null;
-    fadeInContent(content);
   } catch (err) {
     console.warn('Jellio: screen render failed, falling back to native page', err);
     hide();
