@@ -7,16 +7,62 @@
 // through navigate() as a pop, indistinguishable from a real back press,
 // which misbehaves on any route this runtime has not taken over yet.
 // Falls back to the raw assignment only if the real router is not there.
+//
+// Real bug, found live from the player screen specifically: Emby.Page.show()
+// runs through native's own route guard (auth.js's own header explains
+// why), and that guard's own internal "where am I" state can be out of
+// sync with the real address bar on a route only this runtime ever
+// took over, since native never itself ran a real transition into it.
+// show() throwing there used to abort navigateTo entirely with nothing
+// falling back, reported live as Back doing nothing at all, not even
+// the address bar moving. Same real philosophy the history patch below
+// already uses: losing native's own route guard integration for the
+// one real route it does not recognize is an acceptable degradation,
+// leaving the reader stuck on a dead screen is not.
+// Real target, not just "did window.location.hash change at all": a
+// route guard declining the transition can also leave the address bar
+// exactly where navigateTo's own caller already was, a real case a
+// plain equality check against the hash before this call would read
+// as "it worked" for.
+function normalizedHash(value) {
+  return (value || '').replace(/^#\/?/, '');
+}
+
 export function navigateTo(hash) {
   if (window.Emby && window.Emby.Page && typeof window.Emby.Page.show === 'function') {
-    window.Emby.Page.show(hash);
-  } else {
-    window.location.hash = hash;
+    try {
+      window.Emby.Page.show(hash);
+      if (normalizedHash(window.location.hash) === normalizedHash(hash)) return;
+      console.warn('Jellio: Emby.Page.show() did not navigate, falling back to a plain hash change');
+    } catch (err) {
+      console.warn('Jellio: Emby.Page.show() failed, falling back to a plain hash change', err);
+    }
   }
+  window.location.hash = hash;
 }
 
 export function currentHash() {
   return window.location.hash || '#/home';
+}
+
+// navigateTo()'s own Emby.Page.show() call routes through native's real
+// react-router history, and native's own route matcher has no entry for
+// any hash this runtime owns (#/item, #/play, its own library and
+// service routes, none of them a real native path). Confirmed live:
+// that unmatched transition still runs its own "page not found" view
+// far enough to set document.title before this runtime's own screen
+// content ever paints over it, real page content never visible (this
+// runtime's own #jellioRoot already covers it) but the browser tab
+// itself stayed on native's own title the whole time regardless,
+// reported live as every movie and show reading "Page Not Found" in
+// the tab. Called once, synchronously, the moment a route change is
+// underway (app.js's own runSync, before that route's screen has even
+// started fetching), so it always overwrites whatever native's own
+// failed transition just set; a screen with a real title of its own
+// (a movie, a show, an episode) calls this again once its own fetch
+// resolves and wins the same way, last write standing.
+export function setTitle(text) {
+  document.title = text || 'Jellio';
 }
 
 // Splits "#/movies?topParentId=X&collectionType=movies" into its path
@@ -57,7 +103,7 @@ window.addEventListener('popstate', notify);
 // user's own back/forward press or a direct location.hash write do, so
 // every native-routed click this runtime hands off to Emby.Page.show()
 // changed the address bar and never reached this router at all. Real
-// bug, found live: Movies, Shows, Search, Favorites and every card's
+// bug, found live: Movies, Shows, Search, Watchlist and every card's
 // own click handler visibly changed the URL and rendered nothing.
 // Patching both, the same technique any analytics script already uses
 // to see SPA navigation it did not initiate itself, is the only way to

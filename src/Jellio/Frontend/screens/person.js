@@ -7,6 +7,10 @@
 // endpoints, own markup.
 import { getPerson, getPersonFilmography, getImageUrl } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
+import { appendCardsLazily } from '../components/lazyGrid.js';
+import { renderLoading, renderRetry } from '../components/networkState.js';
+import { navigateTo } from '../runtime/router.js';
+import { describeNetworkFailure } from '../runtime/network.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -22,13 +26,26 @@ export async function renderPerson(root, params) {
   const personId = params.get('id');
   if (!personId) return;
 
+  renderLoading(root);
+
+  // Started alongside getPerson below rather than only once it
+  // resolves: both only ever need personId, no real dependency on
+  // each other, but the grid used to not even start fetching until
+  // the header's own request had fully round tripped first.
+  const filmographyPromise = getPersonFilmography(personId);
+
   let person;
   try {
     person = await getPerson(personId);
   } catch (err) {
     console.warn('Jellio: could not load person', err);
+    renderRetry(root, describeNetworkFailure('this person', err), function () {
+      renderPerson(root, params);
+    }, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
     return;
   }
+
+  root.textContent = '';
 
   const header = el('header', 'jellio-person-header');
 
@@ -36,7 +53,7 @@ export async function renderPerson(root, params) {
   if (imageTag) {
     const photo = document.createElement('img');
     photo.className = 'jellio-person-photo';
-    photo.src = getImageUrl(personId, 'Primary', { tag: imageTag, maxWidth: 400 });
+    photo.src = getImageUrl(personId, 'Primary', { tag: imageTag, maxWidth: 400, quality: 85 });
     photo.alt = '';
     header.appendChild(photo);
   } else {
@@ -58,10 +75,8 @@ export async function renderPerson(root, params) {
   root.appendChild(section);
 
   try {
-    const items = await getPersonFilmography(personId);
-    items.forEach(function (item) {
-      grid.appendChild(buildCard(item));
-    });
+    const items = await filmographyPromise;
+    appendCardsLazily(grid, items, buildCard);
   } catch (err) {
     console.warn('Jellio: could not load filmography', err);
   }

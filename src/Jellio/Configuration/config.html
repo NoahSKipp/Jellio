@@ -19,7 +19,7 @@
           </div>
 
           <div class="checkboxContainer checkboxContainer-withDescription">
-            <label>
+            <label class="emby-checkbox-label">
               <input is="emby-checkbox" type="checkbox" id="chkEnableReskin" />
               <span>Enable reskin</span>
             </label>
@@ -27,6 +27,164 @@
               Patches the web client to load Jellio's own runtime. Turn this off to restore
               the stock Jellyfin interface on next server start.
             </div>
+          </div>
+
+          <div class="verticalSection">
+            <div class="sectionTitleContainer flex align-items-center">
+              <h2 class="sectionTitle">Seasonal Themes</h2>
+            </div>
+            <div class="fieldDescription">
+              Applies to every user on this server. Reskins the whole page (background wash,
+              badge and focus colors, a themed ambient layer sitting behind the real content
+              rather than over it) to match whichever of these four occasions is active today,
+              one at a time. Never shown during playback. Each one has its own Start/End date so
+              it can run for a single day or stretch across a whole week; per user overrides may
+              come later, for now this is the one shared, server wide switch.
+            </div>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="chkSeasonalEffectsEnabled" />
+              <span>Enable seasonal themes</span>
+            </label>
+          </div>
+
+          <!-- Static per theme, same real convention the previous 34-theme
+               catalogue already used: a dynamically created is="emby-checkbox"/
+               is="emby-input" row (document.createElement(tag, { is }) after the
+               DOM's own initial parse) never picked up this dashboard's own real
+               is= enhancement, real bug found live once an actual server ran this
+               rather than only a bare headless Chromium check of the raw HTML,
+               the row simply never showing at all. Static markup upgrades the
+               same way every other real plugin's own config page already relies
+               on. -->
+
+          <details open>
+            <summary>Halloween</summary>
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSeasonalHalloweenEnabled" />
+                <span>Enable Halloween</span>
+              </label>
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalHalloweenStartMonth">Start month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalHalloweenStartMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalHalloweenStartDay">Start day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalHalloweenStartDay" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalHalloweenEndMonth">End month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalHalloweenEndMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalHalloweenEndDay">End day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalHalloweenEndDay" />
+            </div>
+          </details>
+
+          <details open>
+            <summary>New Year's</summary>
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSeasonalNewYearEnabled" />
+                <span>Enable New Year's</span>
+              </label>
+              <div class="fieldDescription">
+                A start month after the end month (December into January, the default) wraps
+                across the year boundary rather than needing two separate ranges.
+              </div>
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalNewYearStartMonth">Start month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalNewYearStartMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalNewYearStartDay">Start day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalNewYearStartDay" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalNewYearEndMonth">End month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalNewYearEndMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalNewYearEndDay">End day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalNewYearEndDay" />
+            </div>
+          </details>
+
+          <details open>
+            <summary>Valentine's Day</summary>
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSeasonalValentineEnabled" />
+                <span>Enable Valentine's Day</span>
+              </label>
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalValentineStartMonth">Start month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalValentineStartMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalValentineStartDay">Start day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalValentineStartDay" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalValentineEndMonth">End month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalValentineEndMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalValentineEndDay">End day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalValentineEndDay" />
+            </div>
+          </details>
+
+          <details open>
+            <summary>Christmas</summary>
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSeasonalChristmasEnabled" />
+                <span>Enable Christmas</span>
+              </label>
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalChristmasStartMonth">Start month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalChristmasStartMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalChristmasStartDay">Start day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalChristmasStartDay" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalChristmasEndMonth">End month</label>
+              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalChristmasEndMonth" />
+            </div>
+            <div class="inputContainer">
+              <label class="inputLabel" for="numSeasonalChristmasEndDay">End day</label>
+              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalChristmasEndDay" />
+            </div>
+          </details>
+
+          <div class="verticalSection">
+            <div class="sectionTitleContainer flex align-items-center">
+              <h2 class="sectionTitle">Calendar</h2>
+            </div>
+            <div class="fieldDescription">
+              Powers the Coming Soon row and the Calendar page: upcoming episode air dates and
+              movie digital release dates for whatever is on a user's own Watchlist, read
+              straight off each item's own ProviderIds.Tmdb (every Gelato import already carries
+              one). Needs a free TMDB API Read Access Token, from
+              themoviedb.org under Settings &gt; API, the long token, not the short v3 key. Left
+              blank, both the row and the page just stay empty, nothing else is affected.
+            </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtTmdbAccessToken">TMDB API Read Access Token</label>
+            <input is="emby-input" type="password" id="txtTmdbAccessToken" autocomplete="off" />
           </div>
 
           <div>
@@ -37,37 +195,122 @@
         </form>
       </div>
     </div>
-  </div>
 
-  <script type="text/javascript">
+    <!-- Jellyfin's own dashboard page loader (viewContainer.js's own real
+         parseHtml/loadView) fetches this whole file as plain text and keeps
+         only wrapper.querySelector('div[data-role="page"]') from it, real
+         source read to find this out rather than assumed after three
+         earlier fixes here all landed on a real server and changed nothing:
+         anything outside that one div, a script included, is silently
+         dropped before it ever reaches the live document, so this script
+         was never executing at all up to now, every value this page's own
+         form ever showed was just its own raw, empty HTML default, entirely
+         disconnected from the real saved config the whole time. Has to sit
+         inside this real div for that same reason. -->
+    <script type="text/javascript">
     (function () {
       const pluginId = 'f2937f08-0595-40d1-a74b-a44656cbc6de';
 
-      document
-        .querySelector('#jellioConfigurationPage')
-        .addEventListener('pageshow', function () {
-          Dashboard.showLoadingMsg();
-          window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-            document.querySelector('#chkEnableReskin').checked = config.EnableReskin;
-            Dashboard.hideLoadingMsg();
-          });
-        });
+      // One entry per Frontend/components/seasons.js theme key, same real
+      // shape ConfigController's own real GetConfig endpoint already
+      // returns to every client. Every row this walks already exists as
+      // static markup above; this only ever reads or writes values on ids
+      // that are already real, upgraded elements by the time either
+      // function runs.
+      //
+      // Real defaults, kept in sync by hand with Configuration/PluginConfiguration.cs's
+      // own field initializers: an admin's already-saved config.xml written before
+      // these properties existed comes back from ApiClient.getPluginConfiguration()
+      // with every one of them undefined, real Jellyfin behaviour this page's own
+      // withDefault() below guards against. Without that guard, undefined reads as
+      // false on a checkbox and as an empty, non numeric value on a number input,
+      // an existing install's own real per theme settings (already true, already
+      // the right real dates server side) showing as every theme disabled and
+      // every date blank instead.
+      const THEMES = [
+        { key: 'Halloween', enabled: true, range: [10, 24, 11, 2] },
+        { key: 'NewYear', enabled: true, range: [12, 28, 1, 2] },
+        { key: 'Valentine', enabled: true, range: [2, 10, 2, 18] },
+        { key: 'Christmas', enabled: true, range: [12, 1, 12, 26] },
+      ];
 
-      document
-        .querySelector('#jellioForm')
-        .addEventListener('submit', function (e) {
-          e.preventDefault();
-          Dashboard.showLoadingMsg();
-          window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-            config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
-            window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
-              Dashboard.processPluginConfigurationUpdateResult(result);
-            });
+      function withDefault(value, fallback) {
+        return value !== undefined ? value : fallback;
+      }
+
+      function loadThemesFrom(config) {
+        THEMES.forEach(function (theme) {
+          document.querySelector('#chkSeasonal' + theme.key + 'Enabled').checked =
+            withDefault(config['Seasonal' + theme.key + 'Enabled'], theme.enabled);
+          ['StartMonth', 'StartDay', 'EndMonth', 'EndDay'].forEach(function (field, index) {
+            document.querySelector('#numSeasonal' + theme.key + field).value =
+              withDefault(config['Seasonal' + theme.key + field], theme.range[index]);
           });
-          return false;
         });
+      }
+
+      function saveThemesTo(config) {
+        THEMES.forEach(function (theme) {
+          config['Seasonal' + theme.key + 'Enabled'] = document.querySelector('#chkSeasonal' + theme.key + 'Enabled').checked;
+          ['StartMonth', 'StartDay', 'EndMonth', 'EndDay'].forEach(function (field) {
+            config['Seasonal' + theme.key + field] = parseInt(document.querySelector('#numSeasonal' + theme.key + field).value, 10) || 1;
+          });
+        });
+      }
+
+      function loadConfig() {
+        Dashboard.showLoadingMsg();
+        window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+          document.querySelector('#chkEnableReskin').checked = withDefault(config.EnableReskin, true);
+          document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
+          loadThemesFrom(config);
+          document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
+          Dashboard.hideLoadingMsg();
+        });
+      }
+
+      function saveConfig(e) {
+        e.preventDefault();
+        Dashboard.showLoadingMsg();
+        window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+          config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
+          config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
+          saveThemesTo(config);
+          config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
+          window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+            Dashboard.processPluginConfigurationUpdateResult(result);
+          });
+        });
+        return false;
+      }
+
+      // Real dashboard behaviour: pageshow is a real, native browser event
+      // tied to actual navigation/history, not something the dashboard's
+      // own fetch-this-page-and-inject-it-into-the-SPA-shell loader
+      // necessarily ever fires, so this also calls loadConfig once,
+      // immediately and unconditionally, right here, rather than relying
+      // on pageshow alone for the first real load. The retry loop below
+      // covers a real, once seen case: this whole inline script executing
+      // before its own page container has actually landed in the live
+      // document yet.
+      function bindJellioPageEvents() {
+        var page = document.querySelector('#jellioConfigurationPage');
+        if (!page) {
+          window.setTimeout(bindJellioPageEvents, 50);
+          return;
+        }
+        if (!page.dataset.jellioEventsBound) {
+          page.dataset.jellioEventsBound = 'true';
+          page.addEventListener('pageshow', loadConfig);
+          document.querySelector('#jellioForm').addEventListener('submit', saveConfig);
+        }
+        loadConfig();
+      }
+
+      bindJellioPageEvents();
     })();
-  </script>
+    </script>
+  </div>
 </body>
 
 </html>
