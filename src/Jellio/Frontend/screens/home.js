@@ -6,7 +6,6 @@ import {
   getResumeItems,
   getNextUp,
   getWatchlistItems,
-  getGrouplistItems,
   getCollections,
   collectionKind,
   getCollectionItems,
@@ -32,7 +31,6 @@ import {
   resetHomeCustomization,
 } from '../components/homeCustomizer.js';
 import { navigateTo } from '../runtime/router.js';
-import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 
 // Real Gelato catalog collections (Trending, Popular, Top Rated, a
 // service's own row, ...) plus genres counted from a sample, ported
@@ -358,50 +356,13 @@ function buildWatchlistSection(title, items) {
   return section;
 }
 
-// components/navShared.js's own Watchlist link still points at the
-// exact same #/home?tab=1 route it always has; a &list=group query
-// param on top of that (this header's own Grouplist tab sets it) is
-// the only thing that picks Grouplist instead, so an old link or a
-// bookmark with no list param at all still lands on Watchlist exactly
-// as before. The toggle itself only ever renders once runtime/
-// grouplistSettings.js's own isGrouplistEnabled() is on; off, this
-// reads exactly as it always has, a plain "Watchlist" title, real
-// feedback's own explicit ask for a reader who never turns it on to
-// see nothing different at all.
-function buildListsHeader(activeList) {
+async function renderWatchlist(root) {
   const header = el('header', 'jellio-home-header');
-  if (!isGrouplistEnabled()) {
-    header.appendChild(el('h1', 'jellio-home-greeting', 'Watchlist'));
-    return header;
-  }
-
-  const toggle = el('div', 'jellio-lists-toggle');
-  const watchlistTab = el('button', 'jellio-lists-toggle-tab', 'Watchlist');
-  watchlistTab.type = 'button';
-  watchlistTab.classList.toggle('jellio-lists-toggle-tab-active', activeList !== 'group');
-  watchlistTab.addEventListener('click', function () {
-    navigateTo('#/home?tab=1');
-  });
-  const grouplistTab = el('button', 'jellio-lists-toggle-tab', 'Grouplist');
-  grouplistTab.type = 'button';
-  grouplistTab.classList.toggle('jellio-lists-toggle-tab-active', activeList === 'group');
-  grouplistTab.addEventListener('click', function () {
-    navigateTo('#/home?tab=1&list=group');
-  });
-  toggle.appendChild(watchlistTab);
-  toggle.appendChild(grouplistTab);
-  header.appendChild(toggle);
-  return header;
-}
-
-async function renderWatchlist(root, activeList) {
-  root.appendChild(buildListsHeader(activeList));
-
-  const isGroup = activeList === 'group' && isGrouplistEnabled();
-  const emptyMessage = isGroup ? 'Nothing on your Grouplist yet.' : 'Nothing on your watchlist yet.';
+  header.appendChild(el('h1', 'jellio-home-greeting', 'Watchlist'));
+  root.appendChild(header);
 
   try {
-    const items = await (isGroup ? getGrouplistItems() : getWatchlistItems());
+    const items = await getWatchlistItems();
     const movies = items.filter(function (item) {
       return item.Type === 'Movie';
     });
@@ -415,10 +376,10 @@ async function renderWatchlist(root, activeList) {
     if (seriesSection) root.appendChild(seriesSection);
 
     if (!movieSection && !seriesSection) {
-      root.appendChild(el('p', 'jellio-service-empty', emptyMessage));
+      root.appendChild(el('p', 'jellio-service-empty', 'Nothing on your watchlist yet.'));
     }
   } catch (err) {
-    console.warn('Jellio: could not load ' + (isGroup ? 'grouplist' : 'watchlist'), err);
+    console.warn('Jellio: could not load watchlist', err);
   }
 }
 
@@ -615,7 +576,7 @@ export async function renderHome(root, params) {
   root.className = 'jellio-content jellio-screen-home';
 
   if (params && params.get('tab') === '1') {
-    await renderWatchlist(root, params.get('list'));
+    await renderWatchlist(root);
     return undefined;
   }
 

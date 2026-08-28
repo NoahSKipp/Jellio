@@ -22,18 +22,6 @@
      an unresolved var() just falling back to this property's own
      inherited colour instead of failing loudly. */
   --jellio-trending-color: #ff9800;
-  /* components/seasons.js's own real tokens: inert by default (no wash,
-     an accent that just falls back to the trending colour above), only
-     ever redefined below on #jellioRoot[data-jellio-season="..."] while
-     a theme is actually active. Reading --jellio-trending-color and
-     --jellio-focus-color-rgb back into each of those five blocks is
-     what makes a theme recolour badges and every focus ring in the app,
-     not just its own ambient layer, without any other file needing to
-     know a season exists. */
-  --jellio-season-accent: var(--jellio-trending-color);
-  --jellio-season-accent-2: var(--jellio-secondary-color);
-  --jellio-season-wash-1: transparent;
-  --jellio-season-wash-2: transparent;
   --jellio-font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
   --jellio-card-radius: clamp(14px, 1.1vw, 22px);
   --jellio-card-gap: clamp(12px, 1vw, 18px);
@@ -518,38 +506,6 @@
   margin: 0;
   font-size: clamp(1.4em, 2.2vw, 2em);
   font-weight: 700;
-}
-
-/* screens/home.js's own buildListsHeader(): Watchlist and Grouplist as
-   two selectable headings rather than a plain title, only ever shown
-   at all once runtime/grouplistSettings.js's own isGrouplistEnabled()
-   is on. */
-.jellio-lists-toggle {
-  display: flex;
-  align-items: baseline;
-  gap: clamp(16px, 2vw, 28px);
-}
-
-.jellio-lists-toggle-tab {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--jellio-secondary-color);
-  font-family: var(--jellio-font-family);
-  font-size: clamp(1.4em, 2.2vw, 2em);
-  font-weight: 700;
-  opacity: 0.45;
-  cursor: pointer;
-  transition: opacity 160ms var(--jellio-ease-out), color 160ms var(--jellio-ease-out);
-}
-
-.jellio-lists-toggle-tab:hover {
-  opacity: 0.7;
-}
-
-.jellio-lists-toggle-tab-active {
-  color: var(--jellio-text-color);
-  opacity: 1;
 }
 
 /* Ported in spirit from Harbor's own real customize-bar.tsx:
@@ -1518,36 +1474,6 @@
   color: #ff6b81;
 }
 
-/* components/listMembershipMenu.js's own toggle rows: icon left, label
-   right, checkbox reading order, deliberately the mirror of
-   .jellio-card-options-item's own label-left-icon-right layout above,
-   the real difference between a one shot action and a row that stays
-   checked or not after it. */
-.jellio-list-membership-row {
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
-  padding: 0.8em 0.9em;
-  border: 0;
-  border-radius: calc(var(--jellio-card-radius) / 2);
-  background: transparent;
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.9em;
-  text-align: left;
-  cursor: pointer;
-}
-
-.jellio-list-membership-row:hover,
-.jellio-list-membership-row:focus-visible {
-  background: rgb(255 255 255 / 0.08);
-  outline: none;
-}
-
-.jellio-list-membership-row[aria-checked='true'] {
-  color: var(--jellio-secondary-color);
-}
-
 .jellio-library-header {
   padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(12px, 2vw, 24px);
 }
@@ -1727,26 +1653,6 @@
   margin-bottom: 0.6em;
   color: var(--jellio-text-secondary);
   font-size: 0.9em;
-}
-
-/* components/ratingBadge.js's own buildRatingBadge(): shared by this
-   meta row, the player's own pause overlay meta row and its episode
-   thumb chip, wherever a real CommunityRating shows up. The icon's own
-   real fill is plain black (img/ratings/tmdb.svg, straight off Simple
-   Icons), the same brightness(0) invert(1) trick img/services/ already
-   uses to force a mark like that white against this app's own dark
-   surfaces rather than trusting whatever fill the file ships with. */
-.jellio-rating-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3em;
-}
-
-.jellio-rating-badge-icon {
-  width: 1em;
-  height: 1em;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
 }
 
 .jellio-detail-genres {
@@ -2005,42 +1911,33 @@
    first place, so this breakpoint rejoins More to the row's own real
    flex flow and lets the whole row wrap onto a second real line
    instead of overflowing past the viewport, Play claiming its own
-   real full width row above it.
-
-   Real regression, found live against a real screenshot: the four
-   rules right below used to carry no .jellio-detail-actions-expanded
-   qualifier at all, so Play claimed the real full width row and More
-   dropped to its own real second line even collapsed, the one real
-   state this whole file's own Play-shrinks-not-More-moves rule above
-   was written for in the first place. Only the expanded state
-   actually overflows on a narrow phone; collapsed, Play and More
-   share one row here exactly like desktop already does. */
+   real full width row above it. */
 @media (max-width: 47.99em) {
   .jellio-detail-actions {
     flex-wrap: wrap;
     row-gap: 0.6em;
   }
 
-  .jellio-detail-actions-expanded .jellio-detail-play {
+  .jellio-detail-play {
     flex: 1 1 100%;
   }
 
-  .jellio-detail-actions-expanded.jellio-detail-actions-has-more {
+  .jellio-detail-actions-has-more {
     padding-right: 0;
   }
 
-  .jellio-detail-actions-expanded .jellio-detail-icon-action-more {
+  .jellio-detail-icon-action-more {
     position: static;
     top: auto;
     right: auto;
     transform: none;
   }
 
-  .jellio-detail-actions-expanded .jellio-detail-icon-action-more:hover {
+  .jellio-detail-icon-action-more:hover {
     transform: scale(1.08);
   }
 
-  .jellio-detail-actions-expanded .jellio-detail-icon-action-more:active {
+  .jellio-detail-icon-action-more:active {
     transform: scale(0.94);
   }
 }
@@ -2464,21 +2361,19 @@
   height: 100%;
   object-fit: contain;
   background: #000;
+  --jellio-subtitle-size: 1.3em;
+  --jellio-subtitle-bg: rgb(0 0 0 / 0.5);
 }
 
-/* Real default only, matching DEFAULT_SUBTITLE_STYLE: screens/player.js's
-   own applySubtitleStyle() injects its own <style> element with literal
-   values the instant a track exists, this rule only ever paints during
-   the brief window before that. Used to read two custom properties set
-   on the video element instead (var(--jellio-subtitle-size) etc), real
-   Chromium/Firefox behaviour, confirmed live that WebKit's own ::cue
-   does not reliably inherit a custom property from the element it
-   renders on top of the same way, background/size changes silently
-   doing nothing on macOS Safari no matter what got set. Literal values
-   both places now, no inheritance step left to fail either way. */
+/* Real WebVTT rendering, styled through the two custom properties
+   screens/player.js's own applySubtitleStyle() sets directly on this
+   element: ::cue inherits custom properties down from the element it
+   renders on top of, the same real Chromium/Firefox behaviour every
+   other subtitle style picker on the web already relies on, not a
+   guess this runtime is making on its own. */
 .jellio-player-video::cue {
-  font-size: 1.3em;
-  background-color: rgb(0 0 0 / 0.5);
+  font-size: var(--jellio-subtitle-size);
+  background-color: var(--jellio-subtitle-bg);
 }
 
 /* Ported from Nuvio's own loading screen: the title's real logo art
@@ -2676,119 +2571,6 @@
 .jellio-player-pip-active {
   background: var(--jellio-secondary-color);
   color: #000;
-}
-
-.jellio-player-chat-toggle[aria-expanded="true"] {
-  background: var(--jellio-secondary-color);
-  color: #000;
-}
-
-/* screens/player.js's own in-chrome Group Watch chat: a plainer real
-   version of components/groupWatch.js's own chat view, no avatars, a
-   quick glance while playback keeps running rather than a second real
-   chat surface competing with it. Anchored bottom right, clear of the
-   center transport and the full width seek row below it. */
-.jellio-player-chat-panel {
-  position: absolute;
-  right: clamp(16px, 3vw, 40px);
-  bottom: 7.5em;
-  width: min(22em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-  max-height: 40vh;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6em;
-  padding: 0.8em;
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-bg-elevated);
-  border: 1px solid var(--jellio-border-color);
-  opacity: 0;
-  transform: translateY(0.5em);
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 5;
-}
-
-.jellio-player-chat-panel-visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.jellio-player-chat-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35em;
-  overflow-y: auto;
-  min-height: 6em;
-}
-
-.jellio-player-chat-message {
-  font-size: 0.85em;
-  overflow-wrap: break-word;
-}
-
-.jellio-player-chat-message-author {
-  font-weight: 700;
-  color: var(--jellio-secondary-color);
-  margin-right: 0.4em;
-}
-
-.jellio-player-chat-message-watch-card {
-  cursor: pointer;
-  border-radius: 0.5em;
-  padding: 0.3em 0.5em;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.jellio-player-chat-message-watch-card:hover,
-.jellio-player-chat-message-watch-card:focus-visible {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.jellio-player-chat-message-cta {
-  display: block;
-  margin-top: 0.15em;
-  font-size: 0.85em;
-  font-weight: 700;
-  color: var(--jellio-secondary-color);
-}
-
-.jellio-player-chat-input-row {
-  display: flex;
-  gap: 0.5em;
-  align-items: center;
-}
-
-.jellio-player-chat-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0.5em 0.9em;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.05);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.85em;
-}
-
-.jellio-player-chat-input:focus-visible {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: 2px;
-}
-
-.jellio-player-chat-send {
-  flex: 0 0 auto;
-  width: 2.2em;
-  height: 2.2em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  background: var(--jellio-secondary-color);
-  color: #000;
-  cursor: pointer;
-  font-size: 1.1em;
 }
 
 .jellio-player-center-controls {
@@ -3508,19 +3290,6 @@
   background: rgb(255 255 255 / 0.16);
 }
 
-/* Real feedback: .jellio-avatar-picker-title's own shared margin (no
-   top clearance at all, meant for the plain avatar picker's single
-   top-right close button) left a long group name crowding straight
-   into the back button's own top-left circle the moment Chat added a
-   second icon button up there. Scoped to the chat view specifically
-   (components/groupWatch.js's own openChatView() toggles this class),
-   not the group list view sitting under the same close-button-only
-   header the shared margin already suits fine. */
-.jellio-group-watch-panel-subview .jellio-avatar-picker-title {
-  margin-top: 1.6em;
-  padding: 0 2.6em;
-}
-
 .jellio-group-watch-row-actions {
   display: flex;
   align-items: center;
@@ -3602,36 +3371,6 @@
   gap: 0.8em;
 }
 
-/* components/groupWatch.js's own openChatView(): who's actually in
-   this group, real avatar plus name, refreshed alongside the chat poll
-   below rather than a static snapshot of whoever was in it the moment
-   Chat was clicked. */
-.jellio-group-watch-members {
-  display: flex;
-  gap: 0.6em;
-  overflow-x: auto;
-  padding-bottom: 0.2em;
-}
-
-.jellio-group-watch-member {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3em;
-  flex: 0 0 auto;
-  width: 3.6em;
-}
-
-.jellio-group-watch-member-name {
-  font-size: 0.7em;
-  color: var(--jellio-text-secondary);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
 .jellio-group-watch-chat-messages {
   display: flex;
   flex-direction: column;
@@ -3643,70 +3382,16 @@
 }
 
 .jellio-group-watch-chat-message {
-  display: flex;
-  align-items: flex-end;
   align-self: flex-start;
-  gap: 0.5em;
   max-width: 80%;
-}
-
-.jellio-group-watch-chat-message-own {
-  align-self: flex-end;
-}
-
-.jellio-group-watch-chat-message-bubble {
-  min-width: 0;
   padding: 0.5em 0.8em;
   border-radius: var(--jellio-card-radius);
   background: rgb(255 255 255 / 0.06);
 }
 
-.jellio-group-watch-chat-message-own .jellio-group-watch-chat-message-bubble {
+.jellio-group-watch-chat-message-own {
+  align-self: flex-end;
   background: var(--jellio-secondary-color);
-  color: #000;
-}
-
-.jellio-group-watch-chat-watch-card {
-  display: block;
-  width: 100%;
-  border: none;
-  font: inherit;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-  position: relative;
-  padding-left: 3.6em;
-  min-height: 3em;
-}
-
-.jellio-group-watch-chat-watch-card:hover,
-.jellio-group-watch-chat-watch-card:focus-visible {
-  background: rgb(255 255 255 / 0.12);
-}
-
-.jellio-group-watch-chat-message-own .jellio-group-watch-chat-watch-card:hover,
-.jellio-group-watch-chat-message-own .jellio-group-watch-chat-watch-card:focus-visible {
-  filter: brightness(0.9);
-}
-
-.jellio-group-watch-chat-watch-card-art {
-  position: absolute;
-  left: 0.5em;
-  top: 0.5em;
-  width: 2.4em;
-  height: 3.4em;
-  object-fit: cover;
-  border-radius: 0.3em;
-}
-
-.jellio-group-watch-chat-watch-card-cta {
-  font-size: 0.75em;
-  font-weight: 700;
-  margin-top: 0.2em;
-  color: var(--jellio-secondary-color);
-}
-
-.jellio-group-watch-chat-message-own .jellio-group-watch-chat-watch-card-cta {
   color: #000;
 }
 
@@ -3715,6 +3400,10 @@
   font-weight: 700;
   color: var(--jellio-secondary-color);
   margin-bottom: 0.2em;
+}
+
+.jellio-group-watch-chat-message-own .jellio-group-watch-chat-message-author {
+  color: inherit;
 }
 
 .jellio-group-watch-chat-message-text {
@@ -3733,202 +3422,6 @@
   display: flex;
   gap: 0.6em;
   align-items: center;
-}
-
-/* Chat message author avatar and components/groupWatch.js's own online
-   user picker (openInviteView()) both come from the same real /Users/
-   Public list, see that file's own header on publicUsersPromise. Falls
-   back to a plain initial when a user has no real PrimaryImageTag set,
-   same real fallback components/accountSwitcher.js already uses for its
-   own tiles, just circular and much smaller here. */
-.jellio-group-watch-avatar {
-  flex: 0 0 auto;
-  width: 1.8em;
-  height: 1.8em;
-  border-radius: 50%;
-  background-color: rgb(255 255 255 / 0.1);
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8em;
-  font-weight: 700;
-  color: var(--jellio-text-secondary);
-}
-
-/* components/groupWatchRanking.js's own real single elimination
-   bracket, both components/groupWatch.js's own chat view and
-   screens/player.js's own in-player chat mount this same shape into
-   their own real container (.jellio-pick-container), hidden outright
-   (no min-height, no border) until a real session is actually active. */
-.jellio-pick-trigger {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 0.45em;
-  padding: 0.5em 0.9em 0.5em 0.75em;
-  border: 1px solid rgb(255 152 0 / 0.35);
-  border-radius: 999px;
-  background: rgb(255 152 0 / 0.12);
-  color: var(--jellio-trending-color);
-  font-family: var(--jellio-font-family);
-  font-size: 0.82em;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.jellio-pick-trigger:hover {
-  background: rgb(255 152 0 / 0.2);
-}
-
-.jellio-pick-trigger .material-icons {
-  font-size: 1.1em;
-}
-
-.jellio-pick-container:empty {
-  display: none;
-}
-
-.jellio-pick-card {
-  border-radius: calc(var(--jellio-card-radius) + 2px);
-  padding: 1em 1em 1.1em;
-  background:
-    linear-gradient(180deg, rgb(255 152 0 / 0.09), transparent 40%),
-    var(--jellio-card-bg);
-  border: 1px solid rgb(255 152 0 / 0.22);
-}
-
-.jellio-pick-head {
-  margin-bottom: 0.8em;
-}
-
-.jellio-pick-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.4em;
-  font-size: 0.72em;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--jellio-trending-color);
-}
-
-.jellio-pick-eyebrow .material-icons {
-  font-size: 1.1em;
-}
-
-.jellio-pick-pair + .jellio-pick-pair {
-  margin-top: 0.8em;
-  padding-top: 0.8em;
-  border-top: 1px solid rgb(255 255 255 / 0.08);
-}
-
-.jellio-pick-options {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8em;
-}
-
-.jellio-pick-option {
-  position: relative;
-  border: 2px solid transparent;
-  border-radius: calc(var(--jellio-card-radius) - 4px);
-  overflow: hidden;
-  background: #151515;
-  padding: 0;
-  cursor: pointer;
-}
-
-.jellio-pick-option:disabled {
-  cursor: default;
-}
-
-.jellio-pick-option-poster {
-  position: relative;
-  aspect-ratio: 2 / 3;
-  width: 100%;
-  display: flex;
-  align-items: flex-end;
-  padding: 0.7em 0.7em 0.6em;
-  background-size: cover;
-  background-position: center;
-}
-
-.jellio-pick-option-poster::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 45%, rgb(0 0 0 / 0.75) 100%);
-}
-
-.jellio-pick-option-title {
-  position: relative;
-  z-index: 1;
-  font-size: 0.86em;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.jellio-pick-option-picked {
-  border-color: var(--jellio-secondary-color);
-}
-
-.jellio-pick-option-badge {
-  position: absolute;
-  top: 0.55em;
-  right: 0.55em;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7em;
-  height: 1.7em;
-  border-radius: 50%;
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
-}
-
-.jellio-pick-option-badge .material-icons {
-  font-size: 1em;
-}
-
-.jellio-pick-vs {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 3;
-  width: 2em;
-  height: 2em;
-  border-radius: 50%;
-  background: rgb(var(--jellio-bg-color-rgb) / 0.85);
-  border: 1px solid rgb(255 255 255 / 0.14);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.68em;
-  font-weight: 800;
-  color: var(--jellio-text-secondary);
-  backdrop-filter: blur(6px);
-  pointer-events: none;
-}
-
-/* components/groupWatch.js's own openInviteView(): same real row/list
-   look the group list already uses, just an avatar in front of the name
-   instead of a subtitle line, no other real action but Invite itself. */
-.jellio-group-watch-invite {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8em;
-}
-
-.jellio-group-watch-row-info-invite {
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
-  min-width: 0;
 }
 
 /* components/accountSwitcher.js's own currently-signed-in row, sat
@@ -4524,29 +4017,15 @@
 /* Open admin dashboard/Change avatar: a whole row is the real button
    rather than a label with a small button floating at its own end,
    same real "the entire row is the hit target" convention every
-   mobile/TV settings list already uses.
-   Real bug, found live against a real screenshot: width: 100% plus a
-   negative margin to cancel .jellio-settings-row's own padding looked
-   right in theory but did not in a real browser, a real gap sitting
-   between the button's own right edge and the card's own right edge
-   with the chevron stranded short of it. A flex item's own percentage
-   width resolves against its container's real content box, already
-   narrower than the row by that same padding on both sides; the
-   negative margin only ever shifts the button's own already-fixed
-   width sideways; it does not stretch it back out to compensate. Real
-   fix: .jellio-settings-row-action strips the row's own padding
-   instead so this button's own width: 100% has the row's real full
-   outer width to resolve against, no negative margin needed to fight
-   it back into place. */
-.jellio-settings-row.jellio-settings-row-action {
-  padding: 0;
-}
-
+   mobile/TV settings list already uses. Negative margin cancels
+   .jellio-settings-row's own padding so this real <button> can still
+   fill the card's full own width edge to edge underneath it. */
 .jellio-settings-row-button {
   display: flex;
   align-items: center;
   gap: 1em;
   width: 100%;
+  margin: -1em -1.4em;
   padding: 1em 1.4em;
   border: 0;
   background: transparent;
@@ -4774,18 +4253,6 @@
   align-items: center;
   padding: 0.5em;
   border-radius: var(--jellio-card-radius);
-  cursor: pointer;
-  transition: background-color 140ms ease;
-}
-
-.jellio-now-playing-row:hover,
-.jellio-now-playing-row:focus-visible {
-  background: rgb(255 255 255 / 0.08);
-}
-
-.jellio-now-playing-row:focus-visible {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: -2px;
 }
 
 .jellio-now-playing-row-poster {
@@ -4814,305 +4281,6 @@
   color: var(--jellio-text-secondary);
   text-align: center;
   padding: 1em;
-}
-
-.jellio-sidebar-notifications {
-  position: relative;
-}
-
-/* Same real small-dot shape .jellio-account-switcher-online-dot already
-   uses, real feedback's own ask specifically: "a red or yellow light/
-   dot", not a count the way .jellio-sidebar-now-playing-badge shows one. */
-.jellio-sidebar-notifications-dot {
-  position: absolute;
-  top: 0.3em;
-  left: 2.2em;
-  width: 0.6em;
-  height: 0.6em;
-  border-radius: 50%;
-  background: #e5484d;
-  box-shadow: 0 0 0 2px var(--jellio-bg-color);
-  display: none;
-  pointer-events: none;
-}
-
-.jellio-sidebar-notifications-active .jellio-sidebar-notifications-dot {
-  display: block;
-}
-
-/* Same real floating overlay shape .jellio-now-playing-panel already
-   uses, its own header explains the glass treatment; this one just
-   opens from further down the rail. */
-.jellio-notifications-panel {
-  position: fixed;
-  left: calc(var(--jellio-sidebar-width-collapsed) + 0.75em);
-  bottom: 1.5em;
-  z-index: 10001;
-  display: none;
-  flex-direction: column;
-  gap: 0.5em;
-  width: min(24em, calc(100vw - var(--jellio-sidebar-width-collapsed) - 2 * var(--jellio-safe-gutter)));
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 0.75em;
-  border-radius: var(--jellio-card-radius);
-  background: linear-gradient(
-    180deg,
-    rgb(var(--jellio-bg-elevated-rgb) / 0.82),
-    rgb(var(--jellio-card-bg-rgb) / 0.82)
-  );
-  border: 1px solid rgb(255 255 255 / 0.1);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-}
-
-.jellio-notifications-panel.jellio-notifications-panel-visible {
-  display: flex;
-  transform-origin: bottom left;
-  animation: jellio-popover-in 200ms var(--jellio-ease-out) both;
-}
-
-.jellio-notifications-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.25em 0.5em;
-}
-
-.jellio-notifications-header-title {
-  font-weight: 600;
-}
-
-.jellio-notifications-clear {
-  background: none;
-  border: 0;
-  color: var(--jellio-text-secondary);
-  font-size: 0.85em;
-  cursor: pointer;
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-}
-
-.jellio-notifications-clear:hover,
-.jellio-notifications-clear:focus-visible {
-  color: var(--jellio-text-color);
-  background: rgb(255 255 255 / 0.08);
-}
-
-.jellio-notifications-row {
-  display: flex;
-  gap: 0.75em;
-  align-items: center;
-  padding: 0.5em;
-  border-radius: var(--jellio-card-radius);
-  cursor: pointer;
-  transition: background-color 140ms ease;
-}
-
-.jellio-notifications-row:hover,
-.jellio-notifications-row:focus-visible {
-  background: rgb(255 255 255 / 0.08);
-}
-
-.jellio-notifications-row:focus-visible {
-  outline: 2px solid var(--jellio-secondary-color);
-  outline-offset: -2px;
-}
-
-.jellio-notifications-row-poster {
-  width: 3em;
-  height: 4.2em;
-  flex-shrink: 0;
-  border-radius: calc(var(--jellio-card-radius) / 2);
-  background-color: var(--jellio-card-bg);
-  background-size: cover;
-  background-position: center;
-}
-
-.jellio-notifications-row-text {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.jellio-notifications-row-title {
-  color: var(--jellio-text-color);
-  font-weight: 600;
-  margin: 0 0 0.15em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.jellio-notifications-row-meta {
-  color: var(--jellio-text-secondary);
-  font-size: 0.85em;
-  margin: 0;
-}
-
-.jellio-notifications-row-delete {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.8em;
-  height: 1.8em;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--jellio-text-secondary);
-  cursor: pointer;
-}
-
-.jellio-notifications-row-delete:hover,
-.jellio-notifications-row-delete:focus-visible {
-  background: rgb(255 255 255 / 0.1);
-  color: var(--jellio-text-color);
-}
-
-.jellio-notifications-row-delete .material-icons {
-  font-size: 1.1em;
-}
-
-.jellio-notifications-empty {
-  color: var(--jellio-text-secondary);
-  text-align: center;
-  padding: 1em;
-}
-
-/* screens/player.js's own .jellio-player-toast, scoped to that one
-   screen's own root: this is the same real look, fixed to the page
-   itself instead so components/notifications.js can reach it from
-   outside any one screen. */
-.jellio-toast {
-  position: fixed;
-  right: clamp(16px, 3vw, 40px);
-  bottom: clamp(16px, 3vw, 40px);
-  z-index: 10002;
-  max-width: min(24em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-  padding: 0.8em 1.2em;
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-bg-elevated);
-  border: 1px solid var(--jellio-border-color);
-  color: var(--jellio-text-color);
-  font-size: 0.9em;
-  opacity: 0;
-  transform: translateY(0.5em);
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.jellio-toast-visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.jellio-toast-clickable {
-  cursor: pointer;
-}
-
-/* components/groupWatchNotice.js's own bigger real card, for the two
-   Group Watch events actually worth stopping for (an invite, the group
-   just starting something): opposite corner from .jellio-toast above so
-   the two never stack on top of each other, same real z-index layer. */
-.jellio-groupwatch-notice {
-  position: fixed;
-  left: clamp(16px, 3vw, 40px);
-  bottom: clamp(16px, 3vw, 40px);
-  z-index: 10002;
-  display: flex;
-  align-items: center;
-  gap: 0.9em;
-  width: min(24em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-  padding: 0.8em;
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-bg-elevated);
-  border: 1px solid var(--jellio-border-color);
-  box-shadow: 0 0.6em 1.6em rgb(0 0 0 / 0.35);
-  color: var(--jellio-text-color);
-  opacity: 0;
-  transform: translateY(0.6em);
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.jellio-groupwatch-notice-visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.jellio-groupwatch-notice-clickable {
-  cursor: pointer;
-}
-
-.jellio-groupwatch-notice-media {
-  flex: 0 0 auto;
-  width: 3.4em;
-  height: 4.8em;
-  border-radius: calc(var(--jellio-card-radius) / 2);
-  background-color: var(--jellio-card-bg);
-  background-size: cover;
-  background-position: center;
-}
-
-.jellio-groupwatch-notice-media-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--jellio-secondary-color);
-  color: #000;
-}
-
-.jellio-groupwatch-notice-media-icon .material-icons {
-  font-size: 1.6em;
-}
-
-.jellio-groupwatch-notice-body {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.jellio-groupwatch-notice-header {
-  font-size: 0.75em;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--jellio-secondary-color);
-  margin-bottom: 0.2em;
-}
-
-.jellio-groupwatch-notice-text {
-  font-size: 0.92em;
-  line-height: 1.3;
-  overflow-wrap: break-word;
-}
-
-.jellio-groupwatch-notice-cta {
-  margin-top: 0.35em;
-  font-size: 0.8em;
-  font-weight: 700;
-  color: var(--jellio-secondary-color);
-}
-
-.jellio-groupwatch-notice-close {
-  flex: 0 0 auto;
-  align-self: flex-start;
-  width: 1.8em;
-  height: 1.8em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.08);
-  color: var(--jellio-text-secondary);
-  cursor: pointer;
-  font-size: 0.9em;
-}
-
-.jellio-groupwatch-notice-close:hover {
-  background: rgb(255 255 255 / 0.16);
 }
 
 /* Glass, the same real NuvioWeb pattern the now-playing panel and
@@ -5958,22 +5126,6 @@
   pointer-events: none;
 }
 
-/* Top right, the quick badge above mirrored to bottom right's opposite
-   corner: a real active session right now, per accountSwitcher.js's own
-   buildProfileTile. No existing token for this, an online dot reads as
-   green everywhere else too. */
-.jellio-account-switcher-online-dot {
-  position: absolute;
-  right: -0.1em;
-  top: -0.1em;
-  width: 0.9em;
-  height: 0.9em;
-  border-radius: 50%;
-  background: #3ecf5e;
-  box-shadow: 0 0 0 2px var(--jellio-bg-color);
-  pointer-events: none;
-}
-
 .jellio-account-switcher-quick-label {
   display: block;
   margin-top: 0.2em;
@@ -6013,37 +5165,6 @@
 }
 
 .jellio-login-profile-remove:hover {
-  background: rgb(0 0 0 / 0.9);
-}
-
-.jellio-account-switcher-view-profile {
-  position: absolute;
-  top: -0.4em;
-  left: -0.4em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7em;
-  height: 1.7em;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(0 0 0 / 0.7);
-  color: var(--jellio-text-color);
-  font-size: 0.9em;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 160ms var(--jellio-ease-out), background-color 160ms var(--jellio-ease-out);
-}
-
-.jellio-login-profile-avatar-wrap:hover .jellio-account-switcher-view-profile,
-.jellio-login-profile-avatar:focus-visible ~ .jellio-account-switcher-view-profile,
-.jellio-account-switcher-view-profile:focus-visible {
-  opacity: 1;
-}
-
-.jellio-account-switcher-view-profile:hover {
   background: rgb(0 0 0 / 0.9);
 }
 
@@ -6591,328 +5712,928 @@
   }
 }
 
-/* Four real occasions (Halloween, New Year's, Valentine's, Christmas),
-   replacing the old catalogue of three dozen themes ported
-   wholesale from CodeDevMLH/Jellyfin-Seasonals: real feedback was that
-   flooding the page with falling emoji read as spam rather than a
-   themed page. Each block below only ever redefines the --jellio-season-*
-   tokens declared on :root above (plus --jellio-trending-color and
-   --jellio-focus-color-rgb, so the recolour reaches every badge and
-   focus ring in the app, not just this file), keyed off a
-   data-jellio-season attribute components/seasons.js sets on
-   #jellioRoot itself. */
-#jellioRoot[data-jellio-season="halloween"] {
-  --jellio-season-accent: #ff7518;
-  --jellio-season-accent-2: #7c3aed;
-  --jellio-season-wash-1: #180a24;
-  --jellio-season-wash-2: #1c0f04;
-  --jellio-trending-color: #ff7518;
-  --jellio-focus-color-rgb: 255 117 24;
-}
-
-#jellioRoot[data-jellio-season="newyear"] {
-  --jellio-season-accent: #d4af37;
-  --jellio-season-accent-2: #eef0f5;
-  --jellio-season-wash-1: #05070f;
-  --jellio-season-wash-2: #0b0d16;
-  --jellio-trending-color: #d4af37;
-  --jellio-focus-color-rgb: 212 175 55;
-}
-
-#jellioRoot[data-jellio-season="valentine"] {
-  --jellio-season-accent: #ff4d6d;
-  --jellio-season-accent-2: #ffb3c6;
-  --jellio-season-wash-1: #210510;
-  --jellio-season-wash-2: #160308;
-  --jellio-trending-color: #ff4d6d;
-  --jellio-focus-color-rgb: 255 77 109;
-}
-
-#jellioRoot[data-jellio-season="christmas"] {
-  --jellio-season-accent: #c0392b;
-  --jellio-season-accent-2: #d4af37;
-  --jellio-season-wash-1: #031a10;
-  --jellio-season-wash-2: #160603;
-  --jellio-trending-color: #c0392b;
-  --jellio-focus-color-rgb: 192 57 43;
-}
-
-/* A plain fixed, full viewport, click-through layer: pointer-events:
-   none means nothing here ever intercepts a real tap or click meant
-   for whatever screen is actually showing underneath it. Hidden during
-   screens/player.js's own real fullscreen route the same real way the
-   sidebar and mobile nav mounts already are.
-
-   z-index: -1 is the one real mechanism that keeps every particle here
-   from ever covering a card or a line of text the way the old layer's
-   own z-index: 5 did (confirmed against CSS 2.1 Appendix E's own real
-   stacking order before writing this rather than guessed): a positioned
-   element's negative-z children paint in step 2, strictly before an
-   element's in-flow, non-positioned descendants in step 3, and every
-   real screen this runtime renders (.jellio-content and everything
-   inside it) is exactly that, plain non-positioned flow content. The
-   real sidebar (z-index: 40) and any modal/panel (z-index: 10001+)
-   both sit in their own real positive stacking step regardless, so
-   neither one needs to change for this to still paint underneath them
-   too. */
-.jellio-seasons {
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals, components/
+   seasonalEffects.js's own header explains why as a real owned
+   component rather than that plugin installed directly. A plain
+   fixed, full viewport, click-through layer: pointer-events: none
+   means nothing here ever intercepts a real tap or click meant for
+   whatever screen is actually showing underneath it. Hidden during
+   screens/player.js's own real fullscreen route the same real way
+   the sidebar and mobile nav mounts already are, one existing rule's
+   own real pattern, not a new mechanism. */
+.jellio-seasonal-effects {
   position: fixed;
   inset: 0;
-  z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  z-index: 5;
 }
 
-.jellio-root-fullscreen .jellio-seasons {
+.jellio-root-fullscreen .jellio-seasonal-effects {
   display: none;
 }
 
-.jellio-seasons-wash {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 90% at 15% -10%, var(--jellio-season-wash-1) 0%, transparent 55%),
-    radial-gradient(110% 100% at 100% 110%, var(--jellio-season-wash-2) 0%, transparent 60%);
-}
-
-.jellio-season-particle {
-  position: absolute;
-  will-change: transform;
+.jellio-seasonal-particle {
+  position: fixed;
+  top: -5vh;
+  will-change: transform, opacity;
   user-select: none;
   line-height: 1;
 }
 
-.jellio-season-particle-fall {
-  top: -8%;
-  animation-name: jellio-season-fall;
+/* Fall (or rise) and side to side sway as one real keyframe, not two:
+   two separate animation-name entries that each drive transform
+   would just fight over the same real property, only one of them
+   ever winning, and a sway keyframe on margin-left instead would
+   bring back the exact real layout-property risk this session's own
+   mobile nav pill already paid for (css/app.css's own header on
+   .jellio-mobile-nav-label documents the real hard cut that came
+   from animating a layout property under real load). One real
+   translate() combining both stays entirely on the compositor. */
+.jellio-seasonal-particle-fall {
+  animation-name: jellio-seasonal-fall;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
 
-.jellio-season-particle-rise {
-  bottom: -8%;
-  animation-name: jellio-season-rise;
+.jellio-seasonal-particle-rise {
+  animation-name: jellio-seasonal-rise;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
 
-@keyframes jellio-season-fall {
-  from {
-    transform: translate(0, 0);
+@keyframes jellio-seasonal-fall {
+  0% {
+    transform: translate(0, -5vh);
   }
 
-  to {
-    transform: translate(var(--jellio-season-sway, 12px), 118vh);
-  }
-}
-
-@keyframes jellio-season-rise {
-  from {
-    transform: translate(0, 0);
-  }
-
-  to {
-    transform: translate(var(--jellio-season-sway, 12px), -120vh);
-  }
-}
-
-.jellio-season-heart {
-  color: var(--jellio-season-accent);
-}
-
-.jellio-season-heart-soft {
-  color: var(--jellio-season-accent-2);
-  filter: blur(1.5px);
-}
-
-.jellio-season-flake {
-  color: #ffffff;
-  text-shadow: 0 0 6px color-mix(in srgb, var(--jellio-season-accent) 55%, transparent);
-}
-
-/* Halloween: brightness(0) turns the bat glyph into a flat black
-   silhouette, drop-shadow is the only real colour left on it, drifting
-   diagonally rather than straight down. Mixed near/far in
-   components/seasons.js (a couple large, fast and more opaque; the
-   rest small, slow and faint) so it reads as a few close overhead
-   rather than a uniform swarm. */
-.jellio-season-bat {
-  position: absolute;
-  top: -8%;
-  font-size: 1em;
-  filter: brightness(0) drop-shadow(0 0 6px var(--jellio-season-accent));
-  animation: jellio-season-bat-drift linear infinite;
-}
-
-@keyframes jellio-season-bat-drift {
-  from {
-    transform: translate(0, -6vh);
-  }
-
-  to {
-    transform: translate(var(--jellio-season-dx, -45vw), 108vh);
-  }
-}
-
-.jellio-season-fog {
-  position: absolute;
-  left: -20%;
-  right: -20%;
-  bottom: 0;
-  height: 42vh;
-  background:
-    radial-gradient(60% 100% at 20% 100%, color-mix(in srgb, var(--jellio-season-accent-2) 26%, transparent) 0%, transparent 70%),
-    radial-gradient(50% 100% at 75% 100%, color-mix(in srgb, var(--jellio-season-accent) 18%, transparent) 0%, transparent 65%);
-  filter: blur(8px);
-  animation: jellio-season-fog-drift 24s ease-in-out infinite alternate;
-}
-
-@keyframes jellio-season-fog-drift {
-  from {
-    transform: translateX(-3%);
-  }
-
-  to {
-    transform: translateX(3%);
-  }
-}
-
-/* A dread-vignette that breathes rather than sitting at one fixed
-   opacity, like a held breath instead of a flat filter. */
-.jellio-season-flicker {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(120% 100% at 50% 40%, transparent 45%, rgb(0 0 0 / 0.5) 100%);
-  animation: jellio-season-dread 5.2s ease-in-out infinite;
-}
-
-@keyframes jellio-season-dread {
-  0%, 100% {
-    opacity: 0.65;
-  }
-
-  38% {
-    opacity: 0.88;
-  }
-
-  46% {
-    opacity: 0.5;
-  }
-
-  60% {
-    opacity: 0.8;
-  }
-
-  78% {
-    opacity: 0.6;
-  }
-}
-
-/* A pair of eyes that opens somewhere in the dark every so often and
-   blinks out again, rather than staying lit the whole time a theme is
-   active: components/seasons.js places one per page load, this
-   keyframe is what actually makes it blink. */
-.jellio-season-eyes {
-  position: absolute;
-  display: flex;
-  gap: 0.6em;
-  opacity: 0;
-  animation: jellio-season-blink 15s ease-in-out infinite;
-}
-
-.jellio-season-eyes span {
-  width: 0.4em;
-  height: 0.4em;
-  border-radius: 50%;
-  background: var(--jellio-season-accent);
-  box-shadow: 0 0 8px 2px var(--jellio-season-accent);
-}
-
-@keyframes jellio-season-blink {
-  0%, 88%, 100% {
-    opacity: 0;
-  }
-
-  91% {
-    opacity: 1;
-  }
-
-  94% {
-    opacity: 0.2;
-  }
-
-  97% {
-    opacity: 1;
-  }
-}
-
-/* Christmas: a thin string of fairy lights along the very top edge of
-   the screen, each on its own real offset so they twinkle out of sync
-   with each other rather than all at once. */
-.jellio-season-lights {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1.6em;
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-end;
-  padding-bottom: 0.3em;
-}
-
-.jellio-season-lights span {
-  width: 0.4em;
-  height: 0.4em;
-  border-radius: 50%;
-  animation: jellio-season-twinkle 2.6s ease-in-out infinite;
-}
-
-@keyframes jellio-season-twinkle {
-  0%, 100% {
-    opacity: 0.35;
-    transform: scale(0.85);
+  25% {
+    transform: translate(var(--jellio-seasonal-sway, 20px), 25vh);
   }
 
   50% {
-    opacity: 1;
-    transform: scale(1.15);
+    transform: translate(0, 55vh);
+  }
+
+  75% {
+    transform: translate(calc(var(--jellio-seasonal-sway, 20px) * -1), 85vh);
+  }
+
+  100% {
+    transform: translate(0, 115vh);
   }
 }
 
-/* New Year's: a slow diagonal light sweep across the whole screen,
-   layered behind the real firework canvas (components/seasons.js's own
-   runFireworks()). */
-.jellio-season-shimmer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
+@keyframes jellio-seasonal-rise {
+  0% {
+    transform: translate(0, 110vh);
+  }
+
+  25% {
+    transform: translate(var(--jellio-seasonal-sway, 20px), 80vh);
+  }
+
+  50% {
+    transform: translate(0, 50vh);
+  }
+
+  75% {
+    transform: translate(calc(var(--jellio-seasonal-sway, 20px) * -1), 20vh);
+  }
+
+  100% {
+    transform: translate(0, -10vh);
+  }
 }
 
-.jellio-season-shimmer::after {
-  content: "";
+.jellio-seasonal-fireworks-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.jellio-seasonal-friday13-vignette {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+  animation: jellio-seasonal-flicker 7s ease-in-out infinite;
+}
+
+@keyframes jellio-seasonal-flicker {
+  0%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+
+  93%,
+  95% {
+    opacity: 0.6;
+  }
+
+  94% {
+    opacity: 1;
+  }
+}
+
+.jellio-seasonal-friday13-cat {
+  position: fixed;
+  bottom: 6vh;
+  left: -10vw;
+  font-size: 28px;
+  animation: jellio-seasonal-cat-walk 22s linear infinite;
+}
+
+@keyframes jellio-seasonal-cat-walk {
+  from {
+    transform: translateX(0) scaleX(-1);
+  }
+
+  to {
+    transform: translateX(120vw) scaleX(-1);
+  }
+}
+
+/* earthday's own real coloured petals: a plain circle, no glyph, no
+   font-size, real width/height set directly in components/
+   seasonalEffects.js's own buildDrift() instead. */
+.jellio-seasonal-particle-dot {
+  position: fixed;
+  top: -5vh;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+/* eurovision's/spooky's own real per-theme glow (EurovisionGlowSize/
+   SpookyGlowSize), one shared text-shadow rather than a second real
+   engine for what both those themes already build the same way. */
+.jellio-seasonal-particle-glow {
+  text-shadow: 0 0 6px currentcolor, 0 0 12px currentcolor;
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   nightsky.css: a real nebula glow plus a three layer parallax
+   starfield (box-shadow dots, the one real CSS trick that keeps
+   hundreds of stars to a single real paint layer) and real shooting
+   stars driven entirely by CSS custom properties JS sets once per
+   launch. */
+.jellio-seasonal-nightsky-glow {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 70% 30%, rgb(138 43 226 / 0.15), transparent 60%),
+    radial-gradient(circle at 20% 80%, rgb(65 105 225 / 0.15), transparent 50%);
+  animation: jellio-seasonal-nightsky-pulse 10s ease-in-out infinite alternate;
+}
+
+@keyframes jellio-seasonal-nightsky-pulse {
+  0% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.jellio-seasonal-nightsky-starfield {
+  position: fixed;
+  inset: 0;
+}
+
+@keyframes jellio-seasonal-nightsky-drift {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-100vh);
+  }
+}
+
+.jellio-seasonal-nightsky-shooting-star {
+  position: fixed;
+  width: 200px;
+  height: 2px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / 1) 100%);
+  border-radius: 50%;
+  opacity: 0;
+  transform-origin: right center;
+}
+
+@keyframes jellio-seasonal-nightsky-shoot {
+  0% {
+    transform: rotate(var(--jellio-shoot-angle)) translateX(0) scaleX(0);
+    opacity: 0;
+  }
+
+  25% {
+    transform: rotate(var(--jellio-shoot-angle)) translateX(calc(var(--jellio-shoot-distance) * 0.25)) scaleX(1);
+    opacity: 1;
+  }
+
+  75% {
+    transform: rotate(var(--jellio-shoot-angle)) translateX(calc(var(--jellio-shoot-distance) * 0.75)) scaleX(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: rotate(var(--jellio-shoot-angle)) translateX(var(--jellio-shoot-distance)) scaleX(0);
+    opacity: 0;
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   filmnoir.css: a sepia mix-blend tint plus a grain/scratch/vignette
+   stack, no particles at all, purely a CSS overlay already fully
+   real without any JS driving a single frame of it. */
+.jellio-seasonal-filmnoir-tint {
+  position: fixed;
+  inset: 0;
+  background-color: #8c7355;
+  mix-blend-mode: color;
+}
+
+.jellio-seasonal-filmnoir-effects {
+  position: fixed;
+  inset: 0;
+}
+
+.jellio-seasonal-filmnoir-grain {
   position: absolute;
   top: 0;
-  bottom: 0;
-  width: 22%;
-  left: -30%;
-  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--jellio-season-accent) 25%, transparent), transparent);
-  animation: jellio-season-sweep 9s ease-in-out infinite;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="200" height="200" filter="url(%23n)" opacity="0.4"/></svg>');
+  animation: jellio-seasonal-filmnoir-grain-dance 0.2s steps(4) infinite;
+  mix-blend-mode: overlay;
+  opacity: 0.3;
 }
 
-@keyframes jellio-season-sweep {
+@keyframes jellio-seasonal-filmnoir-grain-dance {
   0% {
-    left: -30%;
+    transform: translate(0, 0);
   }
 
-  45%, 100% {
-    left: 120%;
+  25% {
+    transform: translate(-5%, -5%);
+  }
+
+  50% {
+    transform: translate(-10%, 5%);
+  }
+
+  75% {
+    transform: translate(5%, -10%);
+  }
+
+  100% {
+    transform: translate(0, 0);
   }
 }
 
-.jellio-season-canvas {
+.jellio-seasonal-filmnoir-vignette {
   position: absolute;
   inset: 0;
+  background: radial-gradient(circle at center, transparent 50%, rgb(0 0 0 / 0.8) 120%);
+  box-shadow: inset 0 0 100px rgb(0 0 0 / 0.6);
+}
+
+.jellio-seasonal-filmnoir-scratches {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, transparent 50%, rgb(255 255 255 / 0.2) 51%, transparent 52%);
+  background-size: 200% 100%;
+  animation: jellio-seasonal-filmnoir-scratch 4s infinite linear, jellio-seasonal-filmnoir-flicker 6s infinite alternate;
+  opacity: 0.2;
+  mix-blend-mode: screen;
+}
+
+@keyframes jellio-seasonal-filmnoir-scratch {
+  0% {
+    background-position: -200% 0;
+  }
+
+  10%,
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes jellio-seasonal-filmnoir-flicker {
+  0%,
+  15%,
+  100% {
+    opacity: 0.2;
+  }
+
+  5% {
+    opacity: 0.1;
+  }
+
+  10% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.15;
+  }
+
+  55% {
+    opacity: 0.25;
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   starwars.css: hyperspace streaks radiating outward from one fixed
+   center point, each one's own real ::after doing the actual drawing
+   so the parent span only ever needs a rotate(). */
+.jellio-seasonal-starwars-center {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  translate: 0 50vh;
+}
+
+.jellio-seasonal-starwars-streak {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100vh;
+  transform-origin: top center;
+  display: block;
+}
+
+.jellio-seasonal-starwars-streak::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 15vh;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0) 0%, rgb(200 230 255 / 0.8) 70%, rgb(255 255 255 / 1) 100%);
+  box-shadow: 0 0 8px #88ccff;
+  border-radius: 2px;
+  animation: jellio-seasonal-starwars-warp cubic-bezier(0.7, 0, 1, 1) infinite;
+  animation-duration: inherit;
+  animation-delay: inherit;
+  animation-fill-mode: both;
+}
+
+@keyframes jellio-seasonal-starwars-warp {
+  0% {
+    transform: translateY(2vh) scaleY(0.1);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(150vh) scaleY(3);
+    opacity: 0;
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   oscar.css: a red carpet strip along the bottom edge, three sweeping
+   spotlights, and randomised camera flash pops (each one a plain
+   span with a real, short-lived CSS animation, appended and removed
+   by components/seasonalEffects.js's own real flash loop). */
+.jellio-seasonal-oscar-carpet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 15vh;
+  background: linear-gradient(to top, rgb(139 0 0 / 0.8) 0%, transparent 100%);
+  opacity: 0.9;
+}
+
+.jellio-seasonal-oscar-spotlights {
+  position: fixed;
+  inset: 0;
+}
+
+.jellio-seasonal-oscar-spotlight {
+  position: absolute;
+  top: 0;
+  width: 30vw;
+  height: 120vh;
+  background: linear-gradient(to bottom, rgb(255 215 0 / 0.4) 0%, transparent 80%);
+  clip-path: polygon(45% 0, 55% 0, 100% 100%, 0 100%);
+  transform-origin: top center;
+  animation: jellio-seasonal-oscar-sweep 12s infinite alternate ease-in-out;
+  mix-blend-mode: screen;
+  translate: 0 -10vh;
+  display: block;
+}
+
+@keyframes jellio-seasonal-oscar-sweep {
+  0% {
+    transform: rotate(-30deg);
+  }
+
+  100% {
+    transform: rotate(30deg);
+  }
+}
+
+.jellio-seasonal-oscar-flash {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 50px 30px rgb(255 255 255 / 0.8), 0 0 100px 50px rgb(255 255 255 / 0.5);
+  animation: jellio-seasonal-oscar-flash-pop 0.2s cubic-bezier(0.1, 0.8, 0.1, 1);
+  mix-blend-mode: screen;
+}
+
+@keyframes jellio-seasonal-oscar-flash-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   frost.css: simplified down to a real animated radial vignette plus
+   shimmer, that real plugin's own SVG feTurbulence displacement
+   filter (an injected <svg><filter> id it references via
+   filter: url(#id)) left out, real extra complexity this corner
+   effect isn't taking on. */
+.jellio-seasonal-frost-layer {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgb(180 220 255 / 0.4) 100%);
+  box-shadow: inset 0 0 60px rgb(200 230 255 / 0.5), inset 0 0 120px rgb(255 255 255 / 0.3);
+  animation: jellio-seasonal-frost-shimmer 6s infinite alternate ease-in-out;
+}
+
+@keyframes jellio-seasonal-frost-shimmer {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   carnival.css: shaped, coloured confetti falling AND swaying AND
+   tumbling in 3D at once, three nested real elements (fall wrapper,
+   sway wrapper, flutter piece) since that's three independent real
+   transforms no single shared keyframe below can combine into one. */
+.jellio-seasonal-carnival-wrapper {
+  position: fixed;
+  top: -10vh;
+  animation-name: jellio-seasonal-carnival-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+  will-change: transform;
+}
+
+@keyframes jellio-seasonal-carnival-fall {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 120vh, 0);
+  }
+}
+
+.jellio-seasonal-carnival-sway {
+  animation-name: jellio-seasonal-carnival-sway;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform;
+}
+
+@keyframes jellio-seasonal-carnival-sway {
+  0% {
+    transform: translateX(calc(var(--jellio-carnival-sway, 50px) * -1));
+  }
+
+  100% {
+    transform: translateX(var(--jellio-carnival-sway, 50px));
+  }
+}
+
+.jellio-seasonal-carnival-piece {
+  width: 8px;
+  height: 16px;
+  animation-name: jellio-seasonal-carnival-flutter;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.jellio-seasonal-carnival-circle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.jellio-seasonal-carnival-square {
+  width: 8px;
+  height: 8px;
+}
+
+.jellio-seasonal-carnival-triangle {
+  width: 10px;
+  height: 10px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+@keyframes jellio-seasonal-carnival-flutter {
+  0% {
+    transform: rotate3d(1, 1, 0, 0deg);
+  }
+
+  100% {
+    transform: rotate3d(1, 1, 0, var(--jellio-carnival-rot, 360deg));
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   space.js: real objects drifting horizontally at their own real
+   depth, a slow independent spin layered on top via a real nested
+   span so the drift and the spin never fight over the same
+   transform (the same real two-transform split this file's own
+   Carnival wrapper/sway/piece nesting above already relies on). */
+.jellio-seasonal-space-object {
+  position: fixed;
+  will-change: transform;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.jellio-seasonal-space-drift-right {
+  left: -10vw;
+  animation-name: jellio-seasonal-space-right;
+}
+
+.jellio-seasonal-space-drift-left {
+  right: -10vw;
+  animation-name: jellio-seasonal-space-left;
+}
+
+@keyframes jellio-seasonal-space-right {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(120vw);
+  }
+}
+
+@keyframes jellio-seasonal-space-left {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-120vw);
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   underwater.js: a deep blue tint plus light rays, seaweed swaying at
+   the bottom, static bottom dwellers, and real swimmers, each one a
+   two element split (an outer wrapper doing the real cross-screen
+   traverse, an inner span doing its own independent sway) the same
+   real reason space's own drift/spin split above exists. */
+.jellio-seasonal-underwater-bg {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 60 90 / 0.35) 0%, rgb(0 30 60 / 0.55) 100%);
+}
+
+.jellio-seasonal-underwater-rays {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 0%, rgb(180 230 255 / 0.2), transparent 60%), radial-gradient(ellipse at 70% 0%, rgb(180 230 255 / 0.15), transparent 55%);
+}
+
+.jellio-seasonal-underwater-seaweed {
+  position: fixed;
+  bottom: -1vh;
+  transform-origin: bottom center;
+  animation: jellio-seasonal-underwater-seaweed-sway 4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes jellio-seasonal-underwater-seaweed-sway {
+  0% {
+    transform: rotate(-8deg);
+  }
+
+  100% {
+    transform: rotate(8deg);
+  }
+}
+
+.jellio-seasonal-underwater-bottom {
+  position: fixed;
+  bottom: 0.5vh;
+}
+
+.jellio-seasonal-underwater-swimmer {
+  position: fixed;
+  will-change: transform;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.jellio-seasonal-underwater-sway {
+  display: inline-block;
+  animation: jellio-seasonal-underwater-body-sway 3s ease-in-out infinite alternate;
+}
+
+@keyframes jellio-seasonal-underwater-body-sway {
+  0% {
+    transform: translateY(-6px);
+  }
+
+  100% {
+    transform: translateY(6px);
+  }
+}
+
+.jellio-seasonal-underwater-right {
+  left: -10vw;
+  animation-name: jellio-seasonal-underwater-swim-right;
+}
+
+.jellio-seasonal-underwater-left {
+  right: -10vw;
+  animation-name: jellio-seasonal-underwater-swim-left;
+}
+
+.jellio-seasonal-underwater-up {
+  animation-name: jellio-seasonal-underwater-swim-up;
+}
+
+.jellio-seasonal-underwater-down {
+  animation-name: jellio-seasonal-underwater-swim-down;
+}
+
+@keyframes jellio-seasonal-underwater-swim-right {
+  from {
+    transform: translateX(0) scaleX(-1);
+  }
+
+  to {
+    transform: translateX(120vw) scaleX(-1);
+  }
+}
+
+@keyframes jellio-seasonal-underwater-swim-left {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-120vw);
+  }
+}
+
+@keyframes jellio-seasonal-underwater-swim-up {
+  from {
+    top: 105vh;
+  }
+
+  to {
+    top: -10vh;
+  }
+}
+
+@keyframes jellio-seasonal-underwater-swim-down {
+  from {
+    top: -10vh;
+  }
+
+  to {
+    top: 105vh;
+  }
+}
+
+.jellio-seasonal-underwater-bubble {
+  position: fixed;
+  bottom: -5vh;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.25);
+  border: 1px solid rgb(255 255 255 / 0.4);
+  animation: jellio-seasonal-underwater-rise linear infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes jellio-seasonal-underwater-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(-110vh);
+    opacity: 0;
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   santa.js: a flying Santa (the parabolic arc itself computed frame
+   by frame in components/seasonalEffects.js's own buildSanta(), CSS
+   only owning the rotation/flip already set inline there) and
+   presents that fall straight down via a real top transition,
+   removing themselves on 'transitionend'. */
+.jellio-seasonal-santa {
+  position: fixed;
+  font-size: 3rem;
+  will-change: transform, top, left;
+}
+
+.jellio-seasonal-santa-present {
+  position: fixed;
+  font-size: 1.6rem;
+  will-change: top;
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   marioday.js: a runner crossing the screen on a fixed real loop, a
+   jump toggled by adding/removing one real class rather than a
+   second animation, and coins that pop up briefly near wherever the
+   runner currently really is. */
+.jellio-seasonal-mario-wrapper {
+  position: fixed;
+  bottom: 4vh;
+  left: -15vw;
+  font-size: 2.4rem;
+  animation: jellio-seasonal-mario-run 18s linear infinite;
+  will-change: transform;
+}
+
+@keyframes jellio-seasonal-mario-run {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(130vw);
+  }
+}
+
+.jellio-seasonal-mario-runner {
+  display: inline-block;
+}
+
+.jellio-seasonal-mario-jump {
+  animation: jellio-seasonal-mario-jump 0.8s ease-out;
+}
+
+@keyframes jellio-seasonal-mario-jump {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2.2rem);
+  }
+}
+
+.jellio-seasonal-mario-coin {
+  position: fixed;
+  bottom: 8vh;
+  font-size: 1.4rem;
+  animation: jellio-seasonal-mario-coin-pop 2s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes jellio-seasonal-mario-coin-pop {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  60% {
+    transform: translateY(-3em);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-3em);
+    opacity: 0;
+  }
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   storm.js/rain.js: falling raindrop streaks (a plain gradient bar,
+   not a glyph), storm's own extra lightning flash a single fixed div
+   whose opacity components/seasonalEffects.js's own real flash loop
+   pokes directly rather than a CSS animation, since a real flash has
+   no fixed period to loop on. */
+.jellio-seasonal-raindrop {
+  position: fixed;
+  width: 1px;
+  height: 2vh;
+  background: linear-gradient(to bottom, transparent, rgb(174 200 255 / 0.6));
+  animation-name: jellio-seasonal-rain-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes jellio-seasonal-rain-fall {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(120vh);
+  }
+}
+
+.jellio-seasonal-lightning-flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  mix-blend-mode: overlay;
+}
+
+/* Ported in spirit from CodeDevMLH/Jellyfin-Seasonals' own real
+   sports.js: a turf gradient along the bottom edge and balls that
+   bounce (outer span) while spinning (inner span) independently, the
+   same real two element split used throughout this file for exactly
+   that reason. */
+.jellio-seasonal-sports-turf {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 12vh;
+  background: linear-gradient(180deg, transparent 0%, rgb(34 139 34 / 0.3) 30%, rgb(34 139 34 / 0.8) 100%);
+}
+
+.jellio-seasonal-sports-ball {
+  position: fixed;
+  bottom: 6vh;
+  font-size: 1.8rem;
+  animation-name: jellio-seasonal-sports-bounce;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.jellio-seasonal-sports-ball-spin {
+  display: inline-block;
+  animation-name: jellio-seasonal-sports-spin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes jellio-seasonal-sports-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8vh);
+  }
+}
+
+@keyframes jellio-seasonal-sports-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(var(--jellio-sports-spin, 360deg));
+  }
 }
 
 /* screens/calendar.js's own real screen: header/tagline above a list of
@@ -6967,455 +6688,6 @@
   max-width: 34em;
   border-radius: var(--jellio-card-radius);
   background: rgb(255 255 255 / 0.03);
-}
-
-/* Profile: banner + avatar + bio, badges, activity feed. Rarity tokens
-   mirror the badge case reference sheet (Common/Rare/Epic/Legendary),
-   Legendary reusing the app's own --jellio-trending-color rather than a
-   fifth colour invented just for this. */
-:root {
-  --jellio-rarity-common: #8a90a0;
-  --jellio-rarity-rare: #5b9df0;
-  --jellio-rarity-epic: #b57bf2;
-  --jellio-rarity-legendary: var(--jellio-trending-color);
-}
-
-.jellio-profile-banner {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 4.2;
-  min-height: 120px;
-  background: linear-gradient(135deg, var(--jellio-bg-elevated), var(--jellio-card-bg));
-  overflow: hidden;
-}
-
-.jellio-profile-banner-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.jellio-profile-banner-empty .jellio-profile-banner-img {
-  display: none;
-}
-
-.jellio-profile-banner-input {
-  display: none;
-}
-
-.jellio-profile-banner-edit {
-  position: absolute;
-  z-index: 1;
-  right: 1em;
-  bottom: 1em;
-  padding: 0.5em 1.2em;
-  border: 1px solid rgb(255 255 255 / 0.25);
-  border-radius: 999px;
-  background: rgb(13 13 13 / 0.55);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-weight: 600;
-  font-size: 0.85em;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-}
-
-.jellio-profile-banner-edit:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.jellio-profile-header {
-  display: flex;
-  align-items: flex-end;
-  gap: clamp(16px, 2vw, 28px);
-  padding: 0 var(--jellio-safe-gutter);
-  margin-top: -3.5em;
-  position: relative;
-}
-
-.jellio-profile-avatar {
-  flex: 0 0 auto;
-  width: clamp(84px, 9vw, 128px);
-  height: clamp(84px, 9vw, 128px);
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid var(--jellio-bg-color);
-  background: var(--jellio-card-bg);
-}
-
-.jellio-profile-identity {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-bottom: 0.4em;
-}
-
-.jellio-profile-name-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6em;
-  flex-wrap: wrap;
-}
-
-.jellio-profile-name {
-  margin: 0;
-  font-size: clamp(1.4em, 2.2vw, 2em);
-  font-weight: 800;
-}
-
-.jellio-profile-private-chip {
-  padding: 0.2em 0.7em;
-  border-radius: 999px;
-  border: 1px solid var(--jellio-border-color);
-  color: var(--jellio-text-tertiary);
-  font-size: 0.7em;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.jellio-profile-bio-wrap {
-  margin-top: 0.4em;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.8em;
-  flex-wrap: wrap;
-}
-
-.jellio-profile-bio {
-  margin: 0;
-  color: var(--jellio-text-secondary);
-  max-width: 46em;
-  line-height: 1.5;
-}
-
-.jellio-profile-bio-edit,
-.jellio-profile-bio-cancel {
-  border: 0;
-  background: none;
-  color: var(--jellio-text-tertiary);
-  font-family: var(--jellio-font-family);
-  font-weight: 600;
-  font-size: 0.85em;
-  cursor: pointer;
-  padding: 0;
-}
-
-.jellio-profile-bio-input {
-  width: 100%;
-  max-width: 46em;
-  min-height: 4.5em;
-  resize: vertical;
-  padding: 0.6em 0.8em;
-  border-radius: 10px;
-  border: 1px solid var(--jellio-border-color);
-  background: var(--jellio-bg-elevated);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-}
-
-.jellio-profile-bio-actions {
-  display: flex;
-  align-items: center;
-  gap: 1em;
-}
-
-.jellio-profile-body {
-  padding-top: clamp(20px, 2.5vw, 36px);
-}
-
-.jellio-profile-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(20px, 3vw, 40px);
-  padding: 0 var(--jellio-safe-gutter);
-  margin-bottom: clamp(24px, 3vw, 40px);
-}
-
-.jellio-profile-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2em;
-}
-
-.jellio-profile-stat-value {
-  font-size: clamp(1.3em, 2vw, 1.8em);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.jellio-profile-stat-label {
-  color: var(--jellio-text-tertiary);
-  font-size: 0.8em;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.jellio-profile-section {
-  margin-bottom: clamp(28px, 3.5vw, 44px);
-}
-
-.jellio-profile-badges {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 12px;
-  padding: 0 var(--jellio-safe-gutter);
-}
-
-.jellio-profile-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5em;
-  padding: 1em 0.6em;
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-card-bg);
-  border: 1px solid var(--jellio-border-color);
-  text-align: center;
-}
-
-.jellio-profile-badge-icon {
-  width: 2.4em;
-  height: 2.4em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--jellio-bg-elevated);
-  color: var(--jellio-text-tertiary);
-  font-size: 1.3em;
-}
-
-.jellio-profile-badge-name {
-  font-size: 0.78em;
-  font-weight: 600;
-  color: var(--jellio-text-secondary);
-}
-
-.jellio-profile-badge[data-unlocked='true'] {
-  border-color: color-mix(in srgb, var(--rarity-color, var(--jellio-rarity-common)) 45%, var(--jellio-border-color));
-}
-
-.jellio-profile-badge[data-unlocked='true'] .jellio-profile-badge-icon {
-  background: color-mix(in srgb, var(--rarity-color, var(--jellio-rarity-common)) 20%, var(--jellio-bg-elevated));
-  color: var(--rarity-color, var(--jellio-rarity-common));
-}
-
-.jellio-profile-badge[data-unlocked='true'] .jellio-profile-badge-name {
-  color: var(--jellio-text-color);
-}
-
-.jellio-profile-badge[data-rarity='common'] { --rarity-color: var(--jellio-rarity-common); }
-.jellio-profile-badge[data-rarity='rare'] { --rarity-color: var(--jellio-rarity-rare); }
-.jellio-profile-badge[data-rarity='epic'] { --rarity-color: var(--jellio-rarity-epic); }
-.jellio-profile-badge[data-rarity='legendary'] { --rarity-color: var(--jellio-rarity-legendary); }
-
-.jellio-profile-empty {
-  padding: 0 var(--jellio-safe-gutter);
-  color: var(--jellio-text-tertiary);
-}
-
-.jellio-profile-activity {
-  list-style: none;
-  margin: 0;
-  padding: 0 var(--jellio-safe-gutter);
-  display: flex;
-  flex-direction: column;
-  gap: 0.7em;
-}
-
-.jellio-profile-activity-item {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1em;
-  padding-bottom: 0.7em;
-  border-bottom: 1px solid var(--jellio-border-color);
-}
-
-.jellio-profile-activity-text {
-  color: var(--jellio-text-color);
-}
-
-.jellio-profile-activity-time {
-  flex: 0 0 auto;
-  color: var(--jellio-text-tertiary);
-  font-size: 0.82em;
-  white-space: nowrap;
-}
-
-.jellio-profile-locked {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6em;
-  padding: clamp(40px, 6vw, 72px) var(--jellio-safe-gutter);
-  color: var(--jellio-text-tertiary);
-}
-
-.jellio-profile-locked-icon {
-  font-size: 2.2em;
-}
-
-.jellio-profile-locked-text {
-  margin: 0;
-  font-weight: 600;
-}
-
-/* AniList's own real activity card shape (screenshot checked before
-   writing this): cover art leading the row rather than a small round
-   avatar, the title itself the one coloured part of the description
-   line, not the whole sentence. screens/feed.js's own header explains
-   the same real reasoning. */
-.jellio-feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 var(--jellio-safe-gutter) 40px;
-}
-
-.jellio-feed-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.9em;
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--jellio-border-color);
-  border-radius: var(--jellio-card-radius);
-  background: var(--jellio-card-bg);
-  color: inherit;
-  font-family: var(--jellio-font-family);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease;
-}
-
-.jellio-feed-row:hover {
-  background: var(--jellio-bg-elevated);
-  border-color: rgb(255 255 255 / 0.18);
-}
-
-.jellio-feed-poster,
-.jellio-feed-poster-empty {
-  flex: 0 0 auto;
-  width: clamp(52px, 6vw, 68px);
-  aspect-ratio: 2 / 3;
-  border-radius: calc(var(--jellio-card-radius) - 8px);
-  object-fit: cover;
-  background: var(--jellio-bg-elevated);
-}
-
-.jellio-feed-poster-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--jellio-text-tertiary);
-}
-
-.jellio-feed-body {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.4em;
-}
-
-.jellio-feed-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-}
-
-.jellio-feed-avatar,
-.jellio-feed-avatar-empty {
-  flex: 0 0 auto;
-  width: 1.5em;
-  height: 1.5em;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--jellio-bg-elevated);
-}
-
-.jellio-feed-avatar-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--jellio-text-tertiary);
-  font-size: 0.9em;
-}
-
-.jellio-feed-user {
-  font-weight: 700;
-  color: var(--jellio-secondary-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.jellio-feed-time {
-  margin-left: auto;
-  flex: 0 0 auto;
-  color: var(--jellio-text-tertiary);
-  font-size: 0.8em;
-}
-
-.jellio-feed-desc {
-  color: var(--jellio-text-secondary);
-  font-size: 0.92em;
-  line-height: 1.4;
-}
-
-.jellio-feed-title {
-  color: var(--jellio-trending-color);
-  font-weight: 600;
-}
-
-/* Badge unlock rows: same real footprint as .jellio-feed-poster so a
-   mixed feed's own rows stay one consistent height, a rarity coloured
-   tile standing in for cover art a badge does not have. Same real
-   rarity tokens screens/profile.js's own badge showcase already uses. */
-.jellio-feed-badge-tile {
-  flex: 0 0 auto;
-  width: clamp(52px, 6vw, 68px);
-  aspect-ratio: 2 / 3;
-  border-radius: calc(var(--jellio-card-radius) - 8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--jellio-bg-elevated);
-  color: var(--jellio-text-tertiary);
-}
-
-.jellio-feed-badge-tile .material-icons {
-  font-size: 1.7em;
-}
-
-.jellio-feed-badge-tile[data-rarity='common'] {
-  background: color-mix(in srgb, var(--jellio-rarity-common) 20%, var(--jellio-bg-elevated));
-  color: var(--jellio-rarity-common);
-}
-
-.jellio-feed-badge-tile[data-rarity='rare'] {
-  background: color-mix(in srgb, var(--jellio-rarity-rare) 20%, var(--jellio-bg-elevated));
-  color: var(--jellio-rarity-rare);
-}
-
-.jellio-feed-badge-tile[data-rarity='epic'] {
-  background: color-mix(in srgb, var(--jellio-rarity-epic) 22%, var(--jellio-bg-elevated));
-  color: var(--jellio-rarity-epic);
-}
-
-.jellio-feed-badge-tile[data-rarity='legendary'] {
-  background: color-mix(in srgb, var(--jellio-rarity-legendary) 24%, var(--jellio-bg-elevated));
-  color: var(--jellio-rarity-legendary);
-}
-
-.jellio-feed-badge-desc {
-  margin-top: 0.2em;
-  color: var(--jellio-text-tertiary);
-  font-size: 0.85em;
 }
 
 @media (prefers-reduced-motion: reduce) {

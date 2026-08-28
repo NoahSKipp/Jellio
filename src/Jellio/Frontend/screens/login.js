@@ -19,11 +19,10 @@ import {
   quickSignIn,
   bypassLoginScreen,
   getPublicUsers,
-  pruneHiddenRememberedUsers,
   requestPasswordReset,
   redeemPasswordResetPin,
 } from '../runtime/auth.js';
-import { getUserImageUrl, updateUserPassword, getOnlineUserIds } from '../runtime/api.js';
+import { getUserImageUrl, updateUserPassword } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
 function el(tag, className, text) {
@@ -317,7 +316,7 @@ function applyStagger(wrap, index) {
   wrap.style.setProperty('--jellio-stagger-delay', Math.min(index, STAGGER_MAX) * STAGGER_STEP_MS + 'ms');
 }
 
-function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
+function buildProfileTile(userId, entry, index, onForgotten, onFailed) {
   const wrap = el('div', 'jellio-login-profile');
   applyStagger(wrap, index);
 
@@ -326,7 +325,7 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   const avatar = document.createElement('button');
   avatar.type = 'button';
   avatar.className = 'jellio-login-profile-avatar';
-  avatar.setAttribute('aria-label', 'Quick sign in as ' + (entry.name || ''));
+  avatar.setAttribute('aria-label', 'Sign in as ' + (entry.name || ''));
 
   if (entry.primaryImageTag) {
     avatar.style.backgroundImage = "url('" + getUserImageUrl(userId, entry.primaryImageTag, { maxWidth: 300 }) + "')";
@@ -363,31 +362,10 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   avatarWrap.appendChild(avatar);
   avatarWrap.appendChild(remove);
 
-  // Same real badge components/accountSwitcher.js's own switch-profile
-  // panel already shows for exactly this case (a real remembered token,
-  // no password needed), real feedback asked for this screen to carry
-  // the same tell rather than every tile here looking identical
-  // regardless of whether tapping it signs in immediately or still
-  // needs a password first (components/accountSwitcher.js's own header
-  // explains why "quick" is worth marking at all).
-  const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
-  badge.setAttribute('aria-hidden', 'true');
-  avatarWrap.appendChild(badge);
-
-  // Real ISessionManager session for this user right now (runtime/api.js's
-  // own getOnlineUserIds), same real source and same real dot
-  // components/accountSwitcher.js's own panel already shows.
-  if (online) {
-    const dot = el('span', 'jellio-account-switcher-online-dot');
-    dot.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(dot);
-  }
-
   const name = el('span', 'jellio-login-profile-name', entry.name || '');
 
   wrap.appendChild(avatarWrap);
   wrap.appendChild(name);
-  wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
   return wrap;
 }
 
@@ -404,18 +382,16 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
 // rememberUser()s this same profile on the way, so the very next
 // visit finds it in the other list instead, with a real quick sign-in
 // token this time.
-function buildPublicUserTile(user, index, onNeedsPassword, online) {
+function buildPublicUserTile(user, index, onNeedsPassword) {
   const wrap = el('div', 'jellio-login-profile');
   applyStagger(wrap, index);
 
   const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
 
-  const hasPassword = user.HasPassword !== false && user.HasConfiguredPassword !== false;
-
   const avatar = document.createElement('button');
   avatar.type = 'button';
   avatar.className = 'jellio-login-profile-avatar';
-  avatar.setAttribute('aria-label', (hasPassword ? 'Sign in as ' : 'Quick sign in as ') + (user.Name || ''));
+  avatar.setAttribute('aria-label', 'Sign in as ' + (user.Name || ''));
 
   if (user.PrimaryImageTag) {
     avatar.style.backgroundImage =
@@ -425,6 +401,8 @@ function buildPublicUserTile(user, index, onNeedsPassword, online) {
     icon.setAttribute('aria-hidden', 'true');
     avatar.appendChild(icon);
   }
+
+  const hasPassword = user.HasPassword !== false && user.HasConfiguredPassword !== false;
 
   avatar.addEventListener('click', function () {
     if (!hasPassword) {
@@ -444,29 +422,10 @@ function buildPublicUserTile(user, index, onNeedsPassword, online) {
 
   avatarWrap.appendChild(avatar);
 
-  // Same real badge/dot buildProfileTile() above now carries, mirroring
-  // components/accountSwitcher.js's own switch-profile panel: a
-  // passwordless public user signs in here exactly as instantly as a
-  // remembered one does (the branch above), so it earns the same real
-  // "quick" tell instead of looking identical to a tile that still
-  // needs a password typed first.
-  if (!hasPassword) {
-    const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
-    badge.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(badge);
-  }
-
-  if (online) {
-    const dot = el('span', 'jellio-account-switcher-online-dot');
-    dot.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(dot);
-  }
-
   const name = el('span', 'jellio-login-profile-name', user.Name || '');
 
   wrap.appendChild(avatarWrap);
   wrap.appendChild(name);
-  if (!hasPassword) wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
   return wrap;
 }
 
@@ -500,11 +459,11 @@ function publicOnlyUsers(remembered, publicUsers) {
   });
 }
 
-function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
+function renderProfilePicker(container, remembered, publicUsers) {
   container.textContent = '';
 
   function rerender() {
-    renderProfilePicker(container, getRememberedUsers(), publicUsers, onlineIds);
+    renderProfilePicker(container, getRememberedUsers(), publicUsers);
   }
 
   function showManual(prefillName, message) {
@@ -547,21 +506,15 @@ function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
         function (name) {
           showManual(name, 'That saved sign-in no longer works. Sign in again.');
         },
-        onlineIds.has(userId),
       ),
     );
   });
 
   publicOnly.forEach(function (user) {
     grid.appendChild(
-      buildPublicUserTile(
-        user,
-        index++,
-        function (name) {
-          showManual(name, '');
-        },
-        onlineIds.has(user.Id),
-      ),
+      buildPublicUserTile(user, index++, function (name) {
+        showManual(name, '');
+      }),
     );
   });
 
@@ -582,23 +535,13 @@ export async function renderLogin(root) {
   const screen = el('div', 'jellio-login-screen');
   root.appendChild(screen);
 
-  // Neither real fetch depends on the other's result. allSettled rather
-  // than Promise.all, same real reason components/accountSwitcher.js's
-  // own header already gives: a missing/failed online-ids fetch below
-  // is only ever a missing dot, not worth losing the whole picker over.
-  const [publicUsersResult, onlineIdsResult] = await Promise.allSettled([getPublicUsers(), getOnlineUserIds()]);
-
   let publicUsers = [];
-  if (publicUsersResult.status === 'fulfilled') {
-    publicUsers = publicUsersResult.value;
-    // Real fix: drops a remembered tile for a user later hidden or
-    // deleted server side, see this function's own header in
-    // runtime/auth.js. Only reached once the fetch above actually
-    // succeeded, same real guard that file's own header explains.
-    pruneHiddenRememberedUsers(publicUsers);
+  try {
+    publicUsers = await getPublicUsers();
+  } catch (err) {
+    // A device that has signed in here before still gets the
+    // remembered list, real endpoint or not.
   }
 
-  const onlineIds = new Set(onlineIdsResult.status === 'fulfilled' ? onlineIdsResult.value : []);
-
-  renderProfilePicker(screen, getRememberedUsers(), publicUsers, onlineIds);
+  renderProfilePicker(screen, getRememberedUsers(), publicUsers);
 }
