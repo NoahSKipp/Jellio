@@ -15,15 +15,9 @@ function el(tag, className, text) {
   return node;
 }
 
-// message is optional: screens/detail.js's own polling wait for a
-// title Gelato is still importing for the first time is the one real
-// caller so far with something worth telling the reader while this
-// spinner is already up, every other call site still just wants the
-// bare spinner it always had.
-export function renderLoading(root, message) {
+export function renderLoading(root) {
   const wrap = el('div', 'jellio-screen-loading');
   wrap.appendChild(el('div', 'jellio-screen-spinner'));
-  if (message) wrap.appendChild(el('p', 'jellio-service-empty', message));
   root.appendChild(wrap);
 }
 

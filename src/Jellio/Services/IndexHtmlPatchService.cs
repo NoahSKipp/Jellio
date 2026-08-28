@@ -180,8 +180,6 @@ public class IndexHtmlPatchService(
         "components/sidebar.js",
         "components/mobileNav.js",
         "components/nowPlaying.js",
-        "components/notifications.js",
-        "components/toast.js",
         "components/splash.js",
         "components/card.js",
         "components/row.js",
@@ -195,7 +193,7 @@ public class IndexHtmlPatchService(
         "components/groupWatch.js",
         "components/navShared.js",
         "components/libraryPicker.js",
-        "components/seasons.js",
+        "components/seasonalEffects.js",
         "components/homeCustomizer.js",
         "components/rowListModal.js",
     ];

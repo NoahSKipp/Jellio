@@ -7,15 +7,12 @@
 // why that needed no access to jellyfin-web's own playbackManager at
 // all, when there is not).
 import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp } from '../runtime/api.js';
-import { navigateTo, setTitle } from '../runtime/router.js';
+import { navigateTo } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { toggleWatched, toggleWatchlist, toggleRating } from '../components/cardOptionsMenu.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
-import { buildRatingBadge } from '../components/ratingBadge.js';
-import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
-import { openListMembershipMenu } from '../components/listMembershipMenu.js';
 
 // A failed item lookup used to just console.warn and return, leaving
 // root exactly as blank as root.textContent = '' left it: a series's
@@ -563,43 +560,6 @@ function buildCastRow(people) {
   return section;
 }
 
-// Real bug, found live: opening a title straight from a search result
-// that has never been opened before failed outright every time, going
-// back and searching again always fixed it. Root cause matches this
-// screen's own comment further down about a search result's own
-// synthetic placeholder id: the request below is what actually triggers
-// Gelato's real metadata insert the first time a title is ever opened,
-// and that insert racing this same request losing (an immediate 404
-// before the insert has actually landed, not merely a slow answer) reads
-// identically to a real failure with no way to tell the two apart from
-// here. A plain second search always worked because the title was a
-// real already-imported library item by then.
-//
-// A single short retry was not enough: confirmed against a real server
-// log, Gelato's own InsertActionFilter took 23 real seconds end to end
-// for a title never imported before, and a request that lands anywhere
-// in that window still just 404s, no matter how it is asked. Polling
-// instead, same real wait the reader was already doing by hand (search
-// again, wait, open it) just automatic, with the spinner saying why once
-// the first attempt has already lost that race.
-const IMPORT_POLL_INTERVAL_MS = 3000;
-const IMPORT_POLL_MAX_ATTEMPTS = 15;
-
-function fetchItemDetailsWithRetry(itemId, onRetrying) {
-  function attempt(attemptsLeft) {
-    return getItemDetails(itemId).catch(function (err) {
-      if (attemptsLeft <= 0) throw err;
-      if (onRetrying) onRetrying();
-      return new Promise(function (resolve) {
-        window.setTimeout(resolve, IMPORT_POLL_INTERVAL_MS);
-      }).then(function () {
-        return attempt(attemptsLeft - 1);
-      });
-    });
-  }
-  return attempt(IMPORT_POLL_MAX_ATTEMPTS);
-}
-
 export async function renderDetail(root, params) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-detail';
@@ -618,14 +578,8 @@ export async function renderDetail(root, params) {
   renderLoading(root);
 
   let item;
-  let shownImportMessage = false;
   try {
-    item = await fetchItemDetailsWithRetry(itemId, function () {
-      if (shownImportMessage) return;
-      shownImportMessage = true;
-      root.textContent = '';
-      renderLoading(root, 'Importing this title for the first time. This can take up to a minute.');
-    });
+    item = await getItemDetails(itemId);
   } catch (err) {
     console.warn('Jellio: could not load item details', err);
     renderDetailError(root, describeNetworkFailure('this title', err), function () {
@@ -635,7 +589,6 @@ export async function renderDetail(root, params) {
   }
 
   root.textContent = '';
-  setTitle((item.Type === 'Episode' && item.SeriesName ? item.SeriesName : item.Name) + ' - Jellio');
 
   // A title reached straight from a search result carries a synthetic
   // placeholder id, not a real library one, confirmed against Gelato's
@@ -701,7 +654,7 @@ export async function renderDetail(root, params) {
   const runtime = formatRuntime(item.RunTimeTicks);
   if (runtime) meta.appendChild(el('span', null, runtime));
   if (item.OfficialRating) meta.appendChild(el('span', null, item.OfficialRating));
-  if (item.CommunityRating) meta.appendChild(buildRatingBadge(item.CommunityRating));
+  if (item.CommunityRating) meta.appendChild(el('span', null, item.CommunityRating.toFixed(1) + ' ★'));
   heroContent.appendChild(meta);
 
   if (item.Genres && item.Genres.length) {
@@ -792,10 +745,6 @@ export async function renderDetail(root, params) {
   paintWatchlist();
   watchlistButton.addEventListener('click', function (event) {
     event.stopPropagation();
-    if (isGrouplistEnabled()) {
-      openListMembershipMenu(item, watchlistButton.getBoundingClientRect(), paintWatchlist);
-      return;
-    }
     watchlistButton.disabled = true;
     toggleWatchlist(item)
       .then(paintWatchlist)
@@ -1029,19 +978,9 @@ export async function renderDetail(root, params) {
     root.appendChild(el('p', 'jellio-detail-overview', item.Overview));
   }
 
-  // Real bug, audit-found: buildCastRow/buildTrailersRow below are pure
-  // sync builds off item fields already in hand, no network call of
-  // their own, but used to sit behind this section's own real
-  // getSeasons round trip regardless. Fired without awaiting instead,
-  // same real cancelled-flag shape mountCoverflow() in screens/library.js
-  // already uses for the identical reason: a reader who navigates away
-  // before this resolves must not have a stale insertBefore land in a
-  // root the next screen, or a different title's own renderDetail, has
-  // since taken over.
-  let cancelled = false;
-  let seasonsPromise = null;
   if (item.Type === 'Series') {
-    seasonsPromise = buildSeasonsSection(canonicalId);
+    const seasonsSection = await buildSeasonsSection(canonicalId);
+    if (seasonsSection) root.appendChild(seasonsSection);
   }
 
   const castRow = buildCastRow(item.People);
@@ -1049,20 +988,4 @@ export async function renderDetail(root, params) {
 
   const trailersRow = buildTrailersRow(item.RemoteTrailers);
   if (trailersRow) root.appendChild(trailersRow);
-
-  if (seasonsPromise) {
-    seasonsPromise.then(function (seasonsSection) {
-      if (cancelled || !seasonsSection) return;
-      // Ahead of Cast/Trailers, same real order this section always
-      // rendered in, just no longer holding either of them up to get
-      // there: whichever of the two actually rendered is still the
-      // real first child in root at this point, nothing else this
-      // screen builds lands between them and here.
-      root.insertBefore(seasonsSection, castRow || trailersRow || null);
-    });
-  }
-
-  return function () {
-    cancelled = true;
-  };
 }

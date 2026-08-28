@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Jellio.Services;
 
-public record GroupWatchChatMessage(long Id, Guid GroupId, Guid UserId, string UserName, string Text, DateTime Timestamp, Guid? ItemId);
+public record GroupWatchChatMessage(long Id, Guid GroupId, Guid UserId, string UserName, string Text, DateTime Timestamp);
 
 /// <summary>
 /// Chat for a real Jellyfin SyncPlay group (components/groupWatch.js's own
@@ -29,7 +29,7 @@ public class GroupWatchChatService
     private readonly ConcurrentDictionary<Guid, List<GroupWatchChatMessage>> _messagesByGroup = new();
     private long _nextId;
 
-    public GroupWatchChatMessage Add(Guid groupId, Guid userId, string userName, string text, Guid? itemId = null)
+    public GroupWatchChatMessage Add(Guid groupId, Guid userId, string userName, string text)
     {
         var message = new GroupWatchChatMessage(
             System.Threading.Interlocked.Increment(ref _nextId),
@@ -37,8 +37,7 @@ public class GroupWatchChatService
             userId,
             userName,
             text,
-            DateTime.UtcNow,
-            itemId
+            DateTime.UtcNow
         );
 
         var list = _messagesByGroup.GetOrAdd(groupId, _ => new List<GroupWatchChatMessage>());

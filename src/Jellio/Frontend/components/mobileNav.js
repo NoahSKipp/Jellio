@@ -231,13 +231,6 @@ export async function renderMobileNav(container) {
   scroller.className = 'jellio-mobile-nav-scroll';
   container.appendChild(scroller);
 
-  // Started before getPrimaryNavLinks() below rather than awaited only
-  // at its own append point further down: the same real independent
-  // fetches components/sidebar.js's own header now explains, run
-  // alongside each other instead of Profile only starting once nav
-  // links had already fully resolved.
-  const profileButtonPromise = buildProfileButton();
-
   const links = await getPrimaryNavLinks();
   links.slice(0, FIXED_LINK_COUNT).forEach(function (link) {
     scroller.appendChild(buildLink(link));
@@ -251,7 +244,7 @@ export async function renderMobileNav(container) {
   scroller.appendChild(buildLink(SETTINGS_LINK));
   // Real feedback: Profile as the very last item in the row, not
   // sitting ahead of Settings the way it used to.
-  scroller.appendChild(await profileButtonPromise);
+  scroller.appendChild(await buildProfileButton());
 
   attachScrollCompact(container);
 }

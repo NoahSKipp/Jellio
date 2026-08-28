@@ -11,12 +11,11 @@ import {
   getCurrentUser as getSessionUser,
   getRememberedUsers,
   getPublicUsers,
-  pruneHiddenRememberedUsers,
   quickSignIn,
   authenticateByName,
   logout,
 } from '../runtime/auth.js';
-import { getUserImageUrl, clearCache, getOnlineUserIds } from '../runtime/api.js';
+import { getUserImageUrl, clearCache } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
 const OVERLAY_ID = 'jellioAccountSwitcher';
@@ -96,7 +95,7 @@ function switchToUser(button, promiseFactory, status) {
 // full real sign-in screen underneath (a public user Jellyfin itself
 // says needs a real password, this file's own openAccountSwitcher()
 // already treats differently, just invisibly until now).
-function buildProfileTile(userId, name, imageTag, onClick, quick, online) {
+function buildProfileTile(userId, name, imageTag, onClick, quick) {
   const wrap = el('div', 'jellio-login-profile');
   const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
 
@@ -117,43 +116,10 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online) {
 
   avatarWrap.appendChild(avatar);
 
-  // Top left, real feedback: no way to look at another user's own
-  // profile (badges, activity) without actually switching into their
-  // own session first. A plain button here instead, stopping
-  // propagation so it never also fires avatar's own click above,
-  // closes this overlay and hands off to #/profile?id=X, the same
-  // real profile page Settings' own "View profile" row already opens
-  // for the signed in reader's own id.
-  const viewProfile = document.createElement('button');
-  viewProfile.type = 'button';
-  viewProfile.className = 'jellio-account-switcher-view-profile';
-  viewProfile.setAttribute('aria-label', "View " + (name || 'this user') + "'s profile");
-  const eyeIcon = el('span', 'material-icons visibility');
-  eyeIcon.setAttribute('aria-hidden', 'true');
-  viewProfile.appendChild(eyeIcon);
-  viewProfile.addEventListener('click', function (event) {
-    event.stopPropagation();
-    closeAccountSwitcher();
-    navigateTo('#/profile?id=' + userId);
-  });
-  avatarWrap.appendChild(viewProfile);
-
   if (quick) {
     const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
     badge.setAttribute('aria-hidden', 'true');
     avatarWrap.appendChild(badge);
-  }
-
-  // Top right, the quick sign-in badge's own bottom right mirrored: a
-  // real active ISessionManager session for this user right now
-  // (runtime/api.js's own getOnlineUserIds), not anything this device
-  // remembers, so it stays correct switching between two remembered
-  // profiles that are not actually the reader currently signed in
-  // somewhere else.
-  if (online) {
-    const dot = el('span', 'jellio-account-switcher-online-dot');
-    dot.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(dot);
   }
 
   wrap.appendChild(avatarWrap);
@@ -250,31 +216,13 @@ export async function openAccountSwitcher() {
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
 
-  // Neither real fetch depends on the other's result, but used to be
-  // awaited one after the other regardless, the whole grid waiting on
-  // the sum of both round trips instead of just the slower one.
-  // allSettled rather than Promise.all: each already tolerates its own
-  // failure independently below, the same non-fatal shape neither
-  // should lose just because it now starts alongside the other.
-  const [publicUsersResult, onlineIdsResult] = await Promise.allSettled([getPublicUsers(), getOnlineUserIds()]);
-
-  let publicUsers = [];
-  if (publicUsersResult.status === 'fulfilled') {
-    publicUsers = publicUsersResult.value;
-    // Real fix: drops a remembered tile for a user later hidden or
-    // deleted server side, see this function's own header in
-    // runtime/auth.js. Only reached once the fetch above actually
-    // succeeded, same real guard that file's own header explains.
-    pruneHiddenRememberedUsers(publicUsers);
-  }
-  // Read fresh rather than earlier: the call above can have just
-  // pruned it.
   const remembered = getRememberedUsers();
-
-  // A missing/failed fetch just means no tile shows an online dot this
-  // open, same non-fatal shape as publicUsers above, not worth blocking
-  // the rest of this overlay over.
-  const onlineIds = new Set(onlineIdsResult.status === 'fulfilled' ? onlineIdsResult.value : []);
+  let publicUsers = [];
+  try {
+    publicUsers = await getPublicUsers();
+  } catch (err) {
+    // The remembered list below still works without it.
+  }
 
   Object.keys(remembered).forEach(function (userId) {
     if (userId === currentId) return;
@@ -294,7 +242,6 @@ export async function openAccountSwitcher() {
           );
         },
         true,
-        onlineIds.has(userId),
       ),
     );
   });
@@ -325,7 +272,6 @@ export async function openAccountSwitcher() {
             );
           },
           !hasPassword,
-          onlineIds.has(user.Id),
         ),
       );
     });

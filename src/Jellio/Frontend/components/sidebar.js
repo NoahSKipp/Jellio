@@ -7,7 +7,6 @@
 import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, SETTINGS_LINK } from './navShared.js';
 import { navigateTo } from '../runtime/router.js';
 import { toggleNowPlayingPanel, nowPlayingCount } from './nowPlaying.js';
-import { toggleNotificationsPanel, notificationsUnreadCount } from './notifications.js';
 import { openAccountSwitcher } from './accountSwitcher.js';
 import { openGroupWatch } from './groupWatch.js';
 import { getCurrentUser } from '../runtime/api.js';
@@ -125,43 +124,6 @@ function buildNowPlayingButton() {
   return button;
 }
 
-// Same real shape buildNowPlayingButton() above already uses, a plain
-// dot in place of its own numeric badge: real feedback specifically
-// asked for "a red or yellow light/dot", not a count, and how many
-// releases arrived today is a far less useful real number than "did
-// anything new show up at all".
-function buildNotificationsButton() {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'jellio-sidebar-link jellio-sidebar-notifications';
-  button.title = 'Notifications';
-  button.setAttribute('aria-label', 'Notifications');
-  button.setAttribute('aria-haspopup', 'true');
-  button.setAttribute('aria-expanded', 'false');
-  if (notificationsUnreadCount() > 0) button.classList.add('jellio-sidebar-notifications-active');
-
-  const icon = document.createElement('span');
-  icon.className = 'material-icons notifications';
-  icon.setAttribute('aria-hidden', 'true');
-  button.appendChild(icon);
-
-  const dot = document.createElement('span');
-  dot.className = 'jellio-sidebar-notifications-dot';
-  dot.setAttribute('aria-hidden', 'true');
-  button.appendChild(dot);
-
-  const labelEl = document.createElement('span');
-  labelEl.className = 'jellio-sidebar-label';
-  labelEl.textContent = 'Notifications';
-  button.appendChild(labelEl);
-
-  button.addEventListener('click', function () {
-    button.blur();
-    toggleNotificationsPanel();
-  });
-  return button;
-}
-
 // Real feedback: labelled "Profile" regardless of who was actually
 // signed in read as a placeholder that never got filled in, not a
 // real account row. cached('user:'+userId, ...) in runtime/api.js
@@ -259,47 +221,24 @@ export async function renderSidebar(container) {
   // row on this whole rail that is actually "who", not "where". Leads the
   // rail now, its own divider below it before Home, same grouping shape
   // Settings already gets against the libraries beneath it.
-  // Real feedback: Profile showed up basically instantly, the rest of
-  // the rail well behind it. Both real fetches are independent (nav
-  // links need nothing Profile's own getCurrentUser() call returns),
-  // but this used to await Profile first regardless, so
-  // getPrimaryNavLinks() below never even started until that one
-  // resolved instead of running alongside it. Started here, before
-  // Profile's own real append, so both are in flight together; Profile
-  // still appends the moment its own promise settles, same real order
-  // as before.
-  const linksPromise = getPrimaryNavLinks();
-
   rail.appendChild(await buildProfileButton());
   const profileDivider = document.createElement('div');
   profileDivider.className = 'jellio-sidebar-divider';
   rail.appendChild(profileDivider);
 
-  const links = await linksPromise;
+  const links = await getPrimaryNavLinks();
   links.forEach(function (link, index) {
-    // Only the four links every session always has (Home, Search,
-    // Watchlist, Feed) sit above the divider; the reader's own
-    // libraries start right after it, same grouping the rail always
-    // had. Real bug caught before it shipped: Feed joining
-    // getPrimaryNavLinks() as a fourth fixed entry meant this bound
-    // needed to grow with it, or it silently fell into the scrollable
-    // library group below instead, indistinguishable from one of the
-    // reader's own real libraries and gone from view on any server
-    // with enough of them to scroll.
-    if (index < 4) {
+    // Only the three links every session always has (Home, Search,
+    // Watchlist) sit above the divider; the reader's own libraries
+    // start right after it, same grouping the rail always had.
+    if (index < 3) {
       rail.appendChild(buildLink(link));
-      if (index === 3) {
-        // Calendar (desktop rail only for now, real feedback's own
-        // scope: the mobile pill bar's own real link set comes from
+      if (index === 2) {
+        // Desktop rail only for now, real feedback's own scope: the
+        // mobile pill bar's own real link set comes from
         // getPrimaryNavLinks() above, shared with this rail, and stays
         // untouched, same real reason Group Watch/Now Playing below are
-        // already this rail's own additions, not part of that shared
-        // list) and the divider both moved from right after Watchlist
-        // to right after Feed instead: Feed sitting below this same
-        // divider read as grouped with the reader's own libraries
-        // underneath it, real feedback caught it before it shipped,
-        // even though technically still fixed rather than part of
-        // that scrollable group.
+        // already this rail's own additions, not part of that shared list.
         rail.appendChild(buildLink({ icon: 'calendar_month', label: 'Calendar', hash: '#/calendar' }));
         const divider = document.createElement('div');
         divider.className = 'jellio-sidebar-divider';
@@ -313,6 +252,5 @@ export async function renderSidebar(container) {
 
   rail.appendChild(buildGroupWatchButton());
   rail.appendChild(buildNowPlayingButton());
-  rail.appendChild(buildNotificationsButton());
   rail.appendChild(buildLink(SETTINGS_LINK));
 }

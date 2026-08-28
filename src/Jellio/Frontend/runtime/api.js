@@ -2,7 +2,7 @@
 // auth.js's own headers. Nothing here touches window.ApiClient: the whole
 // point of this runtime is that a screen's data never depends on native
 // jellyfin-web's own request/cache state, only on a real HTTP response.
-import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession } from './auth.js';
+import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId } from './auth.js';
 import { languageName } from './languages.js';
 
 // Nuvio's own real AddonPlatform HTTP clients (OkHttp on Android, Ktor's
@@ -41,55 +41,6 @@ const NEGOTIATION_TIMEOUT_MS = 30000;
 // addons behind it can legitimately take longer than DEFAULT_TIMEOUT_MS
 // gives it, reported live as search always timing out.
 const SEARCH_TIMEOUT_MS = 30000;
-// Same real exception, same real reason: screens/detail.js's own header
-// already documents that a search result's own item id can be Gelato's
-// synthetic placeholder, and the very request getItemDetails below makes
-// is what triggers its real metadata insert the first time a title is
-// ever opened, a real Stremio/TMDb round trip DEFAULT_TIMEOUT_MS was
-// never sized for. An already-imported title (every subsequent open)
-// still answers in well under this, this only ever matters once per
-// title.
-const ITEM_DETAILS_TIMEOUT_MS = 30000;
-
-// Real regression, found live off today's own earlier fixes: this
-// file's own header just above already names the exact failure mode
-// (the browser's hard per-origin connection cap, 6 on plain HTTP/1.1)
-// and the exact symptom (rows and images stuck, further navigation
-// unresponsive) that shortening DEFAULT_TIMEOUT_MS only ever recovered
-// from faster, never actually prevented. Parallelizing catalog rows,
-// genre rows, and every recommendation candidate/genre/person fetch
-// (today's own earlier commits, each individually correct) stacked
-// together into exactly that: home's own initial load now opens
-// twenty-plus of these at once on a server with a full catalog,
-// several times the browser's own real ceiling, so most of them just
-// queue behind each other until DEFAULT_TIMEOUT_MS kills them, the
-// rows-not-appearing symptom reported live. A small global slot queue
-// here, the one real choke point every one of these calls already
-// funnels through, caps how many are ever actually in flight at once
-// instead of leaving that entirely up to the browser's own queue and
-// this runtime's own timeout to sort out after the fact. Below the
-// browser's own 6-connection ceiling rather than at it, leaving real
-// headroom for whatever image tags the same screen is also loading
-// through that same shared per-origin pool.
-const MAX_CONCURRENT_REQUESTS = 5;
-let activeRequestCount = 0;
-const queuedRequestStarts = [];
-
-function acquireRequestSlot() {
-  return new Promise(function (resolve) {
-    function start() {
-      activeRequestCount++;
-      resolve(function releaseRequestSlot() {
-        activeRequestCount--;
-        if (queuedRequestStarts.length && activeRequestCount < MAX_CONCURRENT_REQUESTS) {
-          queuedRequestStarts.shift()();
-        }
-      });
-    }
-    if (activeRequestCount < MAX_CONCURRENT_REQUESTS) start();
-    else queuedRequestStarts.push(start);
-  });
-}
 
 function fetchWithTimeout(url, options, timeoutMs, externalSignal) {
   const controller = new AbortController();
@@ -110,101 +61,35 @@ function fetchWithTimeout(url, options, timeoutMs, externalSignal) {
 }
 
 async function requestJson(url, options, path, timeoutMs, externalSignal) {
-  const releaseRequestSlot = await acquireRequestSlot();
+  let response;
   try {
-    // A request cancelled while still queued for a slot (search.js's own
-    // superseded-query case) has no real fetch to abort yet: skip
-    // dispatching it at all rather than opening a connection this
-    // runtime already knows nobody wants the answer to anymore.
-    if (externalSignal && externalSignal.aborted) {
-      const abortedErr = new Error('Request timed out: ' + path);
-      abortedErr.timedOut = true;
-      throw abortedErr;
+    response = await fetchWithTimeout(url, options, timeoutMs, externalSignal);
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      // A caller-driven abort (search.js cancelling a superseded query) is
+      // not a real timeout, but nothing downstream tells the two apart
+      // today: every current caller either ignores a stale request's own
+      // rejection outright (search.js's own requestId guard) or has no
+      // caller-driven abort path to begin with, so folding both into the
+      // same timedOut shape is not yet a real bug, only a latent one.
+      const timeoutErr = new Error('Request timed out: ' + path);
+      timeoutErr.timedOut = true;
+      throw timeoutErr;
     }
-
-    let response;
-    try {
-      response = await fetchWithTimeout(url, options, timeoutMs, externalSignal);
-    } catch (err) {
-      if (err && err.name === 'AbortError') {
-        // A caller-driven abort (search.js cancelling a superseded query) is
-        // not a real timeout, but nothing downstream tells the two apart
-        // today: every current caller either ignores a stale request's own
-        // rejection outright (search.js's own requestId guard) or has no
-        // caller-driven abort path to begin with, so folding both into the
-        // same timedOut shape is not yet a real bug, only a latent one.
-        const timeoutErr = new Error('Request timed out: ' + path);
-        timeoutErr.timedOut = true;
-        throw timeoutErr;
-      }
-      throw err;
-    }
-    if (!response.ok) {
-      // Real bug, found live: a caller further up (app.js's own
-      // preloadInitialData(), most of all: runTrackedTasks() there
-      // catches every one of its own tasks' real rejections internally,
-      // console.warn only, never re-throwing) can and does swallow this
-      // exact error long before it ever reaches anything that might
-      // treat a 401 as "this session is dead", so a token revoked
-      // server side (deleting its device from the Dashboard, or any
-      // other real revocation) left every screen quietly failing to
-      // load real data forever, never actually routing back to a real
-      // login screen. This file is the one real choke point every
-      // authenticated call in this whole runtime already goes through,
-      // so handling a real 401 right here, unconditionally, reaches
-      // every one of those callers regardless of whether any of them
-      // individually re-throw.
-      if (response.status === 401) {
-        notifySessionExpired();
-      }
-      const err = new Error('Request failed: ' + path);
-      err.status = response.status;
-      throw err;
-    }
-    return response;
-  } finally {
-    releaseRequestSlot();
+    throw err;
   }
-}
-
-// Guards against a burst of concurrent requests (preloadInitialData()'s
-// own real task list, most of all) each independently 401ing and each
-// separately clearing an already cleared session: real, harmless on its
-// own, just real wasted work repeated for nothing once the first one
-// has already done it. Reset on the next real fresh login (the same
-// jellio:session-captured event app.js's own header already explains),
-// or this would only ever fire once for the entire life of this page.
-let sessionExpiredNotified = false;
-document.addEventListener('jellio:session-captured', function () {
-  sessionExpiredNotified = false;
-});
-
-function notifySessionExpired() {
-  if (sessionExpiredNotified) return;
-  sessionExpiredNotified = true;
-  clearSession();
-  // app.js's own jellio:session-captured listener (screens/login.js's
-  // own header explains that real pattern first) is the same real
-  // mechanism this reuses in reverse: a fresh sync() call, this exact
-  // module's own header explains why importing app.js's sync() directly
-  // is not an option here (app.js already imports from this file), so a
-  // real DOM event is the one real way back without a circular import.
-  document.dispatchEvent(new CustomEvent('jellio:session-expired'));
+  if (!response.ok) {
+    const err = new Error('Request failed: ' + path);
+    err.status = response.status;
+    throw err;
+  }
+  return response;
 }
 
 async function getJson(path, timeoutMs, signal) {
   const response = await requestJson(
     getServerAddress() + path,
-    // Real bug, found live: a library missing from a fresh boot's own
-    // /Users/{id}/Views answer (the server itself still mounting it,
-    // Anime reported specifically) got served right back on a plain
-    // reload with no cache option here telling the browser not to,
-    // only a real hard reload bypassing HTTP cache ever picked up the
-    // now-complete list. This runtime's own cached() below already
-    // owns intentional short-lived reuse; the browser caching the same
-    // response underneath it on top only ever adds staleness no caller
-    // here asked for.
-    { headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()), cache: 'no-store' },
+    { headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()) },
     path,
     timeoutMs || DEFAULT_TIMEOUT_MS,
     signal,
@@ -231,19 +116,6 @@ async function postJson(path, body, timeoutMs) {
   );
   const text = await response.text();
   return text ? JSON.parse(text) : null;
-}
-
-// Same real requestJson() funnel getJson/postJson already go through,
-// runtime/notifications.js's own delete/clear calls the one real reason
-// this exists: neither needs the concurrency slot queue above skipped
-// the way cancelSleepTimer's own bare fetch() still does.
-async function deleteJson(path, timeoutMs) {
-  await requestJson(
-    getServerAddress() + path,
-    { method: 'DELETE', headers: getAuthHeaders() },
-    path,
-    timeoutMs || DEFAULT_TIMEOUT_MS,
-  );
 }
 
 // Small in-memory cache for the handful of calls every single screen
@@ -328,7 +200,7 @@ export function getItemDetails(itemId) {
     // installed, populates it server side with no extra work here).
     Fields: 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,Trickplay',
   });
-  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString(), ITEM_DETAILS_TIMEOUT_MS);
+  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString());
 }
 
 export function getCurrentUser() {
@@ -704,65 +576,6 @@ export function getWatchlistItems(limit) {
   });
 }
 
-// Real GrouplistController.cs's own item id list, self only: no native
-// Jellyfin concept to piggyback on the way Watchlist piggybacks on
-// Favorites (that controller's own header explains why), so this
-// plugin owns the storage instead. Membership alone, short cached same
-// as every other list shaped read in this file; getGrouplistItems()
-// below resolves real display detail for the Grouplist tab itself, a
-// separate real cost only paid when that tab is actually open.
-export function getGrouplistIds() {
-  return cached('grouplist:ids', function () {
-    return getJson('/Jellio/grouplist');
-  }, SHORT_CACHE_TTL_MS).then(function (result) {
-    return (result && result.ItemIds) || [];
-  });
-}
-
-// Every real grouplisted item's own display detail, one real batched
-// /Items?Ids= call rather than one getItem() per entry: same real
-// endpoint family getWatchlistItems above already uses, just filtered
-// by an explicit id list instead of Filters=IsFavorite since nothing
-// server side already knows which ids these are.
-export function getGrouplistItems() {
-  const userId = getCurrentUserId();
-  if (!userId) return Promise.reject(new Error('Not signed in'));
-  return getGrouplistIds().then(function (ids) {
-    if (!ids.length) return [];
-    const params = new URLSearchParams({
-      Ids: ids.join(','),
-      Fields: 'PrimaryImageAspectRatio',
-    });
-    return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
-      return (result && result.Items) || [];
-    });
-  });
-}
-
-export function addToGrouplist(itemId) {
-  return postJson('/Jellio/grouplist/' + itemId).then(function (result) {
-    invalidateCache('grouplist:ids');
-    return result;
-  });
-}
-
-export async function removeFromGrouplist(itemId) {
-  const response = await fetch(
-    getServerAddress() + '/Jellio/grouplist/' + itemId,
-    {
-      method: 'DELETE',
-      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
-    },
-  );
-  if (!response.ok) {
-    const err = new Error('Request failed: Grouplist');
-    err.status = response.status;
-    throw err;
-  }
-  invalidateCache('grouplist:ids');
-  return response.json();
-}
-
 // Real endpoint pair, POST/DELETE /Users/{id}/PlayedItems/{itemId}
 // (PlaystateController.cs), the same call the stock UI's own "mark
 // watched" toggle makes. Returns the item's own updated
@@ -966,17 +779,7 @@ const DIRECT_PLAY_AUDIO_CODECS = new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac'
 // also exactly why every native-HLS engine is the one real exception:
 // its own native <video> already parses HLS with no shim of its own,
 // unlike every other browser this runtime targets.
-// Exported for screens/player.js's own real seek/resume handling: a
-// native HLS engine's own master playlist always spans a title's real
-// position 0 onward regardless of anything asked for building it
-// (confirmed directly against DynamicHlsController.cs, its own dynamic
-// segment endpoint throws outright the instant StartTimeTicks reaches
-// it at all), so that screen needs to know ahead of building a stream
-// URL whether this same real check below is about to route it there,
-// to seek with a real native video.currentTime assignment afterward
-// instead of asking this file's own buildStreamUrl for a StartTimeTicks
-// it can no longer honour for that one real case.
-export function supportsNativeHls() {
+function supportsNativeHls() {
   if (typeof document === 'undefined') return false;
   const probe = document.createElement('video');
   if (typeof probe.canPlayType !== 'function') return false;
@@ -1126,23 +929,8 @@ export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
     MediaSourceId: mediaSourceId,
     DeviceId: getDeviceId(),
     api_key: token || '',
+    StartTimeTicks: String(startTimeTicks || 0),
   });
-  // Real bug, found live against a real server log: this runtime never
-  // builds a segment URL itself, only this one master.m3u8 request,
-  // every .ts fetch after that coming straight from Jellyfin's own
-  // generated manifest. Real Jellyfin's own DynamicHlsController.
-  // GetHlsVideoSegment throws System.ArgumentException("StartTimeTicks
-  // is not allowed") outright on that endpoint, and StartTimeTicks on
-  // this master request was baking into every segment URI the server
-  // itself then wrote into that same manifest, killing playback partway
-  // in on every native-HLS client (Safari, the macOS Desktop app's own
-  // WKWebView) the instant a forced transcode's own -ss start position
-  // was anything other than the default this runtime already asks for
-  // over PlaybackInfo's own real negotiation, no separate restatement
-  // needed here.
-  if (!useHls) {
-    params.set('StartTimeTicks', String(startTimeTicks || 0));
-  }
   if (opts.playSessionId) {
     params.set('PlaySessionId', opts.playSessionId);
   }
@@ -1266,7 +1054,7 @@ export function getSleepTimerStatus() {
 
 // Server side, admin controlled, applies to every user: Controllers/
 // ConfigController.cs's own real GetConfig endpoint, components/
-// seasons.js's own real client. Cached the same short lived
+// seasonalEffects.js's own real client. Cached the same short lived
 // way this file's own getUserViews/getCollections already are: a
 // setting an admin just changed in the dashboard is worth a fresh
 // fetch within a few minutes, not held stale for a whole session the
@@ -1399,13 +1187,12 @@ export function setUserAvatarFromFile(file) {
 // used to: real feedback was that native's own menu rendered tiny and
 // off in a real corner once its own header was hidden, this app's own
 // styled panel instead, same real backend underneath either way.
-// Keeping playback itself in lockstep across a group is handled by
-// runtime/syncPlay.js, which drives window.ApiClient's own already
-// authenticated SyncPlay REST helpers (requestSyncPlayUnpause,
-// requestSyncPlaySeek, etc, confirmed against the real
-// jellyfin-apiclient-javascript source) and listens for the server's
-// pushed SyncPlayCommand/SyncPlayGroupUpdate messages over that same
-// client's own WebSocket, rather than this file hand rolling either.
+// Keeping playback itself in lockstep across a group once joined is a
+// separate, larger real feature (real Jellyfin drives that over the
+// same WebSocket connection this runtime's own player has never opened
+// at all, see screens/player.js's own header for why it runs a bare
+// <video> element with none of native's own playbackManager wiring):
+// this only covers real group membership, not synced playback.
 export function getSyncPlayGroups() {
   return getJson('/SyncPlay/List');
 }
@@ -1414,12 +1201,13 @@ export function createSyncPlayGroup(groupName) {
   return postJson('/SyncPlay/New', { GroupName: groupName });
 }
 
-// Joining/leaving go through runtime/syncPlay.js instead (its own
-// window.ApiClient backed joinGroup/leaveGroup): that keeps the one
-// real WebSocket connection's own group state in step with whichever
-// tab actually issued the join, rather than this file's plain fetch()
-// telling the server one thing while syncPlay.js's own listener still
-// thinks it is in whatever group it last saw.
+export function joinSyncPlayGroup(groupId) {
+  return postJson('/SyncPlay/Join', { GroupId: groupId });
+}
+
+export function leaveSyncPlayGroup() {
+  return postJson('/SyncPlay/Leave', {});
+}
 
 // Jellio's own GroupWatchChatController, a small in memory room per real
 // SyncPlay GroupId: real SyncPlay carries no chat of its own (confirmed
@@ -1432,54 +1220,8 @@ export function getGroupWatchMessages(groupId, afterId) {
   return getJson('/Jellio/groupwatch/' + groupId + '/messages?' + params.toString());
 }
 
-// itemId is optional: components/groupWatch.js's own plain messages never
-// pass one, screens/player.js's own "started watching X" message (right
-// alongside the same real toast components/groupWatchInvites.js already
-// shows) does, so a reader who was not looking at the exact moment that
-// toast appeared still has a real, permanent way to reach it: the chat
-// message rendering it below reuses the same real navigateTo('#/play?...')
-// that toast's own onClick already does.
-export function sendGroupWatchMessage(groupId, text, itemId) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/messages', { Text: text, ItemId: itemId || null });
-}
-
-// Jellio's own GroupWatchRankingController: a real single elimination
-// bracket over the group's own pooled Grouplists, polled the same way
-// chat above already is. participantUserIds lets the server pool every
-// current member's own Grouplist, not just the caller's; components/
-// groupWatchRanking.js's own header explains where those ids actually
-// come from, this file has no part in resolving them.
-export function getRankingSession(groupId) {
-  return getJson('/Jellio/groupwatch/' + groupId + '/ranking');
-}
-
-export function startRankingSession(groupId, participantUserIds) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/ranking/start', { ParticipantUserIds: participantUserIds });
-}
-
-export function voteRankingSession(groupId, itemId) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/ranking/vote', { ItemId: itemId });
-}
-
-export function cancelRankingSession(groupId) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/ranking/cancel');
-}
-
-// Jellio's own GroupWatchInviteController: a small in memory per user
-// queue, polled the same way chat above is rather than pushed. Real
-// SyncPlay's own WebSocket carries only SessionMessageType's own closed
-// enum (confirmed against the real jellyfin/jellyfin source), no room in
-// it for an arbitrary "so and so invited you" payload without either
-// forking the server or piggybacking on a native command type readers
-// would see a second, native styled toast for, so this stays a real
-// Jellio owned endpoint instead, same real tradeoff chat already made.
-export function getGroupWatchInvites(afterId) {
-  const params = new URLSearchParams({ after: String(afterId || 0) });
-  return getJson('/Jellio/groupwatch/invites?' + params.toString());
-}
-
-export function sendGroupWatchInvite(groupId, groupName, toUserId) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/invite', { ToUserId: toUserId, GroupName: groupName });
+export function sendGroupWatchMessage(groupId, text) {
+  return postJson('/Jellio/groupwatch/' + groupId + '/messages', { Text: text });
 }
 
 // Jellio's own CalendarController: real per user Watchlist scan server
@@ -1490,28 +1232,6 @@ export function sendGroupWatchInvite(groupId, groupName, toUserId) {
 // token configured yet or a Watchlist with nothing upcoming on it.
 export function getCalendarEntries() {
   return getJson('/Jellio/calendar');
-}
-
-// Jellio's own NotificationsController: the same real Watchlist scan
-// getCalendarEntries above already triggers server side, generating one
-// real notification the first day an entry's own release date actually
-// arrives. Polled on a real interval by components/notifications.js,
-// same real convention components/nowPlaying.js already established for
-// its own panel.
-export function getNotifications() {
-  return getJson('/Jellio/notifications');
-}
-
-export function markNotificationsRead() {
-  return postJson('/Jellio/notifications/read', {});
-}
-
-export function deleteNotification(id) {
-  return deleteJson('/Jellio/notifications/' + encodeURIComponent(id));
-}
-
-export function clearAllNotifications() {
-  return deleteJson('/Jellio/notifications');
 }
 
 // Real endpoint, POST /Users/{id}/Configuration (UserController.cs's
@@ -1627,19 +1347,6 @@ export function getCollections() {
   });
 }
 
-// app.js's own boot-time recheck (see its own header for the real race
-// this covers: Gelato's own catalog import, the Anime nav entry's real
-// source, still running after the very first getCollections() call
-// above already cached whatever existed at that exact moment) calls
-// this once to force its retry past both this and getUserViews's own
-// cache instead of getting the exact same stale answer back.
-export function invalidateNavCaches() {
-  const userId = getCurrentUserId();
-  if (!userId) return;
-  invalidateCache('views:' + userId);
-  invalidateCache('collections:' + userId);
-}
-
 // Gelato's own GetOrCreateBoxSetAsync writes a collection's ProviderIds.Stremio
 // as "{catalogType}.{catalogId}", catalogType being the literal type string
 // configured on that catalog in AIOStreams: "movie", "series", or "anime".
@@ -1713,29 +1420,14 @@ export function getSubtitleStreams(mediaSource) {
 // route before writing this: GET /Videos/{itemId}/{mediaSourceId}/
 // Subtitles/{streamIndex}/Stream.vtt converts any text subtitle format to
 // WebVTT server side, so requesting .vtt always works for a text stream
-// regardless of its real source codec.
-//
-// Used to trust stream.DeliveryUrl instead, whenever a stream's own
-// DeliveryMethod already read 'External', jellyfin-web's own real
-// playbackmanager.js convention. Real bug, found live: that field is
-// itself computed server side from whatever DeviceProfile.SubtitleProfiles
-// a client's own PlaybackInfo request declared (Jellyfin.Api's own
-// MediaInfoHelper.cs, SetDeviceSpecificSubtitleInfo), and
-// getPlaybackInfo() above sends no real DeviceProfile at all, the same
-// real blind spot its own header already documents for direct play
-// detection. With nothing telling the server this client can only ever
-// render WebVTT, an externally delivered real SubRip file came back
-// with a DeliveryUrl pointing at its own original .srt, not the
-// conversion endpoint, silently failing the one real place a native
-// <track> element has no error of its own to surface: a WebVTT parser
-// fed a comma-decimal SubRip timestamp just finds no real cues in it,
-// no console error, nothing visibly broken to trace back to this.
-// selectSubtitle's own real caller (components/player.js's own subtitle
-// menu) only ever reaches this function for a stream.IsTextSubtitleStream
-// one to begin with, an image based track routed to
-// selectBurnedInSubtitle entirely instead, so there is no real case left
-// here DeliveryUrl was ever the only way to reach a working subtitle.
+// regardless of its real source codec. An already external stream
+// (DeliveryMethod === 'External') carries its own DeliveryUrl instead,
+// confirmed against jellyfin-web's own playbackmanager.js: absolute when
+// IsExternalUrl is set, otherwise still relative to this same server.
 export function buildSubtitleUrl(itemId, mediaSourceId, stream) {
+  if (stream.DeliveryMethod === 'External' && stream.DeliveryUrl) {
+    return stream.IsExternalUrl ? stream.DeliveryUrl : getServerAddress() + stream.DeliveryUrl;
+  }
   const token = getAccessToken();
   return (
     getServerAddress() +
@@ -1750,14 +1442,6 @@ export function buildSubtitleUrl(itemId, mediaSourceId, stream) {
 // is a shared "who is watching what" surface by design.
 export function getNowPlayingSessions() {
   return getJson('/Jellio/now-playing');
-}
-
-// Real endpoint, GET /Jellio/online-users (Controllers/OnlineUsersController.cs),
-// the same ISessionManager.Sessions above reads, unfiltered by
-// NowPlayingItem: every user id with a real session on the server right
-// now, components/accountSwitcher.js's own online dot.
-export function getOnlineUserIds() {
-  return getJson('/Jellio/online-users');
 }
 
 // The next episode after this one, for the player's own up-next overlay.
@@ -1925,127 +1609,6 @@ export function getPerson(personId) {
 // everywhere else in this file, confirmed from the controller's own
 // parameter binding), not guessed from the Filters pattern this file
 // uses elsewhere.
-// Backed by Controllers/ProfileController.cs's own per user JSON file.
-// Self only, no {userId} variant: a reader views someone else's own
-// privacy state indirectly, through whether getAchievementsForUser
-// below comes back with IsPrivate true, never through this endpoint.
-export function getProfileSettings() {
-  return getJson('/Jellio/profile/settings');
-}
-
-export function setProfilePrivacy(isPrivate) {
-  return postJson('/Jellio/profile/privacy', { IsPrivate: isPrivate });
-}
-
-// Off by default, gates screens/home.js's own Grouplist tab, the
-// watchlist button's own list picker popover, and Group Watch chat's
-// own ranking session trigger alike, one flag for all three.
-export function setGrouplistEnabled(enabled) {
-  return postJson('/Jellio/profile/grouplist-enabled', { GrouplistEnabled: enabled });
-}
-
-// Own achievement badges, self only. Real Steam-style behaviour lives
-// server side in AchievementsController.cs, not here: a private profile
-// still answers this one with real stats, only getAchievementsForUser
-// below goes dark for it.
-export function getMyAchievements() {
-  return getJson('/Jellio/achievements');
-}
-
-// Any user's own badges, the profile page's own real source: comes
-// back as { IsPrivate: true } with nothing else when that user has
-// Privacy turned on and the reader is not them, same real shape either
-// branch on the server returns so this file does not need to guess
-// which one it got beyond checking that one field.
-export function getAchievementsForUser(userId) {
-  return getJson('/Jellio/achievements/' + userId);
-}
-
-// Group Watch state (is this reader in a group right now, how many
-// others are actually in it) only ever lives client side, this
-// runtime's own real SyncPlay WebSocket state, the same real reason
-// getGroupWatchInvites's own header already gives for that whole
-// endpoint existing outside real SyncPlay's own wire protocol in the
-// first place. components/groupWatch.js and screens/player.js call
-// these directly at the two real moments each one actually happens
-// (a group's own creation, a grouped session's own real completion)
-// rather than AchievementService trying to infer either server side.
-export function creditGroupWatchStarted() {
-  return postJson('/Jellio/achievements/group-watch/started');
-}
-
-export function creditGroupWatchTogether() {
-  return postJson('/Jellio/achievements/group-watch/together');
-}
-
-// Bio (like the profile picture and banner) always visible: only
-// getAchievementsForUser above goes dark for a private profile.
-export function getProfileForUser(userId) {
-  return getJson('/Jellio/profile/' + userId);
-}
-
-// Real GET /Users/{userId} (UserController.cs), [Authorize(Policy =
-// IgnoreParentalControl)] rather than an admin only policy, confirmed
-// against real Jellyfin source before writing this: any signed in
-// reader can look another real user's own name and avatar tag up by
-// id, unlike GET /Users/{id}/Items below, which is why the profile
-// page's own activity feed rides AchievementService's own persisted
-// RecentActivity instead of asking for another user's own watch
-// history directly.
-export function getUserById(userId) {
-  return getJson('/Users/' + userId);
-}
-
-export function setProfileBio(bio) {
-  return postJson('/Jellio/profile/bio', { Bio: bio });
-}
-
-export function getBannerUrl(userId) {
-  return getServerAddress() + '/Jellio/profile/banner/' + userId;
-}
-
-// Same real base64-body-with-Content-Type convention
-// uploadUserAvatarBlob already uses against real Jellyfin's own
-// PostUserImage, ProfileBannerController.cs's own header explains why
-// its endpoint matches it on purpose.
-export async function setProfileBannerFromFile(file) {
-  const contentType = file.type || 'image/png';
-  const base64 = await new Promise(function (resolve, reject) {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = function () {
-      resolve(String(reader.result).split(',')[1]);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  const response = await fetch(getServerAddress() + '/Jellio/profile/banner', {
-    method: 'POST',
-    headers: Object.assign({ 'Content-Type': contentType }, getAuthHeaders()),
-    body: base64,
-  });
-  if (!response.ok) {
-    throw new Error('Could not set banner');
-  }
-}
-
-export function removeProfileBanner() {
-  return fetch(getServerAddress() + '/Jellio/profile/banner', {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  }).then(function (response) {
-    if (!response.ok) throw new Error('Could not remove banner');
-  });
-}
-
-// Server wide feed, Controllers/FeedController.cs's own real merge of
-// every non-private user's own RecentActivity. A private user's own
-// entries never come back here at all, server side, not filtered out
-// after the fact client side.
-export function getActivityFeed() {
-  return getJson('/Jellio/feed');
-}
-
 export function getPersonFilmography(personId, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));

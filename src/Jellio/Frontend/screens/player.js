@@ -19,7 +19,6 @@ import {
   getMediaSources,
   buildStreamUrl,
   canBrowserDirectPlay,
-  supportsNativeHls,
   reportPlaybackStart,
   reportPlaybackProgress,
   reportPlaybackStopped,
@@ -39,40 +38,15 @@ import {
   getTrickplayTileUrl,
   pickTrickplayInfo,
   TICKS_PER_SECOND,
-  getGroupWatchMessages,
-  sendGroupWatchMessage,
-  creditGroupWatchTogether,
-  voteRankingSession,
 } from '../runtime/api.js';
-import { navigateTo, setTitle } from '../runtime/router.js';
+import { navigateTo } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { sourceLabel, buildSourceCard } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { languageName } from '../runtime/languages.js';
-import { buildRatingBadge } from '../components/ratingBadge.js';
-import {
-  getCurrentGroup,
-  getCurrentPlaylistTarget,
-  onGroupChange as onSyncGroupChange,
-  onCommand as onSyncCommand,
-  remoteToLocal,
-  estimateCurrentTicks,
-  notifyBuffering,
-  notifyReady,
-  requestSeek as requestSyncSeek,
-  requestUnpause as requestSyncUnpause,
-  requestPause as requestSyncPause,
-  publishQueue as publishSyncQueue,
-  getSyncUserId,
-} from '../runtime/syncPlay.js';
-import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
-import { fetchRankingSession, renderRankingSession } from '../components/groupWatchRanking.js';
 
 const PROGRESS_REPORT_MS = 5000;
-// Same real 0.9 threshold Services/AchievementService.cs's own
-// IsRealWatch() uses server side.
-const GROUP_WATCH_COMPLETION_THRESHOLD = 0.9;
 const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // How long the reader can sit idle mid playback before the whole
@@ -125,35 +99,17 @@ function saveSubtitleStyle(style) {
   }
 }
 
-// Real bug, found live on macOS Safari: this used to only ever set two
-// CSS custom properties on the video element and lean on css/app.css's
-// own .jellio-player-video::cue rule to read them back through var(),
-// real behaviour every Chromium/Firefox WebVTT renderer gives a custom
-// property, confirmed live that WebKit's own ::cue implementation does
-// not reliably inherit a custom property from the element it renders
-// on top of the same way, background changes and size changes alike
-// silently doing nothing there no matter what this runtime set. A
-// single real <style> element, rewritten with literal resolved values
-// on every change instead of custom properties, has no such
-// inheritance step to fail: ::cue reads a plain background-color/
-// font-size straight off the one real rule this owns, same as any
-// other stylesheet on the page. !important guards against Safari's own
-// user-agent default cue background winning a tie this rule would
-// otherwise lose on specificity alone.
-let subtitleStyleTag = null;
+// ::cue only takes the values this runtime's own stylesheet sets on it
+// (css/app.css's own .jellio-player-video::cue rule reads these same
+// two custom properties), inherited down from whatever sets them on
+// the video element itself, real behaviour every Chromium/Firefox
+// WebVTT renderer already gives a custom property, not something this
+// runtime is guessing works.
 function applySubtitleStyle(video, style) {
   const size = SUBTITLE_SIZES.filter((s) => s.value === style.size)[0] || SUBTITLE_SIZES[1];
   const background = SUBTITLE_BACKGROUNDS.filter((b) => b.value === style.background)[0] || SUBTITLE_BACKGROUNDS[1];
-  if (!subtitleStyleTag) {
-    subtitleStyleTag = document.createElement('style');
-    document.head.appendChild(subtitleStyleTag);
-  }
-  subtitleStyleTag.textContent =
-    '.jellio-player-video::cue { font-size: ' +
-    size.rem +
-    'rem !important; background-color: ' +
-    background.color +
-    ' !important; }';
+  video.style.setProperty('--jellio-subtitle-size', size.rem + 'rem');
+  video.style.setProperty('--jellio-subtitle-bg', background.color);
 }
 
 // Fallback only, when Intro Skipper has no Credits segment for this
@@ -162,15 +118,7 @@ function applySubtitleStyle(video, style) {
 // mode), not re-derived. Real credits segments below make this the
 // less common path, not the whole rule.
 const UPNEXT_FALLBACK_TRIGGER_SECONDS = 120;
-// Real feedback: 15s read as far too short, an inaccurate or early
-// real Intro Skipper Credits detection (shouldShowUpNextNow below
-// trusts that segment outright the moment it exists) already showing
-// the card sooner than the episode actually warranted, then this same
-// short a countdown cutting the current episode off before a reader
-// even had a real chance to notice the card and dismiss it. A full
-// real minute gives that same reader room to actually see and cancel
-// it instead.
-const UPNEXT_COUNTDOWN_SECONDS = 60;
+const UPNEXT_COUNTDOWN_SECONDS = 15;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -289,21 +237,6 @@ function formatTime(seconds) {
   return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
 }
 
-// Mirrors buildStreamUrl's own real directPlay/useHls computation
-// (runtime/api.js) exactly, so this screen can know ahead of building
-// a stream URL whether it is about to land on the one real path
-// (confirmed directly against Jellyfin's own DynamicHlsController.cs)
-// that can never honour a real StartTimeTicks: its own dynamic segment
-// endpoint throws outright the instant it sees one, the master
-// playlist always spanning a title's real position 0 onward instead,
-// real seeking there only ever reachable through this runtime's own
-// native video.currentTime assignment once metadata is ready, not a
-// query param buildStreamUrl can still send.
-function willUseHls(source, forceTranscode) {
-  const directPlay = !forceTranscode && canBrowserDirectPlay(source);
-  return !directPlay && supportsNativeHls();
-}
-
 export async function renderPlayer(root, params) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-player';
@@ -314,18 +247,6 @@ export async function renderPlayer(root, params) {
     return undefined;
   }
 
-  // Real, explicit signal (components/groupWatchInvites.js's own toast,
-  // components/groupWatch.js's and this screen's own chat watch cards,
-  // the only three real places that ever set it) that this exact
-  // navigation is a reader following an already-started group's own
-  // link, not a reader actually choosing to start something. Every
-  // other real path here (the stream picker, this screen's own episode
-  // list, Up Next, a card's own Play) carries no such param, real
-  // feedback asked this to matter: a joiner should only ever join, a
-  // reader who genuinely pressed Play should always publish and notify
-  // the group, this exact title already playing there or not.
-  const isGroupJoinNavigation = params.get('groupJoin') === '1';
-
   // Play already navigates here the instant it is pressed
   // (components/streamPicker.js's own real choice, or the detail
   // screen's own Play button skipping the picker outright): everything
@@ -334,16 +255,6 @@ export async function renderPlayer(root, params) {
   // is the only thing telling the reader Play actually did something in
   // that gap rather than nothing at all.
   renderLoading(root);
-
-  // Started immediately, alongside getItemDetails below: this has no
-  // real dependency on it or on the PlaybackInfo negotiation further
-  // down, only on the current session, but used to only ever start
-  // once both had already fully resolved. Real cost found live: a
-  // cold cache added a full extra round trip to the front of every
-  // playback start just to check a language preference that rarely
-  // even changes anything, consumed by the audio match below once it
-  // actually needs it.
-  const currentUserPromise = getCurrentUser();
 
   let item;
   try {
@@ -356,29 +267,8 @@ export async function renderPlayer(root, params) {
     return undefined;
   }
 
-  // Real Jellyfin SyncPlay: set once this exact title is what the
-  // reader's own current group already has on its real queue
-  // (runtime/syncPlay.js's own getCurrentPlaylistTarget(), populated
-  // from a real pushed PlayQueue update, confirmed against real
-  // QueueCore.js before this was written), null otherwise, in which
-  // case every real transport control below stays exactly what it
-  // already was: a plain local action, no different from before this
-  // existed. Mutable rather than a const snapshot: a reader can join a
-  // group, or the group's own queue can populate, after this screen has
-  // already mounted, see the onSyncGroupChange() subscription further
-  // down. Checked this early, ahead of the real PlaybackInfo negotiation
-  // below, so a reader joining a group already partway through this
-  // title negotiates the real stream starting from the group's own
-  // position, not this reader's own unrelated resume point.
-  let syncPlaylistItemId = null;
-  const initialSyncTarget = getCurrentPlaylistTarget();
-  let startTicks = (item.UserData && item.UserData.PlaybackPositionTicks) || 0;
-  if (initialSyncTarget && initialSyncTarget.itemId === itemId) {
-    syncPlaylistItemId = initialSyncTarget.playlistItemId;
-    startTicks = initialSyncTarget.startPositionTicks || 0;
-  }
+  const startTicks = (item.UserData && item.UserData.PlaybackPositionTicks) || 0;
   const isEpisodeItem = item.Type === 'Episode' && !!item.SeriesName;
-  setTitle((isEpisodeItem ? item.SeriesName : item.Name) + ' - Jellio');
 
   // components/streamPicker.js's own real choice, when there was more
   // than one to choose from: negotiates that exact source instead of
@@ -445,25 +335,10 @@ export async function renderPlayer(root, params) {
   // own "what's active" check too, not just this file's first request.
   let currentAudioStreamIndex = null;
   try {
-    const user = await currentUserPromise;
+    const user = await getCurrentUser();
     const preferredLanguage = user && user.Configuration && user.Configuration.AudioLanguagePreference;
     const matchedIndex = preferredLanguage ? matchAudioStreamIndex(mediaSource, preferredLanguage) : null;
-    // Real bug, found live: skipping this whenever matchedIndex already
-    // equalled mediaSource.DefaultAudioStreamIndex assumed that field
-    // meant the real encode would already select it, matching what the
-    // audio menu itself showed as active. Confirmed live it does not:
-    // DefaultAudioStreamIndex is only Jellyfin's own advisory pick, the
-    // real ffmpeg track selection never actually reads it, only a real
-    // explicit AudioStreamIndex on the stream request itself, the same
-    // real constraint switchAudioTrack below already works around
-    // unconditionally. Matched or not against the default, this now
-    // always renegotiates with the real index explicit, the one thing
-    // that actually gets a match to play rather than just look picked.
-    // Gated on more than one real audio track existing at all: a single
-    // track file has no real choice to make regardless of what it is
-    // tagged as, forcing a transcode over it would only add real server
-    // load and HLS/segment overhead a plain direct play never needed.
-    if (matchedIndex != null && getAudioStreams(mediaSource).length > 1) {
+    if (matchedIndex != null && matchedIndex !== mediaSource.DefaultAudioStreamIndex) {
       const rematched = await getPlaybackInfo(itemId, startTicks, mediaSource.Id, matchedIndex);
       const rematchedSource = rematched && rematched.MediaSources && rematched.MediaSources[0];
       if (rematchedSource) {
@@ -483,21 +358,9 @@ export async function renderPlayer(root, params) {
   // guaranteed against a live Gelato proxy, so a resumed title on an
   // otherwise direct playable source needs the same forced transcode
   // every other real seek in this file now uses.
-  // currentAudioStreamIndex != null alongside startTicks > 0: buildStreamUrl's
-  // own forceTranscode auto-detection compares opts.audioStreamIndex against
-  // mediaSource.DefaultAudioStreamIndex, but mediaSource above has already
-  // been reassigned to the fresh negotiation for that exact index by the
-  // time this runs, so that comparison is checking the negotiated source
-  // against itself and never catches it. Real bug, found live: a matched
-  // preferred-language track still went out over a Static request that
-  // silently serves the file's own real default track regardless, German
-  // playing despite an English preference. Forcing it explicitly here is
-  // the same real fix switchAudioTrack/seekToAbsoluteSeconds below already
-  // use for the identical reason.
-  const forcedTranscode = startTicks > 0 || currentAudioStreamIndex != null;
   const streamUrl = buildStreamUrl(itemId, mediaSource, startTicks, {
     audioStreamIndex: currentAudioStreamIndex,
-    forceTranscode: forcedTranscode,
+    forceTranscode: startTicks > 0,
     playSessionId: playSessionId,
   });
 
@@ -511,52 +374,29 @@ export async function renderPlayer(root, params) {
   // the same reason: a live transcode has no complete moov atom yet
   // for video.duration to read.
   //
-  // A native HLS engine (willUseHls() above) is neither of those two
-  // cases: confirmed directly against Jellyfin's own
-  // DynamicHlsController.cs, StartTimeTicks on the master playlist
-  // request is never read at all, its own generated playlist always
-  // spanning the title's real position 0 onward regardless, so
-  // buildStreamUrl above never actually sends it there in the first
-  // place (real ArgumentException from the server's own dynamic
-  // segment endpoint the instant it tries). video.currentTime already
-  // is the real absolute position for that case too then, same as
-  // direct play, no offset needed, just a real native seek once
-  // metadata is ready instead of relying on a server side start point
-  // that was never asked for.
-  let streamIsTranscoded = forcedTranscode || !canBrowserDirectPlay(mediaSource);
-  const initialUsesHls = willUseHls(mediaSource, forcedTranscode);
-  let needsStartOffset = streamIsTranscoded && !initialUsesHls;
-  let streamOffsetTicks = needsStartOffset ? startTicks : 0;
-  // Consumed once by the loadedmetadata listener further down, then
-  // cleared: every later reload that needs the same real treatment
-  // (switchAudioTrack, seekToAbsoluteSeconds's own HLS branch,
-  // switchSource, selectBurnedInSubtitle) sets this fresh right before
-  // its own video.load() rather than this screen keeping a second
-  // parallel copy of the same real "where should this land" decision.
-  let pendingNativeSeekSeconds = startTicks > 0 && !needsStartOffset ? startTicks / TICKS_PER_SECOND : null;
-  // Catalog RunTimeTicks is the only real duration available up front
-  // (the comment above explains why a live transcode's own moov atom
-  // is not there yet), but for a remote, debrid backed source this
-  // plugin never itself probed, that nominal figure can genuinely
-  // disagree with the file actually being served, real feedback: the
-  // scrubber running longer than the episode actually plays.
-  // reconcileDuration() below swaps in the browser's own real
-  // video.duration the moment it is known and finite, offset back by
-  // streamOffsetTicks the same way currentPositionTicks() already
-  // does for position, so a forced transcode's own truncated-from-
-  // startTicks duration still reads as the title's full real length.
-  let durationSeconds = (item.RunTimeTicks || 0) / TICKS_PER_SECOND;
+  // Real feedback: a matched preferred-language track above stayed
+  // selected in this screen's own audio menu but the wrong one still
+  // played, until switching to another track and back forced a real
+  // transcode. switchAudioTrack() below already knows a direct playable
+  // source serves every embedded track as is and forces one whenever
+  // its own requested index differs from the source's default; this
+  // first real request never asked for that same forcing, so a
+  // preferred language that only won the match above, not the server's
+  // own DefaultAudioStreamIndex too, went out over a Static request that
+  // could never actually select it.
+  let streamIsTranscoded =
+    startTicks > 0 ||
+    (currentAudioStreamIndex != null && currentAudioStreamIndex !== mediaSource.DefaultAudioStreamIndex) ||
+    !canBrowserDirectPlay(mediaSource);
+  let streamOffsetTicks = streamIsTranscoded ? startTicks : 0;
+  const durationSeconds = (item.RunTimeTicks || 0) / TICKS_PER_SECOND;
 
   // A real saved position asks first rather than always silently
   // seeking there: autoplay stays off until the reader actually picks
   // Resume or Start Over below, the paused frame at the saved position
   // showing through behind that choice instead of playback already
-  // running underneath it. Never shown for a real SyncPlay join
-  // (syncPlaylistItemId set): startTicks there is the group's own
-  // shared position, not this reader's own personal one, so there is
-  // nothing of theirs to ask about, and Start Over's own real reset
-  // would be wrong for everyone else already in the group.
-  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId;
+  // running underneath it.
+  const hasResumePosition = startTicks > 0;
 
   // Real feedback: this used to read straight off the item passed in,
   // which for an Episode is the episode's own real DTO, its own
@@ -604,22 +444,16 @@ export async function renderPlayer(root, params) {
 
   // Ported from the same real Nuvio loading screen this whole pass
   // works from: the title's own real logo art breathing in place while
-  // a stream is still loading, standing in for a plain spinner. Real
-  // feedback: this used to only ever show once, for the very first
-  // load, nothing telling the reader a later reload (an audio track or
-  // subtitle switch, a source change, seekToAbsoluteSeconds's own mp4
-  // fallback branch) was doing anything at all until it either finished
-  // or the toast next to it timed out looking abandoned. showLoadingLogo
-  // is now called at every one of those real reload points too, not
-  // just the first one.
+  // the very first stream is still loading, standing in for a plain
+  // spinner. Only for the one real loading window before playback ever
+  // starts here, real feedback did not ask for this on every later
+  // pause, only removed once the video actually starts for the first
+  // time, never rebuilt after.
   let loadingLogo = null;
   const logoUrl = seriesAwareLogoUrl(800);
-  function showLoadingLogo() {
-    if (!logoUrl) return;
-    if (loadingLogo) loadingLogo.remove();
+  if (logoUrl) {
     loadingLogo = el('div', 'jellio-player-loading-logo');
     loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
-    root.appendChild(loadingLogo);
     video.addEventListener(
       'playing',
       function () {
@@ -700,213 +534,6 @@ export async function renderPlayer(root, params) {
     topbarActions.appendChild(pipButton);
   }
 
-  // Absolute OS level fullscreen for the whole player shell, video
-  // plus every real control this runtime draws on top of it, real
-  // feedback asked for this directly: a bare <video> already gets a
-  // native fullscreen affordance for free on some browsers, but only
-  // for the video element itself, none of this runtime's own controls
-  // along with it. document.exitFullscreen() rather than a fullscreen
-  // rule scoped to just the video also gives Escape/the OS's own real
-  // fullscreen chrome a single consistent real element to leave.
-  // Feature detected and hidden outright rather than disabled the same
-  // way the PiP button above already is: real case with no Fullscreen
-  // API at all, iOS Safari, whose own native WKWebView fullscreen for
-  // <video> already covers the same real job a different way this
-  // runtime has no control over.
-  let exitFullscreenOnCleanup = function () {};
-  const fullscreenEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
-  if (fullscreenEnabled) {
-    const fullscreenButton = el('button', 'jellio-player-back jellio-player-fullscreen');
-    fullscreenButton.type = 'button';
-    fullscreenButton.setAttribute('aria-label', 'Fullscreen');
-    const fullscreenIcon = el('span', 'material-icons fullscreen');
-    fullscreenIcon.setAttribute('aria-hidden', 'true');
-    fullscreenButton.appendChild(fullscreenIcon);
-
-    function isFullscreen() {
-      return (document.fullscreenElement || document.webkitFullscreenElement) === root;
-    }
-    function updateFullscreenButton() {
-      const active = isFullscreen();
-      fullscreenIcon.className = 'material-icons ' + (active ? 'fullscreen_exit' : 'fullscreen');
-      fullscreenButton.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Fullscreen');
-    }
-
-    fullscreenButton.addEventListener('click', function () {
-      wakeControls();
-      if (isFullscreen()) {
-        if (document.exitFullscreen) document.exitFullscreen().catch(function () {});
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      } else if (root.requestFullscreen) {
-        root.requestFullscreen().catch(function () {});
-      } else if (root.webkitRequestFullscreen) {
-        root.webkitRequestFullscreen();
-      }
-    });
-    document.addEventListener('fullscreenchange', updateFullscreenButton);
-    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-    exitFullscreenOnCleanup = function () {
-      document.removeEventListener('fullscreenchange', updateFullscreenButton);
-      document.removeEventListener('webkitfullscreenchange', updateFullscreenButton);
-      // Leaving this screen still fullscreen would strand whatever
-      // renders next behind the OS's own fullscreen chrome instead of
-      // this runtime's own real shell, same reasoning cleanup() below
-      // already tears down every other piece of this screen's own
-      // state rather than letting it bleed into the next real one.
-      if (isFullscreen()) {
-        if (document.exitFullscreen) document.exitFullscreen().catch(function () {});
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      }
-    };
-    topbarActions.appendChild(fullscreenButton);
-  }
-
-  // Group Watch chat, right here in the player chrome rather than only
-  // reachable through the sidebar's own separate overlay
-  // (components/groupWatch.js), real feedback asked for exactly this:
-  // a reader mid episode with a group open should not have to leave
-  // playback to say something. Same real endpoints that panel already
-  // polls (runtime/api.js's own getGroupWatchMessages/
-  // sendGroupWatchMessage), scoped to whichever real group this reader
-  // is actually in, not necessarily the one this exact title is synced
-  // to (chatting stays open to any joined group, playback sync above
-  // does not). Kept deliberately plainer than that panel's own version,
-  // no avatars here, this is a quick glance while playback keeps
-  // running, not a second real chat surface competing with it.
-  const CHAT_POLL_MS = 3000;
-  let stopChatOnCleanup = function () {};
-  const currentSyncGroup = getCurrentGroup();
-  if (currentSyncGroup) {
-    const chatToggleButton = el('button', 'jellio-player-back jellio-player-chat-toggle');
-    chatToggleButton.type = 'button';
-    chatToggleButton.setAttribute('aria-label', 'Group Watch chat');
-    chatToggleButton.setAttribute('aria-expanded', 'false');
-    const chatToggleIcon = el('span', 'material-icons chat_bubble_outline');
-    chatToggleIcon.setAttribute('aria-hidden', 'true');
-    chatToggleButton.appendChild(chatToggleIcon);
-    topbarActions.appendChild(chatToggleButton);
-
-    const chatPanel = el('div', 'jellio-player-chat-panel');
-    const chatMessages = el('div', 'jellio-player-chat-messages');
-    const chatRankingContainer = el('div', 'jellio-pick-container');
-    const chatInputRow = el('div', 'jellio-player-chat-input-row');
-    const chatInput = document.createElement('input');
-    chatInput.type = 'text';
-    chatInput.className = 'jellio-player-chat-input';
-    chatInput.placeholder = 'Message the group…';
-    chatInput.maxLength = 500;
-    const chatSendButton = el('button', 'jellio-player-chat-send');
-    chatSendButton.type = 'button';
-    chatSendButton.setAttribute('aria-label', 'Send');
-    const chatSendIcon = el('span', 'material-icons send');
-    chatSendIcon.setAttribute('aria-hidden', 'true');
-    chatSendButton.appendChild(chatSendIcon);
-    chatInputRow.appendChild(chatInput);
-    chatInputRow.appendChild(chatSendButton);
-    chatPanel.appendChild(chatMessages);
-    chatPanel.appendChild(chatRankingContainer);
-    chatPanel.appendChild(chatInputRow);
-    root.appendChild(chatPanel);
-
-    let chatLastMessageId = 0;
-    let chatPollTimer = null;
-    let chatOpen = false;
-
-    function appendChatMessages(messages) {
-      messages.forEach(function (message) {
-        const row = el('div', 'jellio-player-chat-message');
-        if (message.ItemId) {
-          row.classList.add('jellio-player-chat-message-watch-card');
-          row.setAttribute('role', 'button');
-          row.setAttribute('tabindex', '0');
-          row.addEventListener('click', function () {
-            navigateTo('#/play?id=' + message.ItemId + '&groupJoin=1');
-          });
-        }
-        row.appendChild(el('span', 'jellio-player-chat-message-author', (message.UserName || 'Someone') + ':'));
-        row.appendChild(el('span', 'jellio-player-chat-message-text', message.Text));
-        if (message.ItemId) row.appendChild(el('span', 'jellio-player-chat-message-cta', 'Click to join'));
-        chatMessages.appendChild(row);
-        chatLastMessageId = Math.max(chatLastMessageId, message.Id);
-      });
-      if (messages.length) chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // No Start a Pick trigger here, deliberately: this chat is already
-    // "plainer than that panel's own version" by design (this file's
-    // own header above), components/groupWatch.js's own full panel is
-    // where a pick actually starts. Voting on one already under way
-    // still belongs here though, real feedback's own reason this whole
-    // chat exists in the first place: not leaving playback to act on
-    // the group.
-    function onVote(itemId) {
-      voteRankingSession(currentSyncGroup.GroupId, itemId)
-        .then(function (updated) {
-          renderRankingSession(chatRankingContainer, updated, getSyncUserId(), onVote);
-        })
-        .catch(function (err) {
-          console.warn('Jellio: could not cast a Group Watch pick vote', err);
-        });
-    }
-
-    function pollRanking() {
-      if (!isGrouplistEnabled()) return;
-      fetchRankingSession(currentSyncGroup.GroupId).then(function (session) {
-        renderRankingSession(chatRankingContainer, session, getSyncUserId(), onVote);
-      });
-    }
-
-    function pollChat() {
-      getGroupWatchMessages(currentSyncGroup.GroupId, chatLastMessageId)
-        .then(function (messages) {
-          if (messages.length) appendChatMessages(messages);
-        })
-        .catch(function () {
-          // Same real tradeoff every other poll in this codebase already
-          // makes, tries again next tick rather than surfacing an error
-          // over a single missed real round trip.
-        });
-      pollRanking();
-    }
-
-    function sendChatMessage() {
-      const text = chatInput.value.trim();
-      if (!text) return;
-      chatInput.value = '';
-      sendGroupWatchMessage(currentSyncGroup.GroupId, text)
-        .then(function (message) {
-          if (message) appendChatMessages([message]);
-        })
-        .catch(function (err) {
-          console.warn('Jellio: could not send Group Watch message', err);
-        });
-    }
-
-    chatSendButton.addEventListener('click', sendChatMessage);
-    chatInput.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') sendChatMessage();
-    });
-    chatInput.addEventListener('focus', wakeControls);
-
-    chatToggleButton.addEventListener('click', function () {
-      chatOpen = !chatOpen;
-      chatPanel.classList.toggle('jellio-player-chat-panel-visible', chatOpen);
-      chatToggleButton.setAttribute('aria-expanded', String(chatOpen));
-      if (chatOpen) {
-        pollChat();
-        chatPollTimer = window.setInterval(pollChat, CHAT_POLL_MS);
-        wakeControls();
-      } else if (chatPollTimer) {
-        window.clearInterval(chatPollTimer);
-        chatPollTimer = null;
-      }
-    });
-
-    stopChatOnCleanup = function () {
-      if (chatPollTimer) window.clearInterval(chatPollTimer);
-    };
-  }
-
   topbarActions.appendChild(backButton);
   topbar.appendChild(topbarActions);
 
@@ -927,21 +554,6 @@ export async function renderPlayer(root, params) {
   playPauseIcon.setAttribute('aria-hidden', 'true');
   playPauseButton.appendChild(playPauseIcon);
   playPauseButton.addEventListener('click', function () {
-    // In an active real SyncPlay group, a plain local play()/pause()
-    // here would only ever move this one reader's own player: real
-    // SyncPlay instead has every group member, initiator included,
-    // apply the action once the server broadcasts it back as a real
-    // SyncPlayCommand (this screen's own onSyncCommand handler further
-    // down), the same real round trip a native client in the same
-    // group already makes. syncPlaylistItemId null (no group, or one
-    // with nothing on the real queue for this title) falls straight
-    // back to the plain local toggle this button always had.
-    if (syncPlaylistItemId) {
-      (video.paused ? requestSyncUnpause : requestSyncPause)().catch(function (err) {
-        console.warn('Jellio: could not send Group Watch play/pause', err);
-      });
-      return;
-    }
     if (video.paused) attemptPlay();
     else video.pause();
   });
@@ -1134,78 +746,8 @@ export async function renderPlayer(root, params) {
   // be logically the same track.
   let activeSubtitleStreamIndex = null;
 
-  // Real bug, found live on macOS Safari: a reader with the OS's own
-  // Accessibility > Captions "Prefer closed captions and SDH" setting
-  // on had a track this runtime had explicitly turned Off (activeTrack
-  // null, no <track> element even in the DOM) showing anyway. Confirmed
-  // against real WebKit behaviour, not this runtime's own guess: Safari
-  // runs its own automatic caption track selection whenever
-  // video.textTracks changes, independent of and after whatever mode
-  // this runtime already set, and that selection can re-enable a track
-  // this runtime never chose. video.textTracks itself fires a real
-  // 'change' event every time that happens (spec behaviour, not
-  // Safari-only), so reasserting this runtime's own real choice there
-  // catches it the moment it happens rather than trusting a mode set
-  // once at track creation to stay put. reentrant guards the loop
-  // below: setting .mode fires this same 'change' event again, and
-  // only assigning when a track's real mode already differs keeps that
-  // from looping forever once every track already matches.
-  let reentrant = false;
-  function enforceSubtitleTrackModes() {
-    if (reentrant) return;
-    reentrant = true;
-    try {
-      for (let i = 0; i < video.textTracks.length; i++) {
-        const tt = video.textTracks[i];
-        const desired = activeTrack && activeTrack.track === tt ? 'showing' : 'disabled';
-        if (tt.mode !== desired) tt.mode = desired;
-      }
-    } finally {
-      reentrant = false;
-    }
-  }
-  video.textTracks.addEventListener('change', enforceSubtitleTrackModes);
-
-  // Real bug, found live: a release's own real WebVTT file (Jellyfin's
-  // own subtitle conversion, whatever positioning the original
-  // embedded/SSA track carried through with it) can set a real per-cue
-  // position/align/line, on-screen text specifically often placed away
-  // from the usual bottom-center dialogue spot. Confirmed live as the
-  // box jumping left, center and right line to line: not a rendering
-  // bug, that positioning is real, honoured by every browser's own
-  // WebVTT engine exactly as authored. ::cue in CSS cannot override a
-  // cue's own real position/align/line at all, only a cue's own real
-  // JS properties can, so every cue this track just parsed gets pinned
-  // to the same real bottom-center spot here instead, consistent
-  // placement mattering more for a subtitle track than preserving
-  // positioning this runtime has no picker for anyway.
-  function normalizeCuePositions(textTrack) {
-    const cues = textTrack.cues;
-    if (!cues) return;
-    for (let i = 0; i < cues.length; i++) {
-      const cue = cues[i];
-      if (typeof VTTCue === 'undefined' || !(cue instanceof VTTCue)) continue;
-      try {
-        cue.align = 'center';
-        cue.position = 'auto';
-        cue.line = 'auto';
-        cue.size = 100;
-      } catch (err) {
-        // A malformed value on one real cue is not worth losing every
-        // other cue on the same track over.
-      }
-    }
-  }
-
   function selectSubtitle(stream, optionButton) {
     if (activeTrack) {
-      // Explicit disable ahead of the removal below: real WebKit
-      // versions have kept whatever cue was actively rendering on
-      // screen at the exact instant a <track> element left the DOM,
-      // not clearing it until the next cue boundary or a real reload.
-      // Disabling first, a real mode change the spec guarantees clears
-      // active cues immediately, closes that gap.
-      if (activeTrack.track) activeTrack.track.mode = 'disabled';
       activeTrack.remove();
       activeTrack = null;
     }
@@ -1215,10 +757,7 @@ export async function renderPlayer(root, params) {
     });
     if (optionButton) optionButton.classList.add('jellio-player-popover-option-active');
     subtitleButton.classList.toggle('jellio-player-pill-btn-active', !!stream);
-    if (!stream) {
-      enforceSubtitleTrackModes();
-      return;
-    }
+    if (!stream) return;
     const track = document.createElement('track');
     track.kind = 'subtitles';
     track.label = stream.DisplayTitle || stream.Language || 'Subtitle';
@@ -1228,20 +767,7 @@ export async function renderPlayer(root, params) {
     video.appendChild(track);
     activeTrack = track;
     track.addEventListener('load', function () {
-      if (!track.track) return;
-      normalizeCuePositions(track.track);
-      track.track.mode = 'showing';
-      enforceSubtitleTrackModes();
-    });
-    // A <track> element has no equivalent of the main video's own
-    // 'error' handling anywhere else in this file: a failed fetch (or a
-    // fetched file the WebVTT parser rejects outright) used to fail
-    // silently, real bug found live behind exactly this gap, nothing
-    // ever telling a reader why a subtitle they picked just never
-    // showed up.
-    track.addEventListener('error', function () {
-      if (activeTrack !== track) return;
-      showPlayerToast('That subtitle track could not be loaded.');
+      if (track.track) track.track.mode = 'showing';
     });
   }
 
@@ -1255,10 +781,6 @@ export async function renderPlayer(root, params) {
   // different stream index request like this one.
   async function selectBurnedInSubtitle(stream, optionButton) {
     if (activeTrack) {
-      // Same real reason selectSubtitle's own Off path disables before
-      // removing: clears whatever cue is actively rendering immediately
-      // rather than leaving it on screen until the reload below lands.
-      if (activeTrack.track) activeTrack.track.mode = 'disabled';
       activeTrack.remove();
       activeTrack = null;
     }
@@ -1280,14 +802,7 @@ export async function renderPlayer(root, params) {
       playSessionId = info.PlaySessionId;
       activeSubtitleStreamIndex = stream.Index;
       streamIsTranscoded = true;
-      // Same real willUseHls() check switchAudioTrack/seekToAbsoluteSeconds
-      // both make: a burned in subtitle still forces a real transcode,
-      // but that can still land on native HLS, its own master playlist
-      // never actually honouring the StartTimeTicks below either.
-      const subtitleUsesHls = willUseHls(mediaSource, true);
-      needsStartOffset = !subtitleUsesHls;
-      streamOffsetTicks = needsStartOffset ? resumeTicks : 0;
-      pendingNativeSeekSeconds = subtitleUsesHls ? resumeTicks / TICKS_PER_SECOND : null;
+      streamOffsetTicks = resumeTicks;
       hasReportedStart = false;
       video.src = buildStreamUrl(itemId, mediaSource, resumeTicks, {
         audioStreamIndex: currentAudioStreamIndex,
@@ -1296,7 +811,6 @@ export async function renderPlayer(root, params) {
         playSessionId: playSessionId,
       });
       video.load();
-      showLoadingLogo();
       if (wasPlaying) waitForPlayableBuffer(attemptPlay);
       subtitleButton.classList.add('jellio-player-pill-btn-active');
       rebuildAudioMenu();
@@ -1538,47 +1052,21 @@ export async function renderPlayer(root, params) {
         activeTrack = null;
       }
       currentAudioStreamIndex = stream.Index;
-      // Real bug, found live: stream.Index !== mediaSource.DefaultAudioStreamIndex
-      // never actually caught anything, since mediaSource was just
-      // reassigned to the fresh negotiation for stream.Index two lines up,
-      // so its own DefaultAudioStreamIndex already matches stream.Index by
-      // the time this runs. That let forceTranscode below stay false
-      // whenever resumeTicks was 0, going out as a Static direct play
-      // request whose AudioStreamIndex query param a server ignores
-      // entirely on that path (this file's own header above already
-      // documents that real Jellyfin behaviour) - reported live as the
-      // track silently not switching, or the stream dying outright once
-      // whatever the file's own real default track was collided with the
-      // rest of this reload. Same real fix seekToAbsoluteSeconds below
-      // already proved out: force it unconditionally, an explicit track
-      // switch always needs the real transcode this comment already says
-      // it does, not just a resumed one.
-      //
-      // Real bug, found live against a real server log: forcing the
-      // transcode above still was not enough on its own. A native HLS
-      // engine's own master playlist request never actually reads
-      // StartTimeTicks at all (DynamicHlsController.cs, confirmed
-      // directly), always spanning the title's real position 0 onward
-      // regardless of what streamOffsetTicks below assumed, so an audio
-      // switch mid playback landed right back at the start the instant
-      // this ran on Safari or the macOS Desktop app's own WKWebView.
-      // willUseHls() below is the same real check the initial load and
-      // seekToAbsoluteSeconds already make: an HLS destination gets a
-      // real native seek once its own fresh metadata is ready instead
-      // of a server side offset that request was never going to honour.
-      streamIsTranscoded = true;
-      const switchUsesHls = willUseHls(mediaSource, true);
-      needsStartOffset = !switchUsesHls;
-      streamOffsetTicks = needsStartOffset ? resumeTicks : 0;
-      pendingNativeSeekSeconds = switchUsesHls ? resumeTicks / TICKS_PER_SECOND : null;
+      // Same real reason seekToAbsoluteSeconds and switchSource both
+      // force a transcode for any resumeTicks > 0: switching back to
+      // the default track mid playback still needs a real seek to
+      // resumeTicks, which a Static direct play request's own
+      // StartTimeTicks cannot reliably do here either.
+      streamIsTranscoded =
+        resumeTicks > 0 || stream.Index !== mediaSource.DefaultAudioStreamIndex || !canBrowserDirectPlay(mediaSource);
+      streamOffsetTicks = streamIsTranscoded ? resumeTicks : 0;
       hasReportedStart = false;
       video.src = buildStreamUrl(itemId, mediaSource, resumeTicks, {
         audioStreamIndex: currentAudioStreamIndex,
-        forceTranscode: true,
+        forceTranscode: resumeTicks > 0,
         playSessionId: playSessionId,
       });
       video.load();
-      showLoadingLogo();
       if (wasPlaying) waitForPlayableBuffer(attemptPlay);
       rebuildSubtitleMenu();
       rebuildAudioMenu();
@@ -1694,7 +1182,7 @@ export async function renderPlayer(root, params) {
       thumb.style.backgroundImage = 'url(' + getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }) + ')';
     }
     if (episode.CommunityRating) {
-      thumb.appendChild(buildRatingBadge(episode.CommunityRating, 'jellio-player-episode-rating'));
+      thumb.appendChild(el('span', 'jellio-player-episode-rating', episode.CommunityRating.toFixed(1)));
     }
     const hasCode = typeof episode.ParentIndexNumber === 'number' && typeof episode.IndexNumber === 'number';
     if (hasCode) {
@@ -1806,26 +1294,10 @@ export async function renderPlayer(root, params) {
   // all called it and moved on, so a rejection here read as clicking
   // Play and genuinely nothing happening, no different from the three
   // routes into this screen already fixed above for the same reason.
-  //
-  // Real feedback, found live: the error toast below fired well before
-  // the source was actually dead, playback then starting on its own
-  // roughly 10 real seconds later once the underlying Gelato proxy
-  // genuinely caught up, PREBUFFER_TIMEOUT_MS's own real fallback below
-  // having forced this call before that real cushion was there to
-  // begin with. One silent retry a few seconds later covers exactly
-  // that gap without a scary error for what is often just the source
-  // still catching up, the toast now only a real last resort.
-  function attemptPlay(isRetry) {
+  function attemptPlay() {
     const playResult = video.play();
     if (playResult && typeof playResult.catch === 'function') {
       playResult.catch(function (err) {
-        if (!isRetry) {
-          console.warn('Jellio: could not start playback, retrying once', err);
-          window.setTimeout(function () {
-            attemptPlay(true);
-          }, 3000);
-          return;
-        }
         console.warn('Jellio: could not start playback', err);
         showPlayerToast('Could not start playback. Try pressing play again.');
       });
@@ -1846,15 +1318,7 @@ export async function renderPlayer(root, params) {
   // already uses: a source too slow to ever clear the cushion should
   // still start rather than sit there forever looking broken.
   const PREBUFFER_TARGET_SECONDS = 8;
-  // Real feedback, found live: 6s was well short of a real Gelato proxy
-  // still ramping up on a fresh transcode, this fallback forcing
-  // attemptPlay() early enough that video.play() rejected outright
-  // (the error toast below firing), playback then starting on its own
-  // roughly 10 real seconds later once the source genuinely caught up.
-  // Longer here means this fallback rarely fires before the real
-  // cushion above already has, attemptPlay's own one retry covering
-  // whatever real variance is left beyond even this.
-  const PREBUFFER_TIMEOUT_MS = 12000;
+  const PREBUFFER_TIMEOUT_MS = 6000;
   function waitForPlayableBuffer(callback) {
     let settled = false;
     function bufferedAheadSeconds() {
@@ -1922,23 +1386,7 @@ export async function renderPlayer(root, params) {
   // Carries the reader's own active audio track and any burned in
   // subtitle track through the reload too: neither used to be passed
   // here at all, so a seek used to silently drop them back to default.
-  // Real bug, found live: this always reached the renegotiate-and-reload
-  // path below, and its own StartTimeTicks is exactly what
-  // DynamicHlsController.cs's own dynamic segment endpoint throws
-  // System.ArgumentException("StartTimeTicks is not allowed") on,
-  // confirmed directly against a real server log. A native HLS engine
-  // already seeks within the manifest it already has by itself, the
-  // same browser-native mechanism direct play's own plain Range seek
-  // used to lean on before this reload became the rule for every other
-  // real source, Jellyfin generating whichever segment that lands on
-  // (and restarting its own real encode from there server side) with
-  // no renegotiation from this runtime needed at all.
   async function seekToAbsoluteSeconds(targetSeconds) {
-    if (streamIsTranscoded && supportsNativeHls()) {
-      video.currentTime = targetSeconds;
-      return;
-    }
-
     const targetTicks = Math.max(0, Math.round(targetSeconds * TICKS_PER_SECOND));
     const wasPlaying = !video.paused;
     const burnedInSubtitleIndex = activeTrack ? null : activeSubtitleStreamIndex;
@@ -1953,15 +1401,7 @@ export async function renderPlayer(root, params) {
       mediaSource = negotiated;
       playSessionId = info.PlaySessionId;
       streamIsTranscoded = true;
-      // Recomputed fresh rather than assumed: a source that was direct
-      // playing before this seek (the only way to reach here with
-      // streamIsTranscoded already false) can still land on native HLS
-      // now that forceTranscode is true, the same real willUseHls()
-      // check the initial load above already makes for the same reason.
-      const seekUsesHls = willUseHls(mediaSource, true);
-      needsStartOffset = !seekUsesHls;
-      streamOffsetTicks = needsStartOffset ? targetTicks : 0;
-      pendingNativeSeekSeconds = seekUsesHls ? targetSeconds : null;
+      streamOffsetTicks = targetTicks;
       hasReportedStart = false;
       video.src = buildStreamUrl(itemId, mediaSource, targetTicks, {
         audioStreamIndex: currentAudioStreamIndex,
@@ -1970,7 +1410,6 @@ export async function renderPlayer(root, params) {
         playSessionId: playSessionId,
       });
       video.load();
-      showLoadingLogo();
       if (wasPlaying) waitForPlayableBuffer(attemptPlay);
     } catch (err) {
       console.warn('Jellio: seek failed', err);
@@ -1978,27 +1417,11 @@ export async function renderPlayer(root, params) {
     }
   }
 
-  // Same real reasoning as the play/pause button above: every manual
-  // seek in an active real SyncPlay group goes through the server
-  // (requestSyncSeek, real SyncPlay/Seek) rather than applying locally
-  // first, so the resulting SyncPlayCommand this screen's own
-  // onSyncCommand handler receives back is the one real thing that
-  // actually moves this player, same as it would for any other member.
-  function performSeek(targetSeconds) {
-    if (syncPlaylistItemId) {
-      requestSyncSeek(Math.round(targetSeconds * TICKS_PER_SECOND)).catch(function (err) {
-        console.warn('Jellio: could not send Group Watch seek', err);
-      });
-      return;
-    }
-    seekToAbsoluteSeconds(targetSeconds);
-  }
-
   skipBackButton.addEventListener('click', function () {
-    performSeek(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) - 10);
+    seekToAbsoluteSeconds(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) - 10);
   });
   skipForwardButton.addEventListener('click', function () {
-    performSeek(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) + 10);
+    seekToAbsoluteSeconds(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) + 10);
   });
 
   // Re-negotiates PlaybackInfo against the picked source at the exact
@@ -2039,24 +1462,13 @@ export async function renderPlayer(root, params) {
       // any resumeTicks > 0: a Static direct play request's own
       // StartTimeTicks only actually seeks on a source that honours
       // HTTP Range, never guaranteed against a live Gelato proxy.
-      const sourceForceTranscode = resumeTicks > 0;
-      streamIsTranscoded = sourceForceTranscode || !canBrowserDirectPlay(mediaSource);
-      // Same real willUseHls() check every other reload in this file
-      // now makes: its own master playlist request never actually
-      // reads StartTimeTicks (DynamicHlsController.cs, confirmed
-      // directly), so a source switch mid playback needs a real native
-      // seek once metadata is ready instead of trusting the server to
-      // pick this position back up on its own.
-      const switchSourceUsesHls = willUseHls(mediaSource, sourceForceTranscode);
-      needsStartOffset = streamIsTranscoded && !switchSourceUsesHls;
-      streamOffsetTicks = needsStartOffset ? resumeTicks : 0;
-      pendingNativeSeekSeconds = resumeTicks > 0 && !needsStartOffset ? resumeTicks / TICKS_PER_SECOND : null;
+      streamIsTranscoded = resumeTicks > 0 || !canBrowserDirectPlay(mediaSource);
+      streamOffsetTicks = streamIsTranscoded ? resumeTicks : 0;
       video.src = buildStreamUrl(itemId, mediaSource, resumeTicks, {
-        forceTranscode: sourceForceTranscode,
+        forceTranscode: resumeTicks > 0,
         playSessionId: playSessionId,
       });
       video.load();
-      showLoadingLogo();
       if (wasPlaying) waitForPlayableBuffer(attemptPlay);
       topbarMeta.textContent = sourceLabel(mediaSource);
       rebuildSubtitleMenu();
@@ -2097,30 +1509,14 @@ export async function renderPlayer(root, params) {
   // and resets the timer; a paused video, an open popover/side panel,
   // or negotiation still in flight all keep it up regardless. ===
   let idleTimer = null;
-  // Real bug, found live: a still-blocked check used to just give up,
-  // one shot, nothing left armed to try again once the block actually
-  // cleared. wakeControls() below fires exactly once at mount, and a
-  // freshly loaded episode (Up Next's own auto-advance chief among
-  // them) is still negotiating, video.paused true, for real time after
-  // that first check already fired and found itself blocked. Nothing
-  // else in this file calls wakeControls() again once playback
-  // actually starts, so the shell sat there until a reader happened to
-  // interact with it by hand. Rescheduling itself here instead, the
-  // same IDLE_HIDE_MS cadence, means a still-blocked check keeps
-  // quietly retrying until whatever was blocking it (paused, a
-  // popover, a side panel) actually clears, no external wake required.
   function hideControls() {
-    const blocked =
-      video.paused ||
-      popovers.some(function (entry) {
-        return !entry.menu.classList.contains('jellio-player-popover-hidden');
-      }) ||
-      !sourcePanel.classList.contains('jellio-player-sidepanel-hidden') ||
-      !episodesPanel.classList.contains('jellio-player-sidepanel-hidden');
-    if (blocked) {
-      idleTimer = window.setTimeout(hideControls, IDLE_HIDE_MS);
-      return;
-    }
+    if (video.paused) return;
+    const anyPopoverOpen = popovers.some(function (entry) {
+      return !entry.menu.classList.contains('jellio-player-popover-hidden');
+    });
+    if (anyPopoverOpen) return;
+    if (!sourcePanel.classList.contains('jellio-player-sidepanel-hidden')) return;
+    if (!episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) return;
     shell.classList.add('jellio-player-shell-idle');
   }
   function wakeControls() {
@@ -2160,7 +1556,7 @@ export async function renderPlayer(root, params) {
   pauseContent.appendChild(el('div', 'jellio-player-pause-eyebrow', 'You’re watching'));
   pauseContent.appendChild(el('div', 'jellio-player-pause-title', isEpisodeItem ? item.SeriesName : item.Name || ''));
   const pauseMeta = el('div', 'jellio-player-pause-meta');
-  if (item.CommunityRating) pauseMeta.appendChild(buildRatingBadge(item.CommunityRating));
+  if (item.CommunityRating) pauseMeta.appendChild(el('span', null, item.CommunityRating.toFixed(1) + ' ★'));
   if (item.ProductionYear) pauseMeta.appendChild(el('span', null, String(item.ProductionYear)));
   if (item.OfficialRating) pauseMeta.appendChild(el('span', null, item.OfficialRating));
   pauseContent.appendChild(pauseMeta);
@@ -2212,7 +1608,7 @@ export async function renderPlayer(root, params) {
   }
 
   skipButton.addEventListener('click', function () {
-    performSeek(skipTargetSeconds);
+    seekToAbsoluteSeconds(skipTargetSeconds);
   });
 
   getIntroSkipperSegments(itemId).then(function (result) {
@@ -2220,7 +1616,7 @@ export async function renderPlayer(root, params) {
   });
 
   root.appendChild(video);
-  showLoadingLogo();
+  if (loadingLogo) root.appendChild(loadingLogo);
   root.appendChild(pauseOverlay);
   root.appendChild(skipButton);
   root.appendChild(shell);
@@ -2266,19 +1662,12 @@ export async function renderPlayer(root, params) {
             mediaSource = negotiated;
             playSessionId = info.PlaySessionId;
             streamOffsetTicks = 0;
-            needsStartOffset = false;
-            // Target is a real 0 either way here, direct play, the
-            // plain mp4 fallback and a native HLS engine alike, so
-            // there is nothing for the loadedmetadata listener to seek
-            // to on top of that.
-            pendingNativeSeekSeconds = null;
             video.src = buildStreamUrl(itemId, mediaSource, 0, {
               audioStreamIndex: currentAudioStreamIndex,
               forceTranscode: true,
               playSessionId: playSessionId,
             });
             video.load();
-            showLoadingLogo();
             waitForPlayableBuffer(attemptPlay);
           })
           .catch(function (err) {
@@ -2289,33 +1678,7 @@ export async function renderPlayer(root, params) {
     );
     root.appendChild(resumePrompt.overlay);
     resumePrompt.resumeButton.focus();
-  } else if ((!syncPlaylistItemId && !getCurrentGroup()) || initialSyncTarget.isPlaying) {
-    // Joining a group already paused starts this reader paused at its
-    // real shared position too, rather than autoplaying locally out
-    // from under whatever the group actually agreed on: the Unpause
-    // command that resumes it for real (applySyncCommand below) is
-    // still coming, whenever the group actually sends one.
-    //
-    // Real bug, found live: !syncPlaylistItemId alone used to be enough
-    // to reach this branch, true both for genuinely ungrouped playback
-    // (correct: autoplay locally, nothing else is coordinating this)
-    // and for a reader in a group who is about to become the group's
-    // own initiator (about to publish a fresh queue further down,
-    // syncPlaylistItemId not set yet only because that hasn't happened
-    // yet) - very much NOT correct for the second case, which used to
-    // autoplay locally right here, a plain video.play() that never
-    // tells the server anything. The group's own real state stayed
-    // Idle/Stop forever (whatever the fresh queue's own initial state
-    // was), because nothing anywhere ever actually sent a real Unpause
-    // request. Every other member correctly waiting on that broadcast
-    // (this same branch's own comment above, for their own join) then
-    // waited forever for a command that was never coming - confirmed
-    // live: initiator's own player started fine, joined readers sat on
-    // the loading spinner indefinitely. getCurrentGroup() added to the
-    // condition here so this branch is only ever local-only autoplay
-    // for genuinely ungrouped playback; the fresh-initiator case now
-    // requests a real Unpause instead, see publishSyncQueue's own
-    // callback further down.
+  } else {
     waitForPlayableBuffer(attemptPlay);
   }
 
@@ -2382,18 +1745,6 @@ export async function renderPlayer(root, params) {
   }
 
   let hasReportedStart = false;
-  // Real completion for the Watch Together badges, same 90% real
-  // threshold AchievementService.cs's own IsRealWatch() uses server
-  // side for the solo path, only reachable here at all: no server side
-  // event exists that can tell whether this reader's own session was
-  // actually grouped when it stopped, getCurrentGroup()'s own real
-  // SyncPlay WebSocket state is the only place that is ever known.
-  // Deliberately not reset on a mid-session source switch the way
-  // hasReportedStart is above (switchAudioTrack, seekToAbsoluteSeconds,
-  // switchSource, selectBurnedInSubtitle each do): this only ever needs
-  // to fire once for the life of this real screen mount, a switch mid
-  // playback is still the same one real watch, not a second one.
-  let hasCreditedGroupWatch = false;
   let seeking = false;
   let lastReportedTicks = startTicks;
   // Set once cleanup() has actually run: removeAttribute('src') plus
@@ -2408,14 +1759,6 @@ export async function renderPlayer(root, params) {
 
   function currentPositionTicks() {
     return streamOffsetTicks + Math.round((video.currentTime || 0) * TICKS_PER_SECOND);
-  }
-
-  function reconcileDuration() {
-    const real = video.duration;
-    if (real && isFinite(real) && real > 0) {
-      durationSeconds = streamOffsetTicks / TICKS_PER_SECOND + real;
-      durationLabel.textContent = formatTime(durationSeconds);
-    }
   }
 
   // A <video> element that fails to actually decode its own real src,
@@ -2451,27 +1794,16 @@ export async function renderPlayer(root, params) {
   });
 
   video.addEventListener('loadedmetadata', function () {
-    // pendingNativeSeekSeconds covers both real cases that need this:
-    // a direct play resume, and a native HLS stream landing anywhere
-    // but position 0 (switchAudioTrack, seekToAbsoluteSeconds's own
-    // HLS branch, switchSource, selectBurnedInSubtitle each set it
-    // fresh before their own video.load()). The plain forced mp4
-    // transcode fallback already starts encoding at the right real
-    // position server side (see streamOffsetTicks above), so seeking
-    // again here would double that offset, this stays null for it.
-    if (pendingNativeSeekSeconds != null) {
-      video.currentTime = pendingNativeSeekSeconds;
-      pendingNativeSeekSeconds = null;
+    // streamUrl already starts encoding at startTicks server side for a
+    // forced transcode (see streamOffsetTicks above), so seeking again
+    // here would double the offset; only a direct play stream, the
+    // whole file already sitting there, needs this real client side
+    // seek to reach the saved position at all.
+    if (startTicks > 0 && !streamIsTranscoded) {
+      video.currentTime = startTicks / TICKS_PER_SECOND;
     }
-    reconcileDuration();
     durationLabel.textContent = formatTime(durationSeconds);
   });
-
-  // Native HLS in particular: loadedmetadata above can fire before the
-  // playlist is fully parsed, video.duration still NaN/Infinity at
-  // that point, durationchange is the real event for whenever it
-  // later actually settles.
-  video.addEventListener('durationchange', reconcileDuration);
 
   video.addEventListener('timeupdate', function () {
     if (seeking) return;
@@ -2484,21 +1816,6 @@ export async function renderPlayer(root, params) {
     if (!hasReportedStart) {
       hasReportedStart = true;
       reportPlaybackStart(itemId, mediaSource.Id, currentPositionTicks());
-    }
-
-    const activeGroup = getCurrentGroup();
-    if (
-      !hasCreditedGroupWatch &&
-      durationSeconds &&
-      positionSeconds / durationSeconds >= GROUP_WATCH_COMPLETION_THRESHOLD &&
-      activeGroup &&
-      (activeGroup.Participants || []).length >= 2
-    ) {
-      hasCreditedGroupWatch = true;
-      creditGroupWatchTogether().catch(function () {
-        // Not fatal, just one missed real credit towards the Watch
-        // Together badges.
-      });
     }
 
     if (nextEpisode && !upNextDismissed && shouldShowUpNextNow(positionSeconds, durationSeconds)) {
@@ -2524,7 +1841,7 @@ export async function renderPlayer(root, params) {
   });
   seekBar.addEventListener('change', function () {
     if (durationSeconds) {
-      performSeek((Number(seekBar.value) / 100) * durationSeconds);
+      seekToAbsoluteSeconds((Number(seekBar.value) / 100) * durationSeconds);
     }
     seeking = false;
   });
@@ -2550,214 +1867,6 @@ export async function renderPlayer(root, params) {
     reportPlaybackProgress(itemId, mediaSource.Id, lastReportedTicks, video.paused);
   }, PROGRESS_REPORT_MS);
 
-  // Real Jellyfin SyncPlay command handling: applies a pushed
-  // Unpause/Pause/Seek/Stop at the exact real moment the server
-  // scheduled it for (command.When, converted to this device's own
-  // local clock through remoteToLocal()'s own real NTP style offset),
-  // the same real interoperable protocol a native client in the same
-  // group already runs, confirmed against real PlaybackCore.js before
-  // this was written. SkipToSync only, not native's own SpeedToSync
-  // playbackRate ramp (runtime/syncPlay.js's own header explains why):
-  // a correction here always means a real seekToAbsoluteSeconds() reload
-  // (renegotiated PlaybackInfo, a fresh video.load()), a real cost
-  // native's own in-place currentTime assignment never pays, so this
-  // only actually reloads once the drift is large enough to be worth
-  // that cost, small drift left alone rather than reloading on every
-  // single real command the way applying all of them literally would.
-  const SYNC_DRIFT_THRESHOLD_SECONDS = 1.5;
-  let scheduledSyncTimeout = null;
-  function clearScheduledSync() {
-    if (scheduledSyncTimeout) {
-      window.clearTimeout(scheduledSyncTimeout);
-      scheduledSyncTimeout = null;
-    }
-  }
-
-  function syncDriftSeconds(command) {
-    const targetTicks = estimateCurrentTicks(command.PositionTicks || 0, command.When);
-    return Math.abs(currentPositionTicks() - targetTicks) / TICKS_PER_SECOND;
-  }
-
-  function applySyncCommand(command) {
-    if (command.PlaylistItemId !== syncPlaylistItemId) return;
-    clearScheduledSync();
-
-    function run() {
-      switch (command.Command) {
-        case 'Unpause':
-          if (syncDriftSeconds(command) > SYNC_DRIFT_THRESHOLD_SECONDS) {
-            const targetSeconds = estimateCurrentTicks(command.PositionTicks || 0, command.When) / TICKS_PER_SECOND;
-            seekToAbsoluteSeconds(Math.max(0, targetSeconds)).then(function () {
-              waitForPlayableBuffer(attemptPlay);
-            });
-          } else {
-            attemptPlay();
-          }
-          break;
-        case 'Pause':
-          video.pause();
-          if (syncDriftSeconds(command) > SYNC_DRIFT_THRESHOLD_SECONDS) {
-            seekToAbsoluteSeconds(Math.max(0, (command.PositionTicks || 0) / TICKS_PER_SECOND));
-          }
-          break;
-        case 'Seek':
-          seekToAbsoluteSeconds(Math.max(0, (command.PositionTicks || 0) / TICKS_PER_SECOND));
-          break;
-        case 'Stop':
-          video.pause();
-          break;
-        default:
-          break;
-      }
-    }
-
-    const delay = remoteToLocal(command.When).getTime() - Date.now();
-    if (delay > 0) {
-      scheduledSyncTimeout = window.setTimeout(run, delay);
-    } else {
-      run();
-    }
-  }
-
-  let unsubscribeSyncCommand = null;
-  let unsubscribeSyncGroupChange = null;
-  let syncQueuePublishAttempted = false;
-  console.debug('Jellio: player sync check, group is', getCurrentGroup(), 'syncPlaylistItemId is', syncPlaylistItemId);
-
-  // Real bug, found live: this whole block used to only run if
-  // getCurrentGroup() was already truthy the instant this screen
-  // mounted, which missed the common real case of landing here (the
-  // stream picker, a chat watch card) faster than
-  // reconcileGroupMembership()'s own async join/REST snapshot fallback
-  // ever had a chance to resolve first, confirmed still mid-flight at
-  // this exact point live: app.js's own runSync() calls startSyncPlay()
-  // synchronously right before mounting this screen, never awaiting its
-  // own fire-and-forget first reconcile pass. A group that only became
-  // known a moment later left this screen never having subscribed to
-  // anything at all, real feedback matching exactly: no toast, no chat
-  // message, even though the account genuinely was in the group the
-  // whole time. Subscribing unconditionally instead: applySyncCommand
-  // and the 'waiting'/'canplay' listeners below already all check
-  // syncPlaylistItemId themselves before doing anything real, so there
-  // is nothing unsafe about wiring them before a group is confirmed.
-  unsubscribeSyncCommand = onSyncCommand(applySyncCommand);
-
-  // In a real group: publishing this item is the same real call a
-  // native client's own SyncPlay button already makes the moment it
-  // starts something while in a group, the exact real bug this whole
-  // feature started from ("I joined a group and nothing happened,
-  // group just shows idle"). Deliberately not gated on syncPlaylistItemId
-  // any more (whether this exact title happens to already be the
-  // group's own current queue item): real feedback asked for every
-  // real explicit start to publish fresh and notify the group, the
-  // same title started twice in a row included, not just the first
-  // time it is new. isGroupJoinNavigation above is what actually tells
-  // a reader following an already-started group's own link apart from
-  // one genuinely choosing to start something, the real distinction
-  // that check used to lean on syncPlaylistItemId for instead. Guarded
-  // by its own flag rather than a plain condition: this can now run
-  // once from the immediate check below and again from
-  // onSyncGroupChange the moment a late-resolving group is learned
-  // about, and a real SetNewQueue should only ever go out once per
-  // mount either way.
-  function maybePublishQueue() {
-    if (syncQueuePublishAttempted || !getCurrentGroup() || isGroupJoinNavigation) return;
-    syncQueuePublishAttempted = true;
-    publishSyncQueue(itemId, startTicks)
-      .then(function () {
-        console.debug('Jellio: published Group Watch queue for', itemId);
-        // Same real moment components/groupWatchInvites.js's own toast
-        // fires for everyone else in the group, real feedback asked for
-        // this to also land in the group's own real chat, not just a
-        // toast a reader could easily miss or already have dismissed by
-        // the time they check chat: a permanent, clickable record of it
-        // right there, same real name shown either place.
-        const syncGroup = getCurrentGroup();
-        if (syncGroup) {
-          const watchingName = isEpisodeItem ? item.SeriesName : item.Name;
-          sendGroupWatchMessage(syncGroup.GroupId, 'The group started watching ' + (watchingName || 'something'), itemId).catch(function () {});
-        }
-        // This reader just became the group's own initiator (line 2234's
-        // own branch skips local autoplay for exactly this case, see its
-        // own comment), so nothing has actually asked the server to
-        // start playback for real yet. requestSyncUnpause() is the same
-        // real request a native client's own Play button sends; the
-        // broadcast it triggers comes back through this screen's own
-        // onSyncCommand handler (applySyncCommand, further down) exactly
-        // like it does for every other member, this reader included, so
-        // there is only ever one real code path that actually starts a
-        // synced video anywhere in this file.
-        waitForPlayableBuffer(function () {
-          requestSyncUnpause().catch(function (err) {
-            console.warn('Jellio: could not send initial Group Watch unpause', err);
-          });
-        });
-        // Real feedback, found live: SetNewQueue can return a real 204
-        // here and still never actually queue anything, real
-        // WaitingGroupState.cs's own real SetPlayQueue() failing a
-        // real per-user library visibility check on some other group
-        // member (AllUsersHaveAccessToQueue(), confirmed against real
-        // source) silently returns to the previous state instead,
-        // one real server side log line neither this account nor
-        // anyone else in the group ever sees. No real command or
-        // queue update ever arrives either way, so this is the one
-        // real signal available: still nothing on the real queue a
-        // few real seconds after a request that itself reported
-        // success means it quietly failed.
-        window.setTimeout(function () {
-          if (!syncPlaylistItemId) {
-            showPlayerToast('Group Watch could not sync this. Check everyone in the group has library access to this title.');
-          }
-        }, 6000);
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not publish Group Watch queue', err);
-      });
-  }
-
-  // Covers both real gaps together now: syncPlaylistItemId missed at
-  // mount time (a group joined, or already sitting idle, before this
-  // exact title was ever put on its own real queue), and the group
-  // itself only resolving after mount (the race explained above).
-  unsubscribeSyncGroupChange = onSyncGroupChange(function () {
-    const target = getCurrentPlaylistTarget();
-    syncPlaylistItemId = target && target.itemId === itemId ? target.playlistItemId : null;
-    // The gate below on 'waiting'/'canplay' just opened, real feedback
-    // found live: this video's own 'canplay' very often already fired,
-    // gate still closed, before this exact real round trip (SetNewQueue,
-    // then this PlayQueue broadcast coming back) ever completes, and
-    // 'canplay' does not fire again on its own once a video is already
-    // playing through cleanly. Left as only the two listeners below,
-    // the sender's own real Ready signal could go unsent forever, the
-    // server's own WaitingGroupState.cs waiting on it right alongside
-    // everyone else's, confirmed live: a group stuck in Waiting no
-    // matter how many real Play requests follow. Checking the video's
-    // own real current state the moment this gate opens covers exactly
-    // that missed-event case without waiting on one that may not come.
-    if (syncPlaylistItemId && video.readyState >= 3) {
-      notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
-    }
-    maybePublishQueue();
-  });
-
-  maybePublishQueue();
-
-  // Real SyncPlay's own group wide buffering signal: every member
-  // reports Buffering the moment its own player actually stalls and
-  // Ready once it can play again, the server holding a group's own
-  // Unpause back until every member has reported Ready, same real
-  // mechanism a slow connection already gets from a native client.
-  // Wired unconditionally, same real reason as the command listener
-  // above: both already check syncPlaylistItemId themselves first.
-  video.addEventListener('waiting', function () {
-    if (!syncPlaylistItemId) return;
-    notifyBuffering(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
-  });
-  video.addEventListener('canplay', function () {
-    if (!syncPlaylistItemId) return;
-    notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
-  });
-
   // A real function declaration, hoisted, rather than the plain arrow
   // this used to just return directly: the video's own error listener
   // above now calls this same real teardown itself on a dead first
@@ -2766,32 +1875,6 @@ export async function renderPlayer(root, params) {
   function cleanup() {
     if (screenTornDown) return;
     screenTornDown = true;
-    exitFullscreenOnCleanup();
-    // Real feedback: this reader closing out of a synced session used
-    // to leave the rest of the group's own playback running with
-    // nobody actually reporting position for this exact
-    // PlaylistItemId any more, real client behavior confirmed live as
-    // "doesn't pause for the other person". requestSyncPause() is the
-    // same real request the manual pause control already sends
-    // (further up this same file); the broadcast it triggers reaches
-    // every other real member through their own onSyncCommand handler
-    // exactly like any other real pause does, no special case needed
-    // on their own end for this to work. Fired before
-    // unsubscribeSyncCommand below tears down this reader's own real
-    // listener, though this reader leaving is exactly why its own
-    // local reaction to that broadcast no longer matters.
-    if (syncPlaylistItemId) {
-      requestSyncPause().catch(function () {});
-    }
-    clearScheduledSync();
-    if (unsubscribeSyncCommand) unsubscribeSyncCommand();
-    if (unsubscribeSyncGroupChange) unsubscribeSyncGroupChange();
-    stopChatOnCleanup();
-    video.textTracks.removeEventListener('change', enforceSubtitleTrackModes);
-    if (subtitleStyleTag) {
-      subtitleStyleTag.remove();
-      subtitleStyleTag = null;
-    }
     window.clearInterval(progressInterval);
     if (upNextCountdownInterval) window.clearInterval(upNextCountdownInterval);
     if (hasReportedStart) {

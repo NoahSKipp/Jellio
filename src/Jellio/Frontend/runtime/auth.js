@@ -20,7 +20,6 @@ const NATIVE_CREDENTIALS_KEY = 'jellyfin_credentials';
 
 const CLIENT_NAME = 'Jellio';
 const CLIENT_VERSION = '0.1.0';
-const DEVICE_NAME = 'Browser';
 
 function readJson(key) {
   try {
@@ -154,45 +153,10 @@ async function syncNativeCredentials(accessToken, user) {
 // "the exact mechanism that later got pulled"): that risk was
 // specifically in re-running validateAuthentication() over the
 // network, which this never does.
-// Real bug, found live: setAuthenticationInfo above only ever touches
-// the token and user id (confirmed against real apiClient.js source,
-// serverInfo().AccessToken/UserId, nothing else), leaving _deviceId/
-// _appName/_deviceName/_appVersion sitting at whatever native's own
-// ApiClient construction originally set them to. runtime/syncPlay.js
-// deliberately reuses this exact same window.ApiClient instance for
-// every real SyncPlay REST call and its own WebSocket (that file's own
-// header explains why), so once this runtime's own login has swapped
-// the token underneath it, every one of those real REST calls sent a
-// real Authorization header pairing native's own stale Client/DeviceId
-// with this runtime's own fresh Token, real feedback traced all the
-// way to a live server side Devices list: two concurrently active
-// entries for the same account, one "Jellyfin Web", one "Jellio",
-// both genuinely touched by the same browser tab. Confirmed against
-// real Jellyfin source (Jellyfin.Server.Implementations/Security/
-// AuthorizationContext.cs's own GetAuthorizationInfoFromDictionary):
-// a REST call's own Client/DeviceId come straight from that header,
-// but a real browser WebSocket cannot send custom headers at all, so
-// its own connection resolves Client/DeviceId a different way
-// entirely, a server side Device row looked up by the token alone,
-// which correctly found this runtime's own real device given the
-// swapped token above. Two genuinely different real sessions for one
-// real browser tab, confirmed live: a SyncPlayGroupUpdate broadcast
-// addressed to the REST-resolved session never once reached the
-// WebSocket-resolved one. No public setter exists for any of these
-// four fields (confirmed against real apiClient.js source, deviceId()/
-// appName()/deviceName()/appVersion() are all plain getters), so this
-// reaches the same private fields setAuthenticationInfo above already
-// does, keeping window.ApiClient's own real identity internally
-// consistent with the token this runtime just gave it instead of half
-// native's, half this runtime's own.
 function syncNativeApiClientState(accessToken, user) {
   try {
     if (window.ApiClient && typeof window.ApiClient.setAuthenticationInfo === 'function') {
       window.ApiClient.setAuthenticationInfo(accessToken, user.Id);
-      window.ApiClient._deviceId = getDeviceId();
-      window.ApiClient._appName = CLIENT_NAME;
-      window.ApiClient._deviceName = DEVICE_NAME;
-      window.ApiClient._appVersion = CLIENT_VERSION;
     }
   } catch (err) {
     // Native's own guard stays wrong for the rest of this page's life
@@ -265,7 +229,7 @@ export function forgetRememberedUser(userId) {
 function buildAuthHeaderForToken(token) {
   const parts = [
     'Client="' + CLIENT_NAME + '"',
-    'Device="' + DEVICE_NAME + '"',
+    'Device="Browser"',
     'DeviceId="' + getDeviceId() + '"',
     'Version="' + CLIENT_VERSION + '"',
   ];
@@ -355,7 +319,7 @@ export function buildAuthHeader() {
   const token = getAccessToken();
   const parts = [
     'Client="' + CLIENT_NAME + '"',
-    'Device="' + DEVICE_NAME + '"',
+    'Device="Browser"',
     'DeviceId="' + getDeviceId() + '"',
     'Version="' + CLIENT_VERSION + '"',
   ];
@@ -379,73 +343,13 @@ export function getAuthHeaders() {
 // signed in here before still gets a real profile grid instead of a
 // bare username field, the same first-run experience native's own
 // login page already gives every user who opted into it.
-// Throws rather than swallowing a failed request to an empty array:
-// both real call sites below need to tell "the server said zero users
-// are public" apart from "this request never actually reached the
-// server", pruneHiddenRememberedUsers's own header explains why that
-// real distinction matters.
 export async function getPublicUsers() {
   const response = await fetch(getServerAddress() + '/Users/Public', {
     headers: { Accept: 'application/json' },
   });
-  if (!response.ok) throw new Error('Failed to load public users');
+  if (!response.ok) return [];
   const result = await response.json();
   return Array.isArray(result) ? result : [];
-}
-
-// Real bug, found live against a real screenshot: a remembered user
-// (this device's own local Quick Sign-in cache) kept showing up in
-// both screens/login.js's own grid and components/accountSwitcher.js's
-// own Switch Profile grid even after an admin later flipped that same
-// real user's own "Display this user on the login screen" toggle off
-// server side (UserPolicy.IsHidden), since neither screen ever
-// cross-checked a cached tile against a fresh real answer once it was
-// remembered. getPublicUsers() already comes back with IsHidden
-// already enforced (its own header explains why), so a remembered id
-// no longer present in it is exactly a user who either got hidden or
-// got deleted since this device last remembered them: pruned from the
-// real local cache outright here, not just skipped for one render, so
-// neither screen keeps re-checking a stale tile every time it opens.
-//
-// Only ever meant to be called once a real fresh publicUsers fetch
-// actually succeeded (both real call sites only reach this inside
-// their own try, getPublicUsers() above throwing instead of quietly
-// returning [] on a failed request is what makes that real distinction
-// possible): a device offline or a server briefly down must never
-// wipe out its own only real way back in over a request that never
-// even reached the server.
-export function pruneHiddenRememberedUsers(publicUsers) {
-  const publicById = {};
-  publicUsers.forEach(function (user) {
-    if (user && user.Id) publicById[user.Id] = user;
-  });
-  const remembered = readRemembered();
-  let changed = false;
-  Object.keys(remembered).forEach(function (userId) {
-    const live = publicById[userId];
-    if (!live) {
-      delete remembered[userId];
-      changed = true;
-      return;
-    }
-
-    // Same real gap this function's own header already describes for
-    // presence, just for the two display fields too: a remembered tile's
-    // own primaryImageTag was a one time snapshot from whenever this
-    // device last signed in as that user, real bug found live, a smiley
-    // assigned server side afterward never showed here since nothing
-    // ever wrote a fresher value back. Already inside the one real
-    // caller guaranteed a successful fresh fetch, same guard presence
-    // pruning above already relies on.
-    const freshName = live.Name || '';
-    const freshTag = live.PrimaryImageTag || null;
-    if (remembered[userId].name !== freshName || remembered[userId].primaryImageTag !== freshTag) {
-      remembered[userId].name = freshName;
-      remembered[userId].primaryImageTag = freshTag;
-      changed = true;
-    }
-  });
-  if (changed) writeRemembered(remembered);
 }
 
 // Real Jellyfin endpoint, checked against apps/legacy/controllers/session/
