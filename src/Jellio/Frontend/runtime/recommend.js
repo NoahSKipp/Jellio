@@ -206,15 +206,17 @@ function dedupe(items, exclude) {
   return kept;
 }
 
-// Scores and picks one row per seed, in order: pick() reads and then
-// adds to the same exclude object, and running it concurrently would
-// have every row scoring against the same, still-empty exclusion set.
-// Fetching each seed's own candidates has no such dependency on
-// exclude at all though, only pick() reads that, so every seed's own
-// real network round trip fires together here rather than the second
-// seed waiting on the first one's response before it even starts.
-async function buildSeedRows(seeds, titleFor, exclude) {
-  const entriesPerSeed = await Promise.all(
+// Fetching each seed's own candidates has no dependency on exclude at
+// all, only pick() below reads that, so every seed's own real network
+// round trip fires together here rather than the second seed waiting
+// on the first one's response before it even starts. Split from the
+// actual scoring/picking below (buildRecommendationRows' own real
+// reason for the split): that part does read and mutate the shared
+// exclude object and has to run in a fixed real order across every
+// row family, but the fetch that feeds it does not, and used to be
+// stuck behind that same ordering for no real reason of its own.
+function fetchSeedCandidates(seeds) {
+  return Promise.all(
     seeds.map(function (seed) {
       return getRecommendationCandidates(seed, POOL_LIMIT).catch(function (err) {
         console.warn('Jellio: could not load recommendation candidates', err);
@@ -222,7 +224,12 @@ async function buildSeedRows(seeds, titleFor, exclude) {
       });
     }),
   );
+}
 
+// Scores and picks one row per seed, in order: pick() reads and then
+// adds to the same exclude object, and running it concurrently would
+// have every row scoring against the same, still-empty exclusion set.
+function pickSeedRows(seeds, entriesPerSeed, titleFor, exclude) {
   const rows = [];
   for (let i = 0; i < seeds.length; i++) {
     const entries = entriesPerSeed[i];
@@ -301,32 +308,46 @@ function topPeople(history) {
 // real title that says so; MAX_GENRE_ROWS staying at 1 is what keeps
 // that real title from ever needing a second, differently named row to
 // share the page with.
-async function buildTopGenreRows(history, exclude) {
-  const genres = topGenres(history).slice(0, MAX_GENRE_ROWS);
+function fetchGenreItemsList(genres) {
+  return Promise.all(
+    genres.map(function (genre) {
+      return getGenreItems(null, 'Movie,Series', genre, ROW_SIZE).catch(function (err) {
+        console.warn('Jellio: could not load top genre row', err);
+        return null;
+      });
+    }),
+  );
+}
+
+function buildGenreRows(genres, itemsPerGenre, exclude) {
   const rows = [];
   for (let i = 0; i < genres.length; i++) {
-    const genre = genres[i];
-    try {
-      const items = dedupe((await getGenreItems(null, 'Movie,Series', genre, ROW_SIZE)).filter(notPlayed), exclude);
-      if (items.length) rows.push({ title: 'Top Picks for You', items: items });
-    } catch (err) {
-      console.warn('Jellio: could not load top genre row', err);
-    }
+    const raw = itemsPerGenre[i];
+    if (!raw) continue;
+    const items = dedupe(raw.filter(notPlayed), exclude);
+    if (items.length) rows.push({ title: 'Top Picks for You', items: items });
   }
   return rows;
 }
 
-async function buildTopPersonRows(history, exclude) {
-  const people = topPeople(history).slice(0, MAX_PERSON_ROWS);
+function fetchPersonItemsList(people) {
+  return Promise.all(
+    people.map(function (person) {
+      return getPersonItems(person.id, ROW_SIZE).catch(function (err) {
+        console.warn('Jellio: could not load top person row', err);
+        return null;
+      });
+    }),
+  );
+}
+
+function buildPersonRows(people, itemsPerPerson, exclude) {
   const rows = [];
   for (let i = 0; i < people.length; i++) {
-    const person = people[i];
-    try {
-      const items = dedupe((await getPersonItems(person.id, ROW_SIZE)).filter(notPlayed), exclude);
-      if (items.length) rows.push({ title: 'More with ' + person.name, items: items });
-    } catch (err) {
-      console.warn('Jellio: could not load top person row', err);
-    }
+    const raw = itemsPerPerson[i];
+    if (!raw) continue;
+    const items = dedupe(raw.filter(notPlayed), exclude);
+    if (items.length) rows.push({ title: 'More with ' + people[i].name, items: items });
   }
   return rows;
 }
@@ -357,16 +378,37 @@ export async function buildRecommendationRows(exclude) {
   }
 
   const completedSeeds = history.filter(notDisliked).slice(0, SEED_LIMIT);
-  const completedRows = await buildSeedRows(completedSeeds, function (seed) {
+  const nextUpSeeds = nextUp.filter(notDisliked);
+  const genres = topGenres(history).slice(0, MAX_GENRE_ROWS);
+  const people = topPeople(history).slice(0, MAX_PERSON_ROWS);
+
+  // Real bug, audit-found: each of these four candidate pools is an
+  // independent real network fetch, none of them reading or needing
+  // exclude, only the scoring/dedupe below does. Used to fire one
+  // whole row family at a time regardless, each one's own fetch
+  // waiting on the previous family's fetch and pick both finishing
+  // first. Fetched together here instead, the scoring/dedupe phase
+  // below still runs strictly in the same real order against the same
+  // shared exclude object, same real priority and same real dedupe
+  // guarantee as before, just no longer paying for a network wait
+  // between every stage.
+  const [completedEntries, nextUpEntries, genreItemsList, personItemsList] = await Promise.all([
+    fetchSeedCandidates(completedSeeds),
+    fetchSeedCandidates(nextUpSeeds),
+    fetchGenreItemsList(genres),
+    fetchPersonItemsList(people),
+  ]);
+
+  const completedRows = pickSeedRows(completedSeeds, completedEntries, function (seed) {
     return 'Because you watched ' + seed.Name;
   }, exclude);
 
-  const nextUpRows = await buildSeedRows(nextUp.filter(notDisliked), function (seed) {
+  const nextUpRows = pickSeedRows(nextUpSeeds, nextUpEntries, function (seed) {
     return "Because you're watching " + (seed.SeriesName || seed.Name);
   }, exclude);
 
-  const genreRows = await buildTopGenreRows(history, exclude);
-  const personRows = await buildTopPersonRows(history, exclude);
+  const genreRows = buildGenreRows(genres, genreItemsList, exclude);
+  const personRows = buildPersonRows(people, personItemsList, exclude);
 
   // Real feedback: "Top Picks for You" (genreRows' own aggregate row)
   // should sit right after Studio Hubs, ahead of every per-title

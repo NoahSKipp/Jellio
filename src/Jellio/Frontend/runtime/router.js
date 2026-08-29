@@ -45,6 +45,26 @@ export function currentHash() {
   return window.location.hash || '#/home';
 }
 
+// navigateTo()'s own Emby.Page.show() call routes through native's real
+// react-router history, and native's own route matcher has no entry for
+// any hash this runtime owns (#/item, #/play, its own library and
+// service routes, none of them a real native path). Confirmed live:
+// that unmatched transition still runs its own "page not found" view
+// far enough to set document.title before this runtime's own screen
+// content ever paints over it, real page content never visible (this
+// runtime's own #jellioRoot already covers it) but the browser tab
+// itself stayed on native's own title the whole time regardless,
+// reported live as every movie and show reading "Page Not Found" in
+// the tab. Called once, synchronously, the moment a route change is
+// underway (app.js's own runSync, before that route's screen has even
+// started fetching), so it always overwrites whatever native's own
+// failed transition just set; a screen with a real title of its own
+// (a movie, a show, an episode) calls this again once its own fetch
+// resolves and wins the same way, last write standing.
+export function setTitle(text) {
+  document.title = text || 'Jellio';
+}
+
 // Splits "#/movies?topParentId=X&collectionType=movies" into its path
 // ("movies") and query params, the same shape every route this runtime
 // owns needs to read its own arguments from.

@@ -3,7 +3,7 @@
 // current route. An unmigrated route (no entry in SCREENS) leaves native
 // jellyfin-web showing underneath, untouched, real fallback rather than a
 // broken page.
-import { isAuthenticated, loginScreenBypassed } from './runtime/auth.js';
+import { isAuthenticated, loginScreenBypassed, clearSession } from './runtime/auth.js';
 import {
   getUserViews,
   getCollections,
@@ -11,6 +11,7 @@ import {
   getHeroCandidates,
   getImageUrl,
   itemTypesForKind,
+  invalidateNavCaches,
 } from './runtime/api.js';
 import { renderLogin } from './screens/login.js';
 import { renderHome, preloadHomeSections } from './screens/home.js';
@@ -21,14 +22,23 @@ import { renderPlayer } from './screens/player.js';
 import { renderService } from './screens/service.js';
 import { renderSettings } from './screens/settings.js';
 import { renderPerson } from './screens/person.js';
+import { renderProfile } from './screens/profile.js';
+import { renderFeed } from './screens/feed.js';
 import { renderCalendar } from './screens/calendar.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
-import { mountSeasonalEffects } from './components/seasonalEffects.js';
+import { getPrimaryNavLinks } from './components/navShared.js';
+import { mountSeasons } from './components/seasons.js';
 import { startNowPlaying } from './components/nowPlaying.js';
+import { startNotifications } from './components/notifications.js';
+import { startAchievementNotifier } from './components/achievementNotifier.js';
+import { loadGrouplistSetting } from './runtime/grouplistSettings.js';
+import { startSyncPlay } from './runtime/syncPlay.js';
+import { startGroupWatchInvites } from './components/groupWatchInvites.js';
 import { showSplash, hideSplash, setSplashTotal, reportSplashStep } from './components/splash.js';
+import { showToast } from './components/toast.js';
 import { buildLibraryCoverflow } from './components/libraryCoverflow.js';
-import { onRouteChange, parseRoute } from './runtime/router.js';
+import { onRouteChange, parseRoute, setTitle, navigateTo } from './runtime/router.js';
 
 const ROOT_ID = 'jellioRoot';
 
@@ -69,6 +79,8 @@ const SCREENS = {
   service: renderService,
   account: renderSettings,
   person: renderPerson,
+  profile: renderProfile,
+  feed: renderFeed,
   calendar: renderCalendar,
   movies: renderLibrary,
   tv: renderLibrary,
@@ -186,6 +198,26 @@ function hide() {
 // stopped position before the next screen, or native rendering, takes
 // over). Screens with nothing to clean up simply return nothing.
 let activeCleanup = null;
+
+// Real bug, found live: navigateTo()'s own Emby.Page.show() fallback
+// (runtime/router.js's own header explains why) can fire two separate
+// route change notifications for one real navigateTo() call, both
+// landing on the exact same final hash, sync()'s own coalescing below
+// turning the second one into a real extra runSync() rather than
+// dropping it. Every screen re-runs every one of its own real side
+// effects on every mount, the player screen's own publishSyncQueue()
+// among them, so a second real mount for a route already active
+// duplicated a real SetNewQueue call and a real Group Watch chat
+// message right along with it, confirmed live from chat carrying two
+// identical watch cards for one real Play. Tracked as a plain string
+// key rather than reusing route.params itself: URLSearchParams has no
+// real equality of its own, and every screen this runs already trusts
+// route.params fresh off parseRoute() regardless.
+let lastRenderedRouteKey = null;
+
+function routeKey(route) {
+  return route.path + '?' + route.params.toString();
+}
 
 function teardownActiveScreen() {
   if (activeCleanup) {
@@ -543,9 +575,80 @@ async function preloadInitialDataTasks() {
   await withTimeout(runTrackedTasks(tasks), PRELOAD_TIMEOUT_MS);
 }
 
+// Gelato's own catalog import (the Anime nav entry's real source,
+// components/navShared.js's own getPrimaryNavLinks explains why) can
+// still be running well after this runtime's own first render already
+// built both rails from whatever collections existed at that exact
+// moment, real boot race reported live: Anime missing from the sidebar
+// and mobile nav until an actual hard reload gave Gelato enough real
+// wall clock time to finish first, confirmed live that a plain wait
+// fixes it too, no reload needed at all once enough time has passed.
+// A single 20s recheck was not consistently enough either, confirmed
+// live the same way the search/detail screen's own single 2s retry
+// (screens/detail.js's own header) was not enough for a title's real
+// first import (23s end to end there): a full catalog import is real
+// work of its own, no fixed ceiling on how long it takes. Rechecking
+// up to NAV_RECHECK_MAX_ATTEMPTS times, 10s apart, covers the same
+// real minute of wall clock at a finer grain instead of gambling on
+// one fixed window; invalidate the two nav-relevant cache entries and
+// rebuild both rails each time, the same clearCache() + dataset reset
+// pattern components/accountSwitcher.js's own switchToUser already
+// uses for the same real job.
+const NAV_RECHECK_DELAY_MS = 10000;
+const NAV_RECHECK_MAX_ATTEMPTS = 6;
+
+// Real regression, found live off the 10s-grain change above: every
+// attempt used to delete both rails' own dataset.jellioBuilt and
+// rebuild unconditionally, whether or not Gelato's own catalog import
+// had actually finished, so the reader watched the whole rail flash
+// empty and repaint up to six times a minute instead of three. Only
+// the reader's own actual link set (Anime showing up chief among them)
+// ever needs a rebuild; a signature of the hashes this recheck would
+// otherwise rebuild from lets every attempt that found nothing new
+// skip the teardown entirely.
+let lastNavLinksSignature = null;
+
+function navLinksSignature(links) {
+  return links
+    .map(function (link) {
+      return link.hash;
+    })
+    .join('|');
+}
+
+function scheduleNavRecheck(attemptsLeft) {
+  const remaining = attemptsLeft == null ? NAV_RECHECK_MAX_ATTEMPTS : attemptsLeft;
+  window.setTimeout(function () {
+    invalidateNavCaches();
+    getPrimaryNavLinks()
+      .then(function (links) {
+        const signature = navLinksSignature(links);
+        if (signature === lastNavLinksSignature) return null;
+        lastNavLinksSignature = signature;
+
+        const root = getRoot();
+        const sidebarMount = root.querySelector('.jellio-sidebar-mount');
+        const mobileNavMount = root.querySelector('.jellio-mobile-nav-mount');
+        if (sidebarMount) delete sidebarMount.dataset.jellioBuilt;
+        if (mobileNavMount) delete mobileNavMount.dataset.jellioBuilt;
+        return Promise.all([
+          sidebarMount ? renderSidebar(sidebarMount) : null,
+          mobileNavMount ? renderMobileNav(mobileNavMount) : null,
+        ]);
+      })
+      .catch(function (err) {
+        console.warn('Jellio: nav recheck failed', err);
+      })
+      .finally(function () {
+        if (remaining - 1 > 0) scheduleNavRecheck(remaining - 1);
+      });
+  }, NAV_RECHECK_DELAY_MS);
+}
+
 async function runSync() {
   try {
     if (!isAuthenticated()) {
+      lastRenderedRouteKey = null;
       if (loginScreenBypassed()) {
         teardownActiveScreen();
         hide();
@@ -558,24 +661,63 @@ async function runSync() {
     if (!preloaded) {
       preloaded = true;
       await preloadInitialData();
+      // Real regression, found live: awaited right here, this sat
+      // between hideSplash() above (inside preloadInitialData's own
+      // finally) and root.classList.add('jellio-root-visible') further
+      // below, the one real line that actually covers native
+      // jellyfin-web. getUserViews() specifically is not warm yet on
+      // the common home route (only getCollections is, preloadInitialData's
+      // own tracked task list), so this was a real, uncached network
+      // round trip landing in a gap neither the splash nor #jellioRoot
+      // covered, native jellyfin-web visible underneath for exactly as
+      // long as that request took. Fired in the background instead:
+      // scheduleNavRecheck()'s own first attempt is a full
+      // NAV_RECHECK_DELAY_MS away, real time this same call was never
+      // going to need to actually resolve in.
+      getPrimaryNavLinks()
+        .then(function (links) {
+          lastNavLinksSignature = navLinksSignature(links);
+        })
+        .catch(function () {
+          // Left null: scheduleNavRecheck()'s own first attempt just
+          // treats that the same as a real first-ever check and rebuilds
+          // once, same fallback shape as before this signature existed.
+        });
+      scheduleNavRecheck();
     }
 
     const route = parseRoute();
     const screen = SCREENS[route.path];
 
     if (!screen) {
+      lastRenderedRouteKey = null;
       teardownActiveScreen();
       hide();
       return;
     }
 
+    const key = routeKey(route);
+    if (key === lastRenderedRouteKey) return;
+    lastRenderedRouteKey = key;
+
     teardownActiveScreen();
     startNowPlaying();
+    startNotifications();
+    startAchievementNotifier();
+    startSyncPlay();
+    startGroupWatchInvites();
+    loadGrouplistSetting();
+    // Overwrites whatever native's own unmatched route transition just
+    // set the tab to (router.js's own setTitle() header explains why
+    // that happens on every single route this runtime owns); a screen
+    // with a real title of its own sets it again once its own fetch
+    // resolves and wins the same way.
+    setTitle('Jellio');
 
     const root = getRoot();
     root.classList.add('jellio-root-visible');
     root.classList.toggle('jellio-root-fullscreen', FULLSCREEN_ROUTES.has(route.path));
-    mountSeasonalEffects(root);
+    mountSeasons(root);
     applyResponsiveNav();
 
     const sidebarMount = root.querySelector('.jellio-sidebar-mount');
@@ -601,8 +743,46 @@ async function runSync() {
     activeCleanup = typeof results[0] === 'function' ? results[0] : null;
     fadeInContent(content);
   } catch (err) {
-    console.warn('Jellio: screen render failed, falling back to native page', err);
-    hide();
+    // Real bug, found live: revoking this account's own token server
+    // side (deleting its device from the Dashboard, or any other real
+    // revocation) left isAuthenticated() above still reporting true,
+    // since that check is purely local (auth.js's own header explains
+    // why: no server round trip). The very next authenticated fetch
+    // this function makes then fails with a real 401, caught right
+    // here same as any other failure, and used to fall back to native
+    // jellyfin-web, whose own credentials are just as stale, real
+    // feedback: native's own login screen showing instead of this
+    // runtime's own. Clearing the stale local session and re-running
+    // sync() routes back to this runtime's own login screen instead,
+    // the same real screen a visit that was never logged in already
+    // gets, rather than degrading to a native fallback that cannot log
+    // back in as this runtime's own account either.
+    if (err && err.status === 401) {
+      clearSession();
+      sync();
+      return;
+    }
+    // Real bug, live-reported: hide() here used to fall back to native
+    // jellyfin-web, the same real degradation this file's own top
+    // comment documents, but that fallback only actually works for a
+    // route this runtime never claimed at all (no SCREENS entry),
+    // where native's own router still owns it and can render something
+    // real. This catch only ever runs once screen above already
+    // resolved off SCREENS, an owned route, and router.js's own header
+    // already confirms Emby.Page.show()'s own earlier navigation into
+    // it leaves native's own router stuck on a route it does not
+    // recognize either: a real "page not found" shell, not a working
+    // fallback, reported live from a Group Watch pick's own watch
+    // card. Left visible on whatever the previous real screen was
+    // instead, a toast the actual feedback a reader gets. Also a real
+    // bug on its own: lastRenderedRouteKey was already set to this
+    // failed route's own key above, so retrying (the exact same link
+    // again, hash unchanged) hit the "already rendered" fast path
+    // further up and did nothing at all, not even attempt the render
+    // again. Cleared here so a retry genuinely retries.
+    console.warn('Jellio: screen render failed', err);
+    lastRenderedRouteKey = null;
+    showToast('Could not load that page. Try again.');
   }
 }
 
@@ -616,6 +796,43 @@ onRouteChange(sync);
 // finishes, so the very first render happens as soon as a session is
 // real rather than waiting on a hashchange that may never come.
 document.addEventListener('jellio:session-captured', sync);
+
+// runtime/api.js's own real choke point for every authenticated call
+// this runtime makes: a 401 there (a token revoked server side,
+// deleting its device from the Dashboard most of all) already cleared
+// the stale local session by the time this fires, that file's own
+// header explains why it cannot call sync() directly. A fresh sync()
+// here lands back on isAuthenticated() now reporting false, this
+// runtime's own login screen, the same one runSync()'s own catch below
+// already tries for a 401 that reaches it directly, this one reaching
+// every real caller regardless of whether it individually re-throws.
+document.addEventListener('jellio:session-expired', sync);
+
+// Real convenience, same category screens/player.js's own keyboard
+// shortcuts already are: "/" jumps straight to search from anywhere in
+// the app, the same real convention most search heavy web apps already
+// use. Focuses an already mounted search input directly rather than
+// always navigating fresh (a reader already on #/search who clicked a
+// result card, most of all), only actually routing there when nothing
+// is mounted yet. Skipped while the reader is already typing anywhere
+// (an input, a textarea, a contenteditable bio field) or signed out,
+// this runtime's own login screen has no real use for it.
+function isGlobalShortcutTypingTarget(target) {
+  if (!target) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || !!target.isContentEditable;
+}
+document.addEventListener('keydown', function (event) {
+  if (event.key !== '/' || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (!isAuthenticated() || isGlobalShortcutTypingTarget(event.target)) return;
+  event.preventDefault();
+  const existingInput = document.querySelector('.jellio-search-input');
+  if (existingInput) {
+    existingInput.focus();
+  } else {
+    navigateTo('#/search');
+  }
+});
 
 // Best effort: a report sent from here can still be dropped by the
 // browser before it lands, the same real limitation every other Jellyfin

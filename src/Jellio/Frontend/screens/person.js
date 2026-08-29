@@ -28,6 +28,12 @@ export async function renderPerson(root, params) {
 
   renderLoading(root);
 
+  // Started alongside getPerson below rather than only once it
+  // resolves: both only ever need personId, no real dependency on
+  // each other, but the grid used to not even start fetching until
+  // the header's own request had fully round tripped first.
+  const filmographyPromise = getPersonFilmography(personId);
+
   let person;
   try {
     person = await getPerson(personId);
@@ -69,7 +75,7 @@ export async function renderPerson(root, params) {
   root.appendChild(section);
 
   try {
-    const items = await getPersonFilmography(personId);
+    const items = await filmographyPromise;
     appendCardsLazily(grid, items, buildCard);
   } catch (err) {
     console.warn('Jellio: could not load filmography', err);

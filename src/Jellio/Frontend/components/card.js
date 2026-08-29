@@ -9,6 +9,8 @@ import {
   toggleWatchlist,
   animateCardRemoval,
 } from './cardOptionsMenu.js';
+import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
+import { openListMembershipMenu } from './listMembershipMenu.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -104,6 +106,13 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
   paintWatchlist();
   watchlistButton.addEventListener('click', function (event) {
     event.stopPropagation();
+    if (isGrouplistEnabled()) {
+      openListMembershipMenu(item, watchlistButton.getBoundingClientRect(), function (changed) {
+        paintWatchlist();
+        if (onChanged) onChanged(changed);
+      });
+      return;
+    }
     watchlistButton.disabled = true;
     toggleWatchlist(item, onChanged)
       .then(function () {

@@ -1,14 +1,29 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
 
 public record CalendarEntry(DateTime Date, string Kind, string? Detail);
+
+// Real shape Controllers/CalendarController.cs's own real response
+// already carried before this method existed, moved here rather than
+// left duplicated: Controllers/NotificationsController.cs's own real
+// watchlist scan needs the exact same real per item TMDB lookup this
+// file's own GetMovieEntryAsync/GetSeriesEntryAsync already do, not a
+// second copy of the same real ProviderIds.Tmdb plus SemaphoreSlim
+// throttle logic.
+public record WatchlistCalendarItem(Guid ItemId, string Name, string Type, DateTime Date, string Kind, string? Detail);
 
 /// <summary>
 /// TMDB lookups for Controllers/CalendarController.cs's own real per user
@@ -31,6 +46,61 @@ public class CalendarService(IHttpClientFactory httpClientFactory, ILogger<Calen
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(6);
 
     private readonly ConcurrentDictionary<string, (DateTime CachedAt, CalendarEntry? Entry)> _cache = new();
+
+    // Moved verbatim from Controllers/CalendarController.cs's own
+    // former Get(): a concurrency cap rather than a bare Task.WhenAll,
+    // TMDB's own real rate limit is generous but not unlimited, and a
+    // large watchlist should not fire every request in one real burst.
+    // A cache hit above skips the real round trip entirely regardless
+    // of how many callers (CalendarController, NotificationsController)
+    // ask for the same real item the same day.
+    public async Task<List<WatchlistCalendarItem>> GetWatchlistCalendarAsync(
+        IReadOnlyList<BaseItem> watchlist,
+        string accessToken
+    )
+    {
+        using var throttle = new SemaphoreSlim(8);
+        var entryTasks = watchlist
+            .Select(async item =>
+            {
+                // ProviderIds is a plain Dictionary<string, string> (real
+                // shape confirmed against BaseItem.cs before writing this,
+                // no GetProviderId/MetadataProvider helper actually exists
+                // on this Jellyfin version to wrap it). "Tmdb" is the real
+                // literal key GelatoManager itself writes, confirmed live
+                // against a real sample of imported items rather than
+                // assumed: ProviderIds.Imdb never once present, even on
+                // mainstream titles.
+                if (!item.ProviderIds.TryGetValue("Tmdb", out var tmdbId) || string.IsNullOrEmpty(tmdbId))
+                {
+                    return null;
+                }
+
+                await throttle.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    var entry = item is Movie
+                        ? await GetMovieEntryAsync(tmdbId, accessToken).ConfigureAwait(false)
+                        : item is Series
+                            ? await GetSeriesEntryAsync(tmdbId, accessToken).ConfigureAwait(false)
+                            : null;
+                    if (entry == null)
+                    {
+                        return null;
+                    }
+
+                    return new WatchlistCalendarItem(item.Id, item.Name, item is Movie ? "Movie" : "Series", entry.Date, entry.Kind, entry.Detail);
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            })
+            .ToList();
+
+        var entries = await Task.WhenAll(entryTasks).ConfigureAwait(false);
+        return entries.Where(entry => entry != null).Select(entry => entry!).OrderBy(entry => entry.Date).ToList();
+    }
 
     private HttpClient CreateClient(string accessToken)
     {

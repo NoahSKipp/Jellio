@@ -31,8 +31,12 @@ import {
   updateLanguagePreferences,
   isQuickConnectEnabled,
   authorizeQuickConnect,
+  getProfileSettings,
+  setProfilePrivacy,
+  setGrouplistEnabled,
 } from '../runtime/api.js';
 import { logout } from '../runtime/auth.js';
+import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
@@ -98,7 +102,7 @@ function buildRow(iconName, title, description, control) {
 // real destructive colour (see .jellio-settings-row-danger's own CSS
 // header for why that colour specifically).
 function buildActionRow(iconName, title, description, onClick, danger) {
-  const row = el('div', 'jellio-settings-row' + (danger ? ' jellio-settings-row-danger' : ''));
+  const row = el('div', 'jellio-settings-row jellio-settings-row-action' + (danger ? ' jellio-settings-row-danger' : ''));
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'jellio-settings-row-button';
@@ -219,6 +223,76 @@ function buildPasswordCard() {
 
   wrap.appendChild(form);
   body.appendChild(wrap);
+  return card;
+}
+
+// Real Steam-style ask: on, a reader's own profile picture and banner
+// stay visible to other users, only Controllers/AchievementsController.
+// cs's own badge/stats answer for this user goes dark for anyone but
+// them (server side, GetForUser's own header explains the split).
+// Fetched alongside sleepTimerCard/quickConnectCard in renderSettings
+// below rather than inside buildAccountCategory itself, same real
+// reason those two already are: this card owns its own network round
+// trip, no reason to block the rest of the screen's own first render
+// on it.
+async function buildPrivacyCard() {
+  let isPrivate = false;
+  try {
+    const settings = await getProfileSettings();
+    isPrivate = !!(settings && settings.IsPrivate);
+  } catch (err) {
+    console.warn('Jellio: could not load profile privacy setting', err);
+  }
+
+  const { card, body } = buildCard('visibility_off', 'Privacy', 'Controls what other users can see on your profile.');
+  body.appendChild(
+    buildToggleRow(
+      null,
+      'Private profile',
+      'Your profile picture and banner stay visible. Achievement badges and activity are hidden from other users.',
+      isPrivate,
+      function (checked) {
+        setProfilePrivacy(checked).catch(function (err) {
+          console.warn('Jellio: could not update profile privacy', err);
+        });
+      },
+    ),
+  );
+  return card;
+}
+
+// Off by default, real feedback's own explicit ask: a reader who never
+// turns this on should see nothing different at all, no watchlist
+// button suddenly asking Watchlist or Grouplist on every click. On,
+// components/card.js's own watchlist button and screens/detail.js's
+// own version of it both gain a list picker, screens/home.js's own
+// Watchlist tab gains a Grouplist toggle alongside it, and Group Watch
+// chat gains a ranking session that draws from it.
+async function buildGrouplistCard() {
+  let grouplistEnabled = false;
+  try {
+    const settings = await getProfileSettings();
+    grouplistEnabled = !!(settings && settings.GrouplistEnabled);
+  } catch (err) {
+    console.warn('Jellio: could not load Grouplist setting', err);
+  }
+  setGrouplistEnabledLocal(grouplistEnabled);
+
+  const { card, body } = buildCard('groups', 'Group Watch lists', 'A shared list for picking what to watch together.');
+  body.appendChild(
+    buildToggleRow(
+      null,
+      'Grouplist',
+      'Adds a second list alongside your Watchlist, and a ranking session in Group Watch chat for picking from it together.',
+      grouplistEnabled,
+      function (checked) {
+        setGrouplistEnabledLocal(checked);
+        setGrouplistEnabled(checked).catch(function (err) {
+          console.warn('Jellio: could not update Grouplist setting', err);
+        });
+      },
+    ),
+  );
   return card;
 }
 
@@ -415,7 +489,7 @@ async function buildSleepTimerCard() {
 // app has no equivalent of at all (no addon management, no offline
 // downloads here), nothing to port for those without inventing a
 // feature to go with it.
-function buildAccountCategory(user) {
+function buildAccountCategory(user, privacyCard, grouplistCard) {
   const wrap = el('div', 'jellio-settings-category');
 
   const { card: profileCard, body: profileBody } = buildCard(
@@ -431,6 +505,11 @@ function buildAccountCategory(user) {
       // renderSidebar), so a changed avatar needs this live nudge or
       // it never appears until the next reload.
       openAvatarPicker(refreshProfileAvatar);
+    }),
+  );
+  profileBody.appendChild(
+    buildActionRow('badge', 'View profile', 'Banner, badges and activity.', function () {
+      navigateTo('#/profile');
     }),
   );
   // Real Jellyfin's own UserDto.Policy.IsAdministrator (populated for
@@ -451,6 +530,8 @@ function buildAccountCategory(user) {
   wrap.appendChild(profileCard);
 
   wrap.appendChild(buildPasswordCard());
+  wrap.appendChild(privacyCard);
+  wrap.appendChild(grouplistCard);
 
   const { card: signOutCard, body: signOutBody } = buildCard(null, null, null);
   signOutBody.appendChild(
@@ -527,18 +608,20 @@ export async function renderSettings(root) {
   // round trip and neither one depends on the signed in user's own
   // data at all, so all three fire together here instead of those two
   // cards each waiting on the user fetch to even start.
-  const [userResult, sleepTimerCard, quickConnectCard] = await Promise.all([
+  const [userResult, sleepTimerCard, quickConnectCard, privacyCard, grouplistCard] = await Promise.all([
     getCurrentUser().catch(function (err) {
       console.warn('Jellio: could not load current user', err);
       return null;
     }),
     buildSleepTimerCard(),
     buildQuickConnectCard(),
+    buildPrivacyCard(),
+    buildGrouplistCard(),
   ]);
   const user = userResult;
 
   const categories = [
-    { id: 'account', label: 'Account', build: function () { return buildAccountCategory(user); } },
+    { id: 'account', label: 'Account', build: function () { return buildAccountCategory(user, privacyCard, grouplistCard); } },
     { id: 'playback', label: 'Playback', build: function () { return buildPlaybackCategory(user); } },
     {
       id: 'sessions',

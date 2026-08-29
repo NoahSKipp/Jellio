@@ -6,6 +6,7 @@ import {
   getResumeItems,
   getNextUp,
   getWatchlistItems,
+  getGrouplistItems,
   getCollections,
   collectionKind,
   getCollectionItems,
@@ -31,6 +32,8 @@ import {
   resetHomeCustomization,
 } from '../components/homeCustomizer.js';
 import { navigateTo } from '../runtime/router.js';
+import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
+import { onUserDataChange } from '../runtime/syncPlay.js';
 
 // Real Gelato catalog collections (Trending, Popular, Top Rated, a
 // service's own row, ...) plus genres counted from a sample, ported
@@ -356,13 +359,50 @@ function buildWatchlistSection(title, items) {
   return section;
 }
 
-async function renderWatchlist(root) {
+// components/navShared.js's own Watchlist link still points at the
+// exact same #/home?tab=1 route it always has; a &list=group query
+// param on top of that (this header's own Grouplist tab sets it) is
+// the only thing that picks Grouplist instead, so an old link or a
+// bookmark with no list param at all still lands on Watchlist exactly
+// as before. The toggle itself only ever renders once runtime/
+// grouplistSettings.js's own isGrouplistEnabled() is on; off, this
+// reads exactly as it always has, a plain "Watchlist" title, real
+// feedback's own explicit ask for a reader who never turns it on to
+// see nothing different at all.
+function buildListsHeader(activeList) {
   const header = el('header', 'jellio-home-header');
-  header.appendChild(el('h1', 'jellio-home-greeting', 'Watchlist'));
-  root.appendChild(header);
+  if (!isGrouplistEnabled()) {
+    header.appendChild(el('h1', 'jellio-home-greeting', 'Watchlist'));
+    return header;
+  }
+
+  const toggle = el('div', 'jellio-lists-toggle');
+  const watchlistTab = el('button', 'jellio-lists-toggle-tab', 'Watchlist');
+  watchlistTab.type = 'button';
+  watchlistTab.classList.toggle('jellio-lists-toggle-tab-active', activeList !== 'group');
+  watchlistTab.addEventListener('click', function () {
+    navigateTo('#/home?tab=1');
+  });
+  const grouplistTab = el('button', 'jellio-lists-toggle-tab', 'Grouplist');
+  grouplistTab.type = 'button';
+  grouplistTab.classList.toggle('jellio-lists-toggle-tab-active', activeList === 'group');
+  grouplistTab.addEventListener('click', function () {
+    navigateTo('#/home?tab=1&list=group');
+  });
+  toggle.appendChild(watchlistTab);
+  toggle.appendChild(grouplistTab);
+  header.appendChild(toggle);
+  return header;
+}
+
+async function renderWatchlist(root, activeList) {
+  root.appendChild(buildListsHeader(activeList));
+
+  const isGroup = activeList === 'group' && isGrouplistEnabled();
+  const emptyMessage = isGroup ? 'Nothing on your Grouplist yet.' : 'Nothing on your watchlist yet.';
 
   try {
-    const items = await getWatchlistItems();
+    const items = await (isGroup ? getGrouplistItems() : getWatchlistItems());
     const movies = items.filter(function (item) {
       return item.Type === 'Movie';
     });
@@ -376,10 +416,10 @@ async function renderWatchlist(root) {
     if (seriesSection) root.appendChild(seriesSection);
 
     if (!movieSection && !seriesSection) {
-      root.appendChild(el('p', 'jellio-service-empty', 'Nothing on your watchlist yet.'));
+      root.appendChild(el('p', 'jellio-service-empty', emptyMessage));
     }
   } catch (err) {
-    console.warn('Jellio: could not load watchlist', err);
+    console.warn('Jellio: could not load ' + (isGroup ? 'grouplist' : 'watchlist'), err);
   }
 }
 
@@ -576,7 +616,7 @@ export async function renderHome(root, params) {
   root.className = 'jellio-content jellio-screen-home';
 
   if (params && params.get('tab') === '1') {
-    await renderWatchlist(root);
+    await renderWatchlist(root, params.get('list'));
     return undefined;
   }
 
@@ -584,16 +624,27 @@ export async function renderHome(root, params) {
   root.appendChild(hero.element);
 
   const header = el('header', 'jellio-home-header');
-  const [user] = await Promise.allSettled([getCurrentUser()]);
-  const greeting = greetingFor(new Date().getHours());
-  const name = user.status === 'fulfilled' && user.value ? user.value.Name : '';
   // "Still up" reads as a statement next to a plain name; real feedback
   // wanted the late night bucket specifically to read as the direct
   // address it actually is, a question rather than a flat greeting.
-  const greetingText = name
-    ? greeting + ', ' + name + (greeting === 'Still up' ? '?' : '')
-    : greeting + (greeting === 'Still up' ? '?' : '');
-  header.appendChild(el('h1', 'jellio-home-greeting', greetingText));
+  const greeting = greetingFor(new Date().getHours());
+  const greetingEl = el('h1', 'jellio-home-greeting', greeting + (greeting === 'Still up' ? '?' : ''));
+  header.appendChild(greetingEl);
+  // Real feedback: this whole screen, skeleton included, used to sit
+  // behind this one real getCurrentUser() call before painting
+  // anything at all, just to know a name neither the skeleton nor the
+  // rows below it actually need. Patched in once it resolves instead,
+  // same real cache hit this almost always already is (60s TTL,
+  // preloadInitialData()'s own tracked task list keeps it warm) but no
+  // longer the one thing every real cold cache had to sit through
+  // first regardless.
+  getCurrentUser()
+    .then(function (user) {
+      const name = user && user.Name;
+      if (!name) return;
+      greetingEl.textContent = greeting + ', ' + name + (greeting === 'Still up' ? '?' : '');
+    })
+    .catch(function () {});
 
   // Harbor-style row editor (components/homeCustomizer.js's own header
   // explains the real reasoning): editMode lives only in this real
@@ -675,5 +726,44 @@ export async function renderHome(root, params) {
     applyHomeCustomization(rows, editMode);
   });
 
-  return hero.destroy;
+  // invalidateHomeSections() above already re-derives Continue Watching
+  // fresh on the NEXT visit to this screen; this covers the one real
+  // case that misses, this screen already mounted and visible while a
+  // change happens somewhere else (runtime/syncPlay.js's own
+  // onUserDataChange header explains where from: another open tab,
+  // another device, real Jellyfin's own broadcast to every one of this
+  // reader's own sessions on the same already open socket, no polling
+  // added for it). Only ever updates a row already on screen, never
+  // inserts a fresh one that was not there at mount: the customizer's
+  // own saved order/hidden state (components/homeCustomizer.js) has
+  // nothing to say yet about a row it never saw, real ordering surprises
+  // not worth risking here, the next real visit already covers that
+  // case through the cache bust above.
+  let userDataRefreshTimer = null;
+  function refreshContinueWatchingRow() {
+    const existing = rows.querySelector('[data-jellio-row-key="continue-watching"]');
+    if (!existing) return;
+    getResumeItems(20)
+      .then(function (items) {
+        const row = buildRow('Continue Watching', items, { continueWatching: true });
+        if (!row) {
+          existing.remove();
+          return;
+        }
+        existing.replaceWith(wrapRowForCustomization(row, 'continue-watching'));
+        applyHomeCustomization(rows, editMode);
+      })
+      .catch(function () {});
+  }
+  const unsubscribeUserData = onUserDataChange(function () {
+    invalidateHomeSections();
+    window.clearTimeout(userDataRefreshTimer);
+    userDataRefreshTimer = window.setTimeout(refreshContinueWatchingRow, 500);
+  });
+
+  return function cleanup() {
+    window.clearTimeout(userDataRefreshTimer);
+    unsubscribeUserData();
+    hero.destroy();
+  };
 }
