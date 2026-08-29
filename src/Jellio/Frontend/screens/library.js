@@ -22,6 +22,7 @@ import {
 import { buildRow } from '../components/row.js';
 import { buildLibraryCoverflow } from '../components/libraryCoverflow.js';
 import { showsEditorial } from '../runtime/editorial.js';
+import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 
 // Only a real anime catalog collection whose own name actually says
 // "trending" earns the row badge below: runtime/api.js's own
@@ -85,12 +86,19 @@ function getAnimeItemIds() {
 // the page, the per genre rows below already cover "browse by genre"
 // as fixed shortcuts. value is "SortBy:SortOrder", the same two real
 // query params getLibraryItems already accepts.
+// No Recently added: same real reason screens/home.js's own header
+// already dropped native's own row for this Gelato backed setup,
+// DateCreated is the import instant, identical for every title in a
+// batch, not a real signal. Newest release (real PremiereDate) leads
+// instead now, the closest real equivalent that actually means
+// something, and doubles as this select's own default: the first
+// option here is what loadMainRow below sorts by before any real
+// change event fires.
 const SORT_OPTIONS = [
-  { value: 'DateCreated:Descending', label: 'Recently added' },
+  { value: 'PremiereDate:Descending', label: 'Newest release' },
+  { value: 'CommunityRating:Descending', label: 'Top rated' },
   { value: 'SortName:Ascending', label: 'Name (A-Z)' },
   { value: 'SortName:Descending', label: 'Name (Z-A)' },
-  { value: 'CommunityRating:Descending', label: 'Top rated' },
-  { value: 'PremiereDate:Descending', label: 'Newest release' },
 ];
 
 function el(tag, className, text) {
@@ -357,6 +365,22 @@ function renderAnime(root, collectionType) {
   const rows = el('div', 'jellio-rows');
   root.appendChild(rows);
 
+  // components/navShared.js's own header explains why this page can
+  // now be reached before a real anime catalog has even been
+  // confirmed to exist: the sidebar/mobile nav's own Anime link no
+  // longer waits on that check first. Shown the instant this screen
+  // mounts, same real components/homeSkeleton.js shape screens/home.js
+  // already uses, so a reader landing here mid check sees real loading
+  // rather than a blank page that could as easily read as broken.
+  const skeleton = buildHomeSkeleton();
+  rows.appendChild(skeleton);
+  let skeletonRemoved = false;
+  function removeSkeleton() {
+    if (skeletonRemoved) return;
+    skeletonRemoved = true;
+    if (skeleton.parentNode) skeleton.parentNode.removeChild(skeleton);
+  }
+
   let coverflowDestroy = null;
   // Real bug, found live: mountCoverflow's own cancelled flag (that
   // file's own header explains it) only ever guards the one real gap
@@ -398,6 +422,7 @@ function renderAnime(root, collectionType) {
       }),
     );
     if (cancelled) return;
+    removeSkeleton();
 
     // Real feedback: the coverflow used to feature whichever catalog
     // actually had the most real items behind it, which on a real

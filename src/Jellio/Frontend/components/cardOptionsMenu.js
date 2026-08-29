@@ -12,6 +12,8 @@
 import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { openStreamPicker } from './streamPicker.js';
+import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
+import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
 
 const MENU_ID = 'jellioCardOptionsMenu';
 const HOLD_MS = 500;
@@ -247,6 +249,21 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         },
       ),
     );
+    if (isGrouplistEnabled()) {
+      ensureGrouplistIdsLoaded();
+      const isGrouplisted = isOnGrouplistSync(item.Id);
+      menu.appendChild(
+        buildOption(
+          isGrouplisted ? 'Remove from Grouplist' : 'Add to Grouplist',
+          isGrouplisted ? 'playlist_add_check' : 'playlist_add',
+          function () {
+            toggleGrouplist(item.Id).catch(function (err) {
+              console.warn('Jellio: could not update grouplist state', err);
+            });
+          },
+        ),
+      );
+    }
     const isPlayed = !!(item.UserData && item.UserData.Played);
     menu.appendChild(
       buildOption(isPlayed ? 'Mark as unwatched' : 'Mark as watched', 'check', function () {

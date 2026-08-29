@@ -21,7 +21,7 @@ namespace Jellio.Controllers;
 [Authorize]
 public class GroupWatchChatController(GroupWatchChatService chatService, IUserManager userManager) : ControllerBase
 {
-    public record SendRequest(string Text);
+    public record SendRequest(string Text, Guid? ItemId = null);
 
     [HttpGet("{groupId}/messages")]
     public IActionResult GetMessages([FromRoute] Guid groupId, [FromQuery] long after = 0)
@@ -33,6 +33,7 @@ public class GroupWatchChatController(GroupWatchChatService chatService, IUserMa
             m.UserName,
             m.Text,
             m.Timestamp,
+            m.ItemId,
         });
 
         return Ok(messages);
@@ -59,7 +60,7 @@ public class GroupWatchChatController(GroupWatchChatService chatService, IUserMa
         }
 
         var userName = userManager.GetUserById(userId)?.Username ?? "Someone";
-        var message = chatService.Add(groupId, userId, userName, text);
+        var message = chatService.Add(groupId, userId, userName, text, request.ItemId);
         return Ok(message);
     }
 

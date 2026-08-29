@@ -7,17 +7,11 @@
 // Watch and Now Playing are deliberately not here: real feedback asked
 // for both gone on a phone specifically, screen space neither buys
 // enough use to spend here. The sidebar rail still carries both.
-import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, SETTINGS_LINK } from './navShared.js';
+import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, SETTINGS_LINK, FIXED_NAV_LINKS } from './navShared.js';
 import { getCurrentUser } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { openAccountSwitcher } from './accountSwitcher.js';
 import { openLibraryPicker } from './libraryPicker.js';
-
-// getPrimaryNavLinks() always puts Home/Search/Watchlist first, in that
-// fixed order, before any real library it found (components/navShared.js's
-// own header documents the same real order); everything from this index
-// on is a real library link.
-const FIXED_LINK_COUNT = 3;
 
 // Hysteresis rather than one shared threshold: a single cutoff flickers
 // compact/expanded back and forth for a scroll position sitting right
@@ -231,20 +225,40 @@ export async function renderMobileNav(container) {
   scroller.className = 'jellio-mobile-nav-scroll';
   container.appendChild(scroller);
 
-  const links = await getPrimaryNavLinks();
-  links.slice(0, FIXED_LINK_COUNT).forEach(function (link) {
+  // Real feedback: this whole pill bar used to paint nothing at all
+  // until both Profile's own getCurrentUser() and getPrimaryNavLinks()'s
+  // own /Views call had resolved. FIXED_NAV_LINKS and Settings need
+  // neither (components/sidebar.js's own header on the identical real
+  // fix explains why), so both paint synchronously now; the Library
+  // button (if this reader has any real libraries at all) and Profile
+  // each still slot into their own real final position (Library right
+  // before Settings, Profile last) the instant their own promise
+  // actually resolves, whichever of the two that happens to be first.
+  FIXED_NAV_LINKS.forEach(function (link) {
     scroller.appendChild(buildLink(link));
   });
 
-  const libraryLinks = links.slice(FIXED_LINK_COUNT);
-  if (libraryLinks.length) {
-    scroller.appendChild(buildLibraryButton(libraryLinks));
-  }
+  const settingsLink = buildLink(SETTINGS_LINK);
+  scroller.appendChild(settingsLink);
 
-  scroller.appendChild(buildLink(SETTINGS_LINK));
-  // Real feedback: Profile as the very last item in the row, not
-  // sitting ahead of Settings the way it used to.
-  scroller.appendChild(await buildProfileButton());
+  getPrimaryNavLinks()
+    .then(function (links) {
+      const libraryLinks = links.slice(FIXED_NAV_LINKS.length);
+      if (libraryLinks.length) {
+        scroller.insertBefore(buildLibraryButton(libraryLinks), settingsLink);
+      }
+    })
+    .catch(function (err) {
+      console.warn('Jellio: mobile nav library links failed', err);
+    });
+
+  buildProfileButton()
+    .then(function (button) {
+      scroller.appendChild(button);
+    })
+    .catch(function (err) {
+      console.warn('Jellio: mobile nav profile button failed', err);
+    });
 
   attachScrollCompact(container);
 }

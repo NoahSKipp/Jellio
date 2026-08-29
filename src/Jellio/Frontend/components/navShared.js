@@ -8,7 +8,7 @@
 // (originally sourced from Harbor, harborstremio/harbor, MIT, and
 // NuvioMobile's own real vector drawables, see that file's own header
 // for the full provenance), not re-derived here.
-import { getUserViews, getCollections, getCurrentUser, getUserImageUrl, isAnimeCollection } from '../runtime/api.js';
+import { getUserViews, getCollections, getCurrentUser, getUserImageUrl } from '../runtime/api.js';
 import { currentHash } from '../runtime/router.js';
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -62,6 +62,19 @@ const LIBRARY_ROUTES = {
 // reaches it.
 export const SETTINGS_LINK = { icon: 'settings', label: 'Settings', hash: '#/account' };
 
+// Every session always has these four, no real fetch behind any of
+// them: exported on its own so components/sidebar.js and components/
+// mobileNav.js can both paint them the instant either rail mounts,
+// same real getPrimaryNavLinks() output either surface already used
+// before, just no longer needing to wait on it first for the one part
+// of that output that was never actually conditional on anything.
+export const FIXED_NAV_LINKS = [
+  { icon: 'home', label: 'Home', hash: '#/home' },
+  { icon: 'search', label: 'Search', hash: '#/search' },
+  { icon: 'bookmark_add', label: 'Watchlist', hash: '#/home?tab=1' },
+  { icon: 'dynamic_feed', label: 'Feed', hash: '#/feed' },
+];
+
 function libraryHash(view) {
   const route = view.CollectionType && LIBRARY_ROUTES[view.CollectionType];
   if (route) {
@@ -88,8 +101,8 @@ export function isActive(hash) {
   return hashHasKind === currentHasKind;
 }
 
-// The primary link set both surfaces share: Home/Search/Watchlist, the
-// reader's own real libraries (Movies/Shows/Anime called out first,
+// The primary link set both surfaces share: Home/Search/Watchlist/Feed,
+// the reader's own real libraries (Movies/Shows/Anime called out first,
 // same real constraint components/sidebar.js's own header already
 // documents for Anime specifically), then everything else they have.
 // Group Watch, Now Playing, and the profile/settings pair are each
@@ -99,11 +112,20 @@ export function isActive(hash) {
 // buttons), and profile needs its own async avatar paint neither
 // surface should duplicate a second copy of.
 export async function getPrimaryNavLinks() {
-  const links = [
-    { icon: 'home', label: 'Home', hash: '#/home' },
-    { icon: 'search', label: 'Search', hash: '#/search' },
-    { icon: 'bookmark_add', label: 'Watchlist', hash: '#/home?tab=1' },
-  ];
+  const links = FIXED_NAV_LINKS.slice();
+
+  // Fired here, not awaited: real feedback was that Anime specifically
+  // took visibly longer to appear than Movies/Shows just below, this
+  // whole function's own return blocked on the exact real catalog
+  // check now removed from it (see the Anime block's own header).
+  // Still worth starting this early rather than not at all, cached
+  // (the same one preloadInitialData()'s own "Streaming services" task
+  // already fires) so screens/library.js's own renderAnime(), the real
+  // place that check now lives, likely finds it already warm the
+  // instant a reader actually clicks through.
+  getCollections().catch(function () {
+    return [];
+  });
 
   let views = [];
   try {
@@ -130,23 +152,24 @@ export async function getPrimaryNavLinks() {
   // so AniList titles physically live in the TV library. A real Anime
   // view wins if one was made by hand; otherwise fall back to the TV
   // library tagged with &jellioKind=anime, the same marker
-  // screens/library.js reads, and only when there is really something
-  // to show behind it (a real anime/anilist catalog among the user's
-  // own collections). Ported from the original codebase's own
+  // screens/library.js reads. Ported from the original codebase's own
   // persistentSidebar.js, not re-derived.
+  //
+  // Real feedback: this used to wait on a real getCollections() round
+  // trip first, only ever pushing the fallback link once that had
+  // confirmed a real anime/anilist catalog actually existed, so Anime
+  // sat conspicuously slower to appear than Movies/Shows just above,
+  // sometimes long enough to read as broken rather than loading.
+  // Pushed now the same instant Shows is, the same real bet every
+  // other library link here already makes that its own destination
+  // has something behind it: a server with no real anime catalogs
+  // still gets a real link, screens/library.js's own renderAnime() is
+  // the one place that check, and its own real empty state, actually
+  // lives now, behind a real loading skeleton rather than nothing.
   if (realAnimeView) {
     links.push({ icon: 'anime', label: 'Anime', hash: libraryHash(realAnimeView) });
   } else if (tvView) {
-    try {
-      const collections = await getCollections();
-      const hasAnimeCatalogs = collections.some(isAnimeCollection);
-      if (hasAnimeCatalogs) {
-        links.push({ icon: 'anime', label: 'Anime', hash: libraryHash(tvView) + '&jellioKind=anime' });
-      }
-    } catch (err) {
-      // No anime entry without a confirmed catalog behind it, not fatal
-      // to the rest of the list.
-    }
+    links.push({ icon: 'anime', label: 'Anime', hash: libraryHash(tvView) + '&jellioKind=anime' });
   }
 
   views.forEach(function (view) {
