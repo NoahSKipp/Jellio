@@ -17,89 +17,12 @@ import {
   getGenreItems,
   getCollections,
   getCollectionItems,
-  isAnimeCollection,
 } from '../runtime/api.js';
-import { buildRow } from '../components/row.js';
+import { buildCard } from '../components/card.js';
 import { buildLibraryCoverflow } from '../components/libraryCoverflow.js';
-import { showsEditorial } from '../runtime/editorial.js';
-import { buildHomeSkeleton } from '../components/homeSkeleton.js';
-
-// Only a real anime catalog collection whose own name actually says
-// "trending" earns the row badge below: runtime/api.js's own
-// isAnimeCollection() elsewhere on this page just answers "does this
-// collection belong on the Anime page at all", a much narrower real
-// question.
-const TRENDING_ANIME_NAME = /anilist.*trending|trending.*anilist/i;
 
 const GENRE_ROWS = 6;
 const ROW_LIMIT = 20;
-// components/rowListModal.js's own "browse everything": real full
-// depth for whichever row a reader actually opened, not the same
-// ROW_LIMIT-capped array the row itself already rendered from.
-const ROW_LIST_LIMIT = 500;
-
-// Generous rather than exact: this is a best effort exclusion set, not
-// a real query Jellyfin itself can answer (no CollectionType tells a
-// real anime Series apart from any other one sharing the same real TV
-// library, same constraint renderAnime's own header above already
-// documents). A catalog with more real members than this still misses
-// a few, not worth a second real paginated fetch just to close that
-// last gap.
-const ANIME_ITEM_ID_LIMIT = 500;
-
-// Every real item id any real anime/anilist catalog collection
-// currently claims, best effort: the Shows hub below drops anything in
-// this set from its own real main row and genre rows, real feedback's
-// own direct ask ("if possible show no anime at all in the Shows
-// hub"). Failure of any part of this (no catalogs configured, a
-// request that 404s) resolves to an empty real Set rather than
-// rejecting, the Shows hub renders unfiltered same as before this
-// existed rather than breaking outright over a real best effort
-// feature.
-function getAnimeItemIds() {
-  return getCollections()
-    .then(function (collections) {
-      const animeCollections = collections.filter(isAnimeCollection);
-      if (!animeCollections.length) return new Set();
-      return Promise.allSettled(
-        animeCollections.map(function (collection) {
-          return getCollectionItems(collection.Id, 'tvshows', ANIME_ITEM_ID_LIMIT);
-        }),
-      ).then(function (results) {
-        const ids = new Set();
-        results.forEach(function (result) {
-          if (result.status !== 'fulfilled') return;
-          result.value.forEach(function (item) {
-            if (item && item.Id) ids.add(item.Id);
-          });
-        });
-        return ids;
-      });
-    })
-    .catch(function () {
-      return new Set();
-    });
-}
-
-// Ported in spirit from NuvioWeb's own filterPicker.js: a sort/filter
-// control over the library's own top row rather than a full rebuild of
-// the page, the per genre rows below already cover "browse by genre"
-// as fixed shortcuts. value is "SortBy:SortOrder", the same two real
-// query params getLibraryItems already accepts.
-// No Recently added: same real reason screens/home.js's own header
-// already dropped native's own row for this Gelato backed setup,
-// DateCreated is the import instant, identical for every title in a
-// batch, not a real signal. Newest release (real PremiereDate) leads
-// instead now, the closest real equivalent that actually means
-// something, and doubles as this select's own default: the first
-// option here is what loadMainRow below sorts by before any real
-// change event fires.
-const SORT_OPTIONS = [
-  { value: 'PremiereDate:Descending', label: 'Newest release' },
-  { value: 'CommunityRating:Descending', label: 'Top rated' },
-  { value: 'SortName:Ascending', label: 'Name (A-Z)' },
-  { value: 'SortName:Descending', label: 'Name (Z-A)' },
-];
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -108,37 +31,28 @@ function el(tag, className, text) {
   return node;
 }
 
+function buildRow(title, items) {
+  if (!items || !items.length) return null;
+  const section = el('section', 'jellio-row');
+  section.appendChild(el('h2', 'jellio-row-title', title));
+  const track = el('div', 'jellio-row-track');
+  items.forEach(function (item) {
+    track.appendChild(buildCard(item));
+  });
+  section.appendChild(track);
+  return section;
+}
+
 // Mounts a coverflow only once it has confirmed enough real slides to be
 // worth showing (its own MIN_SLIDES floor), rather than always reserving
 // the space: a library without a carousel is still a working library,
 // same reasoning the original codebase's own fetchItems() documents.
-//
-// Real bug, found live against a real screenshot: components/
-// libraryCoverflow.js's own real candidate fetch (runtime/api.js's own
-// getHeroCandidates) is cached by its own real parentId/itemTypes key,
-// so navigating away from a library screen and back to the exact same
-// one before that real fetch first resolves starts a second real
-// coverflow instance that shares the exact same in-flight real
-// promise. app.js's own teardownActiveScreen() calls this function's
-// own returned destroy, real cleanup for the first instance's own real
-// setInterval, but coverflow.destroy() never touched the real .ready
-// promise chain below it at all: that first instance's own real
-// insertBefore call still fired once the shared promise resolved, real
-// root already repopulated by the second real renderLibrary call by
-// then, landing two real coverflow elements in it at once instead of
-// one. cancelled, set the moment this screen is actually torn down, is
-// checked before that real insert ever runs.
 function mountCoverflow(root, options) {
-  let cancelled = false;
   const coverflow = buildLibraryCoverflow(options);
   coverflow.ready.then(function (mounted) {
-    if (cancelled) return;
     if (mounted) root.insertBefore(coverflow.element, root.firstChild);
   });
-  return function () {
-    cancelled = true;
-    coverflow.destroy();
-  };
+  return coverflow.destroy;
 }
 
 export async function renderLibrary(root, params) {
@@ -177,158 +91,39 @@ export async function renderLibrary(root, params) {
   header.appendChild(heading);
   root.appendChild(header);
 
-  const filterBar = el('div', 'jellio-library-filters');
-  const sortSelect = document.createElement('select');
-  sortSelect.className = 'jellio-library-filter-select';
-  sortSelect.setAttribute('aria-label', 'Sort by');
-  SORT_OPTIONS.forEach(function (option) {
-    const optionEl = document.createElement('option');
-    optionEl.value = option.value;
-    optionEl.textContent = option.label;
-    sortSelect.appendChild(optionEl);
-  });
-  filterBar.appendChild(sortSelect);
-
-  const genreSelect = document.createElement('select');
-  genreSelect.className = 'jellio-library-filter-select';
-  genreSelect.setAttribute('aria-label', 'Genre');
-  const allGenresOption = document.createElement('option');
-  allGenresOption.value = '';
-  allGenresOption.textContent = 'All genres';
-  genreSelect.appendChild(allGenresOption);
-  genreSelect.disabled = true;
-  filterBar.appendChild(genreSelect);
-  root.appendChild(filterBar);
-
   const rows = el('div', 'jellio-rows');
   root.appendChild(rows);
 
-  // Real feedback pointed at Harbor's own Shows tab, a mood-led line
-  // above its carousel that changes with the reader's own time of day:
-  // only the Shows library carries one, Movies has no equivalent real
-  // reference screenshot behind it.
-  const editorial = collectionType === 'tvshows' ? showsEditorial(new Date().getHours()) : null;
-  const destroy = mountCoverflow(root, {
-    parentId,
-    itemTypes: itemType,
-    editorial: editorial,
-    rotate: collectionType === 'tvshows',
-  });
+  const destroy = mountCoverflow(root, { parentId, itemTypes: itemType });
 
-  // Anime has its own dedicated page (renderAnime above); best effort
-  // to keep it off the plain Shows hub too, real feedback's own direct
-  // ask. Not attempted for any other library kind, a Movies or Books
-  // page has no real anime overlap question to answer at all.
-  const excludeAnimeIds = collectionType === 'tvshows' ? getAnimeItemIds() : Promise.resolve(null);
+  const [itemResult, latestResult] = await Promise.allSettled([
+    getItem(parentId),
+    getLibraryItems(parentId, collectionType, { limit: ROW_LIMIT, sortBy: 'DateCreated', sortOrder: 'Descending' }),
+  ]);
 
-  let mainRow = null;
+  heading.textContent = itemResult.status === 'fulfilled' && itemResult.value ? itemResult.value.Name : '';
 
-  function sortLabel(value) {
-    const match = SORT_OPTIONS.filter(function (option) {
-      return option.value === value;
-    })[0];
-    return (match && match.label) || 'Browse';
+  if (latestResult.status === 'fulfilled') {
+    const row = buildRow('Recently added', (latestResult.value && latestResult.value.Items) || []);
+    if (row) rows.appendChild(row);
   }
 
-  // Governs only this page's own top row, the genre rows below stay
-  // fixed "browse by genre" shortcuts either way: real feedback wanted
-  // a way to sort or filter what that top row shows without rebuilding
-  // the whole page around one control.
-  async function loadMainRow() {
-    const parts = sortSelect.value.split(':');
-    const genre = genreSelect.value;
-    let items = [];
-    try {
-      const [result, animeIds] = await Promise.all([
-        getLibraryItems(parentId, collectionType, {
-          limit: ROW_LIMIT,
-          sortBy: parts[0],
-          sortOrder: parts[1],
-          genre: genre || undefined,
-        }),
-        excludeAnimeIds,
-      ]);
-      items = (result && result.Items) || [];
-      if (animeIds && animeIds.size) {
-        items = items.filter(function (item) {
-          return !animeIds.has(item.Id);
-        });
+  try {
+    const genres = await discoverGenres(parentId, itemType, GENRE_ROWS);
+    const genreItemLists = await Promise.allSettled(
+      genres.map(function (genre) {
+        return getGenreItems(parentId, itemType, genre, ROW_LIMIT);
+      }),
+    );
+    genreItemLists.forEach(function (result, index) {
+      if (result.status === 'fulfilled') {
+        const row = buildRow(genres[index], result.value);
+        if (row) rows.appendChild(row);
       }
-    } catch (err) {
-      console.warn('Jellio: could not load library items', err);
-    }
-    const newRow = buildRow(genre || sortLabel(sortSelect.value), items, null, function () {
-      return getLibraryItems(parentId, collectionType, {
-        limit: ROW_LIST_LIMIT,
-        sortBy: parts[0],
-        sortOrder: parts[1],
-        genre: genre || undefined,
-      }).then(function (result) {
-        return (result && result.Items) || [];
-      });
     });
-    if (mainRow) mainRow.remove();
-    mainRow = newRow;
-    if (newRow) rows.insertBefore(newRow, rows.firstChild);
+  } catch (err) {
+    console.warn('Jellio: could not load genre rows', err);
   }
-
-  sortSelect.addEventListener('change', loadMainRow);
-  genreSelect.addEventListener('change', loadMainRow);
-
-  // Fire and forget, same reasoning mountCoverflow() above already
-  // uses: app.js's own sync() queue only starts the next real
-  // navigation once this function's own returned promise resolves, so
-  // awaiting any of this here meant every sidebar click queued behind
-  // however long this screen's own slowest real request took, reported
-  // live as switching screens not working at all on a slow connection.
-  // Nothing below writes anywhere this function has not already built
-  // and returned control past, so there is nothing left here that
-  // needs the reader to wait on it before moving on to a different
-  // real screen.
-  Promise.allSettled([getItem(parentId), loadMainRow()]).then(function (results) {
-    const itemResult = results[0];
-    heading.textContent = itemResult.status === 'fulfilled' && itemResult.value ? itemResult.value.Name : '';
-  });
-
-  discoverGenres(parentId, itemType, GENRE_ROWS)
-    .then(function (genres) {
-      genres.forEach(function (genre) {
-        const optionEl = document.createElement('option');
-        optionEl.value = genre;
-        optionEl.textContent = genre;
-        genreSelect.appendChild(optionEl);
-      });
-      genreSelect.disabled = !genres.length;
-
-      return Promise.all([
-        Promise.allSettled(
-          genres.map(function (genre) {
-            return getGenreItems(parentId, itemType, genre, ROW_LIMIT);
-          }),
-        ),
-        excludeAnimeIds,
-      ]).then(function (results) {
-        const genreItemLists = results[0];
-        const animeIds = results[1];
-        genreItemLists.forEach(function (result, index) {
-          if (result.status === 'fulfilled') {
-            let items = result.value;
-            if (animeIds && animeIds.size) {
-              items = items.filter(function (item) {
-                return !animeIds.has(item.Id);
-              });
-            }
-            const row = buildRow(genres[index], items, null, function () {
-              return getGenreItems(parentId, itemType, genres[index], ROW_LIST_LIMIT);
-            });
-            if (row) rows.appendChild(row);
-          }
-        });
-      });
-    })
-    .catch(function (err) {
-      console.warn('Jellio: could not load genre rows', err);
-    });
 
   return destroy;
 }
@@ -350,142 +145,51 @@ const ANIME_EMPTY_MESSAGE =
 // anime" rule the original codebase's own libraryBrowse.js documents:
 // showing nothing is the honest outcome when no catalog is configured,
 // not a copy of the Shows page.
-// Fire and forget, same reasoning renderLibrary's own header above
-// documents: this used to await the whole real fetch chain (catalogs,
-// then every catalog's own items, then the coverflow) before ever
-// returning, which meant app.js's own sync() queue sat blocked behind
-// however long that took before the next real navigation could even
-// start, the exact bug this screen's own sibling function next to it
-// already avoids.
-function renderAnime(root, collectionType) {
+async function renderAnime(root, collectionType) {
   const header = el('header', 'jellio-library-header');
   header.appendChild(el('h1', 'jellio-library-title', 'Anime'));
   root.appendChild(header);
 
+  let animeCollections = [];
+  try {
+    const collections = await getCollections();
+    animeCollections = collections.filter(function (item) {
+      return /anime|anilist/i.test(item.Name || '');
+    });
+  } catch (err) {
+    console.warn('Jellio: could not load anime catalogs', err);
+  }
+
+  if (!animeCollections.length) {
+    root.appendChild(el('p', 'jellio-service-empty', ANIME_EMPTY_MESSAGE));
+    return undefined;
+  }
+
   const rows = el('div', 'jellio-rows');
   root.appendChild(rows);
 
-  // components/navShared.js's own header explains why this page can
-  // now be reached before a real anime catalog has even been
-  // confirmed to exist: the sidebar/mobile nav's own Anime link no
-  // longer waits on that check first. Shown the instant this screen
-  // mounts, same real components/homeSkeleton.js shape screens/home.js
-  // already uses, so a reader landing here mid check sees real loading
-  // rather than a blank page that could as easily read as broken.
-  const skeleton = buildHomeSkeleton();
-  rows.appendChild(skeleton);
-  let skeletonRemoved = false;
-  function removeSkeleton() {
-    if (skeletonRemoved) return;
-    skeletonRemoved = true;
-    if (skeleton.parentNode) skeleton.parentNode.removeChild(skeleton);
+  const itemLists = await Promise.allSettled(
+    animeCollections.slice(0, MAX_ANIME_ROWS).map(function (collection) {
+      return getCollectionItems(collection.Id, collectionType, ROW_LIMIT);
+    }),
+  );
+
+  // The coverflow features whichever catalog actually has the most
+  // real items behind it, rather than always the first one returned.
+  let coverflowSource = [];
+  itemLists.forEach(function (result, index) {
+    if (result.status !== 'fulfilled') return;
+    const items = result.value;
+    if (items.length > coverflowSource.length) coverflowSource = items;
+    const row = buildRow(animeCollections[index].Name, items);
+    if (row) rows.appendChild(row);
+  });
+
+  if (!rows.children.length) {
+    rows.remove();
+    root.appendChild(el('p', 'jellio-service-empty', ANIME_EMPTY_MESSAGE));
+    return undefined;
   }
 
-  let coverflowDestroy = null;
-  // Real bug, found live: mountCoverflow's own cancelled flag (that
-  // file's own header explains it) only ever guards the one real gap
-  // between it being called and its own real candidates resolving.
-  // Navigating away from Anime and back again before this whole IIFE's
-  // own first real await (getCollections, then itemLists) had even
-  // resolved left nothing checking whether this screen was actually
-  // still the one on real display at all: root/rows are the same
-  // persistent real nodes every renderLibrary call reuses, so a stale
-  // call finishing late still built its own real rows into an orphaned
-  // rows reference and still called mountCoverflow against the real
-  // current root, landing a second real coverflow next to whatever the
-  // real current call had already mounted, reported live as
-  // intermittent "two carousels". cancelled, set true the instant this
-  // screen's own real destroy runs, is checked after every real await
-  // below rather than only once up front.
-  let cancelled = false;
-
-  (async function () {
-    let animeCollections = [];
-    try {
-      const collections = await getCollections();
-      if (cancelled) return;
-      animeCollections = collections.filter(isAnimeCollection);
-    } catch (err) {
-      console.warn('Jellio: could not load anime catalogs', err);
-    }
-    if (cancelled) return;
-
-    if (!animeCollections.length) {
-      rows.remove();
-      root.appendChild(el('p', 'jellio-service-empty', ANIME_EMPTY_MESSAGE));
-      return;
-    }
-
-    const itemLists = await Promise.allSettled(
-      animeCollections.slice(0, MAX_ANIME_ROWS).map(function (collection) {
-        return getCollectionItems(collection.Id, collectionType, ROW_LIMIT);
-      }),
-    );
-    if (cancelled) return;
-    removeSkeleton();
-
-    // Real feedback: the coverflow used to feature whichever catalog
-    // actually had the most real items behind it, which on a real
-    // server left it just as likely to show a Popular or Seasonal
-    // catalog's own items as the Trending one, no real tie to whatever
-    // "Trending on AniList" badge happened to land on a row further
-    // down the same page. The real Trending catalog, when this server
-    // actually has one, gets the coverflow now, exclusively; every
-    // other catalog still falls back to the old "most items" pick
-    // among itself so the coverflow is never left empty on a server
-    // with no Trending catalog configured at all. That same catalog is
-    // skipped as its own row below once it becomes the hero instead,
-    // real feedback's own "two carousels" complaint: the same handful
-    // of trending titles were rendering twice, once as the coverflow's
-    // own pick (whenever it happened to have the most items) and again
-    // as a plain row underneath it.
-    // components/libraryCoverflow.js's own MIN_SLIDES floor: a Trending
-    // catalog with fewer real items than that would never actually
-    // mount as a coverflow anyway, so it stays a normal row instead of
-    // being pulled out from under itself into a hero that never renders.
-    const COVERFLOW_MIN_ITEMS = 3;
-    let coverflowSource = [];
-    let coverflowIsTrending = false;
-    let trendingIndex = -1;
-    itemLists.forEach(function (result, index) {
-      if (result.status !== 'fulfilled') return;
-      const items = result.value;
-      const name = animeCollections[index].Name || '';
-      if (TRENDING_ANIME_NAME.test(name) && items.length >= COVERFLOW_MIN_ITEMS) {
-        trendingIndex = index;
-        coverflowSource = items;
-        coverflowIsTrending = true;
-      } else if (!coverflowIsTrending && items.length > coverflowSource.length) {
-        coverflowSource = items;
-      }
-    });
-
-    itemLists.forEach(function (result, index) {
-      if (result.status !== 'fulfilled' || index === trendingIndex) return;
-      const items = result.value;
-      const name = animeCollections[index].Name || '';
-      const collectionId = animeCollections[index].Id;
-      const row = buildRow(name, items, null, function () {
-        return getCollectionItems(collectionId, collectionType, ROW_LIST_LIMIT);
-      });
-      if (row) rows.appendChild(row);
-    });
-
-    if (!rows.children.length && !coverflowIsTrending) {
-      rows.remove();
-      root.appendChild(el('p', 'jellio-service-empty', ANIME_EMPTY_MESSAGE));
-      return;
-    }
-    if (cancelled) return;
-
-    coverflowDestroy = mountCoverflow(root, {
-      items: coverflowSource,
-      badge: coverflowIsTrending ? { icon: 'trending_up', text: 'Trending on AniList' } : null,
-    });
-  })();
-
-  return function () {
-    cancelled = true;
-    if (coverflowDestroy) coverflowDestroy();
-  };
+  return mountCoverflow(root, { items: coverflowSource });
 }

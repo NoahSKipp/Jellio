@@ -13,7 +13,6 @@
 // offset is always the shortest way round.
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
-import { rotationSeed, seededShuffle } from '../runtime/editorial.js';
 
 const CANDIDATE_LIMIT = 8;
 
@@ -57,16 +56,10 @@ function buildSlide(item) {
   art.className = 'jellio-coverflow-art';
   art.alt = '';
   art.loading = 'lazy';
-  // css/app.css's own real coverflow slide width never approaches a
-  // real 1280px on any screen this renders on, three to a row with
-  // the side two visibly shrunk further still: real bytes paid for
-  // resolution nothing here ever actually shows. quality: 85 for the
-  // same real reason components/card.js's own poster request already
-  // carries it, imperceptible at this real display size.
   if (backdropTag) {
-    art.src = getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 960, quality: 85 });
+    art.src = getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 1280 });
   } else if (item.ImageTags && item.ImageTags.Primary) {
-    art.src = getImageUrl(item.Id, 'Primary', { tag: item.ImageTags.Primary, maxWidth: 960, quality: 85 });
+    art.src = getImageUrl(item.Id, 'Primary', { tag: item.ImageTags.Primary, maxWidth: 1280 });
   }
   slide.appendChild(art);
 
@@ -91,60 +84,23 @@ function buildSlide(item) {
 
   info.appendChild(el('div', 'jellio-coverflow-meta', metaLine(item)));
 
-  // Real feedback: Play skipped straight into playback with no chance
-  // to see anything about the title first, not the real Nuvio
-  // reference (components/heroCarousel.js's own header already carries
-  // the same real finding for home's own hero, checked directly
-  // against screenshots there, this is the exact same real component
-  // shape one tier down); View Details is one tap further to
-  // screens/detail.js's own real Play button, not gone.
   const actions = el('div', 'jellio-coverflow-actions');
-  actions.appendChild(buildButton('View Details', 'jellio-coverflow-button', item));
+  actions.appendChild(buildButton('Play', 'jellio-coverflow-button', item));
+  actions.appendChild(
+    buildButton(
+      item.Type === 'Series' ? 'Episodes' : 'More info',
+      'jellio-coverflow-button jellio-coverflow-button-secondary',
+      item,
+    ),
+  );
   info.appendChild(actions);
 
   slide.appendChild(info);
   return slide;
 }
 
-// Rendered as the coverflow's own first child, literally above the
-// sliding stage rather than a second block outside this component:
-// real feedback pointed at Harbor's own Shows tab, where this same
-// copy sits above its carousel, not beside or under it.
-function buildEditorial(editorial) {
-  const wrap = el('div', 'jellio-coverflow-editorial');
-  const eyebrow = el('div', 'jellio-coverflow-editorial-eyebrow');
-  const icon = el('span', 'material-icons ' + (editorial.icon || 'schedule'));
-  icon.setAttribute('aria-hidden', 'true');
-  eyebrow.appendChild(icon);
-  eyebrow.appendChild(el('span', 'jellio-coverflow-editorial-label', editorial.label));
-  wrap.appendChild(eyebrow);
-  wrap.appendChild(el('h2', 'jellio-coverflow-editorial-tagline', editorial.tagline));
-  wrap.appendChild(el('p', 'jellio-coverflow-editorial-description', editorial.description));
-  return wrap;
-}
-
-// Same real chip components/row.js's own buildBadge() renders next to a
-// row title (icon plus text, no pill), reused here above the stage
-// instead: real feedback wanted the Anime page's own Trending on
-// AniList label reachable on the carousel itself, not only on a row
-// further down the page, whenever the carousel's own real candidates
-// (the anime page's own options.items) actually are that catalog.
-function buildCoverflowBadge(badge) {
-  const wrap = el('div', 'jellio-coverflow-badge');
-  const icon = el('span', 'material-icons ' + badge.icon);
-  icon.setAttribute('aria-hidden', 'true');
-  wrap.appendChild(icon);
-  wrap.appendChild(el('span', null, badge.text));
-  return wrap;
-}
-
 export function buildLibraryCoverflow(options) {
   const root = el('div', 'jellio-coverflow');
-  if (options && options.editorial) {
-    root.appendChild(buildEditorial(options.editorial));
-  } else if (options && options.badge) {
-    root.appendChild(buildCoverflowBadge(options.badge));
-  }
   const stage = el('div', 'jellio-coverflow-stage');
   const dotsEl = el('div', 'jellio-coverflow-dots');
   root.appendChild(stage);
@@ -254,14 +210,7 @@ export function buildLibraryCoverflow(options) {
   const ready = fetchCandidates
     .then(function (result) {
       if (!result || result.length < MIN_SLIDES) return false;
-      // Harbor's own real rotationSeed()/seededShuffle(): the same real
-      // split its own buildShowHero() keeps, reordering this real pool
-      // rather than changing which real items are in it. options.rotate
-      // is the Shows page's own real opt-in (screens/library.js), same
-      // scope its own editorial header above is limited to; the anime
-      // page's own real options.items already carries its own real
-      // Trending-catalog order and stays untouched.
-      items = options && options.rotate ? seededShuffle(result, rotationSeed()) : result;
+      items = result;
       index = 0;
       build();
       return true;

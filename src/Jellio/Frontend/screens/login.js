@@ -18,12 +18,8 @@ import {
   forgetRememberedUser,
   quickSignIn,
   bypassLoginScreen,
-  getPublicUsers,
-  pruneHiddenRememberedUsers,
-  requestPasswordReset,
-  redeemPasswordResetPin,
 } from '../runtime/auth.js';
-import { getUserImageUrl, updateUserPassword, getOnlineUserIds } from '../runtime/api.js';
+import { getUserImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
 function el(tag, className, text) {
@@ -44,12 +40,11 @@ function completeSignIn() {
   document.dispatchEvent(new CustomEvent('jellio:session-captured'));
 }
 
-// Quick Connect is still a real native login page feature this screen
-// does not reimplement (the public user grid and forgot password
-// below both are, real feedback asked for each directly), so this
-// stays reachable everywhere on the screen rather than only from the
-// manual form: a remembered or public profile's own owner may still
-// need it, not only someone with no profile visible at all.
+// Quick Connect, a no-password public user grid and "forgot password"
+// are all real native login page features this screen does not
+// reimplement, so this stays reachable everywhere on the screen rather
+// than only from the manual form: a remembered profile's own owner may
+// still need one of those, not only someone with no profile saved yet.
 function buildBypassLink() {
   const link = el('button', 'jellio-login-cancel', 'Use classic sign-in');
   link.type = 'button';
@@ -88,15 +83,6 @@ function buildManualForm(options) {
   form.appendChild(status);
   form.appendChild(submit);
 
-  if (opts.onForgotPassword) {
-    const forgot = el('button', 'jellio-login-forgot', 'Forgot password?');
-    forgot.type = 'button';
-    forgot.addEventListener('click', function () {
-      opts.onForgotPassword(username.value);
-    });
-    form.appendChild(forgot);
-  }
-
   if (opts.onCancel) {
     const cancel = el('button', 'jellio-login-cancel', 'Back');
     cancel.type = 'button';
@@ -130,203 +116,15 @@ function buildManualForm(options) {
   return form;
 }
 
-// Step 1 of 2: a real username, POSTed to /Users/ForgotPassword
-// (runtime/auth.js's own requestPasswordReset, real endpoint, not
-// guessed at). The server's own real response is deliberately the
-// same regardless of whether that username exists at all (that
-// file's own header explains why, straight from Jellyfin's own real
-// source), so the message here has to stay exactly as generic, or it
-// would hand back out the one thing the server itself stopped
-// leaking. jfa-go (already configured server side by whoever runs
-// this server, not something this runtime talks to directly) is what
-// actually turns a real reset into a real email from here.
-function buildForgotUsernameForm(prefillUsername, onRequested, onCancel) {
-  const form = document.createElement('form');
-  form.className = 'jellio-login-form';
-
-  const username = document.createElement('input');
-  username.type = 'text';
-  username.placeholder = 'Username';
-  username.autocomplete = 'username';
-  username.className = 'jellio-login-input';
-  if (prefillUsername) username.value = prefillUsername;
-
-  const status = el('p', 'jellio-login-status', '');
-
-  const submit = el('button', 'jellio-login-submit', 'Send reset code');
-  submit.type = 'submit';
-
-  form.appendChild(username);
-  form.appendChild(status);
-  form.appendChild(submit);
-
-  const cancel = el('button', 'jellio-login-cancel', 'Back');
-  cancel.type = 'button';
-  cancel.addEventListener('click', onCancel);
-  form.appendChild(cancel);
-
-  form.addEventListener('submit', function (event) {
-    event.preventDefault();
-    if (!username.value) {
-      status.textContent = 'Enter your username.';
-      return;
-    }
-    submit.disabled = true;
-    status.textContent = 'Sending…';
-    requestPasswordReset(username.value)
-      .then(function () {
-        onRequested(username.value);
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not request a password reset', err);
-        status.textContent = 'Could not request a reset code. Try again later.';
-        submit.disabled = false;
-      });
-  });
-
-  window.requestAnimationFrame(function () {
-    username.focus();
-  });
-
-  return form;
-}
-
-// Step 2 of 2: the code the reader's own inbox just received, plus
-// the real new password to end on. A real successful redeem clears
-// the account's own password server side rather than setting the one
-// asked for here, real Jellyfin behaviour (PinRedeemResult, real
-// source, only a bare Success boolean, nothing about a chosen
-// password at all), so this signs back in with a blank one the
-// moment that succeeds and immediately calls updateUserPassword with
-// the real new one, the same two real calls the stock profile page's
-// own equivalent flow already makes for the same reason, before
-// finally completing sign in.
-function buildForgotPinForm(username, onCancel) {
-  const form = document.createElement('form');
-  form.className = 'jellio-login-form';
-
-  const pin = document.createElement('input');
-  pin.type = 'text';
-  pin.placeholder = 'Reset code';
-  pin.autocomplete = 'one-time-code';
-  pin.className = 'jellio-login-input';
-
-  const newPassword = document.createElement('input');
-  newPassword.type = 'password';
-  newPassword.placeholder = 'New password';
-  newPassword.autocomplete = 'new-password';
-  newPassword.className = 'jellio-login-input';
-
-  const confirmPassword = document.createElement('input');
-  confirmPassword.type = 'password';
-  confirmPassword.placeholder = 'Confirm new password';
-  confirmPassword.autocomplete = 'new-password';
-  confirmPassword.className = 'jellio-login-input';
-
-  const status = el(
-    'p',
-    'jellio-login-status',
-    'If that account exists, a reset code has been emailed to it. Enter it below with a new password.',
-  );
-
-  const submit = el('button', 'jellio-login-submit', 'Reset password');
-  submit.type = 'submit';
-
-  form.appendChild(pin);
-  form.appendChild(newPassword);
-  form.appendChild(confirmPassword);
-  form.appendChild(status);
-  form.appendChild(submit);
-
-  const cancel = el('button', 'jellio-login-cancel', 'Back');
-  cancel.type = 'button';
-  cancel.addEventListener('click', onCancel);
-  form.appendChild(cancel);
-
-  form.addEventListener('submit', function (event) {
-    event.preventDefault();
-    if (!pin.value || !newPassword.value) {
-      status.textContent = 'Enter the reset code and a new password.';
-      return;
-    }
-    if (newPassword.value !== confirmPassword.value) {
-      status.textContent = 'New passwords do not match.';
-      return;
-    }
-    submit.disabled = true;
-    status.textContent = 'Resetting…';
-    redeemPasswordResetPin(pin.value)
-      .then(function (result) {
-        if (!result || !result.Success) {
-          status.textContent = 'That reset code is invalid or has expired.';
-          submit.disabled = false;
-          return;
-        }
-        return authenticateByName(username, '')
-          .then(function () {
-            return updateUserPassword('', newPassword.value);
-          })
-          .then(function () {
-            completeSignIn();
-          });
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not reset password', err);
-        status.textContent = 'Could not reset the password. Try again.';
-        submit.disabled = false;
-      });
-  });
-
-  window.requestAnimationFrame(function () {
-    pin.focus();
-  });
-
-  return form;
-}
-
-function renderForgotPassword(container, prefillUsername, onCancel) {
-  container.textContent = '';
-  container.appendChild(el('h1', 'jellio-login-heading', 'Reset password'));
-  container.appendChild(
-    buildForgotUsernameForm(
-      prefillUsername,
-      function (username) {
-        container.textContent = '';
-        container.appendChild(el('h1', 'jellio-login-heading', 'Reset password'));
-        container.appendChild(buildForgotPinForm(username, onCancel));
-      },
-      onCancel,
-    ),
-  );
-}
-
-// Real feedback asked for the profile tiles to enter one after another
-// rather than all at once, "like in the Nuvio app". Nuvio's own real
-// source was not reachable to confirm the exact timing (checked
-// NuvioWeb, the project's own primary reference per the project's architecture; its
-// "who's watching" screen, js/core/profile/profileSelectionScreen.js,
-// carries no such per tile stagger to port), so this is a standard
-// staggered grid entrance built directly rather than a port, index
-// order matching left to right, top to bottom reading order, capped
-// (STAGGER_STEP_MS * STAGGER_MAX below) so a long remembered list does
-// not leave the last tile waiting a full second to appear.
-const STAGGER_STEP_MS = 55;
-const STAGGER_MAX = 10;
-
-function applyStagger(wrap, index) {
-  wrap.style.setProperty('--jellio-stagger-delay', Math.min(index, STAGGER_MAX) * STAGGER_STEP_MS + 'ms');
-}
-
-function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
+function buildProfileTile(userId, entry, onForgotten, onFailed) {
   const wrap = el('div', 'jellio-login-profile');
-  applyStagger(wrap, index);
 
   const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
 
   const avatar = document.createElement('button');
   avatar.type = 'button';
   avatar.className = 'jellio-login-profile-avatar';
-  avatar.setAttribute('aria-label', 'Quick sign in as ' + (entry.name || ''));
+  avatar.setAttribute('aria-label', 'Sign in as ' + (entry.name || ''));
 
   if (entry.primaryImageTag) {
     avatar.style.backgroundImage = "url('" + getUserImageUrl(userId, entry.primaryImageTag, { maxWidth: 300 }) + "')";
@@ -363,116 +161,15 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   avatarWrap.appendChild(avatar);
   avatarWrap.appendChild(remove);
 
-  // Same real badge components/accountSwitcher.js's own switch-profile
-  // panel already shows for exactly this case (a real remembered token,
-  // no password needed), real feedback asked for this screen to carry
-  // the same tell rather than every tile here looking identical
-  // regardless of whether tapping it signs in immediately or still
-  // needs a password first (components/accountSwitcher.js's own header
-  // explains why "quick" is worth marking at all).
-  const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
-  badge.setAttribute('aria-hidden', 'true');
-  avatarWrap.appendChild(badge);
-
-  // Real ISessionManager session for this user right now (runtime/api.js's
-  // own getOnlineUserIds), same real source and same real dot
-  // components/accountSwitcher.js's own panel already shows.
-  if (online) {
-    const dot = el('span', 'jellio-account-switcher-online-dot');
-    dot.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(dot);
-  }
-
   const name = el('span', 'jellio-login-profile-name', entry.name || '');
 
   wrap.appendChild(avatarWrap);
   wrap.appendChild(name);
-  wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
   return wrap;
 }
 
-// A user visible here has never necessarily signed in on this device
-// before (getPublicUsers() in runtime/auth.js only mirrors a real
-// admin's own "Display this user on the login screen" toggle, server
-// side), so there is no remembered AccessToken to reuse the way
-// quickSignIn() does for a tile in the other list. HasPassword is a
-// real, if formally obsolete, UserDto field jellyfin-web's own login
-// page still checks the same way before deciding whether a password
-// is even worth asking for; AuthenticateByName with an empty Pw is
-// the same real request a passwordless account's own native sign in
-// already sends. Either path ends by calling setSession, which
-// rememberUser()s this same profile on the way, so the very next
-// visit finds it in the other list instead, with a real quick sign-in
-// token this time.
-function buildPublicUserTile(user, index, onNeedsPassword, online) {
+function buildAddTile(onClick) {
   const wrap = el('div', 'jellio-login-profile');
-  applyStagger(wrap, index);
-
-  const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
-
-  const hasPassword = user.HasPassword !== false && user.HasConfiguredPassword !== false;
-
-  const avatar = document.createElement('button');
-  avatar.type = 'button';
-  avatar.className = 'jellio-login-profile-avatar';
-  avatar.setAttribute('aria-label', (hasPassword ? 'Sign in as ' : 'Quick sign in as ') + (user.Name || ''));
-
-  if (user.PrimaryImageTag) {
-    avatar.style.backgroundImage =
-      "url('" + getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 300 }) + "')";
-  } else {
-    const icon = el('span', 'material-icons person jellio-login-profile-icon');
-    icon.setAttribute('aria-hidden', 'true');
-    avatar.appendChild(icon);
-  }
-
-  avatar.addEventListener('click', function () {
-    if (!hasPassword) {
-      avatar.disabled = true;
-      authenticateByName(user.Name || '', '')
-        .then(function () {
-          completeSignIn();
-        })
-        .catch(function () {
-          avatar.disabled = false;
-          onNeedsPassword(user.Name || '');
-        });
-      return;
-    }
-    onNeedsPassword(user.Name || '');
-  });
-
-  avatarWrap.appendChild(avatar);
-
-  // Same real badge/dot buildProfileTile() above now carries, mirroring
-  // components/accountSwitcher.js's own switch-profile panel: a
-  // passwordless public user signs in here exactly as instantly as a
-  // remembered one does (the branch above), so it earns the same real
-  // "quick" tell instead of looking identical to a tile that still
-  // needs a password typed first.
-  if (!hasPassword) {
-    const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
-    badge.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(badge);
-  }
-
-  if (online) {
-    const dot = el('span', 'jellio-account-switcher-online-dot');
-    dot.setAttribute('aria-hidden', 'true');
-    avatarWrap.appendChild(dot);
-  }
-
-  const name = el('span', 'jellio-login-profile-name', user.Name || '');
-
-  wrap.appendChild(avatarWrap);
-  wrap.appendChild(name);
-  if (!hasPassword) wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
-  return wrap;
-}
-
-function buildAddTile(index, onClick) {
-  const wrap = el('div', 'jellio-login-profile');
-  applyStagger(wrap, index);
   const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
 
   const avatar = document.createElement('button');
@@ -490,22 +187,8 @@ function buildAddTile(index, onClick) {
   return wrap;
 }
 
-// Remembered wins on overlap: that entry carries a real AccessToken
-// (quickSignIn, one click, no password redone), where a public-only
-// listing for the same real user has never signed in on this device
-// and could only ever offer the slower authenticateByName path below.
-function publicOnlyUsers(remembered, publicUsers) {
-  return publicUsers.filter(function (user) {
-    return user && user.Id && !remembered[user.Id];
-  });
-}
-
-function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
+function renderProfilePicker(container, remembered) {
   container.textContent = '';
-
-  function rerender() {
-    renderProfilePicker(container, getRememberedUsers(), publicUsers, onlineIds);
-  }
 
   function showManual(prefillName, message) {
     container.textContent = '';
@@ -514,59 +197,42 @@ function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
       buildManualForm({
         username: prefillName,
         message: message,
-        onCancel: Object.keys(remembered).length || publicOnly.length ? rerender : null,
-        onForgotPassword: function (typedUsername) {
-          renderForgotPassword(container, typedUsername, function () {
-            showManual(typedUsername, '');
-          });
-        },
+        onCancel: Object.keys(remembered).length
+          ? function () {
+              renderProfilePicker(container, getRememberedUsers());
+            }
+          : null,
       }),
     );
     container.appendChild(buildBypassLink());
   }
 
-  const rememberedIds = Object.keys(remembered);
-  const publicOnly = publicOnlyUsers(remembered, publicUsers);
-
-  if (!rememberedIds.length && !publicOnly.length) {
+  const userIds = Object.keys(remembered);
+  if (!userIds.length) {
     showManual('', '');
     return;
   }
 
   container.appendChild(el('h1', 'jellio-login-heading', 'Who’s watching?'));
   const grid = el('div', 'jellio-login-profile-grid');
-  let index = 0;
 
-  rememberedIds.forEach(function (userId) {
+  userIds.forEach(function (userId) {
     grid.appendChild(
       buildProfileTile(
         userId,
         remembered[userId],
-        index++,
-        rerender,
+        function () {
+          renderProfilePicker(container, getRememberedUsers());
+        },
         function (name) {
           showManual(name, 'That saved sign-in no longer works. Sign in again.');
         },
-        onlineIds.has(userId),
-      ),
-    );
-  });
-
-  publicOnly.forEach(function (user) {
-    grid.appendChild(
-      buildPublicUserTile(
-        user,
-        index++,
-        function (name) {
-          showManual(name, '');
-        },
-        onlineIds.has(user.Id),
       ),
     );
   });
 
   grid.appendChild(
-    buildAddTile(index, function () {
+    buildAddTile(function () {
       showManual('', '');
     }),
   );
@@ -582,23 +248,5 @@ export async function renderLogin(root) {
   const screen = el('div', 'jellio-login-screen');
   root.appendChild(screen);
 
-  // Neither real fetch depends on the other's result. allSettled rather
-  // than Promise.all, same real reason components/accountSwitcher.js's
-  // own header already gives: a missing/failed online-ids fetch below
-  // is only ever a missing dot, not worth losing the whole picker over.
-  const [publicUsersResult, onlineIdsResult] = await Promise.allSettled([getPublicUsers(), getOnlineUserIds()]);
-
-  let publicUsers = [];
-  if (publicUsersResult.status === 'fulfilled') {
-    publicUsers = publicUsersResult.value;
-    // Real fix: drops a remembered tile for a user later hidden or
-    // deleted server side, see this function's own header in
-    // runtime/auth.js. Only reached once the fetch above actually
-    // succeeded, same real guard that file's own header explains.
-    pruneHiddenRememberedUsers(publicUsers);
-  }
-
-  const onlineIds = new Set(onlineIdsResult.status === 'fulfilled' ? onlineIdsResult.value : []);
-
-  renderProfilePicker(screen, getRememberedUsers(), publicUsers, onlineIds);
+  renderProfilePicker(screen, getRememberedUsers());
 }
