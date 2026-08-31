@@ -2,11 +2,12 @@
 // advance. Ported from the original Jellio codebase's own heroCarousel.js,
 // itself a jellyfin-featured/NuvioWeb reference implementation (NuvioWeb's
 // own heroCarousel.js is a nine line stub, nothing to port from there),
-// adapted to this runtime's own module system and real routing: the
-// original could only hand off to native's #/details route ("More Info",
-// never "Play", since an injected script cannot reach playbackManager,
-// see that file's own header). This runtime owns its own player, so a
-// non-Series item also gets a real Play button straight into #/play.
+// adapted to this runtime's own module system and real routing.
+// Real feedback: a real Play button here skipped straight into playback
+// with no chance to see anything about the title first, not the real
+// Nuvio reference (checked directly against screenshots), which only
+// ever offers View Details from its own hero. screens/detail.js's own
+// Play button is one tap further in, not gone.
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 
@@ -61,7 +62,7 @@ function crossfadeBackdrop(container, url) {
 }
 
 export function buildHeroCarousel(options) {
-  const root = el('div', 'jellio-hero');
+  const root = el('div', 'jellio-hero jellio-hero-loading');
   const backdrop = el('div', 'jellio-hero-backdrop');
   const scrim = el('div', 'jellio-hero-scrim');
   const content = el('div', 'jellio-hero-content');
@@ -75,11 +76,8 @@ export function buildHeroCarousel(options) {
   const overview = el('p', 'jellio-hero-overview');
   const actions = el('div', 'jellio-hero-actions');
 
-  const playButton = el('button', 'jellio-hero-action', 'Play');
-  playButton.type = 'button';
-  const infoButton = el('button', 'jellio-hero-action jellio-hero-action-secondary', 'More Info');
+  const infoButton = el('button', 'jellio-hero-action', 'View Details');
   infoButton.type = 'button';
-  actions.appendChild(playButton);
   actions.appendChild(infoButton);
 
   content.appendChild(logo);
@@ -120,18 +118,24 @@ export function buildHeroCarousel(options) {
     if (!items.length) return;
     const item = items[index];
 
-    crossfadeBackdrop(backdrop, getImageUrl(item.Id, 'Backdrop', { maxWidth: 1600 }));
+    root.classList.remove('jellio-hero-loading');
+    crossfadeBackdrop(backdrop, getImageUrl(item.Id, 'Backdrop', { maxWidth: 1920 }));
 
     logo.classList.remove('jellio-hero-logo-hidden');
     logo.onerror = function () {
       logo.classList.add('jellio-hero-logo-hidden');
     };
-    logo.src = getImageUrl(item.Id, 'Logo', {});
+    // css/app.css's own .jellio-hero-logo caps this at 5.5em tall,
+    // never more than a few hundred real pixels wide on any real
+    // screen; no maxWidth here meant every request served the source
+    // logo at its own real original resolution instead, some of them
+    // several MB, real cost paid in full for a source-quality asset
+    // rendered no bigger than a real button icon.
+    logo.src = getImageUrl(item.Id, 'Logo', { maxWidth: 800 });
 
     title.textContent = item.Name || '';
     meta.textContent = metaLine(item);
     overview.textContent = item.Overview || '';
-    playButton.style.display = item.Type === 'Series' ? 'none' : '';
 
     dots.textContent = '';
     items.forEach(function (candidate, i) {
@@ -144,10 +148,6 @@ export function buildHeroCarousel(options) {
     });
   }
 
-  playButton.addEventListener('click', function () {
-    if (!items.length) return;
-    navigateTo('#/play?id=' + items[index].Id);
-  });
   infoButton.addEventListener('click', function () {
     if (!items.length) return;
     navigateTo('#/item?id=' + items[index].Id);
@@ -171,7 +171,10 @@ export function buildHeroCarousel(options) {
 
   getHeroCandidates(CANDIDATE_LIMIT, options)
     .then(function (result) {
-      if (!result.length) return;
+      if (!result.length) {
+        root.classList.remove('jellio-hero-loading');
+        return;
+      }
       items = result;
       index = 0;
       render();
@@ -187,6 +190,7 @@ export function buildHeroCarousel(options) {
     })
     .catch(function (err) {
       console.warn('Jellio: hero carousel could not load candidates', err);
+      root.classList.remove('jellio-hero-loading');
     });
 
   return {

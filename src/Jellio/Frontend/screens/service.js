@@ -3,11 +3,23 @@
 // filter chips. Own route (#/service?name=X), not borrowed off a
 // library page the way the original codebase's own streamingHub.js had
 // to (this runtime owns real routing, no native page to borrow).
-import { getCollections, getCollectionItems, collectionKind } from '../runtime/api.js';
-import { groupByService, logoSlug, rowTitle } from '../components/services.js';
+import { getCollections, getCollectionItems, collectionKind, getImageUrl } from '../runtime/api.js';
+import { groupByService, logoUrl, rowTitle } from '../components/services.js';
 import { buildCard } from '../components/card.js';
+import { renderLoading, renderRetry } from '../components/networkState.js';
+import { navigateTo } from '../runtime/router.js';
+import { describeNetworkFailure } from '../runtime/network.js';
+import { attachScrollArrows } from '../components/scrollArrows.js';
+import { makeRowTitleClickable } from '../components/rowListModal.js';
 
 const ROW_LIMIT = 24;
+// components/rowListModal.js's own "browse everything": a real full
+// depth request for whichever studio hub row a reader actually opened,
+// not the same ROW_LIMIT-capped array the row itself already rendered
+// from. No real Stremio catalog collection this runtime has ever seen
+// comes close to this, generous on purpose rather than tuned to a real
+// observed maximum.
+const ROW_LIST_LIMIT = 500;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -16,10 +28,33 @@ function el(tag, className, text) {
   return node;
 }
 
-function buildHeader(service, rowCount) {
-  const header = el('div', 'jellio-service-header');
+// The hero's own real backdrop: whichever item this service's real
+// catalogs actually turned up rates highest, the same "let the real
+// data pick it" spirit components/heroCarousel.js's own real candidate
+// list already follows, rather than always just row zero's own first
+// card. No backdrop of its own anywhere in the whole catalog (a bare
+// service with nothing but posters) falls back to a flat elevated
+// panel, same real fallback screens/detail.js's own hero already uses.
+function pickHeroItem(rows) {
+  let best = null;
+  rows.forEach(function (row) {
+    row.items.forEach(function (item) {
+      if (!item.BackdropImageTags || !item.BackdropImageTags[0]) return;
+      if (!best || (item.CommunityRating || 0) > (best.CommunityRating || 0)) best = item;
+    });
+  });
+  return best;
+}
+
+function buildHeader(service, heroItem) {
+  const hero = el('div', 'jellio-service-hero');
+  if (heroItem) {
+    hero.style.backgroundImage = 'url(' + getImageUrl(heroItem.Id, 'Backdrop', { tag: heroItem.BackdropImageTags[0], maxWidth: 1920 }) + ')';
+  }
+
+  const content = el('div', 'jellio-service-hero-content');
   const eyebrow = el('div', 'jellio-service-eyebrow', 'Popular on');
-  header.appendChild(eyebrow);
+  content.appendChild(eyebrow);
 
   const heading = el('h1', 'jellio-service-name');
   const word = el('span', 'jellio-service-word', service);
@@ -28,7 +63,7 @@ function buildHeader(service, rowCount) {
   logo.className = 'jellio-service-logo';
   logo.alt = service;
   logo.loading = 'lazy';
-  logo.src = '/Jellio/frontend/img/services/' + logoSlug(service) + '.svg';
+  logo.src = logoUrl(service);
   logo.addEventListener('load', function () {
     heading.classList.add('jellio-has-logo');
   });
@@ -36,17 +71,10 @@ function buildHeader(service, rowCount) {
     logo.remove();
   });
   heading.appendChild(logo);
-  header.appendChild(heading);
+  content.appendChild(heading);
 
-  if (rowCount) {
-    const blurb = el(
-      'p',
-      'jellio-service-blurb',
-      rowCount === 1 ? 'One catalog imported from ' + service + '.' : rowCount + ' catalogs imported from ' + service + '.',
-    );
-    header.appendChild(blurb);
-  }
-  return header;
+  hero.appendChild(content);
+  return hero;
 }
 
 // Genres discovered from what actually came back, never a fixed list: a
@@ -98,17 +126,34 @@ function buildChips(genres, onFilter) {
   return bar;
 }
 
-function buildRowSection(row) {
-  const section = el('section', 'jellio-row jellio-service-row');
+function buildRowSection(row, index) {
+  const section = el('section', 'jellio-row jellio-service-row jellio-row-enter');
+  section.style.setProperty('--jellio-row-enter-delay', Math.min(index, 6) * 60 + 'ms');
   section.dataset.jellioRowKind = row.kind;
-  section.appendChild(el('h2', 'jellio-row-title', row.title));
+  const titleEl = el('h2', 'jellio-row-title', row.title);
+  section.appendChild(titleEl);
+  makeRowTitleClickable(titleEl, row.title, row.items, {
+    fetchAll: function () {
+      return getCollectionItems(row.collection.Id, row.kind, ROW_LIST_LIMIT);
+    },
+  });
+
+  const trackWrap = el('div', 'jellio-row-track-wrap');
   const track = el('div', 'jellio-row-track');
   row.items.forEach(function (item) {
     const card = buildCard(item);
     card.dataset.jellioGenres = (item.Genres || []).join('|');
     track.appendChild(card);
   });
-  section.appendChild(track);
+  trackWrap.appendChild(track);
+  section.appendChild(trackWrap);
+  // Stashed on the section itself rather than a separate map keyed by
+  // it: applyFilter() below already has this exact section in hand
+  // every time it needs to re-check whether either arrow still has
+  // anywhere left to go, a genre/type filter hiding enough cards to
+  // change that real answer without ever touching scrollLeft itself
+  // (attachScrollArrows()'s own scroll listener never fires for that).
+  section._jellioRefreshArrows = attachScrollArrows(trackWrap, track);
   return section;
 }
 
@@ -127,6 +172,7 @@ function applyFilter(rowsMount, filter) {
     });
     // A row filtered down to nothing is noise, not an empty state.
     section.style.display = shown ? '' : 'none';
+    if (shown && section._jellioRefreshArrows) section._jellioRefreshArrows();
   });
 }
 
@@ -137,13 +183,20 @@ export async function renderService(root, params) {
   const service = params.get('name');
   if (!service) return;
 
+  renderLoading(root);
+
   let collections;
   try {
     collections = await getCollections();
   } catch (err) {
     console.warn('Jellio: could not load streaming hub collections', err);
+    renderRetry(root, describeNetworkFailure(service, err), function () {
+      renderService(root, params);
+    }, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
     return;
   }
+
+  root.textContent = '';
 
   const matching = (groupByService(collections)[service] || []).map(function (collection) {
     const kind = collectionKind(collection);
@@ -151,13 +204,33 @@ export async function renderService(root, params) {
   });
 
   if (!matching.length) {
-    root.appendChild(buildHeader(service, 0));
+    root.appendChild(buildHeader(service, null));
     root.appendChild(el('p', 'jellio-service-empty', 'Nothing imported for ' + service + ' yet.'));
     return;
   }
 
+  renderLoading(root);
+
+  // Not awaited: app.js's own sync() queue only starts the next real
+  // navigation once this function's own returned promise resolves, and
+  // this fetch is one real request per matched catalog, several on a
+  // real streaming hub tile. Awaiting it here meant a reader could not
+  // leave a slow-loading service page for anywhere else until every
+  // one of those had either resolved or timed out, same real bug
+  // screens/library.js's own genre rows and screens/home.js's own
+  // catalog rows already document and fix the same way. Unlike those
+  // two, the real content this callback builds replaces root's own
+  // top level content wholesale rather than filling in a shell this
+  // function already returned control past, so a late arrival after
+  // the reader has already left this screen needs an explicit guard
+  // here, the same real shape screens/player.js's own screenTornDown
+  // already uses for its error screen: without it, a slow response
+  // still landing after a real navigation elsewhere would wipe out
+  // whatever that next screen had already rendered into the same root.
+  let tornDown = false;
+
   const filled = [];
-  await Promise.all(
+  Promise.all(
     matching.map(function (entry) {
       return getCollectionItems(entry.collection.Id, entry.kind, ROW_LIMIT)
         .then(function (items) {
@@ -167,34 +240,41 @@ export async function renderService(root, params) {
           console.warn('Jellio: could not load service catalog', err);
         });
     }),
-  );
+  ).then(function () {
+    if (tornDown) return;
+    root.textContent = '';
 
-  // Every catalog for this service came back empty. Jellyfin's
-  // CleanupCollectionAndPlaylistPathsTask empties every Gelato collection
-  // on each restart, since their items are virtual and carry no path for
-  // it to find, so this is a real state a server sits in, not a bug to
-  // paper over with a blank page.
-  if (!filled.length) {
-    root.appendChild(buildHeader(service, 0));
-    root.appendChild(
-      el(
-        'p',
-        'jellio-service-empty',
-        'Nothing imported for ' +
-          service +
-          ' yet. Run the Gelato catalog import, and check that the catalogs for this service have Collection enabled.',
-      ),
-    );
-    return;
-  }
+    // Every catalog for this service came back empty. Jellyfin's
+    // CleanupCollectionAndPlaylistPathsTask empties every Gelato collection
+    // on each restart, since their items are virtual and carry no path for
+    // it to find, so this is a real state a server sits in, not a bug to
+    // paper over with a blank page.
+    if (!filled.length) {
+      root.appendChild(buildHeader(service, null));
+      root.appendChild(
+        el(
+          'p',
+          'jellio-service-empty',
+          'Nothing imported for ' +
+            service +
+            ' yet. Run the Gelato catalog import, and check that the catalogs for this service have Collection enabled.',
+        ),
+      );
+      return;
+    }
 
-  root.appendChild(buildHeader(service, filled.length));
-  const rowsMount = el('div', 'jellio-rows');
-  root.appendChild(buildChips(topGenres(filled, 10), function (filter) {
-    applyFilter(rowsMount, filter);
-  }));
-  filled.forEach(function (row) {
-    rowsMount.appendChild(buildRowSection(row));
+    root.appendChild(buildHeader(service, pickHeroItem(filled)));
+    const rowsMount = el('div', 'jellio-rows');
+    root.appendChild(buildChips(topGenres(filled, 10), function (filter) {
+      applyFilter(rowsMount, filter);
+    }));
+    filled.forEach(function (row, index) {
+      rowsMount.appendChild(buildRowSection(row, index));
+    });
+    root.appendChild(rowsMount);
   });
-  root.appendChild(rowsMount);
+
+  return function () {
+    tornDown = true;
+  };
 }
