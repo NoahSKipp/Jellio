@@ -14,6 +14,7 @@
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { rotationSeed, seededShuffle } from '../runtime/editorial.js';
+import { el } from '../runtime/dom.js';
 
 const CANDIDATE_LIMIT = 8;
 
@@ -22,13 +23,6 @@ const CANDIDATE_LIMIT = 8;
 // file uses, not re-derived.
 const MIN_SLIDES = 3;
 const ADVANCE_MS = 7000;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function metaLine(item) {
   const parts = [];

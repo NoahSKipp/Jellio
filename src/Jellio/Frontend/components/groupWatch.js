@@ -44,6 +44,7 @@ import {
   renderRankingSession,
   stopRankingCountdown,
 } from './groupWatchRanking.js';
+import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioGroupWatch';
 const CHAT_POLL_MS = 3000;
@@ -53,13 +54,6 @@ const CHAT_POLL_MS = 3000;
 // panel was closed and reopened. Someone else joining or a group
 // starting something never updates it on its own without this.
 const LIST_POLL_MS = 5000;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function handleKeydown(event) {
   if (event.key === 'Escape') closeGroupWatch();
@@ -354,6 +348,15 @@ export async function openGroupWatch() {
       }
     }
 
+    // Real bug, audit-found: this panel can sit open for a whole real
+    // session, CHAT_POLL_MS appending a fresh DOM row on every tick with
+    // nothing ever removed, an unbounded real node count for a long
+    // enough watch. Same real cap the backend's own
+    // GroupWatchChatService.MaxMessagesPerGroup already enforces, so
+    // trimming here never drops anything the server has not already
+    // dropped on its own next poll response anyway.
+    const MAX_CHAT_DOM_MESSAGES = 200;
+
     let lastMessageId = 0;
     let atBottom = true;
     messageList.addEventListener('scroll', function () {
@@ -416,6 +419,9 @@ export async function openGroupWatch() {
         messageList.appendChild(row);
         lastMessageId = Math.max(lastMessageId, message.Id);
       });
+      while (messageList.children.length > MAX_CHAT_DOM_MESSAGES) {
+        messageList.removeChild(messageList.firstChild);
+      }
       if (messages.length && atBottom) {
         messageList.scrollTop = messageList.scrollHeight;
       }

@@ -313,10 +313,6 @@ export function clearCache() {
   cache.clear();
 }
 
-export function getSystemInfo() {
-  return getJson('/System/Info');
-}
-
 export function getItem(itemId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -329,6 +325,10 @@ export function getItem(itemId) {
 // by default, enough for a heading. A detail screen needs real metadata
 // (overview, genres, cast) that only comes back when explicitly asked for,
 // real Jellyfin API behaviour, not this runtime's own choice.
+// Real bug, audit-found: uncached, unlike getSeasons/getEpisodes right
+// below (same SHORT_CACHE_TTL_MS reasoning applies here too, screens/
+// detail.js and screens/player.js's own episode panel both asking for
+// the exact same item within a real navigation in and back out).
 export function getItemDetails(itemId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -341,7 +341,10 @@ export function getItemDetails(itemId) {
     // installed, populates it server side with no extra work here).
     Fields: 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,Trickplay',
   });
-  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString(), ITEM_DETAILS_TIMEOUT_MS);
+  const path = '/Users/' + userId + '/Items/' + itemId + '?' + params.toString();
+  return cached('details:' + itemId, function () {
+    return getJson(path, ITEM_DETAILS_TIMEOUT_MS);
+  }, SHORT_CACHE_TTL_MS);
 }
 
 export function getCurrentUser() {
@@ -1474,10 +1477,6 @@ export function voteRankingSession(groupId, itemId) {
   return postJson('/Jellio/groupwatch/' + groupId + '/ranking/vote', { ItemId: itemId });
 }
 
-export function cancelRankingSession(groupId) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/ranking/cancel');
-}
-
 // Jellio's own GroupWatchJoinSyncController: separate from real SyncPlay's
 // own Buffering/Ready signal (still sent alongside this, screens/player.js's
 // own header explains why), this is only the "who, and why paused" a reader
@@ -1494,38 +1493,6 @@ export function clearJoinSync(groupId) {
 export function getJoinSync(groupId, playlistItemId) {
   const params = new URLSearchParams({ playlistItemId: playlistItemId });
   return getJson('/Jellio/groupwatch/' + groupId + '/join-sync?' + params.toString());
-}
-
-// Jellio's own SubtitlesController: an automatic SubDL fetch for
-// whichever of the admin's own configured languages a title is
-// missing (Controllers/SubtitlesController.cs's own header explains the
-// real trust model, Services/Subtitles/SubtitleCacheStore.cs's own
-// header explains why this has to be disk backed, not the ephemeral
-// in memory shape most of this file's other Jellio owned endpoints
-// already use). ensureSubtitles fires and forgets, real feedback asked
-// for this to never add a single millisecond to actual playback start;
-// getFetchedSubtitles is a plain poll of whatever has actually landed
-// by now, screens/player.js's own header on where it calls this from
-// explains why that can be "nothing yet" the first time a title is
-// ever opened. buildFetchedSubtitleUrl needs the same real ?ApiKey=
-// query string buildSubtitleUrl above already appends: a <track>
-// element's own fetch carries no custom header of its own to send a
-// real Bearer token on instead.
-export function ensureSubtitles(itemId) {
-  return postJson('/Jellio/subtitles/' + itemId + '/ensure');
-}
-
-export function getFetchedSubtitles(itemId) {
-  return getJson('/Jellio/subtitles/' + itemId);
-}
-
-export function buildFetchedSubtitleUrl(itemId, language) {
-  const token = getAccessToken();
-  return (
-    getServerAddress() +
-    '/Jellio/subtitles/' + itemId + '/' + language + '.vtt' +
-    (token ? '?ApiKey=' + encodeURIComponent(token) : '')
-  );
 }
 
 // Jellio's own GroupWatchInviteController: a small in memory per user
@@ -1912,32 +1879,92 @@ export function getHeroCandidates(limit, options) {
   });
 }
 
-// Which genres a library actually has enough of to be worth a row,
-// ported from the original codebase's own libraryBrowse.js
-// discoverGenres(): counted from a random sample rather than asked of
-// /Genres, since that endpoint answers which genre names exist, not
-// which carry enough titles for a row worth scrolling. A genre with
-// fewer than 8 titles in the sample is dropped, same threshold, same
-// reasoning, not re-derived. parentId is optional: the home screen's
-// own genre rows sample the whole server the same way the original
-// codebase's own homeRows.js discoverGenres() does, not one library.
-export function discoverGenres(parentId, itemType, limit) {
+// Checked first, in this exact order, against whatever this library/
+// type's own items are actually tagged with; count-based
+// discoverGenresByCount below only ever fills whatever slots are left
+// over.
+const COMMON_GENRES = [
+  'Action',
+  'Adventure',
+  'Animation',
+  'Comedy',
+  'Crime',
+  'Documentary',
+  'Drama',
+  'Family',
+  'Fantasy',
+  'Horror',
+  'Mystery',
+  'Romance',
+  'Science Fiction',
+  'Thriller',
+  'War',
+  'Western',
+];
+
+// Real bug, live-reported: native Jellyfin's own /Genres (an earlier
+// real pass through this exact file used that instead) answers "what
+// by-name index entries exist", not "what does this item's own real
+// Genres field actually say" - The Conjuring's own detail page
+// correctly read Horror, Thriller off that real field the whole time,
+// /Genres itself still missing Horror outright. Gelato's own
+// programmatic import apparently never populates whatever secondary
+// by-name index /Genres reads from the way a real native library scan
+// would, that field itself real and correct regardless. Scanned
+// directly here instead, Fields=Genres only to keep each item cheap,
+// no SortBy=Random and no count threshold either (both real
+// discoverGenresByCount below still needs, "worth a row" a real
+// different question than "exists at all"): a high enough real Limit
+// to cover this whole feature's own real friends-only scale in one
+// real call rather than a random subset that could just as easily
+// miss a genre outright, same real class of bug this replaces.
+function scanGenres(parentId, itemType) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
     Recursive: 'true',
     IncludeItemTypes: itemType,
-    Limit: '300',
+    Limit: '4000',
     Fields: 'Genres',
-    SortBy: 'Random',
   });
   if (parentId) params.set('ParentId', parentId);
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {
     return getJson(path);
-  })
-    .then(function (result) {
-      const items = (result && result.Items) || [];
+  }).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
+// Every real genre name this exact library/type's own items are
+// actually tagged with, scanGenres()'s own header explains why this
+// asks that off real item data rather than native Jellyfin's own
+// /Genres. Used as-is for a library page's own filter dropdown, real
+// feedback's own explicit ask for "all genres" there rather than the
+// same handful the row heuristic below settles on, and as the real
+// existence check discoverGenres matches COMMON_GENRES against.
+export function getAllGenres(parentId, itemType) {
+  return scanGenres(parentId, itemType).then(function (items) {
+    const seen = {};
+    items.forEach(function (item) {
+      (item.Genres || []).forEach(function (genre) {
+        seen[genre] = true;
+      });
+    });
+    return Object.keys(seen).sort();
+  });
+}
+
+// Which genres a library actually has enough of to be worth a row,
+// ported from the original codebase's own libraryBrowse.js
+// discoverGenres(). A genre with fewer than 8 titles is dropped, same
+// threshold, same reasoning, not re-derived. parentId is optional:
+// the home screen's own genre rows sample the whole server the same
+// way the original codebase's own homeRows.js discoverGenres() does,
+// not one library.
+function discoverGenresByCount(parentId, itemType, limit) {
+  return scanGenres(parentId, itemType)
+    .then(function (items) {
       const counts = {};
       items.forEach(function (item) {
         (item.Genres || []).forEach(function (genre) {
@@ -1955,6 +1982,50 @@ export function discoverGenres(parentId, itemType, limit) {
     })
     .catch(function () {
       return [];
+    });
+}
+
+// Real genre row candidates: every one of COMMON_GENRES this
+// library/type's own items are actually tagged with, in that exact
+// order, real feedback's own explicit ask (Action, Comedy, Crime,
+// Horror, Animation, ...) rather than capping that real list down to
+// whatever the caller's own row count happens to be - a genre with
+// genuinely nothing behind it drops its own row on its own regardless
+// (the caller's own getGenreItems + buildRow already does that, no
+// separate emptiness check needed here). limit only ever governs how
+// far discoverGenresByCount below still tops things up once
+// COMMON_GENRES alone comes up short, same real "still a full page"
+// reasoning a smaller or more eclectic library already needed it for.
+export function discoverGenres(parentId, itemType, limit) {
+  const max = limit || 6;
+  return getAllGenres(parentId, itemType)
+    .then(function (allGenres) {
+      const byLower = {};
+      allGenres.forEach(function (genre) {
+        byLower[genre.toLowerCase()] = genre;
+      });
+
+      const picked = [];
+      COMMON_GENRES.forEach(function (name) {
+        const real = byLower[name.toLowerCase()];
+        if (real && picked.indexOf(real) === -1) picked.push(real);
+      });
+
+      if (picked.length >= max) return picked;
+
+      return discoverGenresByCount(parentId, itemType, max + picked.length)
+        .then(function (byCount) {
+          byCount.forEach(function (genre) {
+            if (picked.length < max && picked.indexOf(genre) === -1) picked.push(genre);
+          });
+          return picked;
+        })
+        .catch(function () {
+          return picked;
+        });
+    })
+    .catch(function () {
+      return discoverGenresByCount(parentId, itemType, max);
     });
 }
 
@@ -1979,21 +2050,74 @@ export function getGenreItems(parentId, itemType, genre, limit) {
   });
 }
 
+// Real feedback, live: a real episode with a real, working native skip
+// button came back Start: 0, End: 0 from this file's own legacy
+// SkipIntroController.cs lookup below, deep dived rather than assumed
+// a Jellio bug, confirmed against real Jellyfin/Intro Skipper source.
+// Current Intro Skipper releases (10.11 compatible, this real server's
+// own version) implement Jellyfin's own IMediaSegmentProvider, writing
+// real detections into Jellyfin's own native Media Segments store
+// (GET /MediaSegments/{id}, MediaBrowser.Controller.MediaSegments,
+// confirmed against real Jellyfin.Api.Controllers.MediaSegmentsController.cs)
+// rather than (or no longer only) its own legacy custom endpoint,
+// exactly the real gap that explained the live report: native clients
+// already read the native store, this file only ever asked the legacy
+// one. Tried first now. MediaSegmentType's own real members
+// (Commercial, Intro, Outro, Preview, Recap, Unknown) confirmed
+// against real source, Outro the real native name for what this
+// runtime already calls Credits everywhere else. StartTicks/EndTicks
+// the same real tick unit (TICKS_PER_SECOND above) every other
+// duration in this runtime already uses.
+async function getNativeMediaSegments(itemId) {
+  const result = await getJson('/MediaSegments/' + itemId);
+  const items = (result && result.Items) || [];
+  function bySeconds(type) {
+    const segment = items.find(function (s) {
+      return s.Type === type;
+    });
+    return segment
+      ? { Start: segment.StartTicks / TICKS_PER_SECOND, End: segment.EndTicks / TICKS_PER_SECOND }
+      : null;
+  }
+  const introduction = bySeconds('Intro');
+  const credits = bySeconds('Outro');
+  if (!introduction && !credits) return null;
+  return {
+    Introduction: introduction || { Start: 0, End: 0 },
+    Credits: credits || { Start: 0, End: 0 },
+  };
+}
+
 // Soft dependency on the community Intro Skipper plugin
 // (github.com/intro-skipper/intro-skipper). Real endpoint confirmed
 // against its own SkipIntroController.cs before writing this: GET
 // /Episode/{id}/Timestamps, despite the route name it works for both
 // Episode and Movie items. A segment with no real detection comes back
 // as Start: 0, End: 0, the server's own Segment.Valid rule is End > 0,
-// not something this runtime invents. Any failure (plugin not
-// installed, unknown item) resolves to an empty object rather than
-// throwing, since this is a soft dependency: no segments is a normal
-// outcome, not an error worth surfacing.
+// not something this runtime invents. The one real case getNativeMediaSegments
+// above does not already cover: an Intro Skipper release old enough to
+// predate its own real IMediaSegmentProvider integration, never
+// writing to the native store at all.
 export async function getIntroSkipperSegments(itemId) {
+  try {
+    const native = await getNativeMediaSegments(itemId);
+    if (native) return native;
+  } catch (err) {
+    console.warn('Jellio: native Media Segments lookup failed for', itemId, err && err.status, err);
+  }
+
   try {
     const result = await getJson('/Episode/' + itemId + '/Timestamps');
     return result || {};
   } catch (err) {
+    // Real feedback, live: "skip intro never shows up" with nothing in
+    // here to actually tell a real plugin absence (this soft
+    // dependency's own real, expected case) apart from a genuine 401/404/
+    // timeout worth knowing about. err.status is only ever set by this
+    // file's own requestJson() for a real non-2xx response, undefined
+    // for a genuine network failure/timeout, still worth a log either
+    // way now.
+    console.warn('Jellio: Intro Skipper segment lookup failed for', itemId, err && err.status, err);
     return {};
   }
 }
@@ -2148,15 +2272,6 @@ export async function setProfileBannerFromFile(file) {
     }
     throw new Error(message || 'Could not set banner');
   }
-}
-
-export function removeProfileBanner() {
-  return fetch(getServerAddress() + '/Jellio/profile/banner', {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  }).then(function (response) {
-    if (!response.ok) throw new Error('Could not remove banner');
-  });
 }
 
 // Server wide feed, Controllers/FeedController.cs's own real merge of

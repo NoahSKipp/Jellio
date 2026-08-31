@@ -13,6 +13,21 @@
     <PackageReference Include="Jellyfin.Model" Version="10.11.11" />
     <PackageReference Include="Jellyfin.Controller" Version="10.11.11" />
     <PackageReference Include="Jellyfin.Common" Version="10.11.11" />
+    <!-- Pinned to the last plain Apache-2.0 2.1.x release, deliberately
+         not a 3.x/4.x one: those carry the Six Labors Split License,
+         free for this real GPL-3.0 project too, but 4.0.0's own real
+         license key enforcement starts 2026-09-04, two days out from
+         when this was pinned, no real reason to take that on for a
+         plain resize. 2.1.11 is also the first 2.1.x release with
+         both real disclosed CVEs fixed (GHSA-2cmq-823j-5qj8,
+         GHSA-rxmq-m78w-7wmc), both scoped to its own gif decoder, a
+         format ProfileBannerController.cs never accepts uploads of
+         anyway. Jellyfin's own real plugin loader gives every plugin
+         its own isolated AssemblyLoadContext (confirmed against real
+         source before adding this), so this plugin's own copy cannot
+         version clash with whatever Jellyfin's own image pipeline
+         loads internally. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\config.html" />

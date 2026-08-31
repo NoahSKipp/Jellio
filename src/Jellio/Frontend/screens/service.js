@@ -11,6 +11,7 @@ import { navigateTo } from '../runtime/router.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { makeRowTitleClickable } from '../components/rowListModal.js';
+import { el } from '../runtime/dom.js';
 
 const ROW_LIMIT = 24;
 // components/rowListModal.js's own "browse everything": a real full
@@ -20,13 +21,6 @@ const ROW_LIMIT = 24;
 // comes close to this, generous on purpose rather than tuned to a real
 // observed maximum.
 const ROW_LIST_LIMIT = 500;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 // The hero's own real backdrop: whichever item this service's real
 // catalogs actually turned up rates highest, the same "let the real

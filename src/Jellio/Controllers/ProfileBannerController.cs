@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 using MediaBrowser.Common.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace Jellio.Controllers;
 
@@ -34,21 +39,50 @@ public class ProfileBannerController(IApplicationPaths applicationPaths) : Contr
         ("image/webp", ".webp"),
     ];
 
-    // Real feedback, live: an unresized banner (this endpoint never
-    // downsizes anything server side, unlike every other real image
-    // path in this app, which all ask for a specific max width) meant a
-    // reader's own full resolution photo shipped straight back out on
-    // every profile visit, real "scrolling is painfully slow" the
-    // actual symptom of a multi megapixel bitmap sitting in this page's
-    // own render tree. No real image library safely reachable from
-    // here (SixLabors.ImageSharp would be its own fresh dependency this
-    // plugin cannot build or run to actually verify, System.Drawing.Common
-    // is Windows only since .NET 6, and this real server runs on Linux),
-    // so a byte size cap is the one real, dependency free guard rail
-    // available: generous enough for a real, already reasonably
-    // compressed photo, small enough to actually stop the pathological
-    // case.
+    // Real feedback, live, twice over: an unresized banner (this
+    // endpoint never downsized anything server side, unlike every
+    // other real image path in this app, which all ask for a specific
+    // max width) meant a reader's own full resolution photo shipped
+    // straight back out on every profile visit, real "scrolling is
+    // painfully slow" the actual symptom of a multi megapixel bitmap
+    // sitting in this page's own render tree. A byte size cap alone
+    // (this file's own earlier real fix) does not actually catch this:
+    // a real phone photo can sit well under MaxUploadBytes while still
+    // carrying four or more real megapixels, exactly the live report
+    // that came back after a same-file re-upload passed the cap and
+    // still lagged just as bad. MaxDimension below is the real fix,
+    // Jellio.csproj's own header explains why SixLabors.ImageSharp is
+    // safe to reach for here now.
     private const long MaxUploadBytes = 8 * 1024 * 1024;
+
+    // Real bug, audit-found: base64 inflates real bytes by roughly 4/3,
+    // headroom this real bound below already needs so an honest
+    // under-cap upload is never rejected just for its own base64 text
+    // being longer than the real bytes it decodes to.
+    private const long MaxRequestBodyBytes = MaxUploadBytes * 4 / 3 + 1024;
+
+    // Real bug, audit-found: MaxDimension above only ever ran after
+    // Image.Load(bytes) had already fully decoded every real pixel, no
+    // bound at all on how much memory that real decode itself could
+    // cost first. A small, highly compressible file (a large solid
+    // color canvas, say) can pass MaxUploadBytes while still declaring
+    // dimensions that decode into gigabytes of real pixel memory.
+    // Image.Identify below reads just the real header, cheap regardless
+    // of what the real pixel data turns out to be, so this catches that
+    // before Image.Load ever runs. Generous on purpose. No real camera
+    // photo gets anywhere near this; it exists to catch a real
+    // decompression bomb, not to second guess MaxDimension's own real
+    // resize logic further down.
+    private const int MaxDecodeDimension = 10000;
+
+    // 16:4.2 is this banner's own real aspect ratio (css/app.css), so
+    // the short edge is already well under this regardless of which
+    // edge trips it; a real ultra wide 4K viewport is the one
+    // legitimate case that actually renders anywhere near this many
+    // real CSS pixels wide, everything smaller downscales for free.
+    // Never upscales a smaller original: the check below only ever
+    // resizes down.
+    private const int MaxDimension = 2400;
 
     private string BannerDirectory =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "banners");
@@ -89,6 +123,18 @@ public class ProfileBannerController(IApplicationPaths applicationPaths) : Contr
             return BadRequest("Unsupported image type");
         }
 
+        // Real bug, audit-found: this used to only ever check bytes.Length
+        // after the full real body had already been read into memory and
+        // base64 decoded. Request.ContentLength rejects an oversized
+        // upload before any of that real cost is paid at all, whenever
+        // the client actually sends one (it is an optional real header,
+        // so the post-decode check below still has to stay as the one
+        // real guarantee).
+        if (Request.ContentLength is { } contentLength && contentLength > MaxRequestBodyBytes)
+        {
+            return BadRequest("Image too large. Please use a banner under 8 MB.");
+        }
+
         byte[] bytes;
         try
         {
@@ -105,6 +151,59 @@ public class ProfileBannerController(IApplicationPaths applicationPaths) : Contr
             return BadRequest("Image too large. Please use a banner under 8 MB.");
         }
 
+        byte[] encoded;
+        try
+        {
+            using (var identifyStream = new MemoryStream(bytes))
+            {
+                var info = Image.Identify(identifyStream);
+                if (info is null)
+                {
+                    return BadRequest("Malformed image data");
+                }
+
+                if (info.Width > MaxDecodeDimension || info.Height > MaxDecodeDimension)
+                {
+                    return BadRequest("Image dimensions are too large.");
+                }
+            }
+
+            using var image = Image.Load(bytes);
+            if (image.Width > MaxDimension || image.Height > MaxDimension)
+            {
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Mode = ResizeMode.Max,
+                    Size = new Size(MaxDimension, MaxDimension),
+                }));
+            }
+
+            using var output = new MemoryStream();
+            switch (match.ContentType)
+            {
+                case "image/png":
+                    image.Save(output, new PngEncoder());
+                    break;
+                case "image/webp":
+                    image.Save(output, new WebpEncoder());
+                    break;
+                default:
+                    image.Save(output, new JpegEncoder { Quality = 85 });
+                    break;
+            }
+
+            encoded = output.ToArray();
+        }
+        catch (ImageFormatException)
+        {
+            // Real base class, confirmed against ImageSharp's own source
+            // before writing this: UnknownImageFormatException (an
+            // unrecognized format) is one of its own real subclasses, so
+            // this one catch already covers that case too, not just a
+            // real but corrupt file of a genuinely supported format.
+            return BadRequest("Malformed image data");
+        }
+
         Directory.CreateDirectory(BannerDirectory);
         foreach (var type in AllowedTypes)
         {
@@ -115,7 +214,7 @@ public class ProfileBannerController(IApplicationPaths applicationPaths) : Contr
             }
         }
 
-        await System.IO.File.WriteAllBytesAsync(Path.Combine(BannerDirectory, userId + match.Extension), bytes);
+        await System.IO.File.WriteAllBytesAsync(Path.Combine(BannerDirectory, userId + match.Extension), encoded);
         return NoContent();
     }
 

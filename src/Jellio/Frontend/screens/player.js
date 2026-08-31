@@ -46,9 +46,6 @@ import {
   startJoinSync,
   clearJoinSync,
   getJoinSync,
-  ensureSubtitles,
-  getFetchedSubtitles,
-  buildFetchedSubtitleUrl,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
@@ -74,12 +71,23 @@ import {
 } from '../runtime/syncPlay.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
+import { el } from '../runtime/dom.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // Same real 0.9 threshold Services/AchievementService.cs's own
 // IsRealWatch() uses server side.
 const GROUP_WATCH_COMPLETION_THRESHOLD = 0.9;
 const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
+// Services/SleepTimerService.cs's own header already scopes that real
+// service to duration timers only, an episode count timer needing
+// wiring into playback stop/start events for correctness there instead.
+// Handled here purely client side instead: an episode boundary is
+// already a real client side event (the Up Next overlay's own
+// shouldShowUpNextNow trigger below), and dismissUpNext() already ends
+// playback without auto-advancing, real feedback's own explicit
+// description of what this mode should do, so no server side timer or
+// stop command is needed for this mode at all.
+const EPISODE_SLEEP_TIMER_OPTIONS = [1, 2, 3, 5];
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // How long the reader can sit idle mid playback before the whole
 // control shell fades out, ported from the same real convention every
@@ -177,13 +185,6 @@ const UPNEXT_FALLBACK_TRIGGER_SECONDS = 120;
 // real minute gives that same reader room to actually see and cancel
 // it instead.
 const UPNEXT_COUNTDOWN_SECONDS = 60;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   const overlay = el('div', 'jellio-player-upnext jellio-player-upnext-hidden');
@@ -361,17 +362,6 @@ export async function renderPlayer(root, params) {
     });
     return undefined;
   }
-
-  // Fire and forget, real feedback asked for this to never add a single
-  // millisecond to actual playback start below: Controllers/
-  // SubtitlesController.cs's own real Ensure route resolves this exact
-  // item's own ProviderIds.Tmdb server side and kicks off a background
-  // SubDL fetch for whichever admin configured language is still
-  // missing, nothing this screen waits on. Inert (a plain no-op
-  // 200) until an admin actually fills in the config page's own new
-  // Subtitles section, same real non-blocking shape TmdbAccessToken's
-  // own Calendar feature already has.
-  ensureSubtitles(itemId).catch(function () {});
 
   // Real Jellyfin SyncPlay: set once this exact title is what the
   // reader's own current group already has on its real queue
@@ -869,6 +859,13 @@ export async function renderPlayer(root, params) {
     let chatPollTimer = null;
     let chatOpen = false;
 
+    // Real bug, audit-found: same real unbounded DOM growth
+    // components/groupWatch.js's own full chat panel had, a real
+    // playback session left open long enough appends one row per poll
+    // tick with nothing ever removed. Same real cap the backend's own
+    // GroupWatchChatService.MaxMessagesPerGroup already enforces.
+    const MAX_CHAT_DOM_MESSAGES = 200;
+
     function appendChatMessages(messages) {
       messages.forEach(function (message) {
         const row = el('div', 'jellio-player-chat-message');
@@ -886,6 +883,9 @@ export async function renderPlayer(root, params) {
         chatMessages.appendChild(row);
         chatLastMessageId = Math.max(chatLastMessageId, message.Id);
       });
+      while (chatMessages.children.length > MAX_CHAT_DOM_MESSAGES) {
+        chatMessages.removeChild(chatMessages.firstChild);
+      }
       if (messages.length) chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
@@ -1141,12 +1141,36 @@ export async function renderPlayer(root, params) {
       entry.button.setAttribute('aria-expanded', 'false');
     });
   }
+  // Real bug, live-reported: app.css's own .jellio-player-popover carries
+  // one fixed `right` anchor shared by every one of these, so every
+  // popover actually opened in the exact same spot regardless of which
+  // pill button was clicked. That only ever looked right for Audio, the
+  // pill's own real rightmost small popover (Sleep sits further right
+  // still, but as a "large" two column panel Audio's own width already
+  // reached close to that same fixed anchor); Speed sits at the pill's
+  // own left edge, its own real gap to that anchor the exact "opens on
+  // the very right" reader complaint. Centering this on the real
+  // clicked button instead, clamped to shell's own real bounds so a
+  // popover opened from the pill's own left edge still cannot run off
+  // screen to the left.
+  function positionPopover(button, menu) {
+    const shellRect = shell.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    const margin = 16;
+    menu.style.right = 'auto';
+    const menuWidth = menu.offsetWidth;
+    const center = buttonRect.left - shellRect.left + buttonRect.width / 2;
+    const maxLeft = Math.max(margin, shellRect.width - menuWidth - margin);
+    const left = Math.min(Math.max(center - menuWidth / 2, margin), maxLeft);
+    menu.style.left = left + 'px';
+  }
   function registerPopover(button, menu) {
     popovers.push({ button: button, menu: menu });
     button.addEventListener('click', function () {
       closePopovers(menu);
       const nowHidden = menu.classList.toggle('jellio-player-popover-hidden');
       button.setAttribute('aria-expanded', String(!nowHidden));
+      if (!nowHidden) positionPopover(button, menu);
       wakeControls();
     });
   }
@@ -1286,13 +1310,7 @@ export async function renderPlayer(root, params) {
     track.kind = 'subtitles';
     track.label = stream.DisplayTitle || stream.Language || 'Subtitle';
     track.srclang = stream.Language || '';
-    // JellioFetchedUrl only ever set on one of fetchedSubtitleStreams's
-    // own synthetic entries (this function's own header on rebuildSubtitleMenu
-    // explains where those come from): a real native Jellyfin stream
-    // has no such field, buildSubtitleUrl's own real
-    // /Videos/.../Subtitles/{index}/Stream.vtt route the only one that
-    // ever makes sense for it.
-    track.src = stream.JellioFetchedUrl || buildSubtitleUrl(itemId, mediaSource.Id, stream);
+    track.src = buildSubtitleUrl(itemId, mediaSource.Id, stream);
     track.default = true;
     video.appendChild(track);
     activeTrack = track;
@@ -1424,21 +1442,9 @@ export async function renderPlayer(root, params) {
       });
   }
 
-  // fetchedSubtitleStreams: synthetic stream-shaped entries for whatever
-  // Controllers/SubtitlesController.cs's own automatic SubDL fetch has
-  // actually landed for this item so far (loadFetchedSubtitles
-  // further down populates this once, real feedback asked for nothing
-  // here to poll while the player is already open, a title only ever
-  // opened again later actually shows what an earlier open's own
-  // background fetch found). IsTextSubtitleStream true routes these
-  // through the exact same selectSubtitle() every native text stream
-  // already uses; JellioFetchedUrl is the one real field that function's
-  // own header explains telling the two apart.
-  let fetchedSubtitleStreams = [];
-
   function rebuildSubtitleMenu() {
     subtitleLanguageList.textContent = '';
-    const subtitleStreams = getSubtitleStreams(mediaSource).concat(fetchedSubtitleStreams);
+    const subtitleStreams = getSubtitleStreams(mediaSource);
     if (!subtitleStreams.length) {
       subtitleButton.disabled = true;
       return;
@@ -1480,26 +1486,6 @@ export async function renderPlayer(root, params) {
     renderSubtitleTrackList(subtitleStreams);
   }
   rebuildSubtitleMenu();
-
-  // One shot, not polled: fetchedSubtitleStreams's own header above
-  // explains why. languageName() reused for the label the same way
-  // rebuildSubtitleMenu's own language column already does, "(auto)"
-  // the one real thing telling this apart from a native embedded track
-  // in the exact same list.
-  getFetchedSubtitles(itemId)
-    .then(function (entries) {
-      fetchedSubtitleStreams = (entries || []).map(function (entry, index) {
-        return {
-          Index: -1000 - index,
-          Language: entry.Language,
-          DisplayTitle: languageName(entry.Language) + ' (auto)',
-          IsTextSubtitleStream: true,
-          JellioFetchedUrl: buildFetchedSubtitleUrl(itemId, entry.Language),
-        };
-      });
-      if (fetchedSubtitleStreams.length) rebuildSubtitleMenu();
-    })
-    .catch(function () {});
 
   registerPopover(subtitleButton, subtitleMenu);
 
@@ -1694,24 +1680,47 @@ export async function renderPlayer(root, params) {
   rebuildAudioMenu();
 
   // === Sleep timer popover ===
+  // null whenever this mode is not the one active; the duration mode
+  // above it stays a real Services/SleepTimerService.cs timer, this one
+  // decremented from the timeupdate handler below instead, the two
+  // never both armed at once (each option below clears the other
+  // mode's own state before arming its own).
+  let sleepTimerEpisodesRemaining = null;
   const sleepMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
   const cancelOption = el('button', 'jellio-player-popover-option', 'Cancel timer');
   cancelOption.type = 'button';
   cancelOption.addEventListener('click', function () {
+    sleepTimerEpisodesRemaining = null;
     cancelSleepTimer().then(function () {
       sleepButton.classList.remove('jellio-player-pill-btn-active');
       closePopovers(null);
     });
   });
   sleepMenu.appendChild(cancelOption);
+  sleepMenu.appendChild(el('div', 'jellio-player-style-group-label', 'Stop after'));
   SLEEP_TIMER_OPTIONS.forEach(function (minutes) {
     const option = el('button', 'jellio-player-popover-option', minutes + ' min');
     option.type = 'button';
     option.addEventListener('click', function () {
+      sleepTimerEpisodesRemaining = null;
       startSleepTimer(minutes).then(function () {
         sleepButton.classList.add('jellio-player-pill-btn-active');
         closePopovers(null);
       });
+    });
+    sleepMenu.appendChild(option);
+  });
+  sleepMenu.appendChild(el('div', 'jellio-player-style-group-label', 'Or stop after'));
+  EPISODE_SLEEP_TIMER_OPTIONS.forEach(function (count) {
+    const option = el('button', 'jellio-player-popover-option', count + (count === 1 ? ' episode' : ' episodes'));
+    option.type = 'button';
+    option.addEventListener('click', function () {
+      cancelSleepTimer().catch(function () {
+        // Nothing was running server side, nothing to react to.
+      });
+      sleepTimerEpisodesRemaining = count;
+      sleepButton.classList.add('jellio-player-pill-btn-active');
+      closePopovers(null);
     });
     sleepMenu.appendChild(option);
   });
@@ -2693,8 +2702,25 @@ export async function renderPlayer(root, params) {
       });
     }
 
-    if (nextEpisode && !upNextDismissed && shouldShowUpNextNow(positionSeconds, durationSeconds)) {
-      showUpNext();
+    // !upNextShown alongside !upNextDismissed below (shouldShowUpNextNow
+    // stays true for as long as both keep failing, called again on
+    // every one of these timeupdate ticks): the episode sleep timer's
+    // own decrement needs to run exactly once per real episode
+    // boundary, not once per tick, the same real one-shot guarantee
+    // showUpNext()'s own early return already gives its plain callers.
+    if (nextEpisode && !upNextShown && !upNextDismissed && shouldShowUpNextNow(positionSeconds, durationSeconds)) {
+      if (sleepTimerEpisodesRemaining != null) {
+        sleepTimerEpisodesRemaining -= 1;
+        if (sleepTimerEpisodesRemaining <= 0) {
+          sleepTimerEpisodesRemaining = null;
+          sleepButton.classList.remove('jellio-player-pill-btn-active');
+          dismissUpNext();
+        } else {
+          showUpNext();
+        }
+      } else {
+        showUpNext();
+      }
     }
 
     const activeSegment = activeSkipSegment(positionSeconds);
@@ -3062,6 +3088,19 @@ export async function renderPlayer(root, params) {
     }
     window.clearInterval(progressInterval);
     if (upNextCountdownInterval) window.clearInterval(upNextCountdownInterval);
+    // Real bug, audit-found: hideControls() below reschedules itself
+    // via idleTimer for as long as it finds itself "blocked" (video.paused
+    // among other things), and video.paused reads permanently true from
+    // here on, this same function's own video.pause() call three lines
+    // down never undone. Without this, a torn down player's own idleTimer
+    // rescheduled itself forever, once every IDLE_HIDE_MS, holding this
+    // whole closure (video, shell, popovers, sourcePanel, episodesPanel)
+    // alive for nothing: real feedback traced this to a real binge
+    // session, one real screen re-mounted (and one real leaked idleTimer
+    // chain left behind) per episode, Up Next's own auto advance and the
+    // episode list both re-navigating through this exact same real
+    // teardown/mount cycle.
+    if (idleTimer) window.clearTimeout(idleTimer);
     if (hasReportedStart) {
       reportPlaybackStopped(itemId, mediaSource.Id, currentPositionTicks());
       // Up Next and Continue Watching are exactly the two home rows a

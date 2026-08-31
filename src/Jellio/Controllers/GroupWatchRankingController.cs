@@ -30,6 +30,16 @@ public class GroupWatchRankingController(GroupWatchRankingService rankingService
 
     public record VoteRequest(Guid ItemId);
 
+    // Real bug, audit-found: ParticipantUserIds came straight from the
+    // caller with no cap at all, one real Grouplist file read per id
+    // below, so a real caller submitting an arbitrarily large list could
+    // force an arbitrarily large amount of synchronous disk I/O in one
+    // real request. This plugin's own real friends-only scale never
+    // needs a group anywhere near this big; picked well above any real
+    // SyncPlay group this plugin has ever actually seen, not tuned down
+    // to the bone.
+    private const int MaxParticipants = 32;
+
     [HttpPost("{groupId}/ranking/start")]
     public IActionResult Start([FromRoute] Guid groupId, [FromBody] StartRequest request)
     {
@@ -39,7 +49,13 @@ public class GroupWatchRankingController(GroupWatchRankingService rankingService
             return BadRequest("Invalid user session");
         }
 
-        var participantIds = (request.ParticipantUserIds ?? new List<Guid>()).Append(userId).Distinct().ToList();
+        var requestedParticipants = request.ParticipantUserIds ?? new List<Guid>();
+        if (requestedParticipants.Count > MaxParticipants)
+        {
+            return BadRequest($"Too many participants. A pick can pool at most {MaxParticipants} people's own Grouplists.");
+        }
+
+        var participantIds = requestedParticipants.Append(userId).Distinct().ToList();
         var pooled = new List<Guid>();
         var seen = new HashSet<Guid>();
         foreach (var participantId in participantIds)

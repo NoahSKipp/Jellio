@@ -9,15 +9,9 @@
 // nothing different at all.
 import { toggleWatchlist } from './cardOptionsMenu.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
+import { el } from '../runtime/dom.js';
 
 const MENU_ID = 'jellioListMembershipMenu';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function closeMenu() {
   const existing = document.getElementById(MENU_ID);

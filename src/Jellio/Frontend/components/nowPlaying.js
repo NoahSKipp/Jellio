@@ -13,6 +13,7 @@
 import { getNowPlayingSessions, getImageUrl } from '../runtime/api.js';
 import { isAuthenticated } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
+import { el } from '../runtime/dom.js';
 
 const POLL_INTERVAL_MS = 10000;
 // Long enough to cross the real gap between the sidebar's own rail and
@@ -26,13 +27,6 @@ let panel = null;
 let started = false;
 let lastCount = 0;
 let hoverCloseTimer = null;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function subtitle(item) {
   if (item.Type === 'Episode') {

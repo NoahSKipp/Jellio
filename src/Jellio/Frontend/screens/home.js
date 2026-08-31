@@ -34,6 +34,7 @@ import {
 import { navigateTo } from '../runtime/router.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { onUserDataChange } from '../runtime/syncPlay.js';
+import { el } from '../runtime/dom.js';
 
 // Real Gelato catalog collections (Trending, Popular, Top Rated, a
 // service's own row, ...) plus genres counted from a sample, ported
@@ -190,13 +191,6 @@ function buildGenreRows(genreData, seen) {
     if (row) sections.push(wrapRowForCustomization(row, 'genre:' + entry.title));
   });
   return sections;
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
 }
 
 // The logo is requested optimistically and the name sits behind it in

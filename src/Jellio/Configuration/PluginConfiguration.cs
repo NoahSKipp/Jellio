@@ -67,25 +67,4 @@ public class PluginConfiguration : BasePluginConfiguration
     // titles), so this is the one real external credential this whole
     // feature needs, nothing else.
     public string TmdbAccessToken { get; set; } = string.Empty;
-
-    // Controllers/SubtitlesController.cs's own real source: a plain
-    // real SubDL api key, sent as a query parameter on every real
-    // request (confirmed against a real, working client's own source,
-    // kalmnoise/subdl_api_cli's own main.py, before writing any of
-    // this) - no separate real login step the way this feature's own
-    // first pass (OpenSubtitles.com) needed. Swapped for real feedback:
-    // that provider's own free tier was cut to as little as 10 real
-    // downloads a day, unusable for a title binged in one real sitting,
-    // SubDL's own real free tier (2000 searches, 50 downloads a day)
-    // real headroom several times over for the same real scale. Empty
-    // by default, same real non-blocking shape TmdbAccessToken above
-    // already is.
-    public string SubDlApiKey { get; set; } = string.Empty;
-
-    // Comma separated real ISO 639-1 codes, checked in this exact order
-    // for a title missing one of them, one flat string field rather than
-    // a real multi select UI this admin config page has no component
-    // for yet - the same one-field shape TmdbAccessToken above already
-    // uses for its own single credential.
-    public string SubtitleLanguages { get; set; } = "de,en,es";
 }

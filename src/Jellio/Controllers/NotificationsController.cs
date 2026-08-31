@@ -56,6 +56,25 @@ public class NotificationsController(
 
     private const int MaxAnnouncementLength = 300;
 
+    // Real bug, audit-found: this list never got pruned at all, a
+    // watchlist release notification added once per item per real day
+    // and an admin broadcast appended into every real user's own file
+    // forever. Same real cap AchievementService.MaxRecentActivity
+    // already uses for the identical real "keep a real backlog, not an
+    // unbounded one" reason. Newest first (index 0), so trimming the
+    // tail below drops the real oldest entries, never the ones a
+    // reader has not looked at yet.
+    private const int MaxStoredNotifications = 100;
+
+    // Real bug, audit-found: every one of Get()/Broadcast()/MarkRead()/
+    // Delete() below did its own real Load then Save with real time
+    // between them for another request to land in, the same real
+    // lost-update shape ProfileSettingsStore.cs's own header now
+    // explains for the identical reason. Static, not an instance field,
+    // for the same real reason NextUpHiddenController.cs's own lock
+    // already is: a fresh controller instance per real request.
+    private static readonly object Lock = new();
+
     private string StoreDirectory =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "notifications");
 
@@ -70,10 +89,15 @@ public class NotificationsController(
             return BadRequest("Invalid user session");
         }
 
-        var notifications = Load(userId);
-
+        // The watchlist scan itself (an outbound TMDB call) stays outside
+        // the lock below, same real reason the disk stores elsewhere in
+        // this plugin never hold their own lock across a real network
+        // call: only the real Load-mutate-Save around notifications
+        // itself needs to be atomic, not whatever produced the entries
+        // going into it.
         var accessToken = JellioPlugin.Instance?.Configuration.TmdbAccessToken;
         var user = string.IsNullOrWhiteSpace(accessToken) ? null : userManager.GetUserById(userId);
+        List<WatchlistCalendarItem>? entries = null;
         if (user != null)
         {
             var watchlist = libraryManager.GetItemList(new InternalItemsQuery(user)
@@ -82,54 +106,64 @@ public class NotificationsController(
                 IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
             });
 
-            var entries = await calendarService.GetWatchlistCalendarAsync(watchlist, accessToken!).ConfigureAwait(false);
-            var today = DateTime.UtcNow.Date;
-            var known = notifications.Select(n => n.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var changed = false;
-
-            foreach (var entry in entries)
-            {
-                // Only the real day an entry's own date actually arrives,
-                // never before (this reader has not missed anything yet)
-                // and never after (CalendarService's own real PickDigitalRelease/
-                // PickNextEpisode already drop anything already in the
-                // past, so entries here are never anything but today or
-                // still ahead).
-                if (entry.Date.Date != today)
-                {
-                    continue;
-                }
-
-                var id = entry.ItemId + ":" + entry.Date.ToString("yyyy-MM-dd");
-                if (!known.Add(id))
-                {
-                    continue;
-                }
-
-                notifications.Insert(
-                    0,
-                    new WatchlistNotification(
-                        id,
-                        entry.ItemId,
-                        entry.Name,
-                        entry.Type,
-                        entry.Date,
-                        entry.Kind,
-                        entry.Detail,
-                        DateTime.UtcNow,
-                        false
-                    )
-                );
-                changed = true;
-            }
-
-            if (changed)
-            {
-                Save(userId, notifications);
-            }
+            entries = await calendarService.GetWatchlistCalendarAsync(watchlist, accessToken!).ConfigureAwait(false);
         }
 
-        return Ok(notifications);
+        lock (Lock)
+        {
+            var notifications = Load(userId);
+
+            if (entries != null)
+            {
+                var today = DateTime.UtcNow.Date;
+                var known = notifications.Select(n => n.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var changed = false;
+
+                foreach (var entry in entries)
+                {
+                    // Only the real day an entry's own date actually arrives,
+                    // never before (this reader has not missed anything yet)
+                    // and never after (CalendarService's own real PickDigitalRelease/
+                    // PickNextEpisode already drop anything already in the
+                    // past, so entries here are never anything but today or
+                    // still ahead).
+                    if (entry.Date.Date != today)
+                    {
+                        continue;
+                    }
+
+                    var id = entry.ItemId + ":" + entry.Date.ToString("yyyy-MM-dd");
+                    if (!known.Add(id))
+                    {
+                        continue;
+                    }
+
+                    notifications.Insert(
+                        0,
+                        new WatchlistNotification(
+                            id,
+                            entry.ItemId,
+                            entry.Name,
+                            entry.Type,
+                            entry.Date,
+                            entry.Kind,
+                            entry.Detail,
+                            DateTime.UtcNow,
+                            false
+                        )
+                    );
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    TrimToLimit(notifications);
+                    Save(userId, notifications);
+                }
+            }
+
+            return Ok(notifications);
+        }
     }
 
     // Real feedback asked for a way to announce restarts/maintenance to
@@ -164,24 +198,28 @@ public class NotificationsController(
         }
 
         var now = DateTime.UtcNow;
-        foreach (var user in userManager.GetUsers())
+        lock (Lock)
         {
-            var notifications = Load(user.Id);
-            notifications.Insert(
-                0,
-                new WatchlistNotification(
-                    "announcement:" + Guid.NewGuid(),
-                    Guid.Empty,
-                    message,
-                    "Announcement",
-                    now,
-                    "announcement",
-                    null,
-                    now,
-                    false
-                )
-            );
-            Save(user.Id, notifications);
+            foreach (var user in userManager.GetUsers())
+            {
+                var notifications = Load(user.Id);
+                notifications.Insert(
+                    0,
+                    new WatchlistNotification(
+                        "announcement:" + Guid.NewGuid(),
+                        Guid.Empty,
+                        message,
+                        "Announcement",
+                        now,
+                        "announcement",
+                        null,
+                        now,
+                        false
+                    )
+                );
+                TrimToLimit(notifications);
+                Save(user.Id, notifications);
+            }
         }
 
         return Ok();
@@ -196,10 +234,13 @@ public class NotificationsController(
             return BadRequest("Invalid user session");
         }
 
-        var notifications = Load(userId);
-        if (notifications.Any(n => !n.Read))
+        lock (Lock)
         {
-            Save(userId, notifications.Select(n => n with { Read = true }).ToList());
+            var notifications = Load(userId);
+            if (notifications.Any(n => !n.Read))
+            {
+                Save(userId, notifications.Select(n => n with { Read = true }).ToList());
+            }
         }
 
         return Ok();
@@ -214,11 +255,14 @@ public class NotificationsController(
             return BadRequest("Invalid user session");
         }
 
-        var notifications = Load(userId);
-        var remaining = notifications.Where(n => !string.Equals(n.Id, id, StringComparison.OrdinalIgnoreCase)).ToList();
-        if (remaining.Count != notifications.Count)
+        lock (Lock)
         {
-            Save(userId, remaining);
+            var notifications = Load(userId);
+            var remaining = notifications.Where(n => !string.Equals(n.Id, id, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (remaining.Count != notifications.Count)
+            {
+                Save(userId, remaining);
+            }
         }
 
         return Ok();
@@ -233,8 +277,20 @@ public class NotificationsController(
             return BadRequest("Invalid user session");
         }
 
-        Save(userId, []);
+        lock (Lock)
+        {
+            Save(userId, []);
+        }
+
         return Ok();
+    }
+
+    private static void TrimToLimit(List<WatchlistNotification> notifications)
+    {
+        if (notifications.Count > MaxStoredNotifications)
+        {
+            notifications.RemoveRange(MaxStoredNotifications, notifications.Count - MaxStoredNotifications);
+        }
     }
 
     private List<WatchlistNotification> Load(Guid userId)

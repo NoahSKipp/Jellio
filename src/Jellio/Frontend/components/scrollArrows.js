@@ -7,12 +7,8 @@
 // idea (hover reveals a control that pages the track), reimplemented
 // here in vanilla JS against this project's own markup rather than
 // copied.
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+
+import { el } from '../runtime/dom.js';
 
 function buildArrow(direction, label) {
   const button = document.createElement('button');

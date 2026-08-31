@@ -56,9 +56,7 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
             return BadRequest("Invalid user session");
         }
 
-        var settings = store.Load(userId);
-        settings.IsPrivate = request.IsPrivate;
-        store.Save(userId, settings);
+        var settings = store.Update(userId, s => s.IsPrivate = request.IsPrivate);
         return Ok(settings);
     }
 
@@ -71,9 +69,7 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
             return BadRequest("Invalid user session");
         }
 
-        var settings = store.Load(userId);
-        settings.GrouplistEnabled = request.GrouplistEnabled;
-        store.Save(userId, settings);
+        var settings = store.Update(userId, s => s.GrouplistEnabled = request.GrouplistEnabled);
         return Ok(settings);
     }
 
@@ -86,9 +82,8 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
             return BadRequest("Invalid user session");
         }
 
-        var settings = store.Load(userId);
-        settings.Bio = string.IsNullOrWhiteSpace(request.Bio) ? null : request.Bio.Trim()[..Math.Min(request.Bio.Trim().Length, 240)];
-        store.Save(userId, settings);
+        var settings = store.Update(userId, s =>
+            s.Bio = string.IsNullOrWhiteSpace(request.Bio) ? null : request.Bio.Trim()[..Math.Min(request.Bio.Trim().Length, 240)]);
         return Ok(settings);
     }
 

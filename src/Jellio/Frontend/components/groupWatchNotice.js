@@ -7,18 +7,14 @@
 // already has, one instance for the whole page, module level so
 // components/groupWatchInvites.js's own poll and watch-target listener
 // both share it without either needing to hold a reference.
+
+import { el } from '../runtime/dom.js';
+
 const NOTICE_ID = 'jellioGroupWatchNotice';
 const HIDE_MS = 10000;
 
 let notice = null;
 let hideTimer = null;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function ensureNotice() {
   if (notice) return notice;

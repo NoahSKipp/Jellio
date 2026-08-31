@@ -18,6 +18,8 @@
 // or list rows, none of which this runtime has an equivalent concept
 // of to attach them to.
 
+import { el } from '../runtime/dom.js';
+
 const STORAGE_KEY = 'jellioHomeCustomization';
 
 function defaultCustomization() {
@@ -49,10 +51,6 @@ function saveHomeCustomization(customization) {
 
 export function resetHomeCustomization() {
   saveHomeCustomization(defaultCustomization());
-}
-
-export function hasCustomization(customization) {
-  return customization.order.length > 0 || customization.hidden.length > 0;
 }
 
 // Ported from Harbor's own real effectiveOrder(): whatever this
@@ -98,13 +96,6 @@ export function toggleRowHiddenKey(customization, key) {
   });
   saveHomeCustomization(updated);
   return updated;
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
 }
 
 // Real bug, found live in a headless test before this ever shipped:

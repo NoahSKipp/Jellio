@@ -10,11 +10,7 @@
 // same reasoning components/networkState.js's own renderLoading()
 // documents for every other screen, sized for this one instead of the
 // generic single-spinner shape those use.
-function el(tag, className) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 const SKELETON_ROW_CARDS = 6;
 const SKELETON_ROW_COUNT = 4;

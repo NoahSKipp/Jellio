@@ -21,6 +21,12 @@ public class GroupWatchInviteController(GroupWatchInviteService inviteService, I
 {
     public record InviteRequest(Guid ToUserId, string GroupName);
 
+    // Real bug, audit-found: unlike chat text (500) and a profile bio
+    // (240), GroupName below was stored verbatim, no cap at all, an
+    // untrusted client free to send an invite carrying an arbitrarily
+    // large string into GroupWatchInviteService's own per-user queue.
+    private const int MaxGroupNameLength = 100;
+
     [HttpGet("invites")]
     public IActionResult GetInvites([FromQuery] long after = 0)
     {
@@ -59,6 +65,11 @@ public class GroupWatchInviteController(GroupWatchInviteService inviteService, I
 
         var fromUserName = userManager.GetUserById(userId)?.Username ?? "Someone";
         var groupName = string.IsNullOrWhiteSpace(request.GroupName) ? "Group Watch" : request.GroupName.Trim();
+        if (groupName.Length > MaxGroupNameLength)
+        {
+            groupName = groupName[..MaxGroupNameLength];
+        }
+
         var invite = inviteService.Add(request.ToUserId, groupId, groupName, userId, fromUserName);
         return Ok(invite);
     }

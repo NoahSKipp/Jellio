@@ -18,15 +18,9 @@ import {
 } from '../runtime/auth.js';
 import { getUserImageUrl, clearCache, getOnlineUserIds } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
+import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioAccountSwitcher';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function handleKeydown(event) {
   if (event.key === 'Escape') closeAccountSwitcher();

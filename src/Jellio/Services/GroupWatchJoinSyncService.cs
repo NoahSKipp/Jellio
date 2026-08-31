@@ -48,9 +48,19 @@ public class GroupWatchJoinSyncService
         if (_entriesByGroup.TryGetValue(groupId, out var group))
         {
             group.TryRemove(userId, out _);
+            RemoveIfEmpty(groupId, group);
         }
     }
 
+    // Real bug, audit-found: Get() below already filtered a stale entry
+    // out of its own return value, but never actually removed it from
+    // the real inner dictionary, and the real outer per group entry was
+    // never removed at all, even once every one of its own inner
+    // entries was long stale. One real permanent dictionary entry per
+    // GroupId ever created, for the life of this plugin's own process.
+    // Pruned here instead, the one real place already called often
+    // enough (screens/player.js's own poll) for this to double as the
+    // real sweep, no dedicated background loop needed just for it.
     public IReadOnlyList<JoinSyncEntry> Get(Guid groupId, Guid playlistItemId)
     {
         if (!_entriesByGroup.TryGetValue(groupId, out var group))
@@ -59,8 +69,32 @@ public class GroupWatchJoinSyncService
         }
 
         var cutoff = DateTime.UtcNow.AddSeconds(-MaxAgeSeconds);
+        foreach (var entry in group)
+        {
+            if (entry.Value.StartedUtc < cutoff)
+            {
+                group.TryRemove(entry.Key, out _);
+            }
+        }
+
+        RemoveIfEmpty(groupId, group);
+
         return group.Values
-            .Where(e => e.PlaylistItemId == playlistItemId && e.StartedUtc >= cutoff)
+            .Where(e => e.PlaylistItemId == playlistItemId)
             .ToList();
+    }
+
+    // KeyValuePair overload rather than a plain TryRemove(groupId, out
+    // _): a concurrent Start() elsewhere could already have re-added a
+    // real fresh entry for this exact groupId between the emptiness
+    // check above and this real removal, and that overload only removes
+    // this real dictionary entry if the value there is still this exact
+    // same real group instance, never a fresh one racing in.
+    private void RemoveIfEmpty(Guid groupId, ConcurrentDictionary<Guid, JoinSyncEntry> group)
+    {
+        if (group.IsEmpty)
+        {
+            _entriesByGroup.TryRemove(new KeyValuePair<Guid, ConcurrentDictionary<Guid, JoinSyncEntry>>(groupId, group));
+        }
     }
 }

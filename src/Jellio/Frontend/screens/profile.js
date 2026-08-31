@@ -20,32 +20,10 @@ import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { formatRelativeTime } from '../runtime/format.js';
+import { el } from '../runtime/dom.js';
 
 const BIO_MAX_LENGTH = 240;
-
-function formatRelativeTime(isoString) {
-  const then = new Date(isoString).getTime();
-  if (Number.isNaN(then)) return '';
-  const diffMs = Date.now() - then;
-  const minutes = Math.round(diffMs / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return minutes + (minutes === 1 ? ' minute ago' : ' minutes ago');
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
-  const days = Math.round(hours / 24);
-  if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
-  const months = Math.round(days / 30);
-  if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
-  const years = Math.round(months / 12);
-  return years + (years === 1 ? ' year ago' : ' years ago');
-}
 
 // AchievementsController.cs's own real ActivityGrouping.Group: a binge
 // (same series, same UTC day) comes back as one entry with
@@ -70,11 +48,12 @@ function buildBanner(userId, isOwner, onChanged) {
   img.className = 'jellio-profile-banner-img';
   img.alt = '';
   // Real feedback, live: "scrolling is painfully slow" traced back to
-  // an oversized, unresized banner (runtime/api.js's own header on
-  // MAX_BANNER_BYTES explains why no server side resize exists here).
-  // async keeps this file's own real decode off the main thread rather
-  // than blocking a scroll on it, cheap and safe regardless of that
-  // real fix, not a substitute for it.
+  // an oversized banner. ProfileBannerController.cs now resizes one
+  // down server side on upload, but this reader's own browser still
+  // has to decode whatever is already stored (an upload from before
+  // that real fix shipped, most of all). async keeps this file's own
+  // real decode off the main thread rather than blocking a scroll on
+  // it, cheap and safe regardless, not a substitute for that real fix.
   img.decoding = 'async';
   img.src = getBannerUrl(userId) + '&t=' + Date.now();
   img.addEventListener('error', function () {

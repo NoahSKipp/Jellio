@@ -11,13 +11,8 @@ import {
 } from './cardOptionsMenu.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { openListMembershipMenu } from './listMembershipMenu.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { showToast } from './toast.js';
+import { el } from '../runtime/dom.js';
 
 // Rebuilds just the watched badge/progress bar over the poster image,
 // its own function so the options menu's mark watched/unwatched action
@@ -121,6 +116,7 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update watchlist state', err);
+        showToast('Could not update your watchlist. Try again.');
       })
       .finally(function () {
         watchlistButton.disabled = false;
@@ -157,6 +153,7 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update watched state', err);
+        showToast('Could not update watched state. Try again.');
       })
       .finally(function () {
         watchedButton.disabled = false;
