@@ -1,9 +1,7 @@
 using System;
-using System.IO;
-using System.Linq;
+using System.Collections.Generic;
 using System.Security.Claims;
-using System.Text.Json;
-using MediaBrowser.Common.Configuration;
+using Jellio.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,36 +12,18 @@ namespace Jellio.Controllers;
 /// that hides one series from it permanently, only ever the side effect
 /// of marking an episode played (which just advances that same series to
 /// its own next episode, real bug reported live, components/
-/// cardOptionsMenu.js's own "Remove from Up Next" button). This stores a
-/// per user set of series ids to exclude from that row, one plain JSON
-/// array per user id, same real file-per-thing storage AvatarsController
-/// already uses under PluginConfigurationsPath rather than a database
-/// this plugin has no other reason to carry. User id read from the same
-/// real "Jellyfin-UserId" claim SleepTimerController already reads it
+/// cardOptionsMenu.js's own "Remove from Up Next" button). Backed by
+/// NextUpHiddenStore's own real per user JSON file. User id read from the
+/// same real "Jellyfin-UserId" claim SleepTimerController already reads it
 /// from, not guessed.
 /// </summary>
 [ApiController]
 [Route("Jellio/next-up-hidden")]
 [Authorize]
-public class NextUpHiddenController(IApplicationPaths applicationPaths) : ControllerBase
+public class NextUpHiddenController(NextUpHiddenStore store) : ControllerBase
 {
-    // Real bug, audit-found: Hide() below did its own real Load then
-    // Save with real time between them for another request to land
-    // in, the same real lost-update shape ProfileSettingsStore.cs's
-    // own header now explains for the identical reason. A plain
-    // instance field would not do it here, a fresh controller instance
-    // per real request the same as every other ASP.NET Core controller;
-    // static is what actually shares this one real lock across every
-    // one of them.
-    private static readonly object Lock = new();
-
-    private string StoreDirectory =>
-        Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "next-up-hidden");
-
-    private string StorePath(Guid userId) => Path.Combine(StoreDirectory, userId + ".json");
-
     [HttpGet]
-    public ActionResult<string[]> Get()
+    public ActionResult<List<string>> Get()
     {
         var userId = GetUserId();
         if (userId == Guid.Empty)
@@ -51,7 +31,7 @@ public class NextUpHiddenController(IApplicationPaths applicationPaths) : Contro
             return BadRequest("Invalid user session");
         }
 
-        return Ok(Load(userId));
+        return Ok(store.Load(userId));
     }
 
     [HttpPost("{seriesId}")]
@@ -63,40 +43,8 @@ public class NextUpHiddenController(IApplicationPaths applicationPaths) : Contro
             return BadRequest("Invalid user session");
         }
 
-        lock (Lock)
-        {
-            var hidden = Load(userId);
-            if (!hidden.Contains(seriesId, StringComparer.OrdinalIgnoreCase))
-            {
-                Save(userId, hidden.Append(seriesId).ToArray());
-            }
-        }
-
+        store.Hide(userId, seriesId);
         return Ok();
-    }
-
-    private string[] Load(Guid userId)
-    {
-        var path = StorePath(userId);
-        if (!System.IO.File.Exists(path))
-        {
-            return Array.Empty<string>();
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<string[]>(System.IO.File.ReadAllText(path)) ?? Array.Empty<string>();
-        }
-        catch (JsonException)
-        {
-            return Array.Empty<string>();
-        }
-    }
-
-    private void Save(Guid userId, string[] hidden)
-    {
-        Directory.CreateDirectory(StoreDirectory);
-        System.IO.File.WriteAllText(StorePath(userId), JsonSerializer.Serialize(hidden));
     }
 
     private Guid GetUserId()

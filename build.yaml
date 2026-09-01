@@ -1,7 +1,7 @@
 ---
 name: "Jellio"
 guid: "f2937f08-0595-40d1-a74b-a44656cbc6de"
-version: "0.89.2"
+version: "0.89.3"
 targetAbi: "10.11.11.0"
 framework: "net9.0"
 owner: "NoahSKipp"
