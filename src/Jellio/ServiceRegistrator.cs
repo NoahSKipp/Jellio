@@ -66,6 +66,14 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // this store's only writer.
         services.AddSingleton<GrouplistStore>();
 
+        // Extracted from their own controllers (audit-found: a controller
+        // is a fresh instance per real request, so a JSON store inlined
+        // straight into one and only guarded by a static lock field was
+        // the odd one out against every other store above already being
+        // its own shared singleton). Same no-state-of-its-own shape.
+        services.AddSingleton<NextUpHiddenStore>();
+        services.AddSingleton<NotificationStore>();
+
         // In memory only, same real reason GroupWatchChatService above
         // is, and takes a direct dependency on that exact instance to
         // post its own winner announcement through the same real chat
