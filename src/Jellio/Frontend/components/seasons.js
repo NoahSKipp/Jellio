@@ -12,6 +12,7 @@
 // behind the real page rather than over it: css/app.css's own header on
 // .jellio-seasons explains the z-index: -1 trick that makes that true.
 import { getJellioConfig } from '../runtime/api.js';
+import { el } from '../runtime/dom.js';
 
 const THEME_ORDER = ['halloween', 'newyear', 'valentine', 'christmas'];
 
@@ -48,12 +49,6 @@ export function activeSeasonalTheme(date, config) {
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
-}
-
-function el(tag, cls) {
-  const e = document.createElement(tag);
-  e.className = cls;
-  return e;
 }
 
 function reduceMotion() {

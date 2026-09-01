@@ -18,13 +18,7 @@
 // resolve to a real user id, so callers pass the resolved list in
 // rather than this file trying to re-derive it a second time.
 import { getRankingSession, startRankingSession, voteRankingSession, getItem, getImageUrl } from '../runtime/api.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 export function buildPickTrigger(onStart) {
   const button = el('button', 'jellio-pick-trigger');

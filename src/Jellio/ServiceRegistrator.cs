@@ -1,7 +1,6 @@
 using Jellio.Services;
 using Jellio.Services.Achievements;
 using Jellio.Services.Grouplist;
-using Jellio.Services.Subtitles;
 using Jellyfin.Data.Events.Users;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
@@ -77,18 +76,5 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // has, no hosted service of its own: GroupWatchJoinSyncController
         // is this store's only writer.
         services.AddSingleton<GroupWatchJoinSyncService>();
-
-        // SubDlClient carries no instance state of its own (a plain api
-        // key on every request, no login/token cache the way this
-        // feature's own first pass, OpenSubtitles.com, needed), still a
-        // singleton for the same real reason IHttpClientFactory backed
-        // services elsewhere in this file already are. SubtitleCacheStore
-        // is disk backed, same no-state-of-its-own shape AchievementStore
-        // above already has; SubtitleFetchService takes a direct
-        // dependency on both plus ILibraryManager to resolve a real
-        // item's own ProviderIds.Tmdb server side.
-        services.AddSingleton<SubDlClient>();
-        services.AddSingleton<SubtitleCacheStore>();
-        services.AddSingleton<SubtitleFetchService>();
     }
 }

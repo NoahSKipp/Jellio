@@ -8,12 +8,7 @@
 // with a real retry action, same shape as Nuvio's own
 // NetworkOfflineCard's Retry button, confirmed against its real source
 // before writing this.
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 // message is optional: screens/detail.js's own polling wait for a
 // title Gelato is still importing for the first time is the one real

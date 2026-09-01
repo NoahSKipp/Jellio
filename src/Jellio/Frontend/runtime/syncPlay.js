@@ -644,24 +644,8 @@ export function startSyncPlay() {
   }
 }
 
-export function isSyncPlayReady() {
-  return started && !!apiClient;
-}
-
 export function getCurrentGroup() {
   return currentGroup;
-}
-
-export function getCurrentQueue() {
-  return currentQueue;
-}
-
-export function getLastCommand() {
-  return lastCommand;
-}
-
-export function isInGroup(groupId) {
-  return !!currentGroup && (!groupId || currentGroup.GroupId === groupId);
 }
 
 // The real item id (and PlaylistItemId) the group is currently on, or

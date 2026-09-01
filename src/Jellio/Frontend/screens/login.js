@@ -25,13 +25,7 @@ import {
 } from '../runtime/auth.js';
 import { getUserImageUrl, updateUserPassword, getOnlineUserIds } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 // The one real completion signal this screen can give: navigate to
 // #/home (a real route, so its own hashchange fires app.js's sync()),

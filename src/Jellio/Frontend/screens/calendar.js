@@ -8,13 +8,7 @@ import { getCalendarEntries, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

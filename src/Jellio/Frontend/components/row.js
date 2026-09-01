@@ -10,13 +10,7 @@
 import { buildCard } from './card.js';
 import { attachScrollArrows } from './scrollArrows.js';
 import { makeRowTitleClickable } from './rowListModal.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 // fetchAll: optional, a real unbounded (or much larger) refetch of this
 // exact same row for makeRowTitleClickable's own list modal to swap in,

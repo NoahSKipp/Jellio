@@ -11,28 +11,28 @@ import { getNotifications, markNotificationsRead, deleteNotification, clearAllNo
 import { isAuthenticated } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
 import { showToast } from './toast.js';
+import { el } from '../runtime/dom.js';
 
 // A release date changes once a day at most, real reason this polls far
 // less often than components/nowPlaying.js's own 10s (a live session can
 // genuinely change every few seconds, this cannot).
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
+// Same real value and same real reason as components/nowPlaying.js's own
+// HOVER_CLOSE_DELAY_MS: long enough to cross the gap between the
+// sidebar's own rail and this panel's own fixed position without the
+// panel already closing under the reader's own cursor.
+const HOVER_CLOSE_DELAY_MS = 200;
 
 let panel = null;
 let started = false;
 let lastUnreadCount = 0;
 let currentItems = [];
+let hoverCloseTimer = null;
 // null until the first real poll resolves: every notification already
 // sitting there on a fresh page load is not "new" the reader has not
 // seen, it is history, and toasting the reader's own entire backlog the
 // instant the app opens would read as broken, not helpful.
 let knownIds = null;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 // Real feedback: an admin's own broadcast (Controllers/
 // NotificationsController.cs's own POST broadcast, RequiresElevation
@@ -121,6 +121,32 @@ function updateBadge() {
   if (button) button.classList.toggle('jellio-sidebar-notifications-active', lastUnreadCount > 0);
 }
 
+function cancelHoverClose() {
+  if (hoverCloseTimer) {
+    window.clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = null;
+  }
+}
+
+function scheduleHoverClose() {
+  cancelHoverClose();
+  hoverCloseTimer = window.setTimeout(hideNotificationsPanel, HOVER_CLOSE_DELAY_MS);
+}
+
+// Real feedback: this panel used to only ever open on click and had to
+// be clicked again to close, unlike components/nowPlaying.js's own hover
+// sensitive panel right next to it in the same sidebar. Mirrors that
+// file's own showNowPlayingPanel(): marking unread notifications read
+// stays a toggleNotificationsPanel()-only side effect, a reader just
+// hovering through has not actually looked at anything yet.
+function showNotificationsPanel() {
+  if (!panel) return;
+  cancelHoverClose();
+  panel.classList.add('jellio-notifications-panel-visible');
+  const button = document.querySelector('.jellio-sidebar-notifications');
+  if (button) button.setAttribute('aria-expanded', 'true');
+}
+
 function render(items) {
   currentItems = items;
   lastUnreadCount = items.filter(function (n) {
@@ -129,6 +155,21 @@ function render(items) {
   updateBadge();
 
   if (!panel) return;
+
+  // Real feedback, same real gap components/nowPlaying.js's own render()
+  // header already explains: startNotifications() runs before
+  // renderSidebar() on this same page's very first sync(), so the
+  // trigger button does not exist yet the first time this fires. This
+  // same render() re-queries it on every poll tick regardless, so the
+  // dataset marker just keeps a stable button from ever getting a
+  // second real listener stacked on top of the first.
+  const trigger = document.querySelector('.jellio-sidebar-notifications');
+  if (trigger && !trigger.dataset.jellioNotificationsHoverBound) {
+    trigger.dataset.jellioNotificationsHoverBound = '1';
+    trigger.addEventListener('mouseenter', showNotificationsPanel);
+    trigger.addEventListener('mouseleave', scheduleHoverClose);
+  }
+
   panel.textContent = '';
 
   const header = el('div', 'jellio-notifications-header');
@@ -214,6 +255,8 @@ function createPanel() {
   panel = el('div', 'jellio-notifications-panel');
   panel.setAttribute('role', 'region');
   panel.setAttribute('aria-label', 'Notifications');
+  panel.addEventListener('mouseenter', showNotificationsPanel);
+  panel.addEventListener('mouseleave', scheduleHoverClose);
   document.body.appendChild(panel);
 
   document.addEventListener('keydown', function (event) {
@@ -232,6 +275,7 @@ function createPanel() {
 // nothing here waits on it.
 export function toggleNotificationsPanel() {
   if (!panel) return;
+  cancelHoverClose();
   const visible = panel.classList.toggle('jellio-notifications-panel-visible');
   const button = document.querySelector('.jellio-sidebar-notifications');
   if (button) button.setAttribute('aria-expanded', String(visible));
@@ -245,6 +289,7 @@ export function toggleNotificationsPanel() {
 }
 
 export function hideNotificationsPanel() {
+  cancelHoverClose();
   if (!panel) return;
   panel.classList.remove('jellio-notifications-panel-visible');
   const button = document.querySelector('.jellio-sidebar-notifications');

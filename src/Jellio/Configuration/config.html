@@ -187,28 +187,6 @@
             <input is="emby-input" type="password" id="txtTmdbAccessToken" autocomplete="off" />
           </div>
 
-          <div class="verticalSection">
-            <div class="sectionTitleContainer flex align-items-center">
-              <h2 class="sectionTitle">Subtitles</h2>
-            </div>
-            <div class="fieldDescription">
-              Automatically fetches subtitles from SubDL for whichever of the languages below a
-              title is missing, read straight off each item's own ProviderIds.Tmdb the same way
-              the Calendar feature above already does. Needs a free account at subdl.com and an
-              API key from its own developer page. Left blank, this stays off, nothing else is
-              affected.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSubDlApiKey">SubDL API key</label>
-            <input is="emby-input" type="password" id="txtSubDlApiKey" autocomplete="off" />
-          </div>
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSubtitleLanguages">Languages (comma separated ISO 639-1 codes)</label>
-            <input is="emby-input" type="text" id="txtSubtitleLanguages" autocomplete="off" />
-          </div>
-
           <div>
             <button is="emby-button" type="submit" class="raised button-submit block emby-button">
               <span>Save</span>
@@ -309,8 +287,6 @@
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
-          document.querySelector('#txtSubDlApiKey').value = withDefault(config.SubDlApiKey, '');
-          document.querySelector('#txtSubtitleLanguages').value = withDefault(config.SubtitleLanguages, 'de,en,es');
           Dashboard.hideLoadingMsg();
         });
       }
@@ -323,8 +299,6 @@
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
-          config.SubDlApiKey = document.querySelector('#txtSubDlApiKey').value.trim();
-          config.SubtitleLanguages = document.querySelector('#txtSubtitleLanguages').value.trim();
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });

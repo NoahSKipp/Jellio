@@ -10,24 +10,11 @@
 // Play button is one tap further in, not gone.
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
+import { formatRuntime } from '../runtime/format.js';
+import { el } from '../runtime/dom.js';
 
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
-
-function formatRuntime(ticks) {
-  if (!ticks) return '';
-  const minutes = Math.round(ticks / 600000000);
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
-}
 
 function metaLine(item) {
   const parts = [];

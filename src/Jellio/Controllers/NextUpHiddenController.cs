@@ -27,6 +27,16 @@ namespace Jellio.Controllers;
 [Authorize]
 public class NextUpHiddenController(IApplicationPaths applicationPaths) : ControllerBase
 {
+    // Real bug, audit-found: Hide() below did its own real Load then
+    // Save with real time between them for another request to land
+    // in, the same real lost-update shape ProfileSettingsStore.cs's
+    // own header now explains for the identical reason. A plain
+    // instance field would not do it here, a fresh controller instance
+    // per real request the same as every other ASP.NET Core controller;
+    // static is what actually shares this one real lock across every
+    // one of them.
+    private static readonly object Lock = new();
+
     private string StoreDirectory =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "next-up-hidden");
 
@@ -53,10 +63,13 @@ public class NextUpHiddenController(IApplicationPaths applicationPaths) : Contro
             return BadRequest("Invalid user session");
         }
 
-        var hidden = Load(userId);
-        if (!hidden.Contains(seriesId, StringComparer.OrdinalIgnoreCase))
+        lock (Lock)
         {
-            Save(userId, hidden.Append(seriesId).ToArray());
+            var hidden = Load(userId);
+            if (!hidden.Contains(seriesId, StringComparer.OrdinalIgnoreCase))
+            {
+                Save(userId, hidden.Append(seriesId).ToArray());
+            }
         }
 
         return Ok();

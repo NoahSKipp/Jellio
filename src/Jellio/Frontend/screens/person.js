@@ -11,13 +11,7 @@ import { appendCardsLazily } from '../components/lazyGrid.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { navigateTo } from '../runtime/router.js';
 import { describeNetworkFailure } from '../runtime/network.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
+import { el } from '../runtime/dom.js';
 
 export async function renderPerson(root, params) {
   root.textContent = '';

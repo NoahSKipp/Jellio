@@ -101,67 +101,123 @@ public class GroupWatchRankingService(GroupWatchChatService chatService)
     private readonly ConcurrentDictionary<Guid, RankingSession> _sessionsByGroup = new();
     private readonly Random _random = new();
 
+    // Real bug, audit-found: a session's own Pairs/Votes/Round/Status/
+    // Version were mutated straight from Vote()/ResolveRoundIfDue() with
+    // no lock at all, unlike GroupWatchChatService/GroupWatchInviteService's
+    // own real `lock (list)` around their own mutable state. This is the
+    // exact real scenario the whole feature exists for, several group
+    // members voting within the same real second, a plain Dictionary
+    // never safe for that without one. One flat lock rather than a real
+    // per-session lock registry: every real operation here is in memory
+    // and fast, no I/O, so a single lock never holds long enough for this
+    // real friends-only scale to notice, and it needs no lifecycle
+    // management the way a per-session lock object keyed alongside
+    // _sessionsByGroup would.
+    private readonly object _lock = new();
+
+    // Real bug, audit-found: a session only ever left _sessionsByGroup
+    // through an explicit real Cancel() call; one that finished
+    // normally, or whose own initiator just closed the tab mid bracket,
+    // sat there forever, one real permanent dictionary entry per
+    // GroupId a pick was ever started for. Swept here in Start(),
+    // already run under _lock and already the one real place a fresh
+    // session is about to exist regardless, rather than a dedicated
+    // background loop just for this.
+    private static readonly TimeSpan StaleSessionAge = TimeSpan.FromHours(24);
+
     public RankingSession Start(Guid groupId, Guid initiatorUserId, IReadOnlyList<Guid> itemIds, int expectedVoterCount)
     {
-        var shuffled = itemIds.OrderBy(_ => _random.Next()).ToList();
-        var session = new RankingSession
+        lock (_lock)
         {
-            GroupId = groupId,
-            InitiatorUserId = initiatorUserId,
-            Round = 1,
-            Pairs = BuildFirstRoundPairs(shuffled),
-            RoundDeadlineUtc = DateTime.UtcNow.AddSeconds(RoundDurationSeconds),
-            RoundLengthSeconds = RoundDurationSeconds,
-            ExpectedVoterCount = Math.Max(1, expectedVoterCount),
-        };
+            SweepStaleSessions();
 
-        _sessionsByGroup[groupId] = session;
-        return session;
+            var shuffled = itemIds.OrderBy(_ => _random.Next()).ToList();
+            var session = new RankingSession
+            {
+                GroupId = groupId,
+                InitiatorUserId = initiatorUserId,
+                Round = 1,
+                Pairs = BuildFirstRoundPairs(shuffled),
+                RoundDeadlineUtc = DateTime.UtcNow.AddSeconds(RoundDurationSeconds),
+                RoundLengthSeconds = RoundDurationSeconds,
+                ExpectedVoterCount = Math.Max(1, expectedVoterCount),
+            };
+
+            _sessionsByGroup[groupId] = session;
+            return session;
+        }
     }
 
     public RankingSession? Get(Guid groupId)
     {
-        if (!_sessionsByGroup.TryGetValue(groupId, out var session))
+        lock (_lock)
         {
-            return null;
-        }
+            if (!_sessionsByGroup.TryGetValue(groupId, out var session))
+            {
+                return null;
+            }
 
-        ResolveRoundIfDue(session);
-        return session;
+            ResolveRoundIfDue(session);
+            return session;
+        }
     }
 
     public RankingSession? Vote(Guid groupId, Guid userId, Guid itemId)
     {
-        if (!_sessionsByGroup.TryGetValue(groupId, out var session))
+        lock (_lock)
         {
-            return null;
-        }
-
-        ResolveRoundIfDue(session);
-        if (session.Status == RankingStatus.Voting)
-        {
-            var pair = session.Pairs.FirstOrDefault(p => p.ItemA == itemId || p.ItemB == itemId);
-            if (pair != null)
+            if (!_sessionsByGroup.TryGetValue(groupId, out var session))
             {
-                pair.Votes[userId] = itemId;
-                session.Version++;
-                // Real feedback, live: the vote that is itself the last one a
-                // round needs used to still sit until the next real poll tick
-                // picked it up (Get()'s own call to this exact same method),
-                // this exact caller's own response still reading Voting for a
-                // real vote that had already made the round due. Resolved
-                // again right here so the one response this exact vote
-                // returns already carries whatever it resolved to.
-                ResolveRoundIfDue(session);
+                return null;
             }
-        }
 
-        return session;
+            ResolveRoundIfDue(session);
+            if (session.Status == RankingStatus.Voting)
+            {
+                var pair = session.Pairs.FirstOrDefault(p => p.ItemA == itemId || p.ItemB == itemId);
+                if (pair != null)
+                {
+                    pair.Votes[userId] = itemId;
+                    session.Version++;
+                    // Real feedback, live: the vote that is itself the last one a
+                    // round needs used to still sit until the next real poll tick
+                    // picked it up (Get()'s own call to this exact same method),
+                    // this exact caller's own response still reading Voting for a
+                    // real vote that had already made the round due. Resolved
+                    // again right here so the one response this exact vote
+                    // returns already carries whatever it resolved to.
+                    ResolveRoundIfDue(session);
+                }
+            }
+
+            return session;
+        }
     }
 
     public void Cancel(Guid groupId)
     {
-        _sessionsByGroup.TryRemove(groupId, out _);
+        lock (_lock)
+        {
+            _sessionsByGroup.TryRemove(groupId, out _);
+        }
+    }
+
+    // RoundDeadlineUtc rather than a second real "last activity" field:
+    // a Finished session's own copy stays fixed at whatever its last
+    // real round set it to, and a genuinely abandoned Voting one (nobody
+    // ever polled or voted again) never advances past its own real
+    // deadline either, so both real cases already read as stale the
+    // same way once enough real time has passed.
+    private void SweepStaleSessions()
+    {
+        var cutoff = DateTime.UtcNow - StaleSessionAge;
+        foreach (var (groupId, session) in _sessionsByGroup)
+        {
+            if (session.RoundDeadlineUtc < cutoff)
+            {
+                _sessionsByGroup.TryRemove(groupId, out _);
+            }
+        }
     }
 
     private void ResolveRoundIfDue(RankingSession session)

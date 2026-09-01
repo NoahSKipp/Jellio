@@ -16,6 +16,9 @@ import { attachScrollArrows } from '../components/scrollArrows.js';
 import { buildRatingBadge } from '../components/ratingBadge.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { openListMembershipMenu } from '../components/listMembershipMenu.js';
+import { showToast } from '../components/toast.js';
+import { formatRuntime } from '../runtime/format.js';
+import { el } from '../runtime/dom.js';
 
 // A failed item lookup used to just console.warn and return, leaving
 // root exactly as blank as root.textContent = '' left it: a series's
@@ -29,21 +32,6 @@ import { openListMembershipMenu } from '../components/listMembershipMenu.js';
 // asking again, not a trip back to a whole different screen first.
 function renderDetailError(root, message, onRetry) {
   renderRetry(root, message, onRetry, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
-
-function formatRuntime(ticks) {
-  if (!ticks) return '';
-  const minutes = Math.round(ticks / 600000000);
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
 }
 
 // An Episode's own real BaseItemDto never carries BackdropImageTags,
@@ -212,6 +200,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         })
         .catch(function (err) {
           console.warn('Jellio: could not update watched state', err);
+          showToast('Could not update watched state. Try again.');
         });
     }),
   );
@@ -230,6 +219,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
           .then(context.onChanged)
           .catch(function (err) {
             console.warn('Jellio: could not mark previous episodes watched', err);
+            showToast('Could not mark previous episodes watched. Try again.');
           });
       }),
     );
@@ -247,6 +237,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         .then(context.onChanged)
         .catch(function (err) {
           console.warn('Jellio: could not mark season watched', err);
+          showToast('Could not mark season watched. Try again.');
         });
     }),
   );
@@ -801,6 +792,7 @@ export async function renderDetail(root, params) {
       .then(paintWatchlist)
       .catch(function (err) {
         console.warn('Jellio: could not update watchlist state', err);
+        showToast('Could not update your watchlist. Try again.');
       })
       .finally(function () {
         watchlistButton.disabled = false;
@@ -825,6 +817,7 @@ export async function renderDetail(root, params) {
       .then(paintWatched)
       .catch(function (err) {
         console.warn('Jellio: could not update watched state', err);
+        showToast('Could not update watched state. Try again.');
       })
       .finally(function () {
         watchedButton.disabled = false;
@@ -910,6 +903,7 @@ export async function renderDetail(root, params) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update rating', err);
+        showToast('Could not update your rating. Try again.');
       })
       .finally(function () {
         thumbsUpButton.disabled = false;
@@ -930,6 +924,7 @@ export async function renderDetail(root, params) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update rating', err);
+        showToast('Could not update your rating. Try again.');
       })
       .finally(function () {
         thumbsDownButton.disabled = false;

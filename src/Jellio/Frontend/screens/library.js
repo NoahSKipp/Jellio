@@ -14,6 +14,7 @@ import {
   getLibraryItems,
   itemTypesForKind,
   discoverGenres,
+  getAllGenres,
   getGenreItems,
   getCollections,
   getCollectionItems,
@@ -23,6 +24,7 @@ import { buildRow } from '../components/row.js';
 import { buildLibraryCoverflow } from '../components/libraryCoverflow.js';
 import { showsEditorial } from '../runtime/editorial.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
+import { el } from '../runtime/dom.js';
 
 // Only a real anime catalog collection whose own name actually says
 // "trending" earns the row badge below: runtime/api.js's own
@@ -100,13 +102,6 @@ const SORT_OPTIONS = [
   { value: 'SortName:Ascending', label: 'Name (A-Z)' },
   { value: 'SortName:Descending', label: 'Name (Z-A)' },
 ];
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 // Mounts a coverflow only once it has confirmed enough real slides to be
 // worth showing (its own MIN_SLIDES floor), rather than always reserving
@@ -290,7 +285,10 @@ export async function renderLibrary(root, params) {
     heading.textContent = itemResult.status === 'fulfilled' && itemResult.value ? itemResult.value.Name : '';
   });
 
-  discoverGenres(parentId, itemType, GENRE_ROWS)
+  // Filter dropdown: every real genre this library/type actually has,
+  // not the same handful the row heuristic below settles on, real
+  // feedback's own explicit ask.
+  getAllGenres(parentId, itemType)
     .then(function (genres) {
       genres.forEach(function (genre) {
         const optionEl = document.createElement('option');
@@ -299,7 +297,13 @@ export async function renderLibrary(root, params) {
         genreSelect.appendChild(optionEl);
       });
       genreSelect.disabled = !genres.length;
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load genre filter options', err);
+    });
 
+  discoverGenres(parentId, itemType, GENRE_ROWS)
+    .then(function (genres) {
       return Promise.all([
         Promise.allSettled(
           genres.map(function (genre) {

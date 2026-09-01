@@ -27,6 +27,7 @@ import { navigateTo } from '../runtime/router.js';
 import { languageName } from '../runtime/languages.js';
 import { renderLoading, renderRetry } from './networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
+import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioStreamPicker';
 
@@ -99,13 +100,6 @@ function rememberSourceChoice(itemId, mediaSourceId) {
   } catch (err) {
     // A choice not remembered just asks again next time, not fatal.
   }
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
 }
 
 function handleKeydown(event) {

@@ -41,8 +41,7 @@ public class GrouplistController(GrouplistStore store) : ControllerBase
             return BadRequest("Invalid user session");
         }
 
-        store.Add(userId, itemId);
-        return Ok(new { ItemIds = store.Load(userId) });
+        return Ok(new { ItemIds = store.Add(userId, itemId) });
     }
 
     [HttpDelete("{itemId:guid}")]
@@ -54,8 +53,7 @@ public class GrouplistController(GrouplistStore store) : ControllerBase
             return BadRequest("Invalid user session");
         }
 
-        store.Remove(userId, itemId);
-        return Ok(new { ItemIds = store.Load(userId) });
+        return Ok(new { ItemIds = store.Remove(userId, itemId) });
     }
 
     private Guid GetUserId()

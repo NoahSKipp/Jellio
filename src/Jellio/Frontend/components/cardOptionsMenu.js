@@ -14,16 +14,11 @@ import { navigateTo } from '../runtime/router.js';
 import { openStreamPicker } from './streamPicker.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
+import { showToast } from './toast.js';
+import { el } from '../runtime/dom.js';
 
 const MENU_ID = 'jellioCardOptionsMenu';
 const HOLD_MS = 500;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function closeMenu() {
   const existing = document.getElementById(MENU_ID);
@@ -174,6 +169,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       buildOption('Start from beginning', 'replay', function () {
         restartFromBeginning(item).catch(function (err) {
           console.warn('Jellio: could not start over', err);
+          showToast('Could not start over. Try again.');
         });
       }),
     );
@@ -184,6 +180,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         function () {
           toggleWatched(item, opts, onChanged).catch(function (err) {
             console.warn('Jellio: could not remove from continue watching', err);
+            showToast('Could not remove from Continue Watching. Try again.');
           });
         },
         true,
@@ -207,6 +204,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         function () {
           toggleWatched(item, opts, onChanged).catch(function (err) {
             console.warn('Jellio: could not remove from up next', err);
+            showToast('Could not remove from Up Next. Try again.');
           });
         },
         true,
@@ -230,6 +228,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
               })
               .catch(function (err) {
                 console.warn('Jellio: could not remove show from up next', err);
+                showToast('Could not remove show from Up Next. Try again.');
               });
           },
           true,
@@ -245,6 +244,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         function () {
           toggleWatchlist(item, onChanged).catch(function (err) {
             console.warn('Jellio: could not update watchlist state', err);
+            showToast('Could not update your watchlist. Try again.');
           });
         },
       ),
@@ -259,6 +259,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
           function () {
             toggleGrouplist(item.Id).catch(function (err) {
               console.warn('Jellio: could not update grouplist state', err);
+              showToast('Could not update your Grouplist. Try again.');
             });
           },
         ),
@@ -269,6 +270,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       buildOption(isPlayed ? 'Mark as unwatched' : 'Mark as watched', 'check', function () {
         toggleWatched(item, opts, onChanged).catch(function (err) {
           console.warn('Jellio: could not update watched state', err);
+          showToast('Could not update watched state. Try again.');
         });
       }),
     );

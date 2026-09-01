@@ -26,6 +26,20 @@ public class GroupWatchChatService
 {
     private const int MaxMessagesPerGroup = 200;
 
+    // Real bug, audit-found: _messagesByGroup below kept one permanent
+    // entry per real GroupId ever created, for the life of this
+    // plugin's own process, MaxMessagesPerGroup only ever capping a
+    // real still-active room's own history, not evicting a real
+    // finished or simply abandoned one at all. A real message's own
+    // Timestamp already tells this how stale its own group is, no
+    // second real field needed to track that separately. Swept
+    // opportunistically on every real Add() rather than a dedicated
+    // background loop just for this: SyncPlay groups get created
+    // continuously, but never in numbers large enough at this real
+    // friends-only scale for a full real scan here to actually cost
+    // anything worth a timer of its own.
+    private static readonly TimeSpan StaleGroupAge = TimeSpan.FromHours(24);
+
     private readonly ConcurrentDictionary<Guid, List<GroupWatchChatMessage>> _messagesByGroup = new();
     private long _nextId;
 
@@ -51,7 +65,31 @@ public class GroupWatchChatService
             }
         }
 
+        SweepStaleGroups();
         return message;
+    }
+
+    private void SweepStaleGroups()
+    {
+        var cutoff = DateTime.UtcNow - StaleGroupAge;
+        foreach (var (groupId, list) in _messagesByGroup)
+        {
+            DateTime lastActivity;
+            lock (list)
+            {
+                if (list.Count == 0)
+                {
+                    continue;
+                }
+
+                lastActivity = list[^1].Timestamp;
+            }
+
+            if (lastActivity < cutoff)
+            {
+                _messagesByGroup.TryRemove(new KeyValuePair<Guid, List<GroupWatchChatMessage>>(groupId, list));
+            }
+        }
     }
 
     public IReadOnlyList<GroupWatchChatMessage> Since(Guid groupId, long afterId)

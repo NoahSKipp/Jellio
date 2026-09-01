@@ -10,15 +10,9 @@
 // one invented here.
 import { buildIconElement } from './navShared.js';
 import { navigateTo } from '../runtime/router.js';
+import { el } from '../runtime/dom.js';
 
 const MENU_ID = 'jellioLibraryPickerMenu';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 function closeMenu() {
   const existing = document.getElementById(MENU_ID);
