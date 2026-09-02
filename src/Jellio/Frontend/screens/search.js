@@ -3,14 +3,32 @@
 // grid already uses. Debounced locally, does not push a route on every
 // keystroke, native jellyfin-web's own hash history has no reason to grow
 // one entry per character typed.
+//
+// Real bug, live-reported: a card clicked from a result grid had no way
+// back to that same search once landed on its own detail page, only a
+// different nav item or typing the whole query again, every other
+// screen's own back navigation (a real history pop, this runtime never
+// renders a back button of its own) having nothing here to pop back to
+// in the first place, query text and results alike living only in this
+// function's own local variables. reflectStateInAddressBar() below
+// mirrors the current term into the address bar as this runs, without
+// pushing a real history entry for it (the exact per-keystroke growth
+// this file's own header above already avoids) and without re-running
+// this runtime's own sync() on every keystroke either (that function's
+// own header explains why a plain navigateTo()/replaceState() call
+// would). A real back landing on #/search?q=... then reruns that exact
+// same query fresh, same real "screens fetch their own state" shape
+// every other screen here already uses rather than caching the actual
+// result set.
 import { searchItems } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { describeNetworkFailure } from '../runtime/network.js';
+import { reflectStateInAddressBar } from '../runtime/router.js';
 
 const DEBOUNCE_MS = 300;
 
-export async function renderSearch(root) {
+export async function renderSearch(root, params) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-search';
 
@@ -53,6 +71,7 @@ export async function renderSearch(root) {
   let inFlight = null;
 
   function runSearch(term) {
+    reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
     if (inFlight) inFlight.abort();
     const controller = new AbortController();
     inFlight = controller;
@@ -77,6 +96,7 @@ export async function renderSearch(root) {
     if (timer) window.clearTimeout(timer);
     const term = input.value.trim();
     if (!term) {
+      reflectStateInAddressBar('#/search');
       requestId += 1;
       if (inFlight) inFlight.abort();
       grid.textContent = '';
@@ -87,6 +107,18 @@ export async function renderSearch(root) {
       runSearch(term);
     }, DEBOUNCE_MS);
   });
+
+  // A real back navigation landing back on #/search?q=... (a card's own
+  // click handler pushed a real new history entry on top of whatever
+  // runSearch() last reflected here) remounts this whole screen fresh,
+  // same as any other route change; params carries that same term back
+  // in, so the query and its results reappear immediately rather than a
+  // reader having to type the whole thing again.
+  const restoredTerm = (params && params.get('q')) || '';
+  if (restoredTerm) {
+    input.value = restoredTerm;
+    runSearch(restoredTerm);
+  }
 
   input.focus();
 }
