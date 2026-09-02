@@ -119,9 +119,12 @@ window.addEventListener('popstate', notify);
 // not loading at all. Losing pushState detection on a client where
 // this cannot be patched is a real, acceptable degradation; losing the
 // entire runtime over it is not.
+let originalReplaceState = null;
+
 ['pushState', 'replaceState'].forEach(function (method) {
   try {
     const original = window.history[method];
+    if (method === 'replaceState') originalReplaceState = original;
     window.history[method] = function () {
       const result = original.apply(this, arguments);
       notify();
@@ -131,6 +134,26 @@ window.addEventListener('popstate', notify);
     console.warn('Jellio: could not patch history.' + method, err);
   }
 });
+
+// A screen that wants its own transient state (search.js's own query
+// text) restored on a real back navigation into it needs that state
+// reflected in the real address bar, the same real params every other
+// screen already reads its own state from (parseRoute()'s own query
+// string). A plain navigateTo()/history.replaceState() call is the
+// wrong tool for that: both are patched above to call notify(), which
+// re-runs this runtime's own sync() and re-mounts whatever screen is
+// calling this, tearing it down and rebuilding it fresh on every single
+// keystroke a caller reflects into the URL this way. This calls the
+// real, unpatched replaceState() straight through instead: the current
+// history entry's own address bar updates, nothing here ever notices.
+export function reflectStateInAddressBar(hash) {
+  if (!originalReplaceState) return;
+  try {
+    originalReplaceState.call(window.history, null, '', hash);
+  } catch (err) {
+    console.warn('Jellio: could not reflect state in the address bar', err);
+  }
+}
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', notify);

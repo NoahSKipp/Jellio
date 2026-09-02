@@ -20,6 +20,33 @@ namespace Jellio.Controllers;
 /// Participants array, plain display names, ever resolves to a real
 /// user id at all), not re-derived here, no server side SyncPlay
 /// membership check this plugin has never needed before either.
+///
+/// Audit-flagged, Low severity, re-examined rather than left unread: a
+/// caller can name a real user's own id here who never actually joined
+/// this real groupId at all, pooling their own private Grouplist into a
+/// bracket they have no part in. No cheap real fix closes this without
+/// either a false-negative risk or no real protection at all, both
+/// checked directly before writing this rather than assumed. Real
+/// SyncPlay group membership is not something this plugin can see
+/// server side at all (GroupWatchRankingService.cs's own header already
+/// found this, checked again here rather than trusted secondhand).
+/// GroupWatchInviteService's own real invite records looked like a real
+/// fit, an actual signal that two real users share a real groupId, but
+/// that store is keyed by recipient only, caps at MaxPendingPerUser (20)
+/// total invites ever sent to one real user with the oldest evicted
+/// first, and carries no real index by groupId at all: a real, long
+/// since accepted invite for exactly this pick would silently fail that
+/// check the moment 20 newer ones from anywhere else arrived, blocking
+/// a genuinely legitimate participant's own real pooled Grouplist,
+/// worse than the real gap this would be closing. ProfileSettings'
+/// own real GrouplistEnabled flag gates nothing here either: it is a
+/// pure "show me this feature" UI toggle (its own header explains why),
+/// never a real consent signal, and a reader who actually has real
+/// Grouplist items worth leaking is exactly the reader who already has
+/// it turned on, the one real case a check against it would fail to
+/// protect. Left as the same real trust model the rest of this feature
+/// area already accepts, real friends-only scale this plugin has never
+/// needed to defend against a hostile participant at.
 /// </summary>
 [ApiController]
 [Route("Jellio/groupwatch")]
