@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.50.0] - 2026-08-21\n\n### 🚀 Features\n\n- Rotate Shows coverflow order the same way Harbor does\n",
+        "checksum": "f9ec38004740fd9373e1b0072860b811",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.50.0/jellio_0.50.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T23:35:25Z",
+        "version": "0.50.0"
+      },
+      {
         "changelog": "## [0.49.0] - 2026-08-21\n\n### 🚀 Features\n\n- Port Harbor's real shows hero-curation copy table\n- Replace sidebar nav icon animations with Harbor's real ones\n- Move Top Picks for You ahead of because-you-watched rows\n- Drop Remove from Library, add Remove from Up Next\n- Best-effort exclude anime titles from the Shows library hub\n\n### 🐛 Bug Fixes\n\n- Trending badge colors only the icon, drop from rows\n- Exclude already-watched titles from recommendation rows\n- Crop Prime Video logo's baked-in vertical padding\n",
         "checksum": "9cccf08197fc3dfbd21eae2effc06be6",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.49.0/jellio_0.49.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T06:48:11Z",
         "version": "0.37.0"
-      },
-      {
-        "changelog": "## [0.36.0] - 2026-08-20\n\n### 🚀 Features\n\n- Pulsing logo loading state, fix pause overview clipping seek row\n",
-        "checksum": "f2e05c5d8dd77ea899f42de48cfd4317",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.36.0/jellio_0.36.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T06:40:24Z",
-        "version": "0.36.0"
       }
     ]
   }
