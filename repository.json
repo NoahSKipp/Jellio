@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.51.0] - 2026-08-22\n\n### 🚀 Features\n\n- Consolidate mobile nav libraries into one picker, real username\n- Enlarge the mobile nav pill and its icons\n\n### ⚡ Performance\n\n- Drop the mobile nav label's own reflow-heavy transition\n",
+        "checksum": "41c57636c5b79644d3c5f4f82fc46e6b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.51.0/jellio_0.51.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T00:30:08Z",
+        "version": "0.51.0"
+      },
+      {
         "changelog": "## [0.50.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Detail actions wrap on mobile instead of overflowing\n\n### ◀️ Revert\n\n- Drop sidebar nav icon animations\n",
         "checksum": "f301d1b64d8816ce30733a718798309e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.50.1/jellio_0.50.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T08:00:10Z",
         "version": "0.37.2"
-      },
-      {
-        "changelog": "## [0.37.1] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Sidebar Settings link pointing at a dead native route\n",
-        "checksum": "a8c1281873105bf6e9a81f1d5bdbe3e8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.37.1/jellio_0.37.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T07:49:19Z",
-        "version": "0.37.1"
       }
     ]
   }
