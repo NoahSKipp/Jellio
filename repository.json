@@ -49,8 +49,8 @@
       },
       {
         "changelog": "### Jellio v0.4.0\n\nVideo player engine: HTML5 player, sleep timer, and keyboard navigation\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
-        "checksum": "",
-        "sourceUrl": "",
+        "checksum": "bfe625cfb1c541736e2df209a754eaf1",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.4.0/jellio_0.1.0.0.zip",
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:27Z",
         "version": "0.1.0"
