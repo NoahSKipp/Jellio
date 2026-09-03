@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.0.2] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- *(release)* Stop git-cliff from splitting commit bodies into duplicate changelog entries\n- Credit a real watch on natural playback end, not just the 90% ratio\n",
+        "checksum": "3ba66a0fe3c3c9b23e12b7eb9f266f22",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.2/jellio_1.0.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T19:47:31Z",
+        "version": "1.0.2"
+      },
+      {
         "changelog": "## [1.0.1] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Credit achievements off the real stream duration, not metadata\n\n### 💼 Other\n\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n",
         "checksum": "6e78def9bd8bb7317e8b5c7cd8412a7d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.1/jellio_1.0.1.0.zip",
