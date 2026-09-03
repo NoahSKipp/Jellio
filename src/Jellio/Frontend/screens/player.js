@@ -44,6 +44,7 @@ import {
   creditGroupWatchTogether,
   creditRealWatch,
   reportRealDuration,
+  setPlayed,
   voteRankingSession,
   startJoinSync,
   clearJoinSync,
@@ -2582,13 +2583,7 @@ export async function renderPlayer(root, params) {
     // signal this episode was actually watched through on its own,
     // same real credit this needs regardless of what the reader does
     // next.
-    if (!hasCreditedRealWatch) {
-      hasCreditedRealWatch = true;
-      creditRealWatch(itemId).catch(function () {
-        // Not fatal, AchievementService's own metadata based gate is
-        // still there as a real fallback for this exact sitting.
-      });
-    }
+    markRealWatchComplete();
     // A slight underestimate when skipSegments' own real Credits.Start
     // is what triggered this (misses the credits themselves), still
     // far closer to this title's own real length than the library's
@@ -2690,6 +2685,36 @@ export async function renderPlayer(root, params) {
       // reports a good value.
     });
   }
+
+  // Real gap, found by working through the consequences of the fix
+  // above: crediting AchievementService and reporting a real duration
+  // both stay entirely inside this plugin's own data, never touching
+  // native Jellyfin's own Played flag at all. UserDataManager.
+  // UpdatePlayState (real Jellyfin source, confirmed) reads that same
+  // real request's own reportedPositionTicks against item.RunTimeTicks
+  // (still the library's own inflated metadata, nothing above changes
+  // that server side), so a genuine full real watch never crosses its
+  // own 90% MaxResumePct there either: stays in native Continue
+  // Watching, native Up Next never advances, no native watched
+  // checkmark. setPlayed() below is the same real POST/PlayedItems
+  // call the stock "mark watched" toggle already makes
+  // (PlaystateController.cs's own MarkPlayedItem, confirmed: calls
+  // UpdatePlayedStatus(user, item, true, ...) directly, bypassing the
+  // runtime ratio calculation entirely), fired from the exact same
+  // three real trustworthy signals as the achievement credit above.
+  function markRealWatchComplete() {
+    if (hasCreditedRealWatch) return;
+    hasCreditedRealWatch = true;
+    creditRealWatch(itemId).catch(function () {
+      // Not fatal, AchievementService's own metadata based gate is
+      // still there as a real fallback for this exact sitting.
+    });
+    setPlayed(itemId, true).catch(function () {
+      // Not fatal, native Jellyfin's own metadata based gate is still
+      // there as a real fallback for this exact sitting, same as
+      // AchievementService's own above.
+    });
+  }
   let seeking = false;
   let lastReportedTicks = startTicks;
   // Set once cleanup() has actually run: removeAttribute('src') plus
@@ -2788,12 +2813,7 @@ export async function renderPlayer(root, params) {
     // signals reportRealDurationIfUseful() takes since it needs no
     // video.duration at all.
     reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0));
-    if (hasCreditedRealWatch) return;
-    hasCreditedRealWatch = true;
-    creditRealWatch(itemId).catch(function () {
-      // Not fatal, AchievementService's own metadata based gate is
-      // still there as a real fallback for this exact sitting.
-    });
+    markRealWatchComplete();
   });
 
   video.addEventListener('timeupdate', function () {
@@ -2830,11 +2850,7 @@ export async function renderPlayer(root, params) {
     // catch this on its own: real feedback (Below Deck Mediterranean),
     // a genuine full watch never reaching that gate's own 90% at all.
     if (!hasCreditedRealWatch && durationSeconds && positionSeconds / durationSeconds >= REAL_WATCH_COMPLETION_THRESHOLD) {
-      hasCreditedRealWatch = true;
-      creditRealWatch(itemId).catch(function () {
-        // Not fatal, AchievementService's own metadata based gate is
-        // still there as a real fallback for this exact sitting.
-      });
+      markRealWatchComplete();
     }
 
     // !upNextShown alongside !upNextDismissed below (shouldShowUpNextNow
