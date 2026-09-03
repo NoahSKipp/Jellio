@@ -2570,6 +2570,24 @@ export async function renderPlayer(root, params) {
   function showUpNext() {
     if (upNextShown || upNextDismissed || !upNextOverlay) return;
     upNextShown = true;
+    // Real bug, found live: playNextEpisode() just navigates straight
+    // to the next episode's own #/play route, and the countdown below
+    // can fire that same navigation on its own, so 'ended' above never
+    // gets a chance to fire for a reader who moves on the moment Up
+    // Next appears (routine, that's the whole point of Up Next).
+    // shouldShowUpNextNow() only ever reaches here off skipSegments'
+    // own real Credits.Start (when Intro Skipper has it) or its
+    // fallback off durationSeconds, either way a real strong enough
+    // signal this episode was actually watched through on its own,
+    // same real credit this needs regardless of what the reader does
+    // next.
+    if (!hasCreditedRealWatch) {
+      hasCreditedRealWatch = true;
+      creditRealWatch(itemId).catch(function () {
+        // Not fatal, AchievementService's own metadata based gate is
+        // still there as a real fallback for this exact sitting.
+      });
+    }
     upNextOverlay.classList.remove('jellio-player-upnext-hidden');
     upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
     updateUpNextCountdown();
