@@ -394,7 +394,7 @@ export function getResumeItems(limit) {
     (limit || 20) +
     '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb';
   return getJson(query).then(function (result) {
-    return (result && result.Items) || [];
+    return applyRealDurationOverrides((result && result.Items) || []);
   });
 }
 
@@ -2201,6 +2201,63 @@ export function creditGroupWatchTogether() {
 // decides when to call this, not this file.
 export function creditRealWatch(itemId) {
   return postJson('/Jellio/achievements/real-watch', { ItemId: itemId });
+}
+
+// Same real reason creditRealWatch above bypasses item.RunTimeTicks:
+// screens/player.js's own real <video>.duration (or, when that never
+// resolves for one of Gelato's own chunked-delivery sources, its own
+// real positionSeconds once 'ended'/Up Next confirm a genuine full
+// watch) is the only place a title's own real duration is ever
+// actually known. Reported once per real sitting, not on every tick,
+// see player.js's own reportRealDurationIfUseful().
+export function reportRealDuration(itemId, durationTicks) {
+  return postJson('/Jellio/real-duration', { ItemId: itemId, DurationTicks: Math.round(durationTicks) });
+}
+
+// getResumeItems below calls this once per fetch, not once per card:
+// RealDurationController.cs's own comma separated GET exists
+// specifically so a whole Continue Watching row costs one real round
+// trip, not twenty.
+function getRealDurationOverrides(itemIds) {
+  if (!itemIds.length) return Promise.resolve({});
+  return getJson('/Jellio/real-duration?ids=' + itemIds.join(',')).catch(function () {
+    return {};
+  });
+}
+
+// Continue Watching's own real "Xm left" label and progress bar
+// (components/card.js's own remainingLabel/paintLandscapeProgress)
+// both read item.RunTimeTicks and UserData.PlayedPercentage straight
+// off Jellyfin's own native response, real fields this plugin cannot
+// change server side without touching stock Jellyfin itself. Patching
+// both here instead, once, right after the fetch: any item this
+// plugin has already learned a real duration for (see
+// reportRealDuration above) gets its RunTimeTicks replaced and its
+// PlayedPercentage recomputed against that real figure before
+// card.js ever sees it, so neither of those two functions needed to
+// change at all.
+function applyRealDurationOverrides(items) {
+  const withIds = items.filter(function (item) {
+    return item && item.Id;
+  });
+  if (!withIds.length) return Promise.resolve(items);
+  return getRealDurationOverrides(
+    withIds.map(function (item) {
+      return item.Id;
+    }),
+  ).then(function (overrides) {
+    withIds.forEach(function (item) {
+      const key = item.Id.replace(/-/g, '');
+      const realTicks = overrides[key];
+      if (!realTicks) return;
+      item.RunTimeTicks = realTicks;
+      const posTicks = item.UserData && item.UserData.PlaybackPositionTicks;
+      if (item.UserData && posTicks) {
+        item.UserData.PlayedPercentage = Math.min(100, (posTicks / realTicks) * 100);
+      }
+    });
+    return items;
+  });
 }
 
 // Bio (like the profile picture and banner) always visible: only

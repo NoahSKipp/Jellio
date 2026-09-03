@@ -43,6 +43,7 @@ import {
   sendGroupWatchMessage,
   creditGroupWatchTogether,
   creditRealWatch,
+  reportRealDuration,
   voteRankingSession,
   startJoinSync,
   clearJoinSync,
@@ -2588,6 +2589,16 @@ export async function renderPlayer(root, params) {
         // still there as a real fallback for this exact sitting.
       });
     }
+    // A slight underestimate when skipSegments' own real Credits.Start
+    // is what triggered this (misses the credits themselves), still
+    // far closer to this title's own real length than the library's
+    // own inflated metadata guess. reportRealDurationIfUseful's own
+    // monotonic floor means this can only ever raise what's already
+    // been reported, never lower a better figure reconcileDuration
+    // already sent. currentPositionTicks() rather than a
+    // timeupdate-scoped positionSeconds: this function has no closure
+    // over that, only ever called from inside that same handler.
+    reportRealDurationIfUseful(currentPositionTicks() / TICKS_PER_SECOND);
     upNextOverlay.classList.remove('jellio-player-upnext-hidden');
     upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
     updateUpNextCountdown();
@@ -2646,6 +2657,39 @@ export async function renderPlayer(root, params) {
   // real next episode always gets its own fresh renderPlayer() call and
   // its own fresh copy of this flag regardless.
   let hasCreditedRealWatch = false;
+  // components/card.js's own Continue Watching row reads
+  // item.RunTimeTicks straight off Jellyfin's own native response, the
+  // exact same inflated metadata AchievementService.cs's own header
+  // already covers ("Below Deck Mediterranean", reported live) - and,
+  // reported live again, still 22m left at a real 37 of 41 real
+  // minutes once this whole real-watch fix already shipped: crediting
+  // the achievement never taught anything real about the title's own
+  // real duration to the one row that actually displays it.
+  // reportRealDurationIfUseful() below is that: same three real
+  // trustworthy signals hasCreditedRealWatch's own three call sites
+  // already use (reconcileDuration's own real video.duration,
+  // 'ended', Up Next), fed to RealDurationStore.cs instead so
+  // getResumeItems's own next real fetch already knows better.
+  // Monotonically increasing on purpose, not just deduped: Up Next's
+  // own real positionSeconds (skipSegments' own Credits.Start) is only
+  // ever a lower bound on this title's own real length (it always
+  // lands before the real end), so a later, smaller candidate is
+  // never actually better information and must not overwrite an
+  // already-reported larger one. reconcileDuration's own real
+  // video.duration and 'ended' are both the true real total whenever
+  // they do fire, always >= any lower bound reported before them, so
+  // this same rule lets either of those through regardless of order.
+  let lastReportedDurationSeconds = 0;
+  function reportRealDurationIfUseful(candidateSeconds) {
+    if (!candidateSeconds || !isFinite(candidateSeconds) || candidateSeconds <= 0) return;
+    if (candidateSeconds < lastReportedDurationSeconds + 5) return;
+    lastReportedDurationSeconds = candidateSeconds;
+    reportRealDuration(itemId, candidateSeconds * TICKS_PER_SECOND).catch(function () {
+      // Not fatal, Continue Watching just keeps showing the library's
+      // own metadata runtime for this title until a later real sitting
+      // reports a good value.
+    });
+  }
   let seeking = false;
   let lastReportedTicks = startTicks;
   // Set once cleanup() has actually run: removeAttribute('src') plus
@@ -2667,6 +2711,7 @@ export async function renderPlayer(root, params) {
     if (real && isFinite(real) && real > 0) {
       durationSeconds = streamOffsetTicks / TICKS_PER_SECOND + real;
       durationLabel.textContent = formatTime(durationSeconds);
+      reportRealDurationIfUseful(durationSeconds);
     }
   }
 
@@ -2737,6 +2782,12 @@ export async function renderPlayer(root, params) {
   // run out of data to play, so it credits a real full watch even when
   // durationSeconds above is still stuck wrong.
   video.addEventListener('ended', function () {
+    // The real duration itself, not just the credit: whatever
+    // positionSeconds actually reached by the time 'ended' fires IS
+    // this real stream's own real length, the strongest of the three
+    // signals reportRealDurationIfUseful() takes since it needs no
+    // video.duration at all.
+    reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0));
     if (hasCreditedRealWatch) return;
     hasCreditedRealWatch = true;
     creditRealWatch(itemId).catch(function () {

@@ -73,6 +73,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // its own shared singleton). Same no-state-of-its-own shape.
         services.AddSingleton<NextUpHiddenStore>();
         services.AddSingleton<NotificationStore>();
+        services.AddSingleton<RealDurationStore>();
 
         // In memory only, same real reason GroupWatchChatService above
         // is, and takes a direct dependency on that exact instance to
