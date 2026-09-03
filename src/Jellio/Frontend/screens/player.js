@@ -2707,6 +2707,26 @@ export async function renderPlayer(root, params) {
   // later actually settles.
   video.addEventListener('durationchange', reconcileDuration);
 
+  // Real bug, found live: some of Gelato's own real remote sources
+  // never send a Content-Length/proper duration hint at all (chunked
+  // debrid delivery), so video.duration stays Infinity for the whole
+  // real sitting and reconcileDuration() above never actually settles
+  // durationSeconds off the library's own inflated metadata guess —
+  // the exact same real report (37 of a real 41 minute episode, still
+  // showing 22m left, nothing credited) that started this. 'ended' is
+  // the one real signal that needs no known duration at all: the
+  // browser only ever fires it once this real stream has genuinely
+  // run out of data to play, so it credits a real full watch even when
+  // durationSeconds above is still stuck wrong.
+  video.addEventListener('ended', function () {
+    if (hasCreditedRealWatch) return;
+    hasCreditedRealWatch = true;
+    creditRealWatch(itemId).catch(function () {
+      // Not fatal, AchievementService's own metadata based gate is
+      // still there as a real fallback for this exact sitting.
+    });
+  });
+
   video.addEventListener('timeupdate', function () {
     if (seeking) return;
     const positionSeconds = streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0);
