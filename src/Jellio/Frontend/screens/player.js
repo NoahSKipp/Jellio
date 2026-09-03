@@ -1315,6 +1315,18 @@ export async function renderPlayer(root, params) {
     video.appendChild(track);
     activeTrack = track;
     track.addEventListener('load', function () {
+      // Same real guard 'error' below already has, missing here: switch
+      // subtitles more than once before a slower .vtt fetch resolves and
+      // every earlier track's own 'load' still fires later, each one
+      // unconditionally setting track.track.mode = 'showing' on its own
+      // now-orphaned TextTrack and calling enforceSubtitleTrackModes()
+      // off a stale closure. Confirmed live as exactly the reported
+      // symptom: switching around a while, a subtitle eventually shows
+      // but from whichever stale load won the race, its own
+      // normalizeCuePositions() pass having run against cues that are
+      // not what enforceSubtitleTrackModes() actually left showing,
+      // inconsistent line/position from switch to switch.
+      if (activeTrack !== track) return;
       if (!track.track) return;
       normalizeCuePositions(track.track);
       track.track.mode = 'showing';
@@ -1452,7 +1464,13 @@ export async function renderPlayer(root, params) {
     subtitleButton.disabled = false;
     selectedSubtitleLanguage = null;
 
-    const noneOption = el('button', 'jellio-player-popover-option jellio-player-popover-option-active', 'None');
+    // Real feedback: labelled "None" this read as "no subtitles",
+    // indistinguishable at a glance from the right column's own real
+    // "Off" a reader could apparently also have active at once, same
+    // real column this one's own real Language filter, not a subtitle
+    // selection: "no language filter, every track" is what selecting
+    // this actually does, "All languages" says that outright instead.
+    const noneOption = el('button', 'jellio-player-popover-option jellio-player-popover-option-active', 'All languages');
     noneOption.type = 'button';
     noneOption.addEventListener('click', function () {
       selectedSubtitleLanguage = null;
