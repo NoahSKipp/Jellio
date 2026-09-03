@@ -42,6 +42,7 @@ import {
   getGroupWatchMessages,
   sendGroupWatchMessage,
   creditGroupWatchTogether,
+  creditRealWatch,
   voteRankingSession,
   startJoinSync,
   clearJoinSync,
@@ -77,6 +78,14 @@ const PROGRESS_REPORT_MS = 5000;
 // Same real 0.9 threshold Services/AchievementService.cs's own
 // IsRealWatch() uses server side.
 const GROUP_WATCH_COMPLETION_THRESHOLD = 0.9;
+// Same real 0.9 figure, own real constant rather than reusing the one
+// above: this one is compared against durationSeconds (this real
+// <video>'s own real duration once 'durationchange' settles), not
+// item.RunTimeTicks, exactly so a reality show's own metadata runtime
+// (routinely the original broadcast slot, ads included, well past the
+// real ad-stripped file Gelato actually resolved) never has to agree
+// with the real file for a genuine full watch to still register.
+const REAL_WATCH_COMPLETION_THRESHOLD = 0.9;
 const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
 // Services/SleepTimerService.cs's own header already scopes that real
 // service to duration timers only, an episode count timer needing
@@ -2613,6 +2622,12 @@ export async function renderPlayer(root, params) {
   // to fire once for the life of this real screen mount, a switch mid
   // playback is still the same one real watch, not a second one.
   let hasCreditedGroupWatch = false;
+  // Same real reasoning as hasCreditedGroupWatch just above, same real
+  // reason it stays unreset there: playNextEpisode() below navigates to
+  // a whole new #/play route rather than swapping itemId in place, so a
+  // real next episode always gets its own fresh renderPlayer() call and
+  // its own fresh copy of this flag regardless.
+  let hasCreditedRealWatch = false;
   let seeking = false;
   let lastReportedTicks = startTicks;
   // Set once cleanup() has actually run: removeAttribute('src') plus
@@ -2717,6 +2732,19 @@ export async function renderPlayer(root, params) {
       creditGroupWatchTogether().catch(function () {
         // Not fatal, just one missed real credit towards the Watch
         // Together badges.
+      });
+    }
+
+    // REAL_WATCH_COMPLETION_THRESHOLD's own header explains why this
+    // rides the real client-observed durationSeconds instead of
+    // trusting AchievementService's own item.RunTimeTicks based gate to
+    // catch this on its own: real feedback (Below Deck Mediterranean),
+    // a genuine full watch never reaching that gate's own 90% at all.
+    if (!hasCreditedRealWatch && durationSeconds && positionSeconds / durationSeconds >= REAL_WATCH_COMPLETION_THRESHOLD) {
+      hasCreditedRealWatch = true;
+      creditRealWatch(itemId).catch(function () {
+        // Not fatal, AchievementService's own metadata based gate is
+        // still there as a real fallback for this exact sitting.
       });
     }
 

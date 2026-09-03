@@ -2190,6 +2190,19 @@ export function creditGroupWatchTogether() {
   return postJson('/Jellio/achievements/group-watch/together');
 }
 
+// Same real reason the two calls above go straight to Jellio's own
+// endpoints instead of leaving AchievementService to infer things
+// server side: item.RunTimeTicks is the library's own metadata
+// runtime (whatever TVDB/TMDB claims), not the real duration of
+// whatever Gelato actually resolved and streamed, and reality TV in
+// particular (Below Deck Mediterranean, reported live) routinely
+// lists a broadcast time slot well past the real file's own actual
+// length. screens/player.js's own real <video>.duration is what
+// decides when to call this, not this file.
+export function creditRealWatch(itemId) {
+  return postJson('/Jellio/achievements/real-watch', { ItemId: itemId });
+}
+
 // Bio (like the profile picture and banner) always visible: only
 // getAchievementsForUser above goes dark for a private profile.
 export function getProfileForUser(userId) {
