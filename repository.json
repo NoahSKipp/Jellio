@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.52.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Detect anime catalogs by Gelato's real catalog type, not name\n",
+        "checksum": "138737c89d0d4d1409dbf9cb61050e8f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.1/jellio_0.52.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T14:55:12Z",
+        "version": "0.52.1"
+      },
+      {
         "changelog": "## [0.52.0] - 2026-08-22\n\n### 🚀 Features\n\n- Add Discovery+ and Sky Go as recognized services\n\n### 🐛 Bug Fixes\n\n- Mobile nav compact toggle transitions on transform/opacity only\n- Recognize Kitsu-named catalogs as anime alongside AniList\n- Version-bust service logo URLs to close remaining cache gap\n\n### ⚡ Performance\n\n- Cancel superseded search requests instead of letting them time out\n",
         "checksum": "618c353a3ea528388138042dcbc5a69b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.0/jellio_0.52.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T11:02:24Z",
         "version": "0.40.0"
-      },
-      {
-        "changelog": "## [0.39.0] - 2026-08-20\n\n### 🚀 Features\n\n- Inline card quick actions and a real snap removal effect\n",
-        "checksum": "90d7daaa0352176e64e7fa9d97caec6e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.39.0/jellio_0.39.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T10:36:44Z",
-        "version": "0.39.0"
       }
     ]
   }
