@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.41.0] - 2026-08-21\n\n### 🚀 Features\n\n- Add because-you're-watching, top genre and top actor home rows\n\n### ⚡ Performance\n\n- Cache filmography, watchlist and seasons/episodes lookups\n- Parallelize the settings screen's own independent requests\n- Make the anime library screen fire and forget\n- Right-size and compress card, coverflow and person images\n- Batch large item grids instead of rendering them all at once\n- Gzip/brotli compress served JS, CSS and SVG\n",
+        "checksum": "eda96885f1d52c7abb6530221c64349a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.41.0/jellio_0.41.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T09:33:24Z",
+        "version": "0.41.0"
+      },
+      {
         "changelog": "## [0.40.13] - 2026-08-21\n\n### 🐛 Bug Fixes\n\n- Restore home row order after the parallel-fetch change\n\n### ⚡ Performance\n\n- Request and prefetch the hero logo at a real display size\n",
         "checksum": "5fb22f8785f4bc63ffd27ba206f2392a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.13/jellio_0.40.13.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-19T13:47:17Z",
         "version": "0.34.0"
-      },
-      {
-        "changelog": "## [0.33.1] - 2026-08-19\n\n### 🐛 Bug Fixes\n\n- Surface exceptions inside switchAudioTrack instead of dying silently\n",
-        "checksum": "ff24c8755f49e89fcc0fb89056411ba7",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.33.1/jellio_0.33.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T09:49:01Z",
-        "version": "0.33.1"
       }
     ]
   }
