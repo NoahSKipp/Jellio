@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.47.0] - 2026-08-21\n\n### 🚀 Features\n\n- Anime coverflow sources exclusively from Trending on AniList\n- Add avatar upload alongside presets\n- Split watchlist into Movies and Series sections\n- Replace Group Watch's native popup with a real Jellio modal\n- Add scroll arrows to season tabs and episode track\n- Add thumbs up/down rating, weight recommendations by it\n\n### 🐛 Bug Fixes\n\n- Home row order, hub rename, Prime Video logo, greeting punctuation\n- Sidebar staying expanded after a click, load Inter, bump label size\n- Episode hero backdrop cropping the top, cramped settings profile row\n- Continue Watching/Up Next cards scale the whole card on hover\n- Collapse series Watchlist/Mark Watched behind More like episodes\n- Broader animation polish pass, sourced against Harbor\n",
+        "checksum": "7bab899f0be197c8992fdabd07188490",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.47.0/jellio_0.47.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T22:34:56Z",
+        "version": "0.47.0"
+      },
+      {
         "changelog": "## [0.46.0] - 2026-08-21\n\n### 🚀 Features\n\n- Quick sign-in fix, Harbor-inspired Shows row, series Play/Resume, hero fix (#131)\n",
         "checksum": "9226485d11e60b545e8a1548cbf368f4",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.46.0/jellio_0.46.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T06:03:58Z",
         "version": "0.35.3"
-      },
-      {
-        "changelog": "## [0.35.2] - 2026-08-19\n\n### 🐛 Bug Fixes\n\n- Give search its own longer request timeout\n",
-        "checksum": "424458bf1ddee59120fd39b6750972f8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.35.2/jellio_0.35.2.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T22:07:15Z",
-        "version": "0.35.2"
       }
     ]
   }
