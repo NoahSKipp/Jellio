@@ -9,8 +9,8 @@
     "versions": [
       {
         "changelog": "### Jellio v0.8.0\n\nGroup Watch and social playback: SyncPlay synchronization and live chat\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
-        "checksum": "",
-        "sourceUrl": "",
+        "checksum": "42726ff497bc0431afef046de98c983b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.8.0/jellio_0.81.0.0.zip",
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T15:45:29Z",
         "version": "0.81.0"
@@ -33,8 +33,8 @@
       },
       {
         "changelog": "### Jellio v0.9.0\n\nProduction release: settings redesign, intro skipper, audit hardening, and JsonUserStore\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
-        "checksum": "",
-        "sourceUrl": "",
+        "checksum": "318afa984050b4feb12090f09c3391db",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.9.0/jellio_0.9.0.0.zip",
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T15:45:30Z",
         "version": "0.9.0"
@@ -73,8 +73,8 @@
       },
       {
         "changelog": "### Jellio v0.1.0\n\nInitial vertical slice: shell, router, home screen, and item cards\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
-        "checksum": "",
-        "sourceUrl": "",
+        "checksum": "154b2b3e287e9d492e714601b4353bfd",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.1.0/jellio_0.1.0.0.zip",
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:25Z",
         "version": "0.1.0"
