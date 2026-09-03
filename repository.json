@@ -1,82 +1,90 @@
 [
   {
     "category": "General",
-    "description": "Replaces the Jellyfin web client's own rendering with a Nuvio lookalike, backed entirely by remote sources through Gelato. No local media is assumed. Own auth/session runtime and directly rendered screens, not a reskin of native jellyfin-web components.",
+    "description": "Replaces the Jellyfin web client's own rendering with a Nuvio lookalike, backed entirely by remote sources through Gelato. No local media is assumed. Own auth/session runtime and directly rendered screens, not a reskin of native jellyfin-web components.\n",
     "guid": "f2937f08-0595-40d1-a74b-a44656cbc6de",
     "name": "Jellio",
     "overview": "Replaces the Jellyfin web client's own rendering with a Nuvio lookalike.",
     "owner": "NoahSKipp",
     "versions": [
       {
-        "changelog": "## [0.9.0] - 2026-09-03\n\nProduction release with comprehensive security audit hardening, memory optimizations, and architecture refactoring.\n\n### Features\n\n\u2022 Redesign settings screen with grouped list cards and admin dashboard link\n\u2022 Automatic Intro and Credits skip detection via native Media Segments API\n\u2022 Server administrator broadcast message notification service\n\u2022 Multi-tiered in-memory and ETag caching layer across navigation\n\n### Refactor\n\n\u2022 Consolidate disparate user JSON storage into unified atomic JsonUserStore\n\u2022 Unified DOM element builder helper and date/time formatting utilities\n\n### Bug Fixes\n\n\u2022 Enforce decode-time memory caps on profile banner uploads\n\u2022 Decouple request timeouts to prevent image starvation during slow fetches\n\u2022 Fix search result state restoration on browser back-button navigation",
-        "checksum": "318afa984050b4feb12090f09c3391db",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.9.0/jellio_0.9.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T16:54:10Z",
-        "version": "0.9.0"
-      },
-      {
-        "changelog": "## [0.8.0] - 2026-08-27\n\nImplements social group watching, synchronized playback, and interactive ranking sessions.\n\n### Features\n\n\u2022 Group Watch integration backed by native Jellyfin SyncPlay\n\u2022 Real-time in-player Group Watch chat panel with clickable watch cards\n\u2022 Interactive ranking sessions with voting brackets and countdown auto-resolve\n\u2022 Buffer synchronization across joining group members",
+        "changelog": "## [0.8.0] - 2026-08-27\n\nImplements social group watching, synchronized playback, and interactive ranking sessions.\n\n### Features\n\n• Group Watch integration backed by native Jellyfin SyncPlay\n• Real-time in-player Group Watch chat panel with clickable watch cards\n• Interactive ranking sessions with voting brackets and countdown auto-resolve\n• Buffer synchronization across joining group members",
         "checksum": "42726ff497bc0431afef046de98c983b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.8.0/jellio_0.81.0.0.zip",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-27T15:17:00Z",
-        "version": "0.8.0"
+        "timestamp": "2026-09-03T15:45:29Z",
+        "version": "0.81.0"
       },
       {
-        "changelog": "## [0.7.0] - 2026-08-25\n\nAdds brand identity assets, boot splash video reveal, and external streaming service directory.\n\n### Features\n\n\u2022 Streaming hub directory with service branding marks and external links\n\u2022 Animated jellyfish boot splash video reveal with smooth view transitions\n\u2022 Progressive asset preloading pipeline for hero carousels and row thumbnails\n\u2022 Studio hub pages with custom hero banners and catalog rows",
-        "checksum": "1148abd6f5812455cdb86dff717b47a0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.7.0/jellio_0.16.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-25T20:53:00Z",
-        "version": "0.7.0"
-      },
-      {
-        "changelog": "## [0.6.0] - 2026-08-24\n\nIntroduces multi-user profiles, avatar selection, and enhanced watchlist management.\n\n### Features\n\n\u2022 Avatar presets controller, SVG avatar categories, and sidebar avatar picker\n\u2022 Remembered-user quick sign-in and public user grid on login screen\n\u2022 Rebrand Favorites to Watchlist with inline card quick actions\n\u2022 Account settings screen with password change and session termination",
+        "changelog": "## [0.6.0] - 2026-08-24\n\nIntroduces multi-user profiles, avatar selection, and enhanced watchlist management.\n\n### Features\n\n• Avatar presets controller, SVG avatar categories, and sidebar avatar picker\n• Remembered-user quick sign-in and public user grid on login screen\n• Rebrand Favorites to Watchlist with inline card quick actions\n• Account settings screen with password change and session termination",
         "checksum": "e2028d7ed9a5ea5c70a05d5be5f2b40d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.6.0/jellio_0.35.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:28Z",
+        "version": "0.35.0"
+      },
+      {
+        "changelog": "## [0.7.0] - 2026-08-25\n\nAdds brand identity assets, boot splash video reveal, and external streaming service directory.\n\n### Features\n\n• Streaming hub directory with service branding marks and external links\n• Animated jellyfish boot splash video reveal with smooth view transitions\n• Progressive asset preloading pipeline for hero carousels and row thumbnails\n• Studio hub pages with custom hero banners and catalog rows",
+        "checksum": "1148abd6f5812455cdb86dff717b47a0",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.7.0/jellio_0.16.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:29Z",
+        "version": "0.16.0"
+      },
+      {
+        "changelog": "## [0.9.1] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Guard against a stale subtitle track load race\n\n### 💼 Other\n\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n",
+        "checksum": "3506429bf9e55bcac4e8c2583cf4836b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.9.1/jellio_0.9.1.0.zip",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-24T02:29:00Z",
+        "timestamp": "2026-09-03T17:41:19Z",
+        "version": "0.9.1"
+      },
+      {
+        "changelog": "## [0.9.0] - 2026-09-03\n\nProduction release with comprehensive security audit hardening, memory optimizations, and architecture refactoring.\n\n### Features\n\n• Redesign settings screen with grouped list cards and admin dashboard link\n• Automatic Intro and Credits skip detection via native Media Segments API\n• Server administrator broadcast message notification service\n• Multi-tiered in-memory and ETag caching layer across navigation\n\n### Refactor\n\n• Consolidate disparate user JSON storage into unified atomic JsonUserStore\n• Unified DOM element builder helper and date/time formatting utilities\n\n### Bug Fixes\n\n• Enforce decode-time memory caps on profile banner uploads\n• Decouple request timeouts to prevent image starvation during slow fetches\n• Fix search result state restoration on browser back-button navigation",
+        "checksum": "318afa984050b4feb12090f09c3391db",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.9.0/jellio_0.9.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T15:45:30Z",
+        "version": "0.9.0"
+      },
+      {
+        "changelog": "## [0.5.0] - 2026-08-22\n\nEnhances the playback engine with stream quality selection and customizable subtitle rendering.\n\n### Features\n\n• Add pre-playback stream picker and mid-playback quality switcher\n• Add audio language selection and track switching\n• WebVTT subtitle track selector with real-time stream URL resolution\n• Subtitle styling bar with custom font size, text color, and background opacity\n• Adaptive transcoding fallback for unsupported browser codecs",
+        "checksum": "c80c19d81da59c1cb91fd71732d05098",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.5.0/jellio_0.6.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:27Z",
         "version": "0.6.0"
       },
       {
-        "changelog": "## [0.5.0] - 2026-08-22\n\nEnhances the playback engine with stream quality selection and customizable subtitle rendering.\n\n### Features\n\n\u2022 Add pre-playback stream picker and mid-playback quality switcher\n\u2022 Add audio language selection and track switching\n\u2022 WebVTT subtitle track selector with real-time stream URL resolution\n\u2022 Subtitle styling bar with custom font size, text color, and background opacity\n\u2022 Adaptive transcoding fallback for unsupported browser codecs",
-        "checksum": "c80c19d81da59c1cb91fd71732d05098",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.5.0/jellio_0.6.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-22T08:05:00Z",
-        "version": "0.5.0"
-      },
-      {
-        "changelog": "## [0.4.0] - 2026-08-20\n\nFull video player implementation with playback session reporting, controls overlay, and sleep timer.\n\n### Features\n\n\u2022 Fullscreen HTML5 video player with PlaybackInfo negotiation\n\u2022 Report playback progress, start, and stop events to Jellyfin server\n\u2022 Port sleep timer backend service, controller, and in-player modal\n\u2022 Add pause screen overlay with item metadata and playback indicators\n\u2022 Full keyboard accessibility and navigation across player controls",
+        "changelog": "## [0.4.0] - 2026-08-20\n\nFull video player implementation with playback session reporting, controls overlay, and sleep timer.\n\n### Features\n\n• Fullscreen HTML5 video player with PlaybackInfo negotiation\n• Report playback progress, start, and stop events to Jellyfin server\n• Port sleep timer backend service, controller, and in-player modal\n• Add pause screen overlay with item metadata and playback indicators\n• Full keyboard accessibility and navigation across player controls",
         "checksum": "bfe625cfb1c541736e2df209a754eaf1",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.4.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-20T13:41:00Z",
-        "version": "0.4.0"
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:27Z",
+        "version": "0.1.0"
       },
       {
-        "changelog": "## [0.3.0] - 2026-08-18\n\nAdds real-time instant search with debounced queries and smooth navigation state restoration.\n\n### Features\n\n\u2022 Render live search screen with instant debounced queries\n\u2022 Add search endpoint integration with direct API layer\n\u2022 Preserve query parameters and results on back/forward navigation\n\u2022 Keyboard navigation support for search result cards",
+        "changelog": "## [0.3.0] - 2026-08-18\n\nAdds real-time instant search with debounced queries and smooth navigation state restoration.\n\n### Features\n\n• Render live search screen with instant debounced queries\n• Add search endpoint integration with direct API layer\n• Preserve query parameters and results on back/forward navigation\n• Keyboard navigation support for search result cards",
         "checksum": "29c0c72c84b12f5187ebf0297379ed6a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.3.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-18T19:17:00Z",
-        "version": "0.3.0"
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:26Z",
+        "version": "0.1.0"
       },
       {
-        "changelog": "## [0.2.0] - 2026-08-17\n\nExpands media catalog browsing with grid views, coverflow carousels, and rich item details.\n\n### Features\n\n\u2022 Render a responsive library grid screen with query parameter routing\n\u2022 Add detailed item metadata endpoint and detail screen layout\n\u2022 Add season and episode endpoints with season tabs and episode lists\n\u2022 Add favorites endpoints and favorite toggle on detail screens\n\u2022 Implement Harbor-inspired coverflow carousel for library pages",
+        "changelog": "## [0.2.0] - 2026-08-17\n\nExpands media catalog browsing with grid views, coverflow carousels, and rich item details.\n\n### Features\n\n• Render a responsive library grid screen with query parameter routing\n• Add detailed item metadata endpoint and detail screen layout\n• Add season and episode endpoints with season tabs and episode lists\n• Add favorites endpoints and favorite toggle on detail screens\n• Implement Harbor-inspired coverflow carousel for library pages",
         "checksum": "6a48c43df673074268f65b84a7699b5c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.2.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-17T22:05:00Z",
-        "version": "0.2.0"
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:25Z",
+        "version": "0.1.0"
       },
       {
-        "changelog": "## [0.1.0] - 2026-08-16\n\nInitial vertical slice release of Jellio. Introduces the independent client runtime, persistent application shell, and initial media browsing interface.\n\n### Features\n\n\u2022 Patch index.html and serve the embedded frontend bundle\n\u2022 Add auth/session runtime independent of native ApiClient\n\u2022 Add direct-fetch API layer for screens to read from\n\u2022 Render a custom home screen with hero carousel and continue watching\n\u2022 Add hash-based navigation router and persistent sidebar component\n\u2022 Wire the sidebar and router into the main shell layout\n\n### Refactor\n\n\u2022 Extract a shared item card component with watched/progress badges\n\n### Miscellaneous Tasks\n\n\u2022 Scaffold plugin project and configure Net9 Jellyfin integration",
+        "changelog": "## [0.1.0] - 2026-08-16\n\nInitial vertical slice release of Jellio. Introduces the independent client runtime, persistent application shell, and initial media browsing interface.\n\n### Features\n\n• Patch index.html and serve the embedded frontend bundle\n• Add auth/session runtime independent of native ApiClient\n• Add direct-fetch API layer for screens to read from\n• Render a custom home screen with hero carousel and continue watching\n• Add hash-based navigation router and persistent sidebar component\n• Wire the sidebar and router into the main shell layout\n\n### Refactor\n\n• Extract a shared item card component with watched/progress badges\n\n### Miscellaneous Tasks\n\n• Scaffold plugin project and configure Net9 Jellyfin integration",
         "checksum": "154b2b3e287e9d492e714601b4353bfd",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.1.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-16T03:41:00Z",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:25Z",
         "version": "0.1.0"
       }
     ]
