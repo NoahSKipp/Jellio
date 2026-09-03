@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.44.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(stream-picker)* Redesign around the real Nuvio layout\n",
+        "checksum": "e35576e391a3263d69ef7d914d28f52f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.44.0/jellio_0.44.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T19:51:18Z",
+        "version": "0.44.0"
+      },
+      {
         "changelog": "## [0.43.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(sidebar)* Collapse rail to icons, expand on hover\n- *(nav)* Add quick profile switcher, split Profile from Settings\n- *(hero)* Drop Play, rename More Info to View Details\n\n### 🐛 Bug Fixes\n\n- *(card)* Drop the redundant three-dot button from card actions\n- *(detail)* Series actions, Specials ordering, episode context menu\n\n### 🎨 Styling\n\n- Visual pass on sidebar, hero, cards and detail page\n",
         "checksum": "4f47bfa3bddd34ec05e1b40cd2e84457",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.43.0/jellio_0.43.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-19T16:00:16Z",
         "version": "0.35.0"
-      },
-      {
-        "changelog": "## [0.34.2] - 2026-08-19\n\n### 🐛 Bug Fixes\n\n- Renegotiate PlaybackInfo for an audio track switch instead of a bare GET\n",
-        "checksum": "727e58184add47fa57783acc873be08b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.34.2/jellio_0.34.2.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T15:29:55Z",
-        "version": "0.34.2"
       }
     ]
   }
