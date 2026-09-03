@@ -1,4 +1,4 @@
 [git]
 conventional_commits = true
 filter_unconventional = false
-split_commits = true
+split_commits = false
