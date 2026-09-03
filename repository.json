@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.52.2] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Restore mobile nav pill reshape on scroll compact\n- Rename Paramount+ logo asset to match the slug it's requested under\n",
+        "checksum": "55afabbd1a0e0d5e46b04c9a46d05a6d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.2/jellio_0.52.2.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T15:15:31Z",
+        "version": "0.52.2"
+      },
+      {
         "changelog": "## [0.52.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Detect anime catalogs by Gelato's real catalog type, not name\n",
         "checksum": "138737c89d0d4d1409dbf9cb61050e8f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.1/jellio_0.52.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T11:15:53Z",
         "version": "0.40.1"
-      },
-      {
-        "changelog": "## [0.40.0] - 2026-08-20\n\n### 🚀 Features\n\n- Redesign detail hero action row to match Nuvio's icon buttons\n",
-        "checksum": "eff01fccd03e6f1a06d3662d1d50a2ea",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.0/jellio_0.40.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T11:02:24Z",
-        "version": "0.40.0"
       }
     ]
   }
