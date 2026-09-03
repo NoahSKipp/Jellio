@@ -73,6 +73,31 @@ public class AchievementsController(AchievementStore store, AchievementService a
         return Ok(Build(userId));
     }
 
+    public record RealWatchRequest(Guid ItemId);
+
+    // AchievementService.cs's own header explains why this exists at
+    // all: item.RunTimeTicks is the library's own metadata runtime, not
+    // the real duration of whatever Gelato actually resolved, and
+    // reality TV in particular routinely lists a broadcast time slot
+    // well past the real file's own actual length. screens/player.js's
+    // own real <video>.duration, not this endpoint, is what actually
+    // decides when to call this: trusts the caller the same real way
+    // the two group-watch endpoints above already do, real feedback
+    // (Below Deck Mediterranean, reported live) being the exact case
+    // this exists to fix.
+    [HttpPost("real-watch")]
+    public async Task<IActionResult> CreditRealWatch([FromBody] RealWatchRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        await achievementService.CreditRealWatchAsync(userId, request.ItemId).ConfigureAwait(false);
+        return Ok(Build(userId));
+    }
+
     [HttpGet("{userId:guid}")]
     public IActionResult GetForUser(Guid userId)
     {

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +21,28 @@ namespace Jellio.Services;
 // seek-to-end spam must not count): PlayedToCompletion or >=90% of the
 // item's own RunTimeTicks, whichever real signal is available.
 //
+// Real bug, found live: item.RunTimeTicks is the library's own metadata
+// runtime (whatever the matched TVDB/TMDB entry claims), not the real
+// duration of whatever Gelato actually resolved and streamed. Reality TV
+// specifically (Below Deck Mediterranean, reported live) routinely lists
+// a broadcast time slot (with ads) well past the real ad-stripped file's
+// own actual length, so a reader who watches an episode start to finish
+// still lands under 90% of that inflated figure, real Jellyfin's own
+// native played-status tracking (UserDataManager.UpdatePlayState) has
+// the exact same blind spot since it reads the same real RunTimeTicks.
+// CreditRealWatchAsync below is the real fix, not a workaround: fed by
+// screens/player.js's own real <video>.duration once its own
+// 'durationchange' settles (that reflects the real stream Gelato handed
+// the browser, whatever the library's own metadata claims separately),
+// the same real client-observed-ratio pattern
+// GROUP_WATCH_COMPLETION_THRESHOLD already uses there for the identical
+// real reason. Left OnPlaybackStopped's own metadata based gate in place
+// rather than replacing it: any other real Jellyfin client (mobile,
+// Kodi, ...) hitting this same server has no equivalent report to send
+// instead, so it stays the fallback for those, CreditUserAsync's own
+// recent-credit guard is what keeps the two from double counting one
+// real sitting when both fire for this app's own web player.
+//
 // Subscribing itself stays defensive on purpose, same real lesson
 // DefaultAvatarService already paid for: a hosted service throwing out of
 // StartAsync takes the whole Kestrel host down with it, and a
@@ -26,6 +50,7 @@ namespace Jellio.Services;
 // a separate NoInlining method, not the one whose own IL holds the call.
 public class AchievementService(
     ISessionManager sessionManager,
+    ILibraryManager libraryManager,
     AchievementStore store,
     ILogger<AchievementService> logger
 ) : IHostedService
@@ -33,6 +58,7 @@ public class AchievementService(
     private const double CompletionThreshold = 0.9;
     private const int MaxRecentActivity = 20;
     private static readonly TimeSpan BingeGap = TimeSpan.FromMinutes(45);
+    private static readonly TimeSpan RecentCreditGuard = TimeSpan.FromMinutes(30);
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -103,6 +129,23 @@ public class AchievementService(
             && (double)e.PlaybackPositionTicks.Value / e.Item.RunTimeTicks.Value >= CompletionThreshold;
     }
 
+    // (userId, itemId) rather than just userId: a real binge session
+    // crediting three different episodes 40 seconds apart must not have
+    // episode two or three's own real credit swallowed by a guard meant
+    // for the exact same episode firing twice, not adjacent ones.
+    private readonly Dictionary<(Guid UserId, Guid ItemId), DateTime> _recentCredits = new();
+
+    public async Task CreditRealWatchAsync(Guid userId, Guid itemId)
+    {
+        var item = libraryManager.GetItemById(itemId);
+        if (item is null)
+        {
+            return;
+        }
+
+        await CreditUserAsync(userId, item).ConfigureAwait(false);
+    }
+
     private async Task CreditUserAsync(Guid userId, BaseItem item)
     {
         var kind = item.GetBaseItemKind();
@@ -116,6 +159,31 @@ public class AchievementService(
         await _writeLock.WaitAsync().ConfigureAwait(false);
         try
         {
+            // Real dedupe: OnPlaybackStopped's own metadata based gate
+            // and CreditRealWatchAsync's own client-reported gate can
+            // both legitimately fire for the exact same real sitting
+            // (this app's own web player reports both), and would
+            // otherwise double count one real episode as two.
+            var creditKey = (userId, item.Id);
+            if (_recentCredits.TryGetValue(creditKey, out var lastCreditedAt) && DateTime.UtcNow - lastCreditedAt < RecentCreditGuard)
+            {
+                return;
+            }
+
+            _recentCredits[creditKey] = DateTime.UtcNow;
+            if (_recentCredits.Count > 200)
+            {
+                // Unbounded otherwise, this server never restarting for
+                // months at a time is a real case, not a hypothetical
+                // one. Trims whatever has already aged out of the real
+                // guard window above rather than a blind full clear.
+                var expired = _recentCredits.Where(kvp => DateTime.UtcNow - kvp.Value >= RecentCreditGuard).Select(kvp => kvp.Key).ToList();
+                foreach (var key in expired)
+                {
+                    _recentCredits.Remove(key);
+                }
+            }
+
             var stats = store.Load(userId);
             var now = DateTime.Now;
             var nowUtc = DateTime.UtcNow;
