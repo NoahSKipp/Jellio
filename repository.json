@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.0.1] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Credit achievements off the real stream duration, not metadata\n\n### 💼 Other\n\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n- Credit achievements off the real stream duration, not metadata\n",
+        "checksum": "6e78def9bd8bb7317e8b5c7cd8412a7d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.1/jellio_1.0.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T19:14:01Z",
+        "version": "1.0.1"
+      },
+      {
         "changelog": "Restarts Jellio's version counter past Jellio-Plugin's last release (0.89.5.0), fixing the version-comparison mismatch that kept the plugin catalog from offering updates.",
         "checksum": "11e8cef93f72b3b7e71cad96258d448d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.0/jellio_1.0.0.0.zip",
