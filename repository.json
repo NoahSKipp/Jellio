@@ -41,8 +41,8 @@
       },
       {
         "changelog": "### Jellio v0.5.0\n\nStream switcher and subtitles: quality picker and WebVTT subtitle tracks\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
-        "checksum": "",
-        "sourceUrl": "",
+        "checksum": "c80c19d81da59c1cb91fd71732d05098",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.5.0/jellio_0.6.0.0.zip",
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:27Z",
         "version": "0.6.0"
