@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.52.0] - 2026-08-22\n\n### 🚀 Features\n\n- Add Discovery+ and Sky Go as recognized services\n\n### 🐛 Bug Fixes\n\n- Mobile nav compact toggle transitions on transform/opacity only\n- Recognize Kitsu-named catalogs as anime alongside AniList\n- Version-bust service logo URLs to close remaining cache gap\n\n### ⚡ Performance\n\n- Cancel superseded search requests instead of letting them time out\n",
+        "checksum": "618c353a3ea528388138042dcbc5a69b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.0/jellio_0.52.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T13:37:44Z",
+        "version": "0.52.0"
+      },
+      {
         "changelog": "## [0.51.2] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Mobile nav compact toggle reacts almost immediately on scroll\n",
         "checksum": "1a239b334d8c215cec7d25cfcce3333e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.51.2/jellio_0.51.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T10:36:44Z",
         "version": "0.39.0"
-      },
-      {
-        "changelog": "## [0.38.1] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Stream picker language filters missing nearly every real result\n",
-        "checksum": "f110ff00e76a156e255f52c11c7d5815",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.38.1/jellio_0.38.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T09:28:05Z",
-        "version": "0.38.1"
       }
     ]
   }
