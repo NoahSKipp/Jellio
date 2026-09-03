@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.42.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(detail)* Show real episode banners, richer metadata and trailers\n- *(settings)* Group settings into an Account/Playback/Sessions/About sidebar\n\n### 🐛 Bug Fixes\n\n- *(home)* Stop an in-progress episode also showing in Up Next\n- *(card)* Drop the Play button from card action bars\n",
+        "checksum": "ec2c0a68eb08bfa38ee782ba31681482",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.42.0/jellio_0.42.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T10:07:45Z",
+        "version": "0.42.0"
+      },
+      {
         "changelog": "## [0.41.0] - 2026-08-21\n\n### 🚀 Features\n\n- Add because-you're-watching, top genre and top actor home rows\n\n### ⚡ Performance\n\n- Cache filmography, watchlist and seasons/episodes lookups\n- Parallelize the settings screen's own independent requests\n- Make the anime library screen fire and forget\n- Right-size and compress card, coverflow and person images\n- Batch large item grids instead of rendering them all at once\n- Gzip/brotli compress served JS, CSS and SVG\n",
         "checksum": "eda96885f1d52c7abb6530221c64349a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.41.0/jellio_0.41.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-19T14:13:52Z",
         "version": "0.34.1"
-      },
-      {
-        "changelog": "## [0.34.0] - 2026-08-19\n\n### 🚀 Features\n\n- Block on an unmissable alert with the real audio switch URL\n",
-        "checksum": "17649f65c6e6b062e4e8c80bd7ba5819",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.34.0/jellio_0.34.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T13:47:17Z",
-        "version": "0.34.0"
       }
     ]
   }
