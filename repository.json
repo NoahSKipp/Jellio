@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.43.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(sidebar)* Collapse rail to icons, expand on hover\n- *(nav)* Add quick profile switcher, split Profile from Settings\n- *(hero)* Drop Play, rename More Info to View Details\n\n### 🐛 Bug Fixes\n\n- *(card)* Drop the redundant three-dot button from card actions\n- *(detail)* Series actions, Specials ordering, episode context menu\n\n### 🎨 Styling\n\n- Visual pass on sidebar, hero, cards and detail page\n",
+        "checksum": "4f47bfa3bddd34ec05e1b40cd2e84457",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.43.0/jellio_0.43.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T18:15:36Z",
+        "version": "0.43.0"
+      },
+      {
         "changelog": "## [0.42.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(detail)* Show real episode banners, richer metadata and trailers\n- *(settings)* Group settings into an Account/Playback/Sessions/About sidebar\n\n### 🐛 Bug Fixes\n\n- *(home)* Stop an in-progress episode also showing in Up Next\n- *(card)* Drop the Play button from card action bars\n",
         "checksum": "ec2c0a68eb08bfa38ee782ba31681482",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.42.0/jellio_0.42.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-19T15:29:55Z",
         "version": "0.34.2"
-      },
-      {
-        "changelog": "## [0.34.1] - 2026-08-19\n\n### 🐛 Bug Fixes\n\n- Await the old session stopping before requesting the switched track\n",
-        "checksum": "fcf804497d5cec16a55bc932dc3ea3e2",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.34.1/jellio_0.34.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T14:13:52Z",
-        "version": "0.34.1"
       }
     ]
   }
