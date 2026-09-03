@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.46.0] - 2026-08-21\n\n### 🚀 Features\n\n- Quick sign-in fix, Harbor-inspired Shows row, series Play/Resume, hero fix (#131)\n",
+        "checksum": "9226485d11e60b545e8a1548cbf368f4",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.46.0/jellio_0.46.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T21:42:29Z",
+        "version": "0.46.0"
+      },
+      {
         "changelog": "## [0.45.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(sidebar)* Move Profile to the top, show the real user name\n- *(card)* Landscape Up Next/Continue Watching cards\n\n### 🐛 Bug Fixes\n\n- *(library)* Stop a stale coverflow mount landing a second copy\n- *(detail)* Correct episode thumbnail fallback id/type\n- *(stream-picker)* Drop the 0 MB badge, dedupe language tags\n\n### 🎨 Styling\n\n- Row title underline, sidebar box-sizing and icon clip fixes\n",
         "checksum": "79d8074776a8776b1eee3fa4a39586ff",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.45.0/jellio_0.45.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-19T22:07:15Z",
         "version": "0.35.2"
-      },
-      {
-        "changelog": "## [0.35.1] - 2026-08-19\n\n### 🚜 Refactor\n\n- Rename Favorites to Watchlist across the UI\n",
-        "checksum": "7721e2ca1bf651e3cf5ef942a140998e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.35.1/jellio_0.35.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T16:10:55Z",
-        "version": "0.35.1"
       }
     ]
   }
