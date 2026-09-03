@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.54.0] - 2026-08-22\n\n### 🚀 Features\n\n- Move seasonal effects to server side, admin controlled config\n",
+        "checksum": "b2a1e4bcd9fc94c56ef4659738d98ff2",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.54.0/jellio_0.54.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T16:39:24Z",
+        "version": "0.54.0"
+      },
+      {
         "changelog": "## [0.53.0] - 2026-08-22\n\n### 🚀 Features\n\n- Add seasonal overlay effects with per-effect settings\n",
         "checksum": "f89aa463a0a55b9099fb59f3f708ffc0",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.53.0/jellio_0.53.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T11:52:24Z",
         "version": "0.40.4"
-      },
-      {
-        "changelog": "## [0.40.3] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Detail More is a plain toggle, Change Stream is its own button\n",
-        "checksum": "1ea762259f31ebc3b4b9ca33043431c2",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.3/jellio_0.40.3.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T11:39:40Z",
-        "version": "0.40.3"
       }
     ]
   }
