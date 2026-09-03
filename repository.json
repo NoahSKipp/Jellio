@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.0.3] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Credit a real watch as soon as Up Next appears, not only on ended\n- Use the real observed duration for Continue Watching too, not just achievements\n- Mark a real watch played in native Jellyfin too, not just this plugin's own state\n",
+        "checksum": "edd9f685501cb499c34a02de3526d485",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.3/jellio_1.0.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T20:21:19Z",
+        "version": "1.0.3"
+      },
+      {
         "changelog": "## [1.0.2] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- *(release)* Stop git-cliff from splitting commit bodies into duplicate changelog entries\n- Credit a real watch on natural playback end, not just the 90% ratio\n",
         "checksum": "3ba66a0fe3c3c9b23e12b7eb9f266f22",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.2/jellio_1.0.2.0.zip",
