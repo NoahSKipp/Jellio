@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.45.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(sidebar)* Move Profile to the top, show the real user name\n- *(card)* Landscape Up Next/Continue Watching cards\n\n### 🐛 Bug Fixes\n\n- *(library)* Stop a stale coverflow mount landing a second copy\n- *(detail)* Correct episode thumbnail fallback id/type\n- *(stream-picker)* Drop the 0 MB badge, dedupe language tags\n\n### 🎨 Styling\n\n- Row title underline, sidebar box-sizing and icon clip fixes\n",
+        "checksum": "79d8074776a8776b1eee3fa4a39586ff",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.45.0/jellio_0.45.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T20:11:25Z",
+        "version": "0.45.0"
+      },
+      {
         "changelog": "## [0.44.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(stream-picker)* Redesign around the real Nuvio layout\n",
         "checksum": "e35576e391a3263d69ef7d914d28f52f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.44.0/jellio_0.44.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-19T16:10:55Z",
         "version": "0.35.1"
-      },
-      {
-        "changelog": "## [0.35.0] - 2026-08-19\n\n### 🚀 Features\n\n- Burn in image based subtitle tracks on demand\n",
-        "checksum": "7dcaf194d6e3ef4a49c5df5fe338ac4b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.35.0/jellio_0.35.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-19T16:00:16Z",
-        "version": "0.35.0"
       }
     ]
   }
