@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "Restarts Jellio's version counter past Jellio-Plugin's last release (0.89.5.0), fixing the version-comparison mismatch that kept the plugin catalog from offering updates.",
+        "checksum": "11e8cef93f72b3b7e71cad96258d448d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.0/jellio_1.0.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T18:51:51Z",
+        "version": "1.0.0"
+      },
+      {
         "changelog": "## [0.8.0] - 2026-08-27\n\nImplements social group watching, synchronized playback, and interactive ranking sessions.\n\n### Features\n\n• Group Watch integration backed by native Jellyfin SyncPlay\n• Real-time in-player Group Watch chat panel with clickable watch cards\n• Interactive ranking sessions with voting brackets and countdown auto-resolve\n• Buffer synchronization across joining group members",
         "checksum": "42726ff497bc0431afef046de98c983b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.8.0/jellio_0.81.0.0.zip",
