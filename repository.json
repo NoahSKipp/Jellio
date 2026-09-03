@@ -8,244 +8,76 @@
     "owner": "NoahSKipp",
     "versions": [
       {
-        "changelog": "## [0.89.5] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Restore search results on back navigation\n\n### 💼 Other\n\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n",
-        "checksum": "8f15b3334ce23580f2115af906212715",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.5/jellio_0.89.5.0.zip",
+        "changelog": "### Jellio v0.8.0\n\nGroup Watch and social playback: SyncPlay synchronization and live chat\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "",
+        "sourceUrl": "",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T12:17:41Z",
-        "version": "0.89.5"
-      },
-      {
-        "changelog": "## [0.89.4] - 2026-09-03\n\n### 🚜 Refactor\n\n- Consolidate 5 JSON stores into a shared JsonUserStore\n\n### 💼 Other\n\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n",
-        "checksum": "e8c59e9aee304bc078fc778cf28cd82f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.4/jellio_0.89.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T12:11:58Z",
-        "version": "0.89.4"
-      },
-      {
-        "changelog": "## [0.89.3] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n\n### 💼 Other\n\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n",
-        "checksum": "3a4d39652f89534637646c88739f2747",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.3/jellio_0.89.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T11:53:02Z",
-        "version": "0.89.3"
-      },
-      {
-        "changelog": "## [0.89.2] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Address Critical/High findings from full codebase audit\n\n### 💼 Other\n\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n- Address Critical/High findings from full codebase audit\n",
-        "checksum": "133f531020cb01f6f45d18ecfc400d8e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.2/jellio_0.89.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T11:19:39Z",
-        "version": "0.89.2"
-      },
-      {
-        "changelog": "## [0.89.1] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Read genres off real item data, not native /Genres\n\n### 💼 Other\n\n- The Conjuring's own detail page correctly listed\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n- Read genres off real item data, not native /Genres\n",
-        "checksum": "6df053d3ebf226788a3b6360bac61932",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.1/jellio_0.89.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T07:32:41Z",
-        "version": "0.89.1"
-      },
-      {
-        "changelog": "## [0.89.0] - 2026-09-03\n\n### 🚀 Features\n\n- Prioritize common genres for rows, show all genres in the filter\n\n### 💼 Other\n\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n",
-        "checksum": "37802c2909d2091db82f1b1267515996",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.0/jellio_0.89.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T07:07:24Z",
-        "version": "0.89.0"
-      },
-      {
-        "changelog": "## [0.88.5] - 2026-09-03\n\n### 🚜 Refactor\n\n- Remove Jellio's own SubDL subtitle fetch\n\n### 💼 Other\n\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n",
-        "checksum": "0c65bde9c38a7dfb49571755c3337db2",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.5/jellio_0.88.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T06:55:54Z",
-        "version": "0.88.5"
-      },
-      {
-        "changelog": "## [0.88.4] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Let git-cliff read squash merged commit bullets for release versioning\n\n### 💼 Other\n\n- Sleep timer episode mode, popover positioning, notifications hover, SubDL cache fix (#221)\n- * fix: do not cache a SubDL request failure as a 28 day not-found\n- SearchAsync used to return null on any non 2xx status, indistinguishable\n- From a genuine empty search result. A bad api_key or blocked account\n- Then got cached by SaveNotFound the same as a real miss, silently\n- Retrying nothing for 28 days even after being fixed.\n- SearchAsync now throws SubDlRequestFailedException with the real status\n- Code instead, and EnsureAsync catches it separately, logging without\n- Touching the cache. Also logs the two previously silent success paths\n- (found, genuinely not found) so a real SubDL run is distinguishable in\n- The server log from this whole method never firing at all.\n- * fix: log when kicking off a subtitle fetch fails\n- EnsureSubtitles(itemId) used to swallow every outcome silently. The\n- Actual fetch result still only ever shows up in the Jellyfin server log\n- By design (it runs detached server side), but a failure of the kickoff\n- POST itself is a real client side event worth a console line.\n- * fix: open playback speed and sleep timer popovers near their own button\n- Every player popover shared one fixed right anchor in app.css, so all\n- Of them opened in the same spot regardless of which pill button was\n- Actually clicked. That only ever looked right for Audio; Speed sits at\n- The pill's own left edge and opened on the opposite side of the screen.\n- Popovers now position themselves off the real clicked button's own\n- Bounding rect at open time, clamped to the player shell's own bounds.\n- * feat: add an episode count mode to the sleep timer\n- Alongside the existing duration options, Sleep can now be set to stop\n- After a chosen number of episodes instead. Counted down from the same\n- Client side Up Next trigger an episode boundary already fires, and\n- Implemented by calling the same dismissUpNext used when a reader\n- Dismisses Up Next by hand, which already ends playback without\n- Auto-advancing, rather than adding a second stop mechanism.\n- * feat: make the notifications panel hover sensitive like now playing\n- Notifications used to only ever open and close on click. Mirrors\n- Components/nowPlaying.js's own hover behaviour: opens on mouseenter over\n- The sidebar button, and closes on a short delay after the pointer\n- Leaves both the button and the panel, while still supporting a plain\n- Click for touch and keyboard.\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n",
-        "checksum": "634f8122f2d21ec9d9acdf83a2e4b526",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.4/jellio_0.88.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T05:35:29Z",
-        "version": "0.88.4"
-      },
-      {
-        "changelog": "## [0.88.3] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Read Intro Skipper data from Jellyfin's native Media Segments API (#220)\n",
-        "checksum": "b62ba0400dbcc3d1f53455f747fa554e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.3/jellio_0.88.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T20:23:53Z",
-        "version": "0.88.3"
-      },
-      {
-        "changelog": "## [0.88.2] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Actually resize oversized profile banners server side (#219)\n",
-        "checksum": "ed0cbdb4db072a48d7b232a36b328826",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.2/jellio_0.88.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T20:18:01Z",
-        "version": "0.88.2"
-      },
-      {
-        "changelog": "## [0.88.1] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Log Intro Skipper segment lookup failures instead of hiding them (#218)\n",
-        "checksum": "e682b706b9c429f829a931ca12eb696e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.1/jellio_0.88.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T19:43:14Z",
-        "version": "0.88.1"
-      },
-      {
-        "changelog": "## [0.88.0] - 2026-09-02\n\n### 🚀 Features\n\n- Let a server admin broadcast a message to every user (#217)\n",
-        "checksum": "7f0e415ecf74c86e6ac90caf298bdfc8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.0/jellio_0.88.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T19:32:42Z",
-        "version": "0.88.0"
-      },
-      {
-        "changelog": "## [0.87.1] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Cap profile banner uploads to stop the scroll lag they cause (#216)\n",
-        "checksum": "49e1062b6631748430927b0751988c9e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.87.1/jellio_0.87.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T19:24:47Z",
-        "version": "0.87.1"
-      },
-      {
-        "changelog": "## [0.87.0] - 2026-09-02\n\n### 🚀 Features\n\n- Visualize the pick round's auto-resolve countdown (#215)\n",
-        "checksum": "3a2438b9407d61692e5de2cfce576613",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.87.0/jellio_0.87.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T18:38:43Z",
-        "version": "0.87.0"
-      },
-      {
-        "changelog": "## [0.86.3] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Pick finalize speed, stuck group leave, dead navigation fallback (#214)\n",
-        "checksum": "5468bcfd15d81a01eef8eb3358b9d5af",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.3/jellio_0.86.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T18:29:38Z",
-        "version": "0.86.3"
-      },
-      {
-        "changelog": "## [0.86.2] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Banner 401, native SyncPlay toast, Group Watch click loss (#213)\n",
-        "checksum": "854c073f2cae1ccf22397ab1ec6d927a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.2/jellio_0.86.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T17:55:32Z",
-        "version": "0.86.2"
-      },
-      {
-        "changelog": "## [0.86.1] - 2026-09-02\n\n### ⚡ Performance\n\n- Nav fill-in, Anime load, and SyncPlay polling (#212)\n",
-        "checksum": "e5ebe4bd147ee39c85270a8eded931f3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.1/jellio_0.86.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T13:56:46Z",
-        "version": "0.86.1"
-      },
-      {
-        "changelog": "## [0.86.0] - 2026-09-02\n\n### 🚀 Features\n\n- Swap automatic subtitle fetching to SubDL, strip ad lines (#211)\n",
-        "checksum": "cbfa96cfaa286071039b44c1ce95d1a3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.0/jellio_0.86.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T13:23:11Z",
-        "version": "0.86.0"
-      },
-      {
-        "changelog": "## [0.85.0] - 2026-09-02\n\n### 🚀 Features\n\n- Automatic OpenSubtitles.com subtitle fetching (#210)\n",
-        "checksum": "3919bebff22a44ce3ca08694423ea93e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.85.0/jellio_0.85.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T13:03:23Z",
-        "version": "0.85.0"
-      },
-      {
-        "changelog": "## [0.84.0] - 2026-09-02\n\n### 🚀 Features\n\n- Player/app keyboard shortcuts, live Continue Watching sync, profile quick access (#209)\n",
-        "checksum": "12971c78ad0634654bd924b6cf69490d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.84.0/jellio_0.84.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T12:44:52Z",
-        "version": "0.84.0"
-      },
-      {
-        "changelog": "## [0.83.0] - 2026-09-02\n\n### 🚀 Features\n\n- Hold Group Watch playback for a joiner's own initial buffer up (#208)\n",
-        "checksum": "81f925f152e0714709ddcc4e3e059e9f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.83.0/jellio_0.83.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-02T08:36:51Z",
-        "version": "0.83.0"
-      },
-      {
-        "changelog": "## [0.82.0] - 2026-09-01\n\n### 🚀 Features\n\n- Group Watch ranking session (stage 2 of 2) (#207)\n",
-        "checksum": "dea440fc0baa9e14e148989158adc8ca",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.82.0/jellio_0.82.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T21:26:53Z",
-        "version": "0.82.0"
-      },
-      {
-        "changelog": "## [0.81.0] - 2026-09-01\n\n### 🚀 Features\n\n- Grouplist (stage 1 of 2) - storage, settings toggle, screen, dual list picker\n",
-        "checksum": "669a4c34797f94048039bf8e30c49be5",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.81.0/jellio_0.81.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T20:47:55Z",
+        "timestamp": "2026-09-03T15:45:29Z",
         "version": "0.81.0"
       },
       {
-        "changelog": "## [0.80.0] - 2026-09-01\n\n### 🚀 Features\n\n- Group Watch achievements, more genre badges, and an unlock toast\n",
-        "checksum": "6dd4d733f077bbcd014a9f92c6b8085b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.80.0/jellio_0.80.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T19:17:29Z",
-        "version": "0.80.0"
+        "changelog": "### Jellio v0.6.0\n\nUser accounts and watchlist: profile switcher, avatars, and card quick actions\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "e2028d7ed9a5ea5c70a05d5be5f2b40d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.6.0/jellio_0.35.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:28Z",
+        "version": "0.35.0"
       },
       {
-        "changelog": "## [0.79.0] - 2026-09-01\n\n### 🚀 Features\n\n- Add ten more achievement badges\n",
-        "checksum": "98d65994e926b191a3e287e5f56f361b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.79.0/jellio_0.79.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T19:05:52Z",
-        "version": "0.79.0"
+        "changelog": "### Jellio v0.7.0\n\nBranding and streaming hub: streaming service directory and boot splash video\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "1148abd6f5812455cdb86dff717b47a0",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.7.0/jellio_0.16.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:29Z",
+        "version": "0.16.0"
       },
       {
-        "changelog": "## [0.78.3] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Show the Anime nav link immediately, add a loading skeleton behind it\n",
-        "checksum": "e65b4e6f70c81eaa30cf1dd053aa4f7d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.3/jellio_0.78.3.0.zip",
+        "changelog": "### Jellio v0.9.0\n\nProduction release: settings redesign, intro skipper, audit hardening, and JsonUserStore\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "",
+        "sourceUrl": "",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T18:00:55Z",
-        "version": "0.78.3"
+        "timestamp": "2026-09-03T15:45:30Z",
+        "version": "0.9.0"
       },
       {
-        "changelog": "## [0.78.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Profile page click bugs and a scrubber duration mismatch\n",
-        "checksum": "689a883780794d8b1a6153aaeae77915",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.2/jellio_0.78.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T17:56:10Z",
-        "version": "0.78.2"
+        "changelog": "### Jellio v0.5.0\n\nStream switcher and subtitles: quality picker and WebVTT subtitle tracks\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "",
+        "sourceUrl": "",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:27Z",
+        "version": "0.6.0"
       },
       {
-        "changelog": "## [0.78.1] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Import getCurrentUserId from auth.js, not api.js\n",
-        "checksum": "21a30818d0bfe723ceaa88ea73802685",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.1/jellio_0.78.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T17:41:36Z",
-        "version": "0.78.1"
+        "changelog": "### Jellio v0.4.0\n\nVideo player engine: HTML5 player, sleep timer, and keyboard navigation\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "",
+        "sourceUrl": "",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:27Z",
+        "version": "0.1.0"
       },
       {
-        "changelog": "## [0.78.0] - 2026-09-01\n\n### 🚀 Features\n\n- Add social feed, profile pages, and achievement badges\n",
-        "checksum": "069d5b23c303849faccf1da769047d5d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.0/jellio_0.78.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T17:05:58Z",
-        "version": "0.78.0"
+        "changelog": "### Jellio v0.3.0\n\nSearch and discovery: real-time debounced search and query routing\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "29c0c72c84b12f5187ebf0297379ed6a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.3.0/jellio_0.1.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:26Z",
+        "version": "0.1.0"
       },
       {
-        "changelog": "## [0.77.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Suppress native's own join/left toast alongside Jellio's\n",
-        "checksum": "4cfc9ff862ecbfb60ccef8fa7b0d842d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.2/jellio_0.77.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T14:15:26Z",
-        "version": "0.77.2"
+        "changelog": "### Jellio v0.2.0\n\nCatalog and detail view: library grid browsing, coverflow, and item details\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "6a48c43df673074268f65b84a7699b5c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.2.0/jellio_0.1.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:25Z",
+        "version": "0.1.0"
+      },
+      {
+        "changelog": "### Jellio v0.1.0\n\nInitial vertical slice: shell, router, home screen, and item cards\n\n- Cryptographically signed release\n- Full Jellyfin 10.11+ Net9 compatibility",
+        "checksum": "",
+        "sourceUrl": "",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-09-03T15:45:25Z",
+        "version": "0.1.0"
       }
     ]
   }
