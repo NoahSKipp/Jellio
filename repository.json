@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.48.0] - 2026-08-21\n\n### 🚀 Features\n\n- Animate Movies/Anime nav icons on becoming active\n\n### 🐛 Bug Fixes\n\n- Rating an episode now rates the whole show\n- More button jumping on hover, season/episode arrows not revealing\n- Undefined trending color token, real anime coverflow race\n- Library coverflow drops Play/Episodes for View Details only\n- Anchor hero backdrops to the top edge instead of a partial bias\n",
+        "checksum": "a13e6a45a6c5d61c5671113c4c8f4138",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.48.0/jellio_0.48.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-21T22:54:02Z",
+        "version": "0.48.0"
+      },
+      {
         "changelog": "## [0.47.0] - 2026-08-21\n\n### 🚀 Features\n\n- Anime coverflow sources exclusively from Trending on AniList\n- Add avatar upload alongside presets\n- Split watchlist into Movies and Series sections\n- Replace Group Watch's native popup with a real Jellio modal\n- Add scroll arrows to season tabs and episode track\n- Add thumbs up/down rating, weight recommendations by it\n\n### 🐛 Bug Fixes\n\n- Home row order, hub rename, Prime Video logo, greeting punctuation\n- Sidebar staying expanded after a click, load Inter, bump label size\n- Episode hero backdrop cropping the top, cramped settings profile row\n- Continue Watching/Up Next cards scale the whole card on hover\n- Collapse series Watchlist/Mark Watched behind More like episodes\n- Broader animation polish pass, sourced against Harbor\n",
         "checksum": "7bab899f0be197c8992fdabd07188490",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.47.0/jellio_0.47.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T06:14:22Z",
         "version": "0.35.4"
-      },
-      {
-        "changelog": "## [0.35.3] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Player buffering, seek reload, tap-to-pause, and blank poster\n",
-        "checksum": "b08b2e4fa532643588f15bdd3735a5aa",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.35.3/jellio_0.35.3.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T06:03:58Z",
-        "version": "0.35.3"
       }
     ]
   }
