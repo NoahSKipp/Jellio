@@ -3253,7 +3253,25 @@ export async function renderPlayer(root, params) {
     // teardown/mount cycle.
     if (idleTimer) window.clearTimeout(idleTimer);
     if (hasReportedStart) {
-      reportPlaybackStopped(itemId, mediaSource.Id, currentPositionTicks());
+      // Real bug, found live: reporting the real current position here
+      // unconditionally used to undo markRealWatchComplete() above the
+      // moment this screen actually tore down. Native Jellyfin's own
+      // UserDataManager.UpdatePlayState (confirmed real source) runs
+      // again on every real stop report, still dividing by the
+      // library's own inflated RunTimeTicks - a real position at 68%
+      // of that inflated figure lands in its own "still resumable"
+      // middle branch, which unconditionally does
+      // data.PlaybackPositionTicks = positionTicks (resurrecting a
+      // real nonzero resume position) while never touching Played
+      // (stays true, setPlayed() above already set it). Reported live
+      // exactly as that: watched correctly marked, but still sitting
+      // in Continue Watching with no time left, RunTimeTicks already
+      // patched down near equal to that resurrected position.
+      // Reporting 0 once this screen already knows better keeps
+      // native Jellyfin's own math in its own "ignore progress during
+      // the beginning" branch instead, which only ever touches
+      // positionTicks, not Played.
+      reportPlaybackStopped(itemId, mediaSource.Id, hasCreditedRealWatch ? 0 : currentPositionTicks());
       // Up Next and Continue Watching are exactly the two home rows a
       // real playback session changes, so home's own preloaded sections
       // have to be re-derived the next time it's visited rather than
