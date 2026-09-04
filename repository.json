@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.7] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Parallelize sidebar fetches, recheck Anime more than once\n",
+        "checksum": "48aeb7380c08dec81fd359d33621dd2a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.7/jellio_0.68.7.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T14:53:06Z",
+        "version": "0.68.7"
+      },
+      {
         "changelog": "## [0.68.6] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop the early playback error, apply the matched language, show reload progress\n",
         "checksum": "729f1e1bd4de55cee4ff3de1f2ff6677",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.6/jellio_0.68.6.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-25T11:38:56Z",
         "version": "0.62.4"
-      },
-      {
-        "changelog": "## [0.62.3] - 2026-08-25\n\n### ⚡ Performance\n\n- Serve the boot splash video as webm, mp4 as fallback (#165)\n",
-        "checksum": "d3c63350db2ab3ee0e5927c3d53af296",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.62.3/jellio_0.62.3.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-25T11:32:13Z",
-        "version": "0.62.3"
       }
     ]
   }
