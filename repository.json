@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.59.3] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Preferred audio language not actually applied on first play\n",
+        "checksum": "480fb9379f1366798962de9e4e3fa67c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.3/jellio_0.59.3.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-23T08:19:43Z",
+        "version": "0.59.3"
+      },
+      {
         "changelog": "## [0.59.2] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Page through every imported collection, not just the first 100\n",
         "checksum": "b133bca4e517de6a28ef7ef533bd4bcf",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.2/jellio_0.59.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T18:15:36Z",
         "version": "0.43.0"
-      },
-      {
-        "changelog": "## [0.42.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(detail)* Show real episode banners, richer metadata and trailers\n- *(settings)* Group settings into an Account/Playback/Sessions/About sidebar\n\n### 🐛 Bug Fixes\n\n- *(home)* Stop an in-progress episode also showing in Up Next\n- *(card)* Drop the Play button from card action bars\n",
-        "checksum": "ec2c0a68eb08bfa38ee782ba31681482",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.42.0/jellio_0.42.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-21T10:07:45Z",
-        "version": "0.42.0"
       }
     ]
   }
