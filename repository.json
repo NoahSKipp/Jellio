@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.7] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Stop the browser caching a boot-time Views response\n",
+        "checksum": "1cc298e0d88a6712df0e8abd3d6061fe",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.7/jellio_0.67.7.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T20:30:05Z",
+        "version": "0.67.7"
+      },
+      {
         "changelog": "## [0.67.6] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Revert reassigning avatars with a missing file for now\n- Clear the old ProfileImage row before reassigning one\n- Refresh a remembered user's name and avatar from the server\n",
         "checksum": "e572ba494de534f8bb23f5cd00beb7db",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.6/jellio_0.67.6.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T22:12:45Z",
         "version": "0.59.2"
-      },
-      {
-        "changelog": "## [0.59.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Clickable row titles losing their real font size\n",
-        "checksum": "cc9ad18df6556c1aae9e0636343005ab",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.1/jellio_0.59.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T20:44:42Z",
-        "version": "0.59.1"
       }
     ]
   }
