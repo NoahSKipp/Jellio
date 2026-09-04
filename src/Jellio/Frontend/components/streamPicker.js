@@ -241,7 +241,10 @@ function flagLanguages(text) {
   return codes;
 }
 
-function sourceAudioLanguages(source) {
+// Exported so screens/player.js's own in-player Sources panel can
+// filter by the exact same real codes this picker's own filter row
+// does, not a second, separately maintained detection pass.
+export function sourceAudioLanguages(source) {
   const codes = [];
   (source.MediaStreams || []).forEach(function (stream) {
     if (stream.Type !== 'Audio' || !stream.Language) return;
@@ -321,6 +324,7 @@ export function buildSourceCard(source, onSelect, isActive) {
   // caught it. Deduping again here, against languageName()'s own real
   // resolved display name instead of the raw code, catches that.
   const languageCodes = sourceAudioLanguages(source);
+  const langRow = el('div', 'jellio-stream-picker-card-langs');
   if (languageCodes.length) {
     const seenNames = {};
     const names = [];
@@ -331,14 +335,22 @@ export function buildSourceCard(source, onSelect, isActive) {
         names.push(name);
       }
     });
-    if (names.length) {
-      const langRow = el('div', 'jellio-stream-picker-card-langs');
-      names.forEach(function (name) {
-        langRow.appendChild(el('span', 'jellio-stream-picker-card-lang', name));
-      });
-      card.appendChild(langRow);
-    }
+    names.forEach(function (name) {
+      langRow.appendChild(el('span', 'jellio-stream-picker-card-lang', name));
+    });
+  } else {
+    // Real feedback, live: an indexer whose own releases carry no
+    // embedded MediaStreams Language field and no flag emoji in Name
+    // either (neither of sourceAudioLanguages()'s own two real
+    // detection paths) used to leave this whole row blank, no different
+    // on screen from a source this picker just failed to read anything
+    // from. Most real single-track releases from an indexer like that
+    // are the title's own original language with no dub at all, worth
+    // saying so rather than leaving the same blank space a genuine
+    // detection gap would.
+    langRow.appendChild(el('span', 'jellio-stream-picker-card-lang jellio-stream-picker-card-lang-unknown', 'ORIGINAL AUDIO'));
   }
+  card.appendChild(langRow);
 
   card.addEventListener('click', function () {
     onSelect(source);
@@ -399,6 +411,53 @@ function buildOverlayShell(item) {
 
   document.body.appendChild(overlay);
   return { overlay: overlay, status: status };
+}
+
+// Exported so screens/player.js's own in-player Sources panel (real
+// feedback: had no language filter at all, unlike this picker) can
+// build the exact same real chip row over its own real sourceOptions,
+// not a second, separately maintained copy of this. Returns null the
+// same way this picker's own inline version used to skip itself:
+// every source carrying the exact same one language (or none at all)
+// leaves nothing for a filter to actually narrow. onSelect is called
+// with the chosen language code, or null for "All".
+export function buildLanguageFilterRow(sources, onSelect) {
+  const languageCounts = {};
+  sources.forEach(function (source) {
+    sourceAudioLanguages(source).forEach(function (code) {
+      languageCounts[code] = (languageCounts[code] || 0) + 1;
+    });
+  });
+  const languages = Object.keys(languageCounts).sort(function (a, b) {
+    return languageCounts[b] - languageCounts[a] || languageName(a).localeCompare(languageName(b));
+  });
+  if (languages.length <= 1) return null;
+
+  const filterRow = el('div', 'jellio-stream-picker-filters');
+  const chips = [];
+  function setSelected(code, chip) {
+    chips.forEach(function (entry) {
+      entry.classList.toggle('jellio-stream-picker-filter-chip-active', entry === chip);
+    });
+    onSelect(code);
+  }
+  const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', 'All');
+  allChip.type = 'button';
+  allChip.addEventListener('click', function () {
+    setSelected(null, allChip);
+  });
+  chips.push(allChip);
+  filterRow.appendChild(allChip);
+  languages.forEach(function (code) {
+    const chip = el('button', 'jellio-stream-picker-filter-chip', languageName(code));
+    chip.type = 'button';
+    chip.addEventListener('click', function () {
+      setSelected(code, chip);
+    });
+    chips.push(chip);
+    filterRow.appendChild(chip);
+  });
+  return filterRow;
 }
 
 // A picker with nothing real to pick between is not worth showing at
@@ -515,21 +574,6 @@ export async function openStreamPicker(item, options) {
 
   const count = el('div', 'jellio-stream-picker-count');
 
-  // Only worth showing when there is a real choice behind it: every
-  // source carrying the exact same one language (or none at all,
-  // common for a release with no real embedded audio metadata) leaves
-  // nothing for a filter to actually narrow, same reasoning the whole
-  // picker already skips itself for a single-source title.
-  const languageCounts = {};
-  sources.forEach(function (source) {
-    sourceAudioLanguages(source).forEach(function (code) {
-      languageCounts[code] = (languageCounts[code] || 0) + 1;
-    });
-  });
-  const languages = Object.keys(languageCounts).sort(function (a, b) {
-    return languageCounts[b] - languageCounts[a] || languageName(a).localeCompare(languageName(b));
-  });
-
   let selectedLanguage = null;
   const list = el('div', 'jellio-stream-picker-list');
 
@@ -552,34 +596,11 @@ export async function openStreamPicker(item, options) {
     });
   }
 
-  if (languages.length > 1) {
-    const filterRow = el('div', 'jellio-stream-picker-filters');
-    const chips = [];
-    function setSelected(code, chip) {
-      selectedLanguage = code;
-      chips.forEach(function (entry) {
-        entry.chip.classList.toggle('jellio-stream-picker-filter-chip-active', entry.chip === chip);
-      });
-      renderList();
-    }
-    const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', 'All');
-    allChip.type = 'button';
-    allChip.addEventListener('click', function () {
-      setSelected(null, allChip);
-    });
-    chips.push({ chip: allChip });
-    filterRow.appendChild(allChip);
-    languages.forEach(function (code) {
-      const chip = el('button', 'jellio-stream-picker-filter-chip', languageName(code));
-      chip.type = 'button';
-      chip.addEventListener('click', function () {
-        setSelected(code, chip);
-      });
-      chips.push({ chip: chip });
-      filterRow.appendChild(chip);
-    });
-    panel.appendChild(filterRow);
-  }
+  const filterRow = buildLanguageFilterRow(sources, function (code) {
+    selectedLanguage = code;
+    renderList();
+  });
+  if (filterRow) panel.appendChild(filterRow);
 
   panel.appendChild(count);
   renderList();
