@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.59.0] - 2026-08-22\n\n### 🚀 Features\n\n- Make row titles open a browsable list of the whole row\n\n### 🐛 Bug Fixes\n\n- Add scroll arrows to studio hub, cast, and trailer rows\n",
+        "checksum": "20acad1c1f4d34a06d34ee6f34d678ad",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.0/jellio_0.59.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T20:35:52Z",
+        "version": "0.59.0"
+      },
+      {
         "changelog": "## [0.58.0] - 2026-08-22\n\n### 🚀 Features\n\n- Redesign studio hub pages with a real hero\n",
         "checksum": "dfb391ff40ff5351e31e77438005d5de",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.58.0/jellio_0.58.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T02:17:49Z",
         "version": "0.40.13"
-      },
-      {
-        "changelog": "## [0.40.12] - 2026-08-21\n\n### ⚡ Performance\n\n- Fetch recommendation seed candidates in parallel\n- Fetch home's recommendation, catalog and genre rows together\n- Prioritize the hero carousel's first backdrop over the rest\n- Stop blocking the splash on home's full row chain\n",
-        "checksum": "4c95d93d8b70ede2e2ac3a6d874e7a2b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.12/jellio_0.40.12.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-21T01:58:48Z",
-        "version": "0.40.12"
       }
     ]
   }
