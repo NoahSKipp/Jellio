@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.69.1] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Give the Up Next countdown a full minute instead of 15s\n",
+        "checksum": "38a42c9b28d5d41dec7e74e989fb9a43",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.1/jellio_0.69.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T19:36:13Z",
+        "version": "0.69.1"
+      },
+      {
         "changelog": "## [0.69.0] - 2026-08-29\n\n### 🚀 Features\n\n- Add an absolute fullscreen toggle to the player\n\n### 🐛 Bug Fixes\n\n- Stop subtitles ignoring their own state on macOS Safari\n",
         "checksum": "830d299b2200a506c501a13b58eb754b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.0/jellio_0.69.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T13:29:23Z",
         "version": "0.65.0"
-      },
-      {
-        "changelog": "## [0.64.4] - 2026-08-28\n\n### 📚 Documentation\n\n- Add a session handoff doc for the next agent (#172)\n",
-        "checksum": "0b654347d7e2407ac8033a0f7cbe0b5a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.4/jellio_0.64.4.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T12:18:20Z",
-        "version": "0.64.4"
       }
     ]
   }
