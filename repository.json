@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.65.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Authenticate avatar preset image requests with api_key (#176)\n- Add spacing between avatar picker grid and category sections (#175)\n",
+        "checksum": "3246e6295e06045bf731ac44ec2e5c9e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.2/jellio_0.65.2.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T14:23:12Z",
+        "version": "0.65.2"
+      },
+      {
         "changelog": "## [0.65.1] - 2026-08-28\n\n### 🎨 Styling\n\n- Circular profile avatars on login and the account switcher (#174)\n",
         "checksum": "59bc7b7da53734a492f490123dccefd8",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.1/jellio_0.65.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T17:39:04Z",
         "version": "0.55.0"
-      },
-      {
-        "changelog": "## [0.54.0] - 2026-08-22\n\n### 🚀 Features\n\n- Move seasonal effects to server side, admin controlled config\n",
-        "checksum": "b2a1e4bcd9fc94c56ef4659738d98ff2",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.54.0/jellio_0.54.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T16:39:24Z",
-        "version": "0.54.0"
       }
     ]
   }
