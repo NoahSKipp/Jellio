@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.64.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Fall back to HLS on Safari instead of fragmented mp4 (#170)\n",
+        "checksum": "f6ab492f5ba39d28c82757b3311b7a6a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.2/jellio_0.64.2.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T10:50:52Z",
+        "version": "0.64.2"
+      },
+      {
         "changelog": "## [0.64.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Guarantee the boot splash always hides, enlarge the mark (#169)\n",
         "checksum": "b53f6a583f2262699c7f1fe03f44bd71",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.1/jellio_0.64.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T14:55:12Z",
         "version": "0.52.1"
-      },
-      {
-        "changelog": "## [0.52.0] - 2026-08-22\n\n### 🚀 Features\n\n- Add Discovery+ and Sky Go as recognized services\n\n### 🐛 Bug Fixes\n\n- Mobile nav compact toggle transitions on transform/opacity only\n- Recognize Kitsu-named catalogs as anime alongside AniList\n- Version-bust service logo URLs to close remaining cache gap\n\n### ⚡ Performance\n\n- Cancel superseded search requests instead of letting them time out\n",
-        "checksum": "618c353a3ea528388138042dcbc5a69b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.0/jellio_0.52.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T13:37:44Z",
-        "version": "0.52.0"
       }
     ]
   }
