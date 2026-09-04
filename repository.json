@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.66.1] - 2026-08-28\n\n### 🎨 Styling\n\n- Redesign settings screen as grouped list cards (#178)\n",
+        "checksum": "ccf4d71cb428f9b873ee50bfddb822f8",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.66.1/jellio_0.66.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T17:45:25Z",
+        "version": "0.66.1"
+      },
+      {
         "changelog": "## [0.66.0] - 2026-08-28\n\n### 🚀 Features\n\n- Add Remove Show from Up Next, hiding the whole series (#177)\n",
         "checksum": "96ee36f9d6bac8f86dcacbcc96bfeeec",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.66.0/jellio_0.66.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T18:24:37Z",
         "version": "0.55.2"
-      },
-      {
-        "changelog": "## [0.55.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Render seasonal effect rows as static markup in the admin config page\n",
-        "checksum": "e68993d3bfbf9ca5e592fc46fe385654",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.1/jellio_0.55.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T18:13:05Z",
-        "version": "0.55.1"
       }
     ]
   }
