@@ -1286,7 +1286,18 @@ export async function renderPlayer(root, params) {
       try {
         cue.align = 'center';
         cue.position = 'auto';
-        cue.line = 'auto';
+        // Real feedback, live: 'auto' line left cues sitting right on
+        // the bottom safe area, and (worse) let two cues with close but
+        // not identical real timestamps each get their own
+        // browser-computed auto line, an inconsistent real gap between
+        // them rather than a tight two line stack. A fixed real
+        // percentage with snapToLines off is deterministic instead of
+        // heuristic: every real cue box starts at the same real 82%
+        // down the frame regardless of how many others are near it in
+        // time, closing that gap and moving normal single line dialogue
+        // up off the very bottom edge in the same real change.
+        cue.snapToLines = false;
+        cue.line = 82;
         cue.size = 100;
       } catch (err) {
         // A malformed value on one real cue is not worth losing every
@@ -1317,6 +1328,17 @@ export async function renderPlayer(root, params) {
       enforceSubtitleTrackModes();
       return;
     }
+    // Real feedback, live: an embedded subtitle track on one of Gelato's
+    // own remote sources can take real minutes to actually show up,
+    // nothing here telling a reader why in the meantime. Jellyfin's own
+    // real SubtitleController has to demux that track out of the whole
+    // remote container itself (SubtitleEncoder, real ffmpeg work, not
+    // something this plugin can speed up), a real external subtitle
+    // file serves near instantly by contrast. No way to tell which one
+    // this stream is without a real field this runtime does not fetch
+    // yet, so this fires either way: a real fast load just outlives its
+    // own 4 second real toast unnoticed, same as any other toast here.
+    showPlayerToast('Loading subtitles… this can take a moment for some sources.');
     const track = document.createElement('track');
     track.kind = 'subtitles';
     track.label = stream.DisplayTitle || stream.Language || 'Subtitle';
