@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.5] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Seek and resume natively on a real native HLS stream\n",
+        "checksum": "d75d6c7e955b8d59a2622399133b16c4",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.5/jellio_0.68.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T12:26:42Z",
+        "version": "0.68.5"
+      },
+      {
         "changelog": "## [0.68.4] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Poll for a title still importing instead of one short retry\n",
         "checksum": "08c3761f9bd8f2714a3238806f5bcf47",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.4/jellio_0.68.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-25T11:27:36Z",
         "version": "0.62.2"
-      },
-      {
-        "changelog": "## [0.62.1] - 2026-08-25\n\n### 🐛 Bug Fixes\n\n- Make the boot splash video full screen, drop the progress bar (#163)\n",
-        "checksum": "3b70bf178068bae16e049f7484cc025d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.62.1/jellio_0.62.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-25T11:03:22Z",
-        "version": "0.62.1"
       }
     ]
   }
