@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.56.0] - 2026-08-22\n\n### 🚀 Features\n\n- Port 19 more seasonal effects from Jellyfin-Seasonals\n",
+        "checksum": "395d6771c2e5e85c272539fc24b54016",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.56.0/jellio_0.56.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T19:42:26Z",
+        "version": "0.56.0"
+      },
+      {
         "changelog": "## [0.55.4] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Move the admin config page's own script inside its page div\n",
         "checksum": "54545ea561eb1e1be1f2dae3b4375174",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.4/jellio_0.55.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T15:23:07Z",
         "version": "0.40.10"
-      },
-      {
-        "changelog": "## [0.40.9] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Give detail hero content a real width instead of shrink-to-fit\n",
-        "checksum": "2dd80d56703ec254210e38a7be5d5875",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.9/jellio_0.40.9.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T15:07:06Z",
-        "version": "0.40.9"
       }
     ]
   }
