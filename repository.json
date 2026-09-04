@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.4] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Poll for a title still importing instead of one short retry\n",
+        "checksum": "08c3761f9bd8f2714a3238806f5bcf47",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.4/jellio_0.68.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T00:14:28Z",
+        "version": "0.68.4"
+      },
+      {
         "changelog": "## [0.68.3] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Drop StartTimeTicks from a native HLS master playlist request\n",
         "checksum": "481ab443438f7727e9d98f36383fbf99",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.3/jellio_0.68.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-25T11:03:22Z",
         "version": "0.62.1"
-      },
-      {
-        "changelog": "## [0.62.0] - 2026-08-25\n\n### 🚀 Features\n\n- Play the jellyfish logo reveal in the boot splash (#162)\n",
-        "checksum": "b1206f1ff5df0321de4c70085d2749dd",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.62.0/jellio_0.62.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-25T10:53:38Z",
-        "version": "0.62.0"
       }
     ]
   }
