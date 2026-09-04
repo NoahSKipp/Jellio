@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Isolate the IUserManager.Users read so its own catch actually fires\n",
+        "checksum": "fcb72f5278b8f06feeefe4ddf5d3261a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.2/jellio_0.67.2.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T19:26:06Z",
+        "version": "0.67.2"
+      },
+      {
         "changelog": "## [0.67.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Never let default avatar assignment crash the host on startup\n",
         "checksum": "ce6c33c65d658f2b8e4d19412641c112",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.1/jellio_0.67.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T19:42:26Z",
         "version": "0.56.0"
-      },
-      {
-        "changelog": "## [0.55.4] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Move the admin config page's own script inside its page div\n",
-        "checksum": "54545ea561eb1e1be1f2dae3b4375174",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.4/jellio_0.55.4.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T19:18:19Z",
-        "version": "0.55.4"
       }
     ]
   }
