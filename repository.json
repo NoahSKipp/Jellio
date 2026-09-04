@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.60.1] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Browse-everything list only showed the row's own capped array\n",
+        "checksum": "5ed5b693011e79a58476093bc8e033b3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.60.1/jellio_0.60.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-23T10:00:27Z",
+        "version": "0.60.1"
+      },
+      {
         "changelog": "## [0.60.0] - 2026-08-23\n\n### 🚀 Features\n\n- Add chat to Group Watch\n- Add picture in picture to the player\n- Scrub thumbnail preview on the seek bar\n",
         "checksum": "e08ac6ba7713bbd07f736d2b4ad9bd4f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.60.0/jellio_0.60.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T20:11:25Z",
         "version": "0.45.0"
-      },
-      {
-        "changelog": "## [0.44.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(stream-picker)* Redesign around the real Nuvio layout\n",
-        "checksum": "e35576e391a3263d69ef7d914d28f52f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.44.0/jellio_0.44.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-21T19:51:18Z",
-        "version": "0.44.0"
       }
     ]
   }
