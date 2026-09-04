@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.9] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Only stack Play/More on mobile once actually expanded\n",
+        "checksum": "a7b349fb8e5e4facc295020944b10390",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.9/jellio_0.67.9.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T20:52:22Z",
+        "version": "0.67.9"
+      },
+      {
         "changelog": "## [0.67.8] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Recheck the nav rails once for a still-importing Anime catalog\n- Drop the Recently added library sort, same reason home dropped it\n",
         "checksum": "cc55788650edecc48746452a3912f3ef",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.8/jellio_0.67.8.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-23T09:31:25Z",
         "version": "0.60.0"
-      },
-      {
-        "changelog": "## [0.59.3] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Preferred audio language not actually applied on first play\n",
-        "checksum": "480fb9379f1366798962de9e4e3fa67c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.3/jellio_0.59.3.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-23T08:19:43Z",
-        "version": "0.59.3"
       }
     ]
   }
