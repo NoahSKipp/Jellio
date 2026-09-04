@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.59.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Clickable row titles losing their real font size\n",
+        "checksum": "cc9ad18df6556c1aae9e0636343005ab",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.1/jellio_0.59.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T20:44:42Z",
+        "version": "0.59.1"
+      },
+      {
         "changelog": "## [0.59.0] - 2026-08-22\n\n### 🚀 Features\n\n- Make row titles open a browsable list of the whole row\n\n### 🐛 Bug Fixes\n\n- Add scroll arrows to studio hub, cast, and trailer rows\n",
         "checksum": "20acad1c1f4d34a06d34ee6f34d678ad",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.0/jellio_0.59.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T09:33:24Z",
         "version": "0.41.0"
-      },
-      {
-        "changelog": "## [0.40.13] - 2026-08-21\n\n### 🐛 Bug Fixes\n\n- Restore home row order after the parallel-fetch change\n\n### ⚡ Performance\n\n- Request and prefetch the hero logo at a real display size\n",
-        "checksum": "5fb22f8785f4bc63ffd27ba206f2392a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.13/jellio_0.40.13.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-21T02:17:49Z",
-        "version": "0.40.13"
       }
     ]
   }
