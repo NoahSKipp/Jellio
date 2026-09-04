@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Force a real transcode for every explicit audio track request\n",
+        "checksum": "a700614dbbbc54565ff3a79c39bd6091",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.2/jellio_0.68.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T23:07:47Z",
+        "version": "0.68.2"
+      },
+      {
         "changelog": "## [0.68.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Retry a never-before-opened title's own detail lookup once\n",
         "checksum": "9ebd355b7146ecc3d501ac2bd7245f1f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.1/jellio_0.68.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-23T12:19:00Z",
         "version": "0.61.1"
-      },
-      {
-        "changelog": "## [0.61.0] - 2026-08-23\n\n### 🚀 Features\n\n- Add a TMDB backed release calendar service\n- Add a Calendar page and a Coming Soon row\n\n### 🐛 Bug Fixes\n\n- Correct real namespace/member errors in CalendarController\n",
-        "checksum": "7d5f05d8897f24ee3204e010ec862956",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.61.0/jellio_0.61.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-23T11:18:16Z",
-        "version": "0.61.0"
       }
     ]
   }
