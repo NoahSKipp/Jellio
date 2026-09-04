@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.66.0] - 2026-08-28\n\n### 🚀 Features\n\n- Add Remove Show from Up Next, hiding the whole series (#177)\n",
+        "checksum": "96ee36f9d6bac8f86dcacbcc96bfeeec",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.66.0/jellio_0.66.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T14:56:11Z",
+        "version": "0.66.0"
+      },
+      {
         "changelog": "## [0.65.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Authenticate avatar preset image requests with api_key (#176)\n- Add spacing between avatar picker grid and category sections (#175)\n",
         "checksum": "3246e6295e06045bf731ac44ec2e5c9e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.2/jellio_0.65.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T18:13:05Z",
         "version": "0.55.1"
-      },
-      {
-        "changelog": "## [0.55.0] - 2026-08-22\n\n### 🚀 Features\n\n- Match saved audio language preference against the actual stream\n- Add Harbor style home row customizer\n",
-        "checksum": "1bcaa3660624423a63a98321c3f63c61",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.0/jellio_0.55.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T17:39:04Z",
-        "version": "0.55.0"
       }
     ]
   }
