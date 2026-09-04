@@ -1328,17 +1328,48 @@ export async function renderPlayer(root, params) {
       enforceSubtitleTrackModes();
       return;
     }
-    // Real feedback, live: an embedded subtitle track on one of Gelato's
-    // own remote sources can take real minutes to actually show up,
-    // nothing here telling a reader why in the meantime. Jellyfin's own
-    // real SubtitleController has to demux that track out of the whole
-    // remote container itself (SubtitleEncoder, real ffmpeg work, not
-    // something this plugin can speed up), a real external subtitle
-    // file serves near instantly by contrast. No way to tell which one
-    // this stream is without a real field this runtime does not fetch
-    // yet, so this fires either way: a real fast load just outlives its
-    // own 4 second real toast unnoticed, same as any other toast here.
-    showPlayerToast('Loading subtitles… this can take a moment for some sources.');
+    attachSubtitleTrack(stream, 0);
+  }
+
+  // Real feedback, live: an embedded subtitle track on one of Gelato's
+  // own remote sources can take real minutes to actually show up (or
+  // fail outright on anime specifically, reported live: real anime
+  // releases are almost always muxed with a real soft ASS/SSA track,
+  // Jellyfin's own SubtitleController has to demux that out of the
+  // whole remote container itself, SubtitleEncoder's own real ffmpeg
+  // work). That real extraction is cached server side once it actually
+  // finishes (SubtitleEncoder.cs's own GetSubtitleCachePath, confirmed
+  // against real source), so a request that dies part way through
+  // (a reverse proxy's own real read timeout sitting in front of
+  // Jellyfin, well short of what a slow remote extraction can take, is
+  // the likely real cause here, not something this plugin's own client
+  // code controls) is not necessarily a real dead end: a fresh request
+  // either lands on that now-cached real result, or at minimum gives
+  // the server another real attempt rather than this reader's own one
+  // shot silently giving up. MAX_SUBTITLE_LOAD_ATTEMPTS below is that
+  // real retry budget, a short real pause between attempts so a
+  // genuinely bad stream index (an instant real 404, retrying that
+  // is pure waste) does not spin as fast as it can rather than actually
+  // waiting on anything.
+  const MAX_SUBTITLE_LOAD_ATTEMPTS = 4;
+  const SUBTITLE_RETRY_DELAY_MS = 4000;
+
+  function attachSubtitleTrack(stream, attempt) {
+    if (activeSubtitleStreamIndex !== stream.Index) return;
+    // A retry's own failed predecessor otherwise sat in the DOM
+    // indefinitely, one orphaned <track> (and TextTrack) per attempt,
+    // enforceSubtitleTrackModes() left to disable each one it finds
+    // rather than never having anything to clean up in the first place.
+    if (activeTrack) {
+      if (activeTrack.track) activeTrack.track.mode = 'disabled';
+      activeTrack.remove();
+      activeTrack = null;
+    }
+    showPlayerToast(
+      attempt === 0
+        ? 'Loading subtitles… this can take a moment for some sources.'
+        : 'Still loading subtitles… (attempt ' + (attempt + 1) + ' of ' + MAX_SUBTITLE_LOAD_ATTEMPTS + ')',
+    );
     const track = document.createElement('track');
     track.kind = 'subtitles';
     track.label = stream.DisplayTitle || stream.Language || 'Subtitle';
@@ -1373,6 +1404,12 @@ export async function renderPlayer(root, params) {
     // showed up.
     track.addEventListener('error', function () {
       if (activeTrack !== track) return;
+      if (attempt + 1 < MAX_SUBTITLE_LOAD_ATTEMPTS) {
+        window.setTimeout(function () {
+          if (activeSubtitleStreamIndex === stream.Index) attachSubtitleTrack(stream, attempt + 1);
+        }, SUBTITLE_RETRY_DELAY_MS);
+        return;
+      }
       showPlayerToast('That subtitle track could not be loaded.');
     });
   }
