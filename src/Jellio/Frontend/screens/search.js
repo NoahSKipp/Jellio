@@ -25,6 +25,7 @@ import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { reflectStateInAddressBar } from '../runtime/router.js';
+import { el } from '../runtime/dom.js';
 
 const DEBOUNCE_MS = 300;
 
@@ -55,9 +56,27 @@ export async function renderSearch(root, params) {
   status.className = 'jellio-service-empty jellio-search-status';
   root.appendChild(status);
 
-  const grid = document.createElement('div');
-  grid.className = 'jellio-library-grid';
-  root.appendChild(grid);
+  const results = document.createElement('div');
+  results.className = 'jellio-search-results';
+  root.appendChild(results);
+
+  // Real feedback: results used to land in one flat grid, movies and
+  // series interleaved in whatever order Gelato's own AIOStreams proxy
+  // happened to return them, no way to tell the two apart at a glance
+  // beyond each card's own small type-adjacent detail. searchItems()
+  // already asks for IncludeItemTypes: 'Movie,Series' only, so
+  // item.Type is always one of exactly those two real values here, the
+  // same real split screens/home.js's own Watchlist tab already uses
+  // for its own Movies/Series sections.
+  function buildTypeSection(title, items) {
+    if (!items.length) return null;
+    const section = el('section', 'jellio-row');
+    section.appendChild(el('h2', 'jellio-row-title', title));
+    const grid = el('div', 'jellio-library-grid');
+    section.appendChild(grid);
+    appendCardsLazily(grid, items, buildCard);
+    return section;
+  }
 
   let timer = null;
   let requestId = 0;
@@ -80,14 +99,23 @@ export async function renderSearch(root, params) {
     searchItems(term, undefined, controller.signal)
       .then(function (items) {
         if (thisRequest !== requestId) return;
-        grid.textContent = '';
-        appendCardsLazily(grid, items, buildCard);
+        results.textContent = '';
+        const movies = items.filter(function (item) {
+          return item.Type === 'Movie';
+        });
+        const series = items.filter(function (item) {
+          return item.Type === 'Series';
+        });
+        const movieSection = buildTypeSection('Movies', movies);
+        if (movieSection) results.appendChild(movieSection);
+        const seriesSection = buildTypeSection('Series', series);
+        if (seriesSection) results.appendChild(seriesSection);
         status.textContent = items.length ? '' : 'No results for “' + term + '”.';
       })
       .catch(function (err) {
         if (thisRequest !== requestId) return;
         console.warn('Jellio: search failed', err);
-        grid.textContent = '';
+        results.textContent = '';
         status.textContent = describeNetworkFailure('search results', err);
       });
   }
@@ -99,7 +127,7 @@ export async function renderSearch(root, params) {
       reflectStateInAddressBar('#/search');
       requestId += 1;
       if (inFlight) inFlight.abort();
-      grid.textContent = '';
+      results.textContent = '';
       status.textContent = '';
       return;
     }
