@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.10] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Skip the nav rail rebuild when a recheck finds nothing new\n",
+        "checksum": "f1516006fa00d1340061cbfe6a7e0bfd",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.10/jellio_0.68.10.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T15:36:10Z",
+        "version": "0.68.10"
+      },
+      {
         "changelog": "## [0.68.9] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop several more independent fetches from blocking each other\n",
         "checksum": "e4689fdb3c75bd3a2d41019e46eeba07",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.9/jellio_0.68.9.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T09:23:02Z",
         "version": "0.64.1"
-      },
-      {
-        "changelog": "## [0.64.0] - 2026-08-27\n\n### 🚀 Features\n\n- Swap the boot splash video for our animated jellyfish mark (#168)\n",
-        "checksum": "d213e040d60bc832acd28ffd1ee5119b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.0/jellio_0.64.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-27T21:45:07Z",
-        "version": "0.64.0"
       }
     ]
   }
