@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.55.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Render seasonal effect rows as static markup in the admin config page\n",
+        "checksum": "e68993d3bfbf9ca5e592fc46fe385654",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.1/jellio_0.55.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T18:13:05Z",
+        "version": "0.55.1"
+      },
+      {
         "changelog": "## [0.55.0] - 2026-08-22\n\n### 🚀 Features\n\n- Match saved audio language preference against the actual stream\n- Add Harbor style home row customizer\n",
         "checksum": "1bcaa3660624423a63a98321c3f63c61",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.0/jellio_0.55.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T13:28:18Z",
         "version": "0.40.6"
-      },
-      {
-        "changelog": "## [0.40.5] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Measure More's real drift directly instead of trusting flex math\n",
-        "checksum": "965ccfb05f2914e2ae6f5ed9174527a1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.5/jellio_0.40.5.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T12:12:36Z",
-        "version": "0.40.5"
       }
     ]
   }
