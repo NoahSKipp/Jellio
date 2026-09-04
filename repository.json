@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.63.0] - 2026-08-25\n\n### 🚀 Features\n\n- Swap in the icon+text boot splash reveal (#167)\n",
+        "checksum": "6adc10b711881f22e0601bdd2aeb6081",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.63.0/jellio_0.63.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-25T12:03:21Z",
+        "version": "0.63.0"
+      },
+      {
         "changelog": "## [0.62.4] - 2026-08-25\n\n### 🐛 Bug Fixes\n\n- Cover the boot splash screen again, drop the fit-by-width try (#166)\n",
         "checksum": "8e0d78d95566c859f5ebe5b74ea32aef",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.62.4/jellio_0.62.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T00:41:41Z",
         "version": "0.51.1"
-      },
-      {
-        "changelog": "## [0.51.0] - 2026-08-22\n\n### 🚀 Features\n\n- Consolidate mobile nav libraries into one picker, real username\n- Enlarge the mobile nav pill and its icons\n\n### ⚡ Performance\n\n- Drop the mobile nav label's own reflow-heavy transition\n",
-        "checksum": "41c57636c5b79644d3c5f4f82fc46e6b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.51.0/jellio_0.51.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T00:30:08Z",
-        "version": "0.51.0"
       }
     ]
   }
