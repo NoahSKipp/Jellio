@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.69.2] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Keep retrying the idle auto-hide instead of giving up once\n",
+        "checksum": "dc756de6f283346589f86a0a79bebca4",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.2/jellio_0.69.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T19:41:17Z",
+        "version": "0.69.2"
+      },
+      {
         "changelog": "## [0.69.1] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Give the Up Next countdown a full minute instead of 15s\n",
         "checksum": "38a42c9b28d5d41dec7e74e989fb9a43",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.1/jellio_0.69.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T14:09:44Z",
         "version": "0.65.1"
-      },
-      {
-        "changelog": "## [0.65.0] - 2026-08-28\n\n### 🚀 Features\n\n- Group preset avatars by their own real subfolder (#173)\n",
-        "checksum": "79d5b39e19be69dc47fa307044ce4b8a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.0/jellio_0.65.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T13:29:23Z",
-        "version": "0.65.0"
       }
     ]
   }
