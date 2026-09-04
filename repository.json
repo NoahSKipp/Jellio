@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.5] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Also reassign an avatar whose own real file is gone\n",
+        "checksum": "deda0594a422e9b94bca9dc78caf3945",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.5/jellio_0.67.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T20:11:24Z",
+        "version": "0.67.5"
+      },
+      {
         "changelog": "## [0.67.4] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Call the real GetUsers(), now that it actually compiles\n\n### ⚙️ Miscellaneous Tasks\n\n- Build against the real 10.11.11 packages, not 10.11.6\n",
         "checksum": "29834d0a910d3001f023cdb4dd1f3da4",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.4/jellio_0.67.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T20:35:52Z",
         "version": "0.59.0"
-      },
-      {
-        "changelog": "## [0.58.0] - 2026-08-22\n\n### 🚀 Features\n\n- Redesign studio hub pages with a real hero\n",
-        "checksum": "dfb391ff40ff5351e31e77438005d5de",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.58.0/jellio_0.58.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T20:17:58Z",
-        "version": "0.58.0"
       }
     ]
   }
