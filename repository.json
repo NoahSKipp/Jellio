@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.70.0] - 2026-08-29\n\n### 🚀 Features\n\n- Show the TMDB mark next to every CommunityRating\n",
+        "checksum": "198e68164f2dd29dc0a320940b7203eb",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.70.0/jellio_0.70.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T19:49:53Z",
+        "version": "0.70.0"
+      },
+      {
         "changelog": "## [0.69.2] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Keep retrying the idle auto-hide instead of giving up once\n",
         "checksum": "dc756de6f283346589f86a0a79bebca4",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.2/jellio_0.69.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T14:23:12Z",
         "version": "0.65.2"
-      },
-      {
-        "changelog": "## [0.65.1] - 2026-08-28\n\n### 🎨 Styling\n\n- Circular profile avatars on login and the account switcher (#174)\n",
-        "checksum": "59bc7b7da53734a492f490123dccefd8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.1/jellio_0.65.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T14:09:44Z",
-        "version": "0.65.1"
       }
     ]
   }
