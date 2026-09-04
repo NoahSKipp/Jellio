@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.6] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Revert reassigning avatars with a missing file for now\n- Clear the old ProfileImage row before reassigning one\n- Refresh a remembered user's name and avatar from the server\n",
+        "checksum": "e572ba494de534f8bb23f5cd00beb7db",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.6/jellio_0.67.6.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T20:20:22Z",
+        "version": "0.67.6"
+      },
+      {
         "changelog": "## [0.67.5] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Also reassign an avatar whose own real file is gone\n",
         "checksum": "deda0594a422e9b94bca9dc78caf3945",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.5/jellio_0.67.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T20:44:42Z",
         "version": "0.59.1"
-      },
-      {
-        "changelog": "## [0.59.0] - 2026-08-22\n\n### 🚀 Features\n\n- Make row titles open a browsable list of the whole row\n\n### 🐛 Bug Fixes\n\n- Add scroll arrows to studio hub, cast, and trailer rows\n",
-        "checksum": "20acad1c1f4d34a06d34ee6f34d678ad",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.0/jellio_0.59.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T20:35:52Z",
-        "version": "0.59.0"
       }
     ]
   }
