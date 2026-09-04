@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Never let default avatar assignment crash the host on startup\n",
+        "checksum": "ce6c33c65d658f2b8e4d19412641c112",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.1/jellio_0.67.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T19:11:43Z",
+        "version": "0.67.1"
+      },
+      {
         "changelog": "## [0.67.0] - 2026-08-28\n\n### 🚀 Features\n\n- Rotate through Smileys avatars for users with none (#181)\n\n### 🐛 Bug Fixes\n\n- Settings action rows not filling the card's full width (#179)\n- Stop showing users hidden from the login screen in quick switch (#180)\n",
         "checksum": "987bd2291385d77d9e1b3cc152991fc7",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.0/jellio_0.67.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T19:18:19Z",
         "version": "0.55.4"
-      },
-      {
-        "changelog": "## [0.55.3] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Load the admin config page's own values without waiting on pageshow alone\n",
-        "checksum": "82370451348e0dc3bbd936eb03c4dbdf",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.3/jellio_0.55.3.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T18:59:25Z",
-        "version": "0.55.3"
       }
     ]
   }
