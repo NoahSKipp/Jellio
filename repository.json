@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.2.1] - 2026-09-04\n\n### 🐛 Bug Fixes\n\n- Retry a failed subtitle load instead of giving up after one attempt\n",
+        "checksum": "a1b8cc9ce97c72c5581843463118891d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.2.1/jellio_1.2.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-04T19:52:40Z",
+        "version": "1.2.1"
+      },
+      {
         "changelog": "## [1.2.0] - 2026-09-04\n\n### 🚀 Features\n\n- Split search results into Movies and Series sections\n\n### 🐛 Bug Fixes\n\n- Let the language filter treat original-audio-only as its own choice\n",
         "checksum": "c1dde90a0730127f1c7cf16ba2e13e89",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.2.0/jellio_1.2.0.0.zip",
