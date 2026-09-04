@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.65.1] - 2026-08-28\n\n### 🎨 Styling\n\n- Circular profile avatars on login and the account switcher (#174)\n",
+        "checksum": "59bc7b7da53734a492f490123dccefd8",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.1/jellio_0.65.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T14:09:44Z",
+        "version": "0.65.1"
+      },
+      {
         "changelog": "## [0.65.0] - 2026-08-28\n\n### 🚀 Features\n\n- Group preset avatars by their own real subfolder (#173)\n",
         "checksum": "79d5b39e19be69dc47fa307044ce4b8a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.65.0/jellio_0.65.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T16:39:24Z",
         "version": "0.54.0"
-      },
-      {
-        "changelog": "## [0.53.0] - 2026-08-22\n\n### 🚀 Features\n\n- Add seasonal overlay effects with per-effect settings\n",
-        "checksum": "f89aa463a0a55b9099fb59f3f708ffc0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.53.0/jellio_0.53.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T16:28:04Z",
-        "version": "0.53.0"
       }
     ]
   }
