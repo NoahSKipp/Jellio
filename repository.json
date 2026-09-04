@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.55.4] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Move the admin config page's own script inside its page div\n",
+        "checksum": "54545ea561eb1e1be1f2dae3b4375174",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.4/jellio_0.55.4.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T19:18:19Z",
+        "version": "0.55.4"
+      },
+      {
         "changelog": "## [0.55.3] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Load the admin config page's own values without waiting on pageshow alone\n",
         "checksum": "82370451348e0dc3bbd936eb03c4dbdf",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.55.3/jellio_0.55.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T15:07:06Z",
         "version": "0.40.9"
-      },
-      {
-        "changelog": "## [0.40.8] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Take detail page More button out of flex flow entirely\n",
-        "checksum": "dbf34ed4b8ac1daedc97ebc4401cd126",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.8/jellio_0.40.8.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T14:53:45Z",
-        "version": "0.40.8"
       }
     ]
   }
