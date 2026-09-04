@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.57.0] - 2026-08-22\n\n### 🚀 Features\n\n- Port the remaining 9 seasonal effects from Jellyfin-Seasonals\n",
+        "checksum": "a9b144b572e261d0fe22371ce078c253",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.57.0/jellio_0.57.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T19:55:55Z",
+        "version": "0.57.0"
+      },
+      {
         "changelog": "## [0.56.0] - 2026-08-22\n\n### 🚀 Features\n\n- Port 19 more seasonal effects from Jellyfin-Seasonals\n",
         "checksum": "395d6771c2e5e85c272539fc24b54016",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.56.0/jellio_0.56.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-20T16:04:39Z",
         "version": "0.40.11"
-      },
-      {
-        "changelog": "## [0.40.10] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Tighten detail action row spacing, stop expanded overflow into More\n",
-        "checksum": "b69a7d489bd561e88882c7d15ce6744a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.10/jellio_0.40.10.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T15:23:07Z",
-        "version": "0.40.10"
       }
     ]
   }
