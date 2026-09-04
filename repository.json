@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.64.4] - 2026-08-28\n\n### 📚 Documentation\n\n- Add a session handoff doc for the next agent (#172)\n",
+        "checksum": "0b654347d7e2407ac8033a0f7cbe0b5a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.4/jellio_0.64.4.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T12:18:20Z",
+        "version": "0.64.4"
+      },
+      {
         "changelog": "## [0.64.3] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Detect native HLS support instead of sniffing for Safari (#171)\n",
         "checksum": "aac5dec774520916f79480cf05ddefd5",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.3/jellio_0.64.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T15:47:36Z",
         "version": "0.52.3"
-      },
-      {
-        "changelog": "## [0.52.2] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Restore mobile nav pill reshape on scroll compact\n- Rename Paramount+ logo asset to match the slug it's requested under\n",
-        "checksum": "55afabbd1a0e0d5e46b04c9a46d05a6d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.2/jellio_0.52.2.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T15:15:31Z",
-        "version": "0.52.2"
       }
     ]
   }
