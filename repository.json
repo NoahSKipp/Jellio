@@ -8,6 +8,22 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.4] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Call the real GetUsers(), now that it actually compiles\n\n### ⚙️ Miscellaneous Tasks\n\n- Build against the real 10.11.11 packages, not 10.11.6\n",
+        "checksum": "29834d0a910d3001f023cdb4dd1f3da4",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.4/jellio_0.67.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T19:50:09Z",
+        "version": "0.67.4"
+      },
+      {
+        "changelog": "## [0.67.3] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Read users through GetUsers, the real 10.11.11 surface\n",
+        "checksum": "",
+        "sourceUrl": "",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T19:40:37Z",
+        "version": "0.67.3"
+      },
+      {
         "changelog": "## [0.67.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Isolate the IUserManager.Users read so its own catch actually fires\n",
         "checksum": "fcb72f5278b8f06feeefe4ddf5d3261a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.2/jellio_0.67.2.0.zip",
@@ -230,22 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T20:17:58Z",
         "version": "0.58.0"
-      },
-      {
-        "changelog": "## [0.57.0] - 2026-08-22\n\n### 🚀 Features\n\n- Port the remaining 9 seasonal effects from Jellyfin-Seasonals\n",
-        "checksum": "a9b144b572e261d0fe22371ce078c253",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.57.0/jellio_0.57.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T19:55:55Z",
-        "version": "0.57.0"
-      },
-      {
-        "changelog": "## [0.56.0] - 2026-08-22\n\n### 🚀 Features\n\n- Port 19 more seasonal effects from Jellyfin-Seasonals\n",
-        "checksum": "395d6771c2e5e85c272539fc24b54016",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.56.0/jellio_0.56.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T19:42:26Z",
-        "version": "0.56.0"
       }
     ]
   }
