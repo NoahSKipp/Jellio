@@ -3232,6 +3232,18 @@
   color: var(--jellio-text-color);
 }
 
+/* Real components/streamPicker.js's own .jellio-stream-picker-filters
+   chip row, just wrapped here (not overflow-x scrolled the way
+   -sidepanel-tabs above is) since a language filter's own real chip
+   count stays small, always fewer than a season list's own real tab
+   count could get. Collapses to nothing on its own (no chip children
+   at all) when buildLanguageFilterRow() finds only one real language
+   behind this panel's own sourceOptions to filter, same real skip
+   that picker's own inline version used to do. */
+.jellio-player-sidepanel-filters {
+  padding: 0 1.2em 1em;
+}
+
 .jellio-player-sidepanel-list {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -6652,6 +6664,14 @@
   color: var(--jellio-text-secondary);
   font-size: 0.72em;
   font-weight: 600;
+}
+
+/* An inferred "no dub detected" real fallback, not a real confirmed
+   embedded/flag language the pill styling above already covers:
+   dashed rather than solid so it reads as a real guess, not data. */
+.jellio-stream-picker-card-lang-unknown {
+  border-style: dashed;
+  opacity: 0.75;
 }
 
 /* Real feedback: could not see any of this at all on a phone. Below

@@ -52,7 +52,7 @@ import {
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
-import { sourceLabel, buildSourceCard } from '../components/streamPicker.js';
+import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { languageName } from '../runtime/languages.js';
@@ -1795,10 +1795,20 @@ export async function renderPlayer(root, params) {
   sourceCloseButton.type = 'button';
   sourcePanelHeader.appendChild(sourceCloseButton);
   sourcePanel.appendChild(sourcePanelHeader);
+  // Real feedback, live: Change Stream had no language filter at all,
+  // unlike components/streamPicker.js's own pre-playback picker.
+  // buildLanguageFilterRow() is that same real chip row, rebuilt
+  // (rebuildSourceFilter below) whenever sourceOptions itself actually
+  // changes rather than on every list re-render, since the real
+  // language set behind it only ever changes when a fresh real fetch
+  // lands, not on every source pick/highlight update.
+  const sourceFilterContainer = el('div', 'jellio-player-sidepanel-filters');
+  sourcePanel.appendChild(sourceFilterContainer);
   const sourceList = el('div', 'jellio-player-sidepanel-list');
   sourcePanel.appendChild(sourceList);
 
   let sourceOptions = [mediaSource];
+  let selectedSourceLanguage = null;
   let switchingSource = false;
 
   function closeSidePanels() {
@@ -1806,9 +1816,24 @@ export async function renderPlayer(root, params) {
     episodesPanel.classList.add('jellio-player-sidepanel-hidden');
   }
 
+  function rebuildSourceFilter() {
+    sourceFilterContainer.textContent = '';
+    selectedSourceLanguage = null;
+    const filterRow = buildLanguageFilterRow(sourceOptions, function (code) {
+      selectedSourceLanguage = code;
+      rebuildSourceMenu();
+    });
+    if (filterRow) sourceFilterContainer.appendChild(filterRow);
+  }
+
   function rebuildSourceMenu() {
     sourceList.textContent = '';
-    sourceOptions.forEach(function (source) {
+    const filtered = selectedSourceLanguage
+      ? sourceOptions.filter(function (source) {
+          return sourceAudioLanguages(source).indexOf(selectedSourceLanguage) !== -1;
+        })
+      : sourceOptions;
+    filtered.forEach(function (source) {
       sourceList.appendChild(
         buildSourceCard(
           source,
@@ -2237,6 +2262,7 @@ export async function renderPlayer(root, params) {
       if (sources.length > 1) {
         sourceOptions = sources;
         sourceButton.disabled = false;
+        rebuildSourceFilter();
         rebuildSourceMenu();
       }
     })
