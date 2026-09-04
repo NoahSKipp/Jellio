@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.67.8] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Recheck the nav rails once for a still-importing Anime catalog\n- Drop the Recently added library sort, same reason home dropped it\n",
+        "checksum": "cc55788650edecc48746452a3912f3ef",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.8/jellio_0.67.8.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T20:43:56Z",
+        "version": "0.67.8"
+      },
+      {
         "changelog": "## [0.67.7] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Stop the browser caching a boot-time Views response\n",
         "checksum": "1cc298e0d88a6712df0e8abd3d6061fe",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.7/jellio_0.67.7.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-23T08:19:43Z",
         "version": "0.59.3"
-      },
-      {
-        "changelog": "## [0.59.2] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Page through every imported collection, not just the first 100\n",
-        "checksum": "b133bca4e517de6a28ef7ef533bd4bcf",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.59.2/jellio_0.59.2.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T22:12:45Z",
-        "version": "0.59.2"
       }
     ]
   }
