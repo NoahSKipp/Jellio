@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.62.4] - 2026-08-25\n\n### 🐛 Bug Fixes\n\n- Cover the boot splash screen again, drop the fit-by-width try (#166)\n",
+        "checksum": "8e0d78d95566c859f5ebe5b74ea32aef",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.62.4/jellio_0.62.4.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-25T11:38:56Z",
+        "version": "0.62.4"
+      },
+      {
         "changelog": "## [0.62.3] - 2026-08-25\n\n### ⚡ Performance\n\n- Serve the boot splash video as webm, mp4 as fallback (#165)\n",
         "checksum": "d3c63350db2ab3ee0e5927c3d53af296",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.62.3/jellio_0.62.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T00:30:08Z",
         "version": "0.51.0"
-      },
-      {
-        "changelog": "## [0.50.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Detail actions wrap on mobile instead of overflowing\n\n### ◀️ Revert\n\n- Drop sidebar nav icon animations\n",
-        "checksum": "f301d1b64d8816ce30733a718798309e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.50.1/jellio_0.50.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T00:17:33Z",
-        "version": "0.50.1"
       }
     ]
   }
