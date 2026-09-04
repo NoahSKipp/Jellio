@@ -8,6 +8,13 @@ const LANGUAGE_NAMES = {
   spa: 'Spanish', ita: 'Italian', jpn: 'Japanese', kor: 'Korean', chi: 'Chinese',
   zho: 'Chinese', rus: 'Russian', por: 'Portuguese', dut: 'Dutch', nld: 'Dutch',
   ara: 'Arabic', pol: 'Polish', swe: 'Swedish', tur: 'Turkish',
+  // Not a real ISO code: components/streamPicker.js's own
+  // sourceAudioLanguages() real fallback bucket for a source with no
+  // MediaStreams Language field and no flag emoji in Name either,
+  // still worth its own real filter chip (a reader choosing between a
+  // German dub and an undubbed original release is a real choice too),
+  // not just a tag with nothing behind it to filter by.
+  __original__: 'Original Audio',
 };
 
 export function languageName(code) {

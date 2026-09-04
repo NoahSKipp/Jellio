@@ -241,6 +241,14 @@ function flagLanguages(text) {
   return codes;
 }
 
+// Not a real ISO code, languages.js's own LANGUAGE_NAMES entry for it
+// explains why this exists at all: an indexer whose own releases carry
+// no MediaStreams Language field and no flag emoji in Name either
+// still deserves its own real filter chip, a reader choosing between a
+// German dub and an undubbed original release being a real choice too,
+// not just a tag with nothing behind it to filter by.
+export const ORIGINAL_AUDIO_CODE = '__original__';
+
 // Exported so screens/player.js's own in-player Sources panel can
 // filter by the exact same real codes this picker's own filter row
 // does, not a second, separately maintained detection pass.
@@ -254,6 +262,7 @@ export function sourceAudioLanguages(source) {
   flagLanguages(source.Name).forEach(function (code) {
     if (codes.indexOf(code) === -1) codes.push(code);
   });
+  if (!codes.length) codes.push(ORIGINAL_AUDIO_CODE);
   return codes;
 }
 
@@ -323,33 +332,32 @@ export function buildSourceCard(source, onSelect, isActive) {
   // sources mix both conventions, so that code-level dedup never
   // caught it. Deduping again here, against languageName()'s own real
   // resolved display name instead of the raw code, catches that.
+  // sourceAudioLanguages() always returns at least one real code now:
+  // ORIGINAL_AUDIO_CODE itself when neither of its own two real
+  // detection paths (embedded MediaStreams Language, a flag emoji in
+  // Name) finds anything, its own real fallback tag below, dashed so
+  // it reads as an inferred guess rather than confirmed data.
   const languageCodes = sourceAudioLanguages(source);
   const langRow = el('div', 'jellio-stream-picker-card-langs');
-  if (languageCodes.length) {
-    const seenNames = {};
-    const names = [];
-    languageCodes.forEach(function (code) {
-      const name = languageName(code);
-      if (name && !seenNames[name]) {
-        seenNames[name] = true;
-        names.push(name);
-      }
-    });
-    names.forEach(function (name) {
-      langRow.appendChild(el('span', 'jellio-stream-picker-card-lang', name));
-    });
-  } else {
-    // Real feedback, live: an indexer whose own releases carry no
-    // embedded MediaStreams Language field and no flag emoji in Name
-    // either (neither of sourceAudioLanguages()'s own two real
-    // detection paths) used to leave this whole row blank, no different
-    // on screen from a source this picker just failed to read anything
-    // from. Most real single-track releases from an indexer like that
-    // are the title's own original language with no dub at all, worth
-    // saying so rather than leaving the same blank space a genuine
-    // detection gap would.
-    langRow.appendChild(el('span', 'jellio-stream-picker-card-lang jellio-stream-picker-card-lang-unknown', 'ORIGINAL AUDIO'));
-  }
+  const seenNames = {};
+  languageCodes.forEach(function (code) {
+    const name = languageName(code);
+    // Real feedback, a real screenshot: German showed up twice in the
+    // same card. sourceAudioLanguages() already dedupes its own real
+    // codes against each other, but a real embedded MediaStreams
+    // Language ('de', ISO 639-1) and a real flag-emoji-derived code
+    // ('ger', ISO 639-2/T, flagLanguages() above) describe the exact
+    // same real language under two different real strings, real Gelato
+    // sources mix both conventions, so that code-level dedup never
+    // caught it. Deduping again here, against languageName()'s own real
+    // resolved display name instead of the raw code, catches that.
+    if (!name || seenNames[name]) return;
+    seenNames[name] = true;
+    const isInferred = code === ORIGINAL_AUDIO_CODE;
+    langRow.appendChild(
+      el('span', 'jellio-stream-picker-card-lang' + (isInferred ? ' jellio-stream-picker-card-lang-unknown' : ''), name),
+    );
+  });
   card.appendChild(langRow);
 
   card.addEventListener('click', function () {
