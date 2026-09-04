@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.58.0] - 2026-08-22\n\n### 🚀 Features\n\n- Redesign studio hub pages with a real hero\n",
+        "checksum": "dfb391ff40ff5351e31e77438005d5de",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.58.0/jellio_0.58.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-22T20:17:58Z",
+        "version": "0.58.0"
+      },
+      {
         "changelog": "## [0.57.0] - 2026-08-22\n\n### 🚀 Features\n\n- Port the remaining 9 seasonal effects from Jellyfin-Seasonals\n",
         "checksum": "a9b144b572e261d0fe22371ce078c253",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.57.0/jellio_0.57.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T01:58:48Z",
         "version": "0.40.12"
-      },
-      {
-        "changelog": "## [0.40.11] - 2026-08-20\n\n### 🐛 Bug Fixes\n\n- Even out gap before More with the rest of the detail action row\n",
-        "checksum": "8b694e15260a7310e536cd66a135098d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.40.11/jellio_0.40.11.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-20T16:04:39Z",
-        "version": "0.40.11"
       }
     ]
   }
