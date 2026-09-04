@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Retry a never-before-opened title's own detail lookup once\n",
+        "checksum": "9ebd355b7146ecc3d501ac2bd7245f1f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.1/jellio_0.68.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-28T21:55:47Z",
+        "version": "0.68.1"
+      },
+      {
         "changelog": "## [0.68.0] - 2026-08-28\n\n### 🚀 Features\n\n- Show online status dot in account switcher\n",
         "checksum": "5d53bff887c3406700102a814012d157",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.0/jellio_0.68.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-23T11:18:16Z",
         "version": "0.61.0"
-      },
-      {
-        "changelog": "## [0.60.1] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Browse-everything list only showed the row's own capped array\n",
-        "checksum": "5ed5b693011e79a58476093bc8e033b3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.60.1/jellio_0.60.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-23T10:00:27Z",
-        "version": "0.60.1"
       }
     ]
   }
