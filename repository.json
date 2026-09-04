@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.69.0] - 2026-08-29\n\n### 🚀 Features\n\n- Add an absolute fullscreen toggle to the player\n\n### 🐛 Bug Fixes\n\n- Stop subtitles ignoring their own state on macOS Safari\n",
+        "checksum": "830d299b2200a506c501a13b58eb754b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.0/jellio_0.69.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T18:04:08Z",
+        "version": "0.69.0"
+      },
+      {
         "changelog": "## [0.68.12] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop native jellyfin-web flashing through after the splash fades\n",
         "checksum": "3d508fc29b38f7b9a530aad608d06e0e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.12/jellio_0.68.12.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T12:18:20Z",
         "version": "0.64.4"
-      },
-      {
-        "changelog": "## [0.64.3] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Detect native HLS support instead of sniffing for Safari (#171)\n",
-        "checksum": "aac5dec774520916f79480cf05ddefd5",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.3/jellio_0.64.3.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T11:05:37Z",
-        "version": "0.64.3"
       }
     ]
   }
