@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.61.0] - 2026-08-23\n\n### 🚀 Features\n\n- Add a TMDB backed release calendar service\n- Add a Calendar page and a Coming Soon row\n\n### 🐛 Bug Fixes\n\n- Correct real namespace/member errors in CalendarController\n",
+        "checksum": "7d5f05d8897f24ee3204e010ec862956",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.61.0/jellio_0.61.0.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-23T11:18:16Z",
+        "version": "0.61.0"
+      },
+      {
         "changelog": "## [0.60.1] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Browse-everything list only showed the row's own capped array\n",
         "checksum": "5ed5b693011e79a58476093bc8e033b3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.60.1/jellio_0.60.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T21:42:29Z",
         "version": "0.46.0"
-      },
-      {
-        "changelog": "## [0.45.0] - 2026-08-21\n\n### 🚀 Features\n\n- *(sidebar)* Move Profile to the top, show the real user name\n- *(card)* Landscape Up Next/Continue Watching cards\n\n### 🐛 Bug Fixes\n\n- *(library)* Stop a stale coverflow mount landing a second copy\n- *(detail)* Correct episode thumbnail fallback id/type\n- *(stream-picker)* Drop the 0 MB badge, dedupe language tags\n\n### 🎨 Styling\n\n- Row title underline, sidebar box-sizing and icon clip fixes\n",
-        "checksum": "79d8074776a8776b1eee3fa4a39586ff",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.45.0/jellio_0.45.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-21T20:11:25Z",
-        "version": "0.45.0"
       }
     ]
   }
