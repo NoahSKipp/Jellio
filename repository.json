@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.61.1] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Enlarge card watchlist/watched buttons and pop on click\n",
+        "checksum": "5931b32a6344385f3355fa656ce6fa4e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.61.1/jellio_0.61.1.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-23T12:19:00Z",
+        "version": "0.61.1"
+      },
+      {
         "changelog": "## [0.61.0] - 2026-08-23\n\n### 🚀 Features\n\n- Add a TMDB backed release calendar service\n- Add a Calendar page and a Coming Soon row\n\n### 🐛 Bug Fixes\n\n- Correct real namespace/member errors in CalendarController\n",
         "checksum": "7d5f05d8897f24ee3204e010ec862956",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.61.0/jellio_0.61.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-21T22:34:56Z",
         "version": "0.47.0"
-      },
-      {
-        "changelog": "## [0.46.0] - 2026-08-21\n\n### 🚀 Features\n\n- Quick sign-in fix, Harbor-inspired Shows row, series Play/Resume, hero fix (#131)\n",
-        "checksum": "9226485d11e60b545e8a1548cbf368f4",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.46.0/jellio_0.46.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-21T21:42:29Z",
-        "version": "0.46.0"
       }
     ]
   }
