@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.68.3] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Drop StartTimeTicks from a native HLS master playlist request\n",
+        "checksum": "481ab443438f7727e9d98f36383fbf99",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.3/jellio_0.68.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T00:10:41Z",
+        "version": "0.68.3"
+      },
+      {
         "changelog": "## [0.68.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Force a real transcode for every explicit audio track request\n",
         "checksum": "a700614dbbbc54565ff3a79c39bd6091",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.2/jellio_0.68.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-25T10:53:38Z",
         "version": "0.62.0"
-      },
-      {
-        "changelog": "## [0.61.1] - 2026-08-23\n\n### 🐛 Bug Fixes\n\n- Enlarge card watchlist/watched buttons and pop on click\n",
-        "checksum": "5931b32a6344385f3355fa656ce6fa4e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.61.1/jellio_0.61.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-23T12:19:00Z",
-        "version": "0.61.1"
       }
     ]
   }
