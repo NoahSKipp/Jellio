@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.64.3] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Detect native HLS support instead of sniffing for Safari (#171)\n",
+        "checksum": "aac5dec774520916f79480cf05ddefd5",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.3/jellio_0.64.3.0.zip",
+        "targetAbi": "10.11.6.0",
+        "timestamp": "2026-08-28T11:05:37Z",
+        "version": "0.64.3"
+      },
+      {
         "changelog": "## [0.64.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Fall back to HLS on Safari instead of fragmented mp4 (#170)\n",
         "checksum": "f6ab492f5ba39d28c82757b3311b7a6a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.64.2/jellio_0.64.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-22T15:15:31Z",
         "version": "0.52.2"
-      },
-      {
-        "changelog": "## [0.52.1] - 2026-08-22\n\n### 🐛 Bug Fixes\n\n- Detect anime catalogs by Gelato's real catalog type, not name\n",
-        "checksum": "138737c89d0d4d1409dbf9cb61050e8f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.52.1/jellio_0.52.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-22T14:55:12Z",
-        "version": "0.52.1"
       }
     ]
   }
