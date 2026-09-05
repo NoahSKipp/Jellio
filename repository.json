@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.86.1] - 2026-09-02\n\n### ⚡ Performance\n\n- Nav fill-in, Anime load, and SyncPlay polling (#212)\n",
+        "checksum": "e5ebe4bd147ee39c85270a8eded931f3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.1/jellio_0.86.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T13:56:46Z",
+        "version": "0.86.1"
+      },
+      {
         "changelog": "## [0.86.0] - 2026-09-02\n\n### 🚀 Features\n\n- Swap automatic subtitle fetching to SubDL, strip ad lines (#211)\n",
         "checksum": "cbfa96cfaa286071039b44c1ce95d1a3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.0/jellio_0.86.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-30T13:02:25Z",
         "version": "0.74.2"
-      },
-      {
-        "changelog": "## [0.74.1] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Group Watch sync gaps, bigger notifications, member list\n",
-        "checksum": "74525b8e529e641b03f48ab35a17c68f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.1/jellio_0.74.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-30T12:27:47Z",
-        "version": "0.74.1"
       }
     ]
   }
