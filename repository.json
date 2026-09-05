@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.78.3] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Show the Anime nav link immediately, add a loading skeleton behind it\n",
+        "checksum": "e65b4e6f70c81eaa30cf1dd053aa4f7d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.3/jellio_0.78.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T18:00:55Z",
+        "version": "0.78.3"
+      },
+      {
         "changelog": "## [0.78.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Profile page click bugs and a scrubber duration mismatch\n",
         "checksum": "689a883780794d8b1a6153aaeae77915",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.2/jellio_0.78.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T20:21:51Z",
         "version": "0.71.0"
-      },
-      {
-        "changelog": "## [0.70.0] - 2026-08-29\n\n### 🚀 Features\n\n- Show the TMDB mark next to every CommunityRating\n",
-        "checksum": "198e68164f2dd29dc0a320940b7203eb",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.70.0/jellio_0.70.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T19:49:53Z",
-        "version": "0.70.0"
       }
     ]
   }
