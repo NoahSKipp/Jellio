@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.78.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Profile page click bugs and a scrubber duration mismatch\n",
+        "checksum": "689a883780794d8b1a6153aaeae77915",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.2/jellio_0.78.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T17:56:10Z",
+        "version": "0.78.2"
+      },
+      {
         "changelog": "## [0.78.1] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Import getCurrentUserId from auth.js, not api.js\n",
         "checksum": "21a30818d0bfe723ceaa88ea73802685",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.1/jellio_0.78.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T19:49:53Z",
         "version": "0.70.0"
-      },
-      {
-        "changelog": "## [0.69.2] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Keep retrying the idle auto-hide instead of giving up once\n",
-        "checksum": "dc756de6f283346589f86a0a79bebca4",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.2/jellio_0.69.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T19:41:17Z",
-        "version": "0.69.2"
       }
     ]
   }
