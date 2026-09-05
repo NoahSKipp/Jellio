@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.77.1] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Stop realigning the SyncPlay WebSocket, track toast restarts by playlist item\n",
+        "checksum": "74b191f32c88060aedfc117de4882a30",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.1/jellio_0.77.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T14:10:22Z",
+        "version": "0.77.1"
+      },
+      {
         "changelog": "## [0.77.0] - 2026-09-01\n\n### 🚀 Features\n\n- Show Jellio's own notice for a group member joining or leaving\n",
         "checksum": "a49fdd0106e79e971200ed110954d667",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.0/jellio_0.77.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T17:18:28Z",
         "version": "0.68.12"
-      },
-      {
-        "changelog": "## [0.68.11] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Cap total in-flight requests instead of letting the browser queue them into timeouts\n",
-        "checksum": "38361ced7ec4aef17ea80cb1b462f307",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.11/jellio_0.68.11.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T16:49:29Z",
-        "version": "0.68.11"
       }
     ]
   }
