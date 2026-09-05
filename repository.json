@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.75.0] - 2026-08-31\n\n### 🚀 Features\n\n- Post a clickable watch card to Group Watch chat, not just a toast\n",
+        "checksum": "ee47923a715dbbe12e565cf0a65cb23b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.0/jellio_0.75.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-31T11:42:13Z",
+        "version": "0.75.0"
+      },
+      {
         "changelog": "## [0.74.6] - 2026-08-31\n\n### 🐛 Bug Fixes\n\n- Give join and publish their own WebSocket realignment, not a shared one\n",
         "checksum": "ab49fbdc7736c45bc03f884803c765d2",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.6/jellio_0.74.6.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-28T23:07:47Z",
         "version": "0.68.2"
-      },
-      {
-        "changelog": "## [0.68.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Retry a never-before-opened title's own detail lookup once\n",
-        "checksum": "9ebd355b7146ecc3d501ac2bd7245f1f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.1/jellio_0.68.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-28T21:55:47Z",
-        "version": "0.68.1"
       }
     ]
   }
