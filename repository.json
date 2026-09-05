@@ -9,10 +9,10 @@
     "versions": [
       {
         "changelog": "## [0.74.3] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Surface and fix a real Group Watch sync reconciliation gap (#185)\n",
-        "checksum": "a0a6f23b113e1dbf398b73d4279e4b94",
+        "checksum": "0dbf3f41adc9182ff02f344d971dae22",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.3/jellio_0.74.3.0.zip",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-30T17:13:16Z",
+        "timestamp": "2026-08-30T17:35:56Z",
         "version": "0.74.3"
       },
       {
