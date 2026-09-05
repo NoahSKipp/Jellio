@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.88.3] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Read Intro Skipper data from Jellyfin's native Media Segments API (#220)\n",
+        "checksum": "b62ba0400dbcc3d1f53455f747fa554e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.3/jellio_0.88.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T20:23:53Z",
+        "version": "0.88.3"
+      },
+      {
         "changelog": "## [0.88.2] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Actually resize oversized profile banners server side (#219)\n",
         "checksum": "ed0cbdb4db072a48d7b232a36b328826",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.2/jellio_0.88.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-01T11:52:06Z",
         "version": "0.75.3"
-      },
-      {
-        "changelog": "## [0.75.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Stop navigateTo() from double-mounting a route\n",
-        "checksum": "d5ccb33f1f7db2e59570e5f83188f5c3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.2/jellio_0.75.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T10:51:51Z",
-        "version": "0.75.2"
       }
     ]
   }
