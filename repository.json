@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.86.3] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Pick finalize speed, stuck group leave, dead navigation fallback (#214)\n",
+        "checksum": "5468bcfd15d81a01eef8eb3358b9d5af",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.3/jellio_0.86.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T18:29:38Z",
+        "version": "0.86.3"
+      },
+      {
         "changelog": "## [0.86.2] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Banner 401, native SyncPlay toast, Group Watch click loss (#213)\n",
         "checksum": "854c073f2cae1ccf22397ab1ec6d927a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.2/jellio_0.86.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-30T18:58:20Z",
         "version": "0.74.4"
-      },
-      {
-        "changelog": "## [0.74.3] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Surface and fix a real Group Watch sync reconciliation gap (#185)\n",
-        "checksum": "0dbf3f41adc9182ff02f344d971dae22",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.3/jellio_0.74.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-30T17:35:56Z",
-        "version": "0.74.3"
       }
     ]
   }
