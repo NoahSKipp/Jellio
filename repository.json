@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.72.0] - 2026-08-29\n\n### 🚀 Features\n\n- Notify readers when a watchlist title releases\n\n### 🐛 Bug Fixes\n\n- Stop CalendarController referencing a nested type that isn't nested\n\n### 🚜 Refactor\n\n- Move the watchlist calendar scan into CalendarService\n",
+        "checksum": "a24f81b023b1a972e84616dee2d7128e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.72.0/jellio_0.72.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T21:55:10Z",
+        "version": "0.72.0"
+      },
+      {
         "changelog": "## [0.71.0] - 2026-08-29\n\n### 🚀 Features\n\n- Make a Now Playing row navigate to its own title\n",
         "checksum": "67343c918dde984c179c57d7c3ad4310",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.71.0/jellio_0.71.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T17:45:25Z",
         "version": "0.66.1"
-      },
-      {
-        "changelog": "## [0.66.0] - 2026-08-28\n\n### 🚀 Features\n\n- Add Remove Show from Up Next, hiding the whole series (#177)\n",
-        "checksum": "96ee36f9d6bac8f86dcacbcc96bfeeec",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.66.0/jellio_0.66.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T14:56:11Z",
-        "version": "0.66.0"
       }
     ]
   }
