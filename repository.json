@@ -8,6 +8,22 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.88.0] - 2026-09-02\n\n### 🚀 Features\n\n- Let a server admin broadcast a message to every user (#217)\n",
+        "checksum": "7f0e415ecf74c86e6ac90caf298bdfc8",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.0/jellio_0.88.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T19:32:42Z",
+        "version": "0.88.0"
+      },
+      {
+        "changelog": "## [0.87.1] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Cap profile banner uploads to stop the scroll lag they cause (#216)\n",
+        "checksum": "49e1062b6631748430927b0751988c9e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.87.1/jellio_0.87.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T19:24:47Z",
+        "version": "0.87.1"
+      },
+      {
         "changelog": "## [0.87.0] - 2026-09-02\n\n### 🚀 Features\n\n- Visualize the pick round's auto-resolve countdown (#215)\n",
         "checksum": "3a2438b9407d61692e5de2cfce576613",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.87.0/jellio_0.87.0.0.zip",
@@ -230,22 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-31T11:42:13Z",
         "version": "0.75.0"
-      },
-      {
-        "changelog": "## [0.74.6] - 2026-08-31\n\n### 🐛 Bug Fixes\n\n- Give join and publish their own WebSocket realignment, not a shared one\n",
-        "checksum": "ab49fbdc7736c45bc03f884803c765d2",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.6/jellio_0.74.6.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-31T05:35:01Z",
-        "version": "0.74.6"
-      },
-      {
-        "changelog": "## [0.74.5] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Group Watch notice routing and WebSocket session realignment\n",
-        "checksum": "d74e2c6e4ba23f54a30a4c15a3bff448",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.5/jellio_0.74.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-30T20:21:54Z",
-        "version": "0.74.5"
       }
     ]
   }
