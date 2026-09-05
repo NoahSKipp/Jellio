@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.74.0] - 2026-08-30\n\n### 🚀 Features\n\n- Real Jellyfin SyncPlay, invites, and in-player chat\n",
+        "checksum": "b6675b58d78aa589de2817f73d58a00f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.0/jellio_0.74.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-30T02:05:22Z",
+        "version": "0.74.0"
+      },
+      {
         "changelog": "## [0.73.4] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Open Now Playing on hover, not just click\n- Stop the Group Watch chat title crowding the back button\n",
         "checksum": "80aa5a727e10f1b1f5b85f0411096264",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.4/jellio_0.73.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-28T20:11:24Z",
         "version": "0.67.5"
-      },
-      {
-        "changelog": "## [0.67.4] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Call the real GetUsers(), now that it actually compiles\n\n### ⚙️ Miscellaneous Tasks\n\n- Build against the real 10.11.11 packages, not 10.11.6\n",
-        "checksum": "29834d0a910d3001f023cdb4dd1f3da4",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.4/jellio_0.67.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-28T19:50:09Z",
-        "version": "0.67.4"
       }
     ]
   }
