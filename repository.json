@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.79.0] - 2026-09-01\n\n### 🚀 Features\n\n- Add ten more achievement badges\n",
+        "checksum": "98d65994e926b191a3e287e5f56f361b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.79.0/jellio_0.79.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T19:05:52Z",
+        "version": "0.79.0"
+      },
+      {
         "changelog": "## [0.78.3] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Show the Anime nav link immediately, add a loading skeleton behind it\n",
         "checksum": "e65b4e6f70c81eaa30cf1dd053aa4f7d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.3/jellio_0.78.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T21:55:10Z",
         "version": "0.72.0"
-      },
-      {
-        "changelog": "## [0.71.0] - 2026-08-29\n\n### 🚀 Features\n\n- Make a Now Playing row navigate to its own title\n",
-        "checksum": "67343c918dde984c179c57d7c3ad4310",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.71.0/jellio_0.71.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T20:21:51Z",
-        "version": "0.71.0"
       }
     ]
   }
