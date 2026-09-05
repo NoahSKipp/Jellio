@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.75.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Stop navigateTo() from double-mounting a route\n",
+        "checksum": "d5ccb33f1f7db2e59570e5f83188f5c3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.2/jellio_0.75.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T10:51:51Z",
+        "version": "0.75.2"
+      },
+      {
         "changelog": "## [0.75.1] - 2026-08-31\n\n### 🐛 Bug Fixes\n\n- Leave a Group Watch group, and let stale ones actually clean up\n",
         "checksum": "c0b0e980ac27c125125754048b4c0745",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.1/jellio_0.75.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T00:14:28Z",
         "version": "0.68.4"
-      },
-      {
-        "changelog": "## [0.68.3] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Drop StartTimeTicks from a native HLS master playlist request\n",
-        "checksum": "481ab443438f7727e9d98f36383fbf99",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.3/jellio_0.68.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T00:10:41Z",
-        "version": "0.68.3"
       }
     ]
   }
