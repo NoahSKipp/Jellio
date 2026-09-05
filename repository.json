@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.88.2] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Actually resize oversized profile banners server side (#219)\n",
+        "checksum": "ed0cbdb4db072a48d7b232a36b328826",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.2/jellio_0.88.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T20:18:01Z",
+        "version": "0.88.2"
+      },
+      {
         "changelog": "## [0.88.1] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Log Intro Skipper segment lookup failures instead of hiding them (#218)\n",
         "checksum": "e682b706b9c429f829a931ca12eb696e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.1/jellio_0.88.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-01T10:51:51Z",
         "version": "0.75.2"
-      },
-      {
-        "changelog": "## [0.75.1] - 2026-08-31\n\n### 🐛 Bug Fixes\n\n- Leave a Group Watch group, and let stale ones actually clean up\n",
-        "checksum": "c0b0e980ac27c125125754048b4c0745",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.1/jellio_0.75.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-31T15:13:13Z",
-        "version": "0.75.1"
       }
     ]
   }
