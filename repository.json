@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.74.1] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Group Watch sync gaps, bigger notifications, member list\n",
+        "checksum": "74525b8e529e641b03f48ab35a17c68f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.1/jellio_0.74.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-30T12:27:47Z",
+        "version": "0.74.1"
+      },
+      {
         "changelog": "## [0.74.0] - 2026-08-30\n\n### 🚀 Features\n\n- Real Jellyfin SyncPlay, invites, and in-player chat\n",
         "checksum": "b6675b58d78aa589de2817f73d58a00f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.0/jellio_0.74.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-28T20:20:22Z",
         "version": "0.67.6"
-      },
-      {
-        "changelog": "## [0.67.5] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Also reassign an avatar whose own real file is gone\n",
-        "checksum": "deda0594a422e9b94bca9dc78caf3945",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.5/jellio_0.67.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-28T20:11:24Z",
-        "version": "0.67.5"
       }
     ]
   }
