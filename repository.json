@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.85.0] - 2026-09-02\n\n### 🚀 Features\n\n- Automatic OpenSubtitles.com subtitle fetching (#210)\n",
+        "checksum": "3919bebff22a44ce3ca08694423ea93e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.85.0/jellio_0.85.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T13:03:23Z",
+        "version": "0.85.0"
+      },
+      {
         "changelog": "## [0.84.0] - 2026-09-02\n\n### 🚀 Features\n\n- Player/app keyboard shortcuts, live Continue Watching sync, profile quick access (#209)\n",
         "checksum": "12971c78ad0634654bd924b6cf69490d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.84.0/jellio_0.84.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-30T02:05:22Z",
         "version": "0.74.0"
-      },
-      {
-        "changelog": "## [0.73.4] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Open Now Playing on hover, not just click\n- Stop the Group Watch chat title crowding the back button\n",
-        "checksum": "80aa5a727e10f1b1f5b85f0411096264",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.4/jellio_0.73.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T23:56:09Z",
-        "version": "0.73.4"
       }
     ]
   }
