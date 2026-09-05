@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.74.2] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Re-join, not just trust, a reader's own reconciled group\n",
+        "checksum": "4a3716e918f6da25f67bcffa75887737",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.2/jellio_0.74.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-30T13:02:25Z",
+        "version": "0.74.2"
+      },
+      {
         "changelog": "## [0.74.1] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Group Watch sync gaps, bigger notifications, member list\n",
         "checksum": "74525b8e529e641b03f48ab35a17c68f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.1/jellio_0.74.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-28T20:30:05Z",
         "version": "0.67.7"
-      },
-      {
-        "changelog": "## [0.67.6] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Revert reassigning avatars with a missing file for now\n- Clear the old ProfileImage row before reassigning one\n- Refresh a remembered user's name and avatar from the server\n",
-        "checksum": "e572ba494de534f8bb23f5cd00beb7db",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.6/jellio_0.67.6.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-28T20:20:22Z",
-        "version": "0.67.6"
       }
     ]
   }
