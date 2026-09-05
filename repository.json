@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.78.0] - 2026-09-01\n\n### 🚀 Features\n\n- Add social feed, profile pages, and achievement badges\n",
+        "checksum": "069d5b23c303849faccf1da769047d5d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.0/jellio_0.78.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T17:05:58Z",
+        "version": "0.78.0"
+      },
+      {
         "changelog": "## [0.77.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Suppress native's own join/left toast alongside Jellio's\n",
         "checksum": "4cfc9ff862ecbfb60ccef8fa7b0d842d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.2/jellio_0.77.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T19:36:13Z",
         "version": "0.69.1"
-      },
-      {
-        "changelog": "## [0.69.0] - 2026-08-29\n\n### 🚀 Features\n\n- Add an absolute fullscreen toggle to the player\n\n### 🐛 Bug Fixes\n\n- Stop subtitles ignoring their own state on macOS Safari\n",
-        "checksum": "830d299b2200a506c501a13b58eb754b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.0/jellio_0.69.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T18:04:08Z",
-        "version": "0.69.0"
       }
     ]
   }
