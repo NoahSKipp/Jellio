@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.81.0] - 2026-09-01\n\n### 🚀 Features\n\n- Grouplist (stage 1 of 2) - storage, settings toggle, screen, dual list picker\n",
+        "checksum": "669a4c34797f94048039bf8e30c49be5",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.81.0/jellio_0.81.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T20:47:55Z",
+        "version": "0.81.0"
+      },
+      {
         "changelog": "## [0.80.0] - 2026-09-01\n\n### 🚀 Features\n\n- Group Watch achievements, more genre badges, and an unlock toast\n",
         "checksum": "6dd4d733f077bbcd014a9f92c6b8085b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.80.0/jellio_0.80.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T22:37:32Z",
         "version": "0.73.1"
-      },
-      {
-        "changelog": "## [0.73.0] - 2026-08-29\n\n### 🚀 Features\n\n- Replace the seasonal effects catalogue with five real occasions\n",
-        "checksum": "03e7dc7e154a03f6307d2b8589a46e89",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.0/jellio_0.73.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T22:31:44Z",
-        "version": "0.73.0"
       }
     ]
   }
