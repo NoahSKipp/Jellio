@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.89.5] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Restore search results on back navigation\n\n### 💼 Other\n\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n- Restore search results on back navigation\n",
+        "checksum": "8f15b3334ce23580f2115af906212715",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.5/jellio_0.89.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T12:17:41Z",
+        "version": "0.89.5"
+      },
+      {
         "changelog": "## [0.89.4] - 2026-09-03\n\n### 🚜 Refactor\n\n- Consolidate 5 JSON stores into a shared JsonUserStore\n\n### 💼 Other\n\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n",
         "checksum": "e8c59e9aee304bc078fc778cf28cd82f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.4/jellio_0.89.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-01T14:15:26Z",
         "version": "0.77.2"
-      },
-      {
-        "changelog": "## [0.77.1] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Stop realigning the SyncPlay WebSocket, track toast restarts by playlist item\n",
-        "checksum": "74b191f32c88060aedfc117de4882a30",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.1/jellio_0.77.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T14:10:22Z",
-        "version": "0.77.1"
       }
     ]
   }
