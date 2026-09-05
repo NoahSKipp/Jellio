@@ -24,6 +24,7 @@ public static class ActivityGrouping
                     end + 1 < activity.Count
                     && activity[end + 1].ItemType == "Episode"
                     && activity[end + 1].SeriesName == first.SeriesName
+                    && activity[end + 1].SeasonNumber == first.SeasonNumber
                     && activity[end + 1].CompletedAtUtc.Date == first.CompletedAtUtc.Date)
                 {
                     end++;
