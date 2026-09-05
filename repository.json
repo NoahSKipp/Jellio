@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.75.7] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Catch a dead session at the one real choke point every call uses\n",
+        "checksum": "7f2d1addac7e523b3d1cbf6820c80e29",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.7/jellio_0.75.7.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T13:10:49Z",
+        "version": "0.75.7"
+      },
+      {
         "changelog": "## [0.75.6] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Return to Jellio's own login when a stale session gets a 401\n",
         "checksum": "6ce2a8220fa3953cf748e4cdae770ea0",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.6/jellio_0.75.6.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T15:22:01Z",
         "version": "0.68.9"
-      },
-      {
-        "changelog": "## [0.68.8] - 2026-08-29\n\n### 🎨 Styling\n\n- Recheck the nav rails every 10s instead of every 20s\n",
-        "checksum": "f0b53aba854edca59a79240528226c10",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.8/jellio_0.68.8.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T15:08:04Z",
-        "version": "0.68.8"
       }
     ]
   }
