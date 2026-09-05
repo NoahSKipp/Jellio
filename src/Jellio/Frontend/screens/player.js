@@ -2891,7 +2891,23 @@ export async function renderPlayer(root, params) {
   // browser only ever fires it once this real stream has genuinely
   // run out of data to play, so it credits a real full watch even when
   // durationSeconds above is still stuck wrong.
+  //
+  // Real bug, found live: an unreleased title with a stray indexed
+  // source (real case, "Shrek 7" reported live) resolved to a stream
+  // that never actually decoded a single real frame, yet still
+  // credited a full real watch and marked it played both here and on
+  // Jellyfin itself. Some browsers fire 'ended' for exactly this kind
+  // of broken/empty stream without ever firing so much as one real
+  // 'timeupdate' first, and this listener trusted 'ended' alone with
+  // no check that this reader had watched any real content at all.
+  // hasReportedStart only ever flips true from inside that same
+  // 'timeupdate' handler below, real proof the browser actually
+  // decoded and advanced through at least one real frame - gating on
+  // it here closes this exact gap without weakening the real fix
+  // above (a stream that is genuinely playing through to a real
+  // 'ended' has already fired plenty of those by then).
   video.addEventListener('ended', function () {
+    if (!hasReportedStart) return;
     // The real duration itself, not just the credit: whatever
     // positionSeconds actually reached by the time 'ended' fires IS
     // this real stream's own real length, the strongest of the three
