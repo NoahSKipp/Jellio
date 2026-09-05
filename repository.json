@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.78.1] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Import getCurrentUserId from auth.js, not api.js\n",
+        "checksum": "21a30818d0bfe723ceaa88ea73802685",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.1/jellio_0.78.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T17:41:36Z",
+        "version": "0.78.1"
+      },
+      {
         "changelog": "## [0.78.0] - 2026-09-01\n\n### 🚀 Features\n\n- Add social feed, profile pages, and achievement badges\n",
         "checksum": "069d5b23c303849faccf1da769047d5d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.78.0/jellio_0.78.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T19:41:17Z",
         "version": "0.69.2"
-      },
-      {
-        "changelog": "## [0.69.1] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Give the Up Next countdown a full minute instead of 15s\n",
-        "checksum": "38a42c9b28d5d41dec7e74e989fb9a43",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.69.1/jellio_0.69.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T19:36:13Z",
-        "version": "0.69.1"
       }
     ]
   }
