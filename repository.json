@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.77.0] - 2026-09-01\n\n### 🚀 Features\n\n- Show Jellio's own notice for a group member joining or leaving\n",
+        "checksum": "a49fdd0106e79e971200ed110954d667",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.0/jellio_0.77.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T13:54:45Z",
+        "version": "0.77.0"
+      },
+      {
         "changelog": "## [0.76.0] - 2026-09-01\n\n### 🚀 Features\n\n- Login screen quick sign-in parity, Group Watch notify/pause fixes\n",
         "checksum": "7a51faff0c0ddd840d0053bb83d479bc",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.76.0/jellio_0.76.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T16:49:29Z",
         "version": "0.68.11"
-      },
-      {
-        "changelog": "## [0.68.10] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Skip the nav rail rebuild when a recheck finds nothing new\n",
-        "checksum": "f1516006fa00d1340061cbfe6a7e0bfd",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.10/jellio_0.68.10.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T15:36:10Z",
-        "version": "0.68.10"
       }
     ]
   }
