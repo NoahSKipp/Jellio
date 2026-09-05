@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.87.0] - 2026-09-02\n\n### 🚀 Features\n\n- Visualize the pick round's auto-resolve countdown (#215)\n",
+        "checksum": "3a2438b9407d61692e5de2cfce576613",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.87.0/jellio_0.87.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T18:38:43Z",
+        "version": "0.87.0"
+      },
+      {
         "changelog": "## [0.86.3] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Pick finalize speed, stuck group leave, dead navigation fallback (#214)\n",
         "checksum": "5468bcfd15d81a01eef8eb3358b9d5af",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.86.3/jellio_0.86.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-30T20:21:54Z",
         "version": "0.74.5"
-      },
-      {
-        "changelog": "## [0.74.4] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Send a sender's own Ready signal even after canplay already fired\n",
-        "checksum": "8089890c331a4b9336e301f388b6fa41",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.4/jellio_0.74.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-30T18:58:20Z",
-        "version": "0.74.4"
       }
     ]
   }
