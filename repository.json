@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.88.1] - 2026-09-02\n\n### 🐛 Bug Fixes\n\n- Log Intro Skipper segment lookup failures instead of hiding them (#218)\n",
+        "checksum": "e682b706b9c429f829a931ca12eb696e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.1/jellio_0.88.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T19:43:14Z",
+        "version": "0.88.1"
+      },
+      {
         "changelog": "## [0.88.0] - 2026-09-02\n\n### 🚀 Features\n\n- Let a server admin broadcast a message to every user (#217)\n",
         "checksum": "7f0e415ecf74c86e6ac90caf298bdfc8",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.0/jellio_0.88.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-31T15:13:13Z",
         "version": "0.75.1"
-      },
-      {
-        "changelog": "## [0.75.0] - 2026-08-31\n\n### 🚀 Features\n\n- Post a clickable watch card to Group Watch chat, not just a toast\n",
-        "checksum": "ee47923a715dbbe12e565cf0a65cb23b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.0/jellio_0.75.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-31T11:42:13Z",
-        "version": "0.75.0"
       }
     ]
   }
