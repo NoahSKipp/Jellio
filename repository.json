@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.73.2] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop the browser tab reading Page Not Found on every title\n",
+        "checksum": "649c3164c34eb465ee2429eb888ced0b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.2/jellio_0.73.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T23:45:40Z",
+        "version": "0.73.2"
+      },
+      {
         "changelog": "## [0.73.1] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Drop Easter from the seasonal themes\n",
         "checksum": "a16bba626f8a80322b1aacd5a1a75b5a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.1/jellio_0.73.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T19:26:06Z",
         "version": "0.67.2"
-      },
-      {
-        "changelog": "## [0.67.1] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Never let default avatar assignment crash the host on startup\n",
-        "checksum": "ce6c33c65d658f2b8e4d19412641c112",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.1/jellio_0.67.1.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T19:11:43Z",
-        "version": "0.67.1"
       }
     ]
   }
