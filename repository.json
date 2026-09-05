@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.84.0] - 2026-09-02\n\n### 🚀 Features\n\n- Player/app keyboard shortcuts, live Continue Watching sync, profile quick access (#209)\n",
+        "checksum": "12971c78ad0634654bd924b6cf69490d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.84.0/jellio_0.84.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-02T12:44:52Z",
+        "version": "0.84.0"
+      },
+      {
         "changelog": "## [0.83.0] - 2026-09-02\n\n### 🚀 Features\n\n- Hold Group Watch playback for a joiner's own initial buffer up (#208)\n",
         "checksum": "81f925f152e0714709ddcc4e3e059e9f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.83.0/jellio_0.83.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T23:56:09Z",
         "version": "0.73.4"
-      },
-      {
-        "changelog": "## [0.73.3] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop trusting a subtitle's own DeliveryUrl for real SubRip tracks\n",
-        "checksum": "d48ed21c4e8c95191d3504f454e177ca",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.3/jellio_0.73.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T23:48:40Z",
-        "version": "0.73.3"
       }
     ]
   }
