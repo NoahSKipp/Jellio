@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.73.1] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Drop Easter from the seasonal themes\n",
+        "checksum": "a16bba626f8a80322b1aacd5a1a75b5a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.1/jellio_0.73.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T22:37:32Z",
+        "version": "0.73.1"
+      },
+      {
         "changelog": "## [0.73.0] - 2026-08-29\n\n### 🚀 Features\n\n- Replace the seasonal effects catalogue with five real occasions\n",
         "checksum": "03e7dc7e154a03f6307d2b8589a46e89",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.0/jellio_0.73.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T19:11:43Z",
         "version": "0.67.1"
-      },
-      {
-        "changelog": "## [0.67.0] - 2026-08-28\n\n### 🚀 Features\n\n- Rotate through Smileys avatars for users with none (#181)\n\n### 🐛 Bug Fixes\n\n- Settings action rows not filling the card's full width (#179)\n- Stop showing users hidden from the login screen in quick switch (#180)\n",
-        "checksum": "987bd2291385d77d9e1b3cc152991fc7",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.0/jellio_0.67.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T18:24:56Z",
-        "version": "0.67.0"
       }
     ]
   }
