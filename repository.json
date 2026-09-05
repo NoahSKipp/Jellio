@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.88.5] - 2026-09-03\n\n### 🚜 Refactor\n\n- Remove Jellio's own SubDL subtitle fetch\n\n### 💼 Other\n\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n",
+        "checksum": "0c65bde9c38a7dfb49571755c3337db2",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.5/jellio_0.88.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T06:55:54Z",
+        "version": "0.88.5"
+      },
+      {
         "changelog": "## [0.88.4] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Let git-cliff read squash merged commit bullets for release versioning\n\n### 💼 Other\n\n- Sleep timer episode mode, popover positioning, notifications hover, SubDL cache fix (#221)\n- * fix: do not cache a SubDL request failure as a 28 day not-found\n- SearchAsync used to return null on any non 2xx status, indistinguishable\n- From a genuine empty search result. A bad api_key or blocked account\n- Then got cached by SaveNotFound the same as a real miss, silently\n- Retrying nothing for 28 days even after being fixed.\n- SearchAsync now throws SubDlRequestFailedException with the real status\n- Code instead, and EnsureAsync catches it separately, logging without\n- Touching the cache. Also logs the two previously silent success paths\n- (found, genuinely not found) so a real SubDL run is distinguishable in\n- The server log from this whole method never firing at all.\n- * fix: log when kicking off a subtitle fetch fails\n- EnsureSubtitles(itemId) used to swallow every outcome silently. The\n- Actual fetch result still only ever shows up in the Jellyfin server log\n- By design (it runs detached server side), but a failure of the kickoff\n- POST itself is a real client side event worth a console line.\n- * fix: open playback speed and sleep timer popovers near their own button\n- Every player popover shared one fixed right anchor in app.css, so all\n- Of them opened in the same spot regardless of which pill button was\n- Actually clicked. That only ever looked right for Audio; Speed sits at\n- The pill's own left edge and opened on the opposite side of the screen.\n- Popovers now position themselves off the real clicked button's own\n- Bounding rect at open time, clamped to the player shell's own bounds.\n- * feat: add an episode count mode to the sleep timer\n- Alongside the existing duration options, Sleep can now be set to stop\n- After a chosen number of episodes instead. Counted down from the same\n- Client side Up Next trigger an episode boundary already fires, and\n- Implemented by calling the same dismissUpNext used when a reader\n- Dismisses Up Next by hand, which already ends playback without\n- Auto-advancing, rather than adding a second stop mechanism.\n- * feat: make the notifications panel hover sensitive like now playing\n- Notifications used to only ever open and close on click. Mirrors\n- Components/nowPlaying.js's own hover behaviour: opens on mouseenter over\n- The sidebar button, and closes on a short delay after the pointer\n- Leaves both the button and the panel, while still supporting a plain\n- Click for touch and keyboard.\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n- Let git-cliff read squash merged commit bullets for release versioning\n",
         "checksum": "634f8122f2d21ec9d9acdf83a2e4b526",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.4/jellio_0.88.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-01T12:56:19Z",
         "version": "0.75.5"
-      },
-      {
-        "changelog": "## [0.75.4] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Subscribe to Group Watch sync before the group is known\n",
-        "checksum": "6613ae11dfa15ced5996f522ee9e17e1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.4/jellio_0.75.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T12:32:52Z",
-        "version": "0.75.4"
       }
     ]
   }
