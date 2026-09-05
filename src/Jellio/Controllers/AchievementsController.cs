@@ -109,9 +109,135 @@ public class AchievementsController(AchievementStore store, AchievementService a
         return Ok(Build(userId));
     }
 
-    private object Build(Guid userId)
+    // screens/profile.js's own real activity list already shows exactly
+    // one row per ActivityGrouping.Group() entry (a whole binge
+    // collapsed to one row, that file's own header explains why), so
+    // itemId+completedAtUtc here is that same group's own real "first"
+    // entry, the one real GroupedActivityEntry actually carries back to
+    // a caller. Deleting only that one real RecentActivity record would
+    // leave the rest of a collapsed binge behind as a shorter, now
+    // mismatched row still on screen, so this walks forward the exact
+    // same real same-series/same-UTC-day span ActivityGrouping.Group()
+    // itself would have collapsed, and removes the whole real span
+    // together. Query params rather than a DELETE body: runtime/api.js's
+    // own shared deleteJson() helper (notifications' own delete/clear
+    // calls already lean on it) never needed one before this, and two
+    // real Guid/DateTime values round trip through a query string just
+    // as well without touching that shared helper's own signature.
+    [HttpDelete("{userId:guid}/activity")]
+    [Authorize(Policy = "RequiresElevation")]
+    public IActionResult DeleteActivity(Guid userId, [FromQuery] Guid itemId, [FromQuery] DateTime completedAtUtc)
     {
-        var stats = store.Load(userId);
+        var found = false;
+        var stats = store.Update(userId, s =>
+        {
+            var start = s.RecentActivity.FindIndex(entry =>
+                entry.ItemId == itemId && entry.CompletedAtUtc == completedAtUtc);
+            if (start < 0)
+            {
+                return;
+            }
+
+            found = true;
+            var first = s.RecentActivity[start];
+            var end = start;
+            if (first.ItemType == "Episode" && first.SeriesName is not null)
+            {
+                while (
+                    end + 1 < s.RecentActivity.Count
+                    && s.RecentActivity[end + 1].ItemType == "Episode"
+                    && s.RecentActivity[end + 1].SeriesName == first.SeriesName
+                    && s.RecentActivity[end + 1].CompletedAtUtc.Date == first.CompletedAtUtc.Date)
+                {
+                    end++;
+                }
+            }
+
+            s.RecentActivity.RemoveRange(start, end - start + 1);
+        });
+
+        if (!found)
+        {
+            return NotFound("No matching activity entry");
+        }
+
+        return Ok(Build(userId, stats));
+    }
+
+    // Real feedback: an admin correcting a mistaken credit (a shared
+    // account, a real accidental mark-as-played) needs this badge to
+    // actually stay locked afterward, not just disappear from
+    // UnlockedBadgeIds until the next real completed movie or episode
+    // silently re-adds it right back (UserAchievementStats.
+    // SuppressedBadgeIds's own header covers exactly why that would
+    // otherwise happen - most tiers here share one real counter across
+    // several badges). Reset below is the only other real place this
+    // set ever gets cleared.
+    [HttpPost("{userId:guid}/badges/{badgeId}/lock")]
+    [Authorize(Policy = "RequiresElevation")]
+    public IActionResult LockBadge(Guid userId, string badgeId)
+    {
+        if (AchievementCatalog.All.All(badge => badge.Id != badgeId))
+        {
+            return NotFound("Unknown badge id");
+        }
+
+        var stats = store.Update(userId, s =>
+        {
+            s.UnlockedBadgeIds.Remove(badgeId);
+            s.UnlockedAt.Remove(badgeId);
+            s.SuppressedBadgeIds.Add(badgeId);
+        });
+
+        return Ok(Build(userId, stats));
+    }
+
+    // A whole-user wipe, not a per badge one: most thresholds in
+    // AchievementCatalog.cs share one real counter across several tiers
+    // (MoviesCompleted alone backs all three movie-buff-* badges), so
+    // there is no real way to roll back "this one badge's own progress"
+    // in isolation without also relitigating every other badge that
+    // same counter feeds. Real feedback's own "reset the progress" ask,
+    // taken at its word: every counter, every unlocked badge, and this
+    // user's own activity feed all go back to a fresh account's real
+    // starting state together.
+    [HttpPost("{userId:guid}/reset")]
+    [Authorize(Policy = "RequiresElevation")]
+    public IActionResult ResetProgress(Guid userId)
+    {
+        var stats = store.Update(userId, s =>
+        {
+            var fresh = new UserAchievementStats();
+            s.MoviesCompleted = fresh.MoviesCompleted;
+            s.EpisodesCompleted = fresh.EpisodesCompleted;
+            s.CurrentBingeStreak = fresh.CurrentBingeStreak;
+            s.BestBingeStreak = fresh.BestBingeStreak;
+            s.LastCompletionUtc = fresh.LastCompletionUtc;
+            s.LastCompletionWasEpisode = fresh.LastCompletionWasEpisode;
+            s.NightOwlCompletions = fresh.NightOwlCompletions;
+            s.EarlyBirdCompletions = fresh.EarlyBirdCompletions;
+            s.WeekendCompletions = fresh.WeekendCompletions;
+            s.LastStreakDate = fresh.LastStreakDate;
+            s.CurrentDailyStreak = fresh.CurrentDailyStreak;
+            s.BestDailyStreak = fresh.BestDailyStreak;
+            s.GroupsStarted = fresh.GroupsStarted;
+            s.GroupWatchesTogether = fresh.GroupWatchesTogether;
+            s.GenreCompletions = fresh.GenreCompletions;
+            s.CurrentDayKey = fresh.CurrentDayKey;
+            s.CurrentDayRuntimeTicks = fresh.CurrentDayRuntimeTicks;
+            s.BestSingleDayRuntimeTicks = fresh.BestSingleDayRuntimeTicks;
+            s.UnlockedBadgeIds = fresh.UnlockedBadgeIds;
+            s.UnlockedAt = fresh.UnlockedAt;
+            s.SuppressedBadgeIds = fresh.SuppressedBadgeIds;
+            s.RecentActivity = fresh.RecentActivity;
+        });
+
+        return Ok(Build(userId, stats));
+    }
+
+    private object Build(Guid userId, UserAchievementStats? preloadedStats = null)
+    {
+        var stats = preloadedStats ?? store.Load(userId);
         var badges = AchievementCatalog.All.Select(badge => new
         {
             badge.Id,

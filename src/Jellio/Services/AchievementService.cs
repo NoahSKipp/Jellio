@@ -316,7 +316,9 @@ public class AchievementService(
     {
         foreach (var badge in AchievementCatalog.All)
         {
-            if (!stats.UnlockedBadgeIds.Contains(badge.Id) && badge.IsUnlocked(stats))
+            if (!stats.UnlockedBadgeIds.Contains(badge.Id)
+                && !stats.SuppressedBadgeIds.Contains(badge.Id)
+                && badge.IsUnlocked(stats))
             {
                 stats.UnlockedBadgeIds.Add(badge.Id);
                 stats.UnlockedAt[badge.Id] = nowUtc;

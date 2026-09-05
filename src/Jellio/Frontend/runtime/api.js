@@ -2173,6 +2173,36 @@ export function getAchievementsForUser(userId) {
   return getJson('/Jellio/achievements/' + userId);
 }
 
+// Admin only (Controllers/AchievementsController.cs's own
+// RequiresElevation gate on all three of these), screens/profile.js's
+// own admin controls the one real caller. completedAtUtc must be the
+// exact string that entry's own CompletedAtUtc field already carries
+// back from getAchievementsForUser above, not a value rebuilt through
+// a JS Date: that controller's own DeleteActivity matches it against a
+// stored DateTime by exact equality, and Date only round trips to
+// millisecond precision where a stored value can carry more.
+export function deleteActivityEntry(userId, itemId, completedAtUtc) {
+  return deleteJson(
+    '/Jellio/achievements/' + userId + '/activity?itemId=' + itemId + '&completedAtUtc=' + encodeURIComponent(completedAtUtc),
+  );
+}
+
+// Relocks one badge for another user (UserAchievementStats.
+// SuppressedBadgeIds's own header covers why this stays locked
+// afterward instead of silently reappearing on their next completed
+// movie or episode).
+export function lockBadgeForUser(userId, badgeId) {
+  return postJson('/Jellio/achievements/' + userId + '/badges/' + badgeId + '/lock');
+}
+
+// A whole-user wipe (every counter, every unlocked badge, their whole
+// activity feed), not a per badge one: AchievementsController.cs's own
+// ResetProgress header covers why a single badge's own progress can't
+// be rolled back in isolation when several badges share one counter.
+export function resetAchievementsForUser(userId) {
+  return postJson('/Jellio/achievements/' + userId + '/reset');
+}
+
 // Group Watch state (is this reader in a group right now, how many
 // others are actually in it) only ever lives client side, this
 // runtime's own real SyncPlay WebSocket state, the same real reason
