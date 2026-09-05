@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.75.3] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Send a real SyncPlay Unpause when starting a Group Watch, quiet SyncPlay debug spam\n",
+        "checksum": "21c5fc73bda03157a94d429ff680e900",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.3/jellio_0.75.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T11:52:06Z",
+        "version": "0.75.3"
+      },
+      {
         "changelog": "## [0.75.2] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Stop navigateTo() from double-mounting a route\n",
         "checksum": "d5ccb33f1f7db2e59570e5f83188f5c3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.2/jellio_0.75.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T12:26:42Z",
         "version": "0.68.5"
-      },
-      {
-        "changelog": "## [0.68.4] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Poll for a title still importing instead of one short retry\n",
-        "checksum": "08c3761f9bd8f2714a3238806f5bcf47",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.68.4/jellio_0.68.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T00:14:28Z",
-        "version": "0.68.4"
       }
     ]
   }
