@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.73.3] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop trusting a subtitle's own DeliveryUrl for real SubRip tracks\n",
+        "checksum": "d48ed21c4e8c95191d3504f454e177ca",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.3/jellio_0.73.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-29T23:48:40Z",
+        "version": "0.73.3"
+      },
+      {
         "changelog": "## [0.73.2] - 2026-08-29\n\n### 🐛 Bug Fixes\n\n- Stop the browser tab reading Page Not Found on every title\n",
         "checksum": "649c3164c34eb465ee2429eb888ced0b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.73.2/jellio_0.73.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-08-28T19:40:37Z",
         "version": "0.67.3"
-      },
-      {
-        "changelog": "## [0.67.2] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Isolate the IUserManager.Users read so its own catch actually fires\n",
-        "checksum": "fcb72f5278b8f06feeefe4ddf5d3261a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.2/jellio_0.67.2.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-08-28T19:26:06Z",
-        "version": "0.67.2"
       }
     ]
   }
