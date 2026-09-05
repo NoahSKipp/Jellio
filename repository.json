@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.80.0] - 2026-09-01\n\n### 🚀 Features\n\n- Group Watch achievements, more genre badges, and an unlock toast\n",
+        "checksum": "6dd4d733f077bbcd014a9f92c6b8085b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.80.0/jellio_0.80.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-01T19:17:29Z",
+        "version": "0.80.0"
+      },
+      {
         "changelog": "## [0.79.0] - 2026-09-01\n\n### 🚀 Features\n\n- Add ten more achievement badges\n",
         "checksum": "98d65994e926b191a3e287e5f56f361b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.79.0/jellio_0.79.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-29T22:31:44Z",
         "version": "0.73.0"
-      },
-      {
-        "changelog": "## [0.72.0] - 2026-08-29\n\n### 🚀 Features\n\n- Notify readers when a watchlist title releases\n\n### 🐛 Bug Fixes\n\n- Stop CalendarController referencing a nested type that isn't nested\n\n### 🚜 Refactor\n\n- Move the watchlist calendar scan into CalendarService\n",
-        "checksum": "a24f81b023b1a972e84616dee2d7128e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.72.0/jellio_0.72.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-29T21:55:10Z",
-        "version": "0.72.0"
       }
     ]
   }
