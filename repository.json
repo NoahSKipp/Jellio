@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.89.4] - 2026-09-03\n\n### 🚜 Refactor\n\n- Consolidate 5 JSON stores into a shared JsonUserStore\n\n### 💼 Other\n\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n- Consolidate 5 JSON stores into a shared JsonUserStore\n",
+        "checksum": "e8c59e9aee304bc078fc778cf28cd82f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.4/jellio_0.89.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T12:11:58Z",
+        "version": "0.89.4"
+      },
+      {
         "changelog": "## [0.89.3] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n\n### 💼 Other\n\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n- Audit fixes batch 2, growth caps, silent-failure toasts, dedup\n",
         "checksum": "3a4d39652f89534637646c88739f2747",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.3/jellio_0.89.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-01T14:10:22Z",
         "version": "0.77.1"
-      },
-      {
-        "changelog": "## [0.77.0] - 2026-09-01\n\n### 🚀 Features\n\n- Show Jellio's own notice for a group member joining or leaving\n",
-        "checksum": "a49fdd0106e79e971200ed110954d667",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.77.0/jellio_0.77.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T13:54:45Z",
-        "version": "0.77.0"
       }
     ]
   }
