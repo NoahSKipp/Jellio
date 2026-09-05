@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.74.4] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Send a sender's own Ready signal even after canplay already fired\n",
+        "checksum": "8089890c331a4b9336e301f388b6fa41",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.4/jellio_0.74.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-08-30T18:58:20Z",
+        "version": "0.74.4"
+      },
+      {
         "changelog": "## [0.74.3] - 2026-08-30\n\n### 🐛 Bug Fixes\n\n- Surface and fix a real Group Watch sync reconciliation gap (#185)\n",
         "checksum": "0dbf3f41adc9182ff02f344d971dae22",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.74.3/jellio_0.74.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-08-28T20:52:22Z",
         "version": "0.67.9"
-      },
-      {
-        "changelog": "## [0.67.8] - 2026-08-28\n\n### 🐛 Bug Fixes\n\n- Recheck the nav rails once for a still-importing Anime catalog\n- Drop the Recently added library sort, same reason home dropped it\n",
-        "checksum": "cc55788650edecc48746452a3912f3ef",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.67.8/jellio_0.67.8.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-08-28T20:43:56Z",
-        "version": "0.67.8"
       }
     ]
   }
