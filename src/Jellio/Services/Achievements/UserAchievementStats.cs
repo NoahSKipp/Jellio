@@ -58,6 +58,19 @@ public class UserAchievementStats
 
     public Dictionary<string, DateTime> UnlockedAt { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // AchievementService.ApplyCatalog only ever adds a badge, never
+    // removes one: most thresholds here share one real counter across
+    // several badges (MoviesCompleted alone backs all three
+    // movie-buff-* tiers), so an admin relocking one badge (Controllers/
+    // AchievementsController.cs's own {userId}/badges/{badgeId}/lock)
+    // without this would see it silently reappear the very next time
+    // that same counter's own predicate got re-checked on this user's
+    // next completed movie or episode, still sitting well past
+    // whichever threshold it already cleared. Checked by ApplyCatalog
+    // alongside UnlockedBadgeIds; only that relock endpoint and the
+    // full reset endpoint below it ever touch this set.
+    public HashSet<string> SuppressedBadgeIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     // The profile page's own real feed, newest first, capped in
     // AchievementService rather than here: real GET /Users/{id}/Items
     // (getRecentlyCompleted's own real endpoint) only answers for the

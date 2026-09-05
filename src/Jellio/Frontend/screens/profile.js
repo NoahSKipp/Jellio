@@ -15,6 +15,10 @@ import {
   getBannerUrl,
   setProfileBannerFromFile,
   getAchievementsForUser,
+  getCurrentUser,
+  deleteActivityEntry,
+  lockBadgeForUser,
+  resetAchievementsForUser,
 } from '../runtime/api.js';
 import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -164,7 +168,14 @@ function buildLockedPanel() {
   return panel;
 }
 
-function buildBadgesSection(badges) {
+// isAdmin/userId/onChanged only ever passed for someone else's own
+// profile (renderProfile below gates that): an admin correcting a
+// mistaken credit needs a way to relock a badge that already unlocked,
+// same real Steam-moderation shape "reset the progress" was asked for
+// alongside. Controllers/AchievementsController.cs's own LockBadge
+// keeps it locked afterward (SuppressedBadgeIds), not just hidden
+// until the next real completed movie or episode quietly re-adds it.
+function buildBadgesSection(badges, isAdmin, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
   const unlockedCount = badges.filter(function (b) { return b.Unlocked; }).length;
   section.appendChild(el('h2', 'jellio-row-title', 'Badges (' + unlockedCount + '/' + badges.length + ')'));
@@ -177,13 +188,29 @@ function buildBadgesSection(badges) {
     tile.appendChild(icon);
     tile.appendChild(el('span', 'jellio-profile-badge-name', badge.Name));
     tile.title = badge.Description;
+    if (isAdmin && badge.Unlocked) {
+      const lockButton = el('button', 'jellio-profile-admin-lock', 'Lock again');
+      lockButton.type = 'button';
+      lockButton.addEventListener('click', function (event) {
+        event.stopPropagation();
+        if (!window.confirm('Lock "' + badge.Name + '" again for this user?')) return;
+        lockButton.disabled = true;
+        lockBadgeForUser(userId, badge.Id)
+          .then(onChanged)
+          .catch(function (err) {
+            console.warn('Jellio: could not lock badge', err);
+            lockButton.disabled = false;
+          });
+      });
+      tile.appendChild(lockButton);
+    }
     grid.appendChild(tile);
   });
   section.appendChild(grid);
   return section;
 }
 
-function buildActivitySection(entries) {
+function buildActivitySection(entries, isAdmin, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
   section.appendChild(el('h2', 'jellio-row-title', 'Recent activity'));
   if (!entries.length) {
@@ -195,9 +222,50 @@ function buildActivitySection(entries) {
     const item = el('li', 'jellio-profile-activity-item');
     item.appendChild(el('span', 'jellio-profile-activity-text', describeActivity(entry)));
     item.appendChild(el('span', 'jellio-profile-activity-time', formatRelativeTime(entry.CompletedAtUtc)));
+    if (isAdmin) {
+      const deleteButton = el('button', 'jellio-profile-admin-delete', 'Delete');
+      deleteButton.type = 'button';
+      deleteButton.addEventListener('click', function () {
+        if (!window.confirm('Delete this activity entry? This cannot be undone.')) return;
+        deleteButton.disabled = true;
+        deleteActivityEntry(userId, entry.ItemId, entry.CompletedAtUtc)
+          .then(onChanged)
+          .catch(function (err) {
+            console.warn('Jellio: could not delete activity entry', err);
+            deleteButton.disabled = false;
+          });
+      });
+      item.appendChild(deleteButton);
+    }
     list.appendChild(item);
   });
   section.appendChild(list);
+  return section;
+}
+
+// The one whole-user "start over" hammer, deliberately separate from
+// (and more prominent than) the two per row/per badge actions above:
+// AchievementsController.cs's own ResetProgress header covers why a
+// single badge's own progress can't be rolled back in isolation when
+// several badges share one counter, so this is the only real way
+// "reset the progress" (real feedback's own words) can safely mean
+// anything at all.
+function buildAdminDangerZone(userId, onChanged) {
+  const section = el('section', 'jellio-profile-section jellio-profile-danger-zone');
+  section.appendChild(el('h2', 'jellio-row-title', 'Admin'));
+  const resetButton = el('button', 'jellio-profile-admin-reset', 'Reset all progress');
+  resetButton.type = 'button';
+  resetButton.addEventListener('click', function () {
+    if (!window.confirm('Reset every counter, badge and activity entry for this user? This cannot be undone.')) return;
+    resetButton.disabled = true;
+    resetAchievementsForUser(userId)
+      .then(onChanged)
+      .catch(function (err) {
+        console.warn('Jellio: could not reset achievements', err);
+        resetButton.disabled = false;
+      });
+  });
+  section.appendChild(resetButton);
   return section;
 }
 
@@ -215,11 +283,13 @@ export async function renderProfile(root, params) {
   let user;
   let profile;
   let achievements;
+  let viewer;
   try {
-    [user, profile, achievements] = await Promise.all([
+    [user, profile, achievements, viewer] = await Promise.all([
       getUserById(userId),
       getProfileForUser(userId),
       getAchievementsForUser(userId),
+      isOwner ? Promise.resolve(null) : getCurrentUser().catch(function () { return null; }),
     ]);
   } catch (err) {
     console.warn('Jellio: could not load profile', err);
@@ -230,6 +300,13 @@ export async function renderProfile(root, params) {
   }
 
   root.textContent = '';
+
+  // Admin controls (delete an activity entry, relock a badge, reset a
+  // user's whole progress) only ever show on someone else's own
+  // profile: viewer.Policy.IsAdministrator is the one real gate
+  // screens/settings.js's own "Open admin dashboard" row already uses,
+  // matched here rather than inventing a second one.
+  const isAdmin = !isOwner && !!(viewer && viewer.Policy && viewer.Policy.IsAdministrator);
 
   root.appendChild(
     buildBanner(userId, isOwner, function () {
@@ -277,8 +354,14 @@ export async function renderProfile(root, params) {
       stats.appendChild(stat);
     });
     body.appendChild(stats);
-    body.appendChild(buildBadgesSection(achievements.Badges));
-    body.appendChild(buildActivitySection(achievements.RecentActivity));
+    const refresh = function () {
+      renderProfile(root, params);
+    };
+    body.appendChild(buildBadgesSection(achievements.Badges, isAdmin, userId, refresh));
+    body.appendChild(buildActivitySection(achievements.RecentActivity, isAdmin, userId, refresh));
+    if (isAdmin) {
+      body.appendChild(buildAdminDangerZone(userId, refresh));
+    }
   }
   root.appendChild(body);
 }

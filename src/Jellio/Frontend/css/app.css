@@ -7381,6 +7381,67 @@
   white-space: nowrap;
 }
 
+/* Admin only controls (screens/profile.js's own isAdmin gate): a
+   compact "Delete"/"Lock again" button riding the same small ghost
+   button look, never the primary jellio-settings-button treatment,
+   so a moderation action never reads as more prominent than the
+   activity/badge content it sits beside. */
+.jellio-profile-admin-delete,
+.jellio-profile-admin-lock {
+  flex: 0 0 auto;
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.76em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-profile-admin-delete:hover,
+.jellio-profile-admin-lock:hover {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--jellio-text-color);
+}
+
+.jellio-profile-admin-delete:disabled,
+.jellio-profile-admin-lock:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.jellio-profile-danger-zone {
+  padding: 1.2em var(--jellio-safe-gutter);
+  border: 1px solid color-mix(in srgb, #ff5a5a 35%, var(--jellio-border-color));
+  border-radius: var(--jellio-card-radius);
+  margin-left: var(--jellio-safe-gutter);
+  margin-right: var(--jellio-safe-gutter);
+}
+
+.jellio-profile-danger-zone .jellio-row-title {
+  padding: 0;
+}
+
+.jellio-profile-admin-reset {
+  margin-top: 0.6em;
+  padding: 0.6em 1.6em;
+  border: 0;
+  border-radius: 999px;
+  background: #ff5a5a;
+  color: #1a1a1a;
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: clamp(0.85em, 1vw, 1em);
+  cursor: pointer;
+}
+
+.jellio-profile-admin-reset:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .jellio-profile-locked {
   display: flex;
   flex-direction: column;
