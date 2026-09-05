@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [0.89.0] - 2026-09-03\n\n### 🚀 Features\n\n- Prioritize common genres for rows, show all genres in the filter\n\n### 💼 Other\n\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n- Prioritize common genres for rows, show all genres in the filter\n",
+        "checksum": "37802c2909d2091db82f1b1267515996",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.89.0/jellio_0.89.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-03T07:07:24Z",
+        "version": "0.89.0"
+      },
+      {
         "changelog": "## [0.88.5] - 2026-09-03\n\n### 🚜 Refactor\n\n- Remove Jellio's own SubDL subtitle fetch\n\n### 💼 Other\n\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n- Remove Jellio's own SubDL subtitle fetch\n",
         "checksum": "0c65bde9c38a7dfb49571755c3337db2",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.88.5/jellio_0.88.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-01T12:59:40Z",
         "version": "0.75.6"
-      },
-      {
-        "changelog": "## [0.75.5] - 2026-09-01\n\n### 🐛 Bug Fixes\n\n- Keep window.ApiClient's own identity consistent after login\n",
-        "checksum": "ae687703f8bd811e447232a48065f43f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio-Plugin/releases/download/0.75.5/jellio_0.75.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-01T12:56:19Z",
-        "version": "0.75.5"
       }
     ]
   }
