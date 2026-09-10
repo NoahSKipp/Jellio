@@ -697,6 +697,31 @@ export function searchItems(term, limit, signal) {
   });
 }
 
+// Real bottleneck traced through Gelato's own SearchActionFilter.cs: the
+// combined searchItems() call above waits on Task.WhenAll(movie search,
+// series search) server side before answering at all, even though this
+// runtime's own search.js already renders Movies and Series as two
+// independent sections. gelato/search/movie and gelato/search/series
+// (Controllers/GelatoApiController.cs, added alongside this call) expose
+// that exact same per-type search as two requests that resolve on their
+// own, so search.js can paint whichever section's real addon round trip
+// lands first instead of both waiting on the slower one. A server
+// without Gelato installed, or on an old build without these routes yet,
+// 404s here; search.js's own header explains the fallback that gives it.
+function searchByType(term, mediaType, signal) {
+  if (!term) return Promise.resolve([]);
+  const params = new URLSearchParams({ q: term });
+  return getJson('/gelato/search/' + mediaType + '?' + params.toString(), SEARCH_TIMEOUT_MS, signal);
+}
+
+export function searchMovies(term, signal) {
+  return searchByType(term, 'movie', signal);
+}
+
+export function searchSeries(term, signal) {
+  return searchByType(term, 'series', signal);
+}
+
 // Every watchlisted item, real endpoint (GET /Users/{id}/Items with
 // Filters=IsFavorite, Jellyfin's own real favorites concept underneath
 // this app's own Watchlist wording), the same #/home?tab=1 route the

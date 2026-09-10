@@ -20,7 +20,7 @@
 // same query fresh, same real "screens fetch their own state" shape
 // every other screen here already uses rather than caching the actual
 // result set.
-import { searchItems } from '../runtime/api.js';
+import { searchItems, searchMovies, searchSeries } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -87,37 +87,107 @@ export async function renderSearch(root, params) {
   // concurrent AIOStreams round trips for a result nothing still wants.
   // Aborting it outright the moment a newer query fires frees that
   // connection and backend load immediately instead of waiting it out.
-  let inFlight = null;
+  let inFlight = [];
 
+  function abortInFlight() {
+    inFlight.forEach(function (controller) {
+      controller.abort();
+    });
+    inFlight = [];
+  }
+
+  // Real bottleneck runtime/api.js's own searchMovies/searchSeries header
+  // documents: the old single combined searchItems() call waited on
+  // Gelato's own Task.WhenAll(movie search, series search) server side,
+  // so a reader saw nothing at all until whichever half was slower also
+  // finished. Firing the two halves as separate requests and painting
+  // each into its own reserved slot the moment it resolves, regardless
+  // of which one lands first, means Movies (or Series) shows up as soon
+  // as its own real addon round trip is done rather than both waiting on
+  // the slower one. moviesSlot/seriesSlot below are fixed DOM anchors so
+  // a late-arriving Movies section still renders above Series, not
+  // wherever insertion order happened to land it.
   function runSearch(term) {
     reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
-    if (inFlight) inFlight.abort();
-    const controller = new AbortController();
-    inFlight = controller;
+    abortInFlight();
     const thisRequest = ++requestId;
     status.textContent = 'Searching…';
-    searchItems(term, undefined, controller.signal)
-      .then(function (items) {
-        if (thisRequest !== requestId) return;
-        results.textContent = '';
-        const movies = items.filter(function (item) {
-          return item.Type === 'Movie';
+    results.textContent = '';
+
+    const moviesSlot = el('div', 'jellio-search-type-slot');
+    const seriesSlot = el('div', 'jellio-search-type-slot');
+    results.appendChild(moviesSlot);
+    results.appendChild(seriesSlot);
+
+    let settledCount = 0;
+    let anyResults = false;
+    let fellBack = false;
+
+    function maybeFinishStatus() {
+      if (thisRequest !== requestId) return;
+      settledCount += 1;
+      if (settledCount < 2 || fellBack) return;
+      status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
+    }
+
+    // Real servers without Gelato installed (or on an older build
+    // without these two routes yet) 404 here: fall back to the original
+    // combined call so search still works there, same real result that
+    // call always gave, just without the incremental split.
+    function fallBackToCombined(err) {
+      if (thisRequest !== requestId || fellBack) return;
+      fellBack = true;
+      console.warn('Jellio: per-type search unavailable, falling back to combined search', err);
+      const controller = new AbortController();
+      inFlight.push(controller);
+      searchItems(term, undefined, controller.signal)
+        .then(function (items) {
+          if (thisRequest !== requestId) return;
+          moviesSlot.textContent = '';
+          seriesSlot.textContent = '';
+          const movies = items.filter(function (item) { return item.Type === 'Movie'; });
+          const series = items.filter(function (item) { return item.Type === 'Series'; });
+          const movieSection = buildTypeSection('Movies', movies);
+          if (movieSection) moviesSlot.appendChild(movieSection);
+          const seriesSection = buildTypeSection('Series', series);
+          if (seriesSection) seriesSlot.appendChild(seriesSection);
+          status.textContent = items.length ? '' : 'No results for “' + term + '”.';
+        })
+        .catch(function (fallbackErr) {
+          if (thisRequest !== requestId) return;
+          console.warn('Jellio: combined search fallback also failed', fallbackErr);
+          status.textContent = describeNetworkFailure('search results', fallbackErr);
         });
-        const series = items.filter(function (item) {
-          return item.Type === 'Series';
+    }
+
+    function runOne(fetcher, slot, title) {
+      const controller = new AbortController();
+      inFlight.push(controller);
+      fetcher(term, controller.signal)
+        .then(function (items) {
+          if (thisRequest !== requestId || fellBack) return;
+          if (items.length) anyResults = true;
+          const section = buildTypeSection(title, items);
+          if (section) slot.appendChild(section);
+          maybeFinishStatus();
+        })
+        .catch(function (err) {
+          if (thisRequest !== requestId || fellBack) return;
+          if (err && err.status === 404) {
+            fallBackToCombined(err);
+            return;
+          }
+          console.warn('Jellio: ' + title.toLowerCase() + ' search failed', err);
+          const note = document.createElement('p');
+          note.className = 'jellio-service-empty jellio-search-status';
+          note.textContent = describeNetworkFailure(title.toLowerCase() + ' results', err);
+          slot.appendChild(note);
+          maybeFinishStatus();
         });
-        const movieSection = buildTypeSection('Movies', movies);
-        if (movieSection) results.appendChild(movieSection);
-        const seriesSection = buildTypeSection('Series', series);
-        if (seriesSection) results.appendChild(seriesSection);
-        status.textContent = items.length ? '' : 'No results for “' + term + '”.';
-      })
-      .catch(function (err) {
-        if (thisRequest !== requestId) return;
-        console.warn('Jellio: search failed', err);
-        results.textContent = '';
-        status.textContent = describeNetworkFailure('search results', err);
-      });
+    }
+
+    runOne(searchMovies, moviesSlot, 'Movies');
+    runOne(searchSeries, seriesSlot, 'Series');
   }
 
   input.addEventListener('input', function () {
@@ -126,7 +196,7 @@ export async function renderSearch(root, params) {
     if (!term) {
       reflectStateInAddressBar('#/search');
       requestId += 1;
-      if (inFlight) inFlight.abort();
+      abortInFlight();
       results.textContent = '';
       status.textContent = '';
       return;
