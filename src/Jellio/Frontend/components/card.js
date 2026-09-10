@@ -1,7 +1,7 @@
 // Shared item card, used by every screen that renders a poster grid or row
 // (home's own rows, the library grid). One definition so a later visual
 // change (a hover state, a progress bar) only has one place to happen.
-import { getImageUrl, TICKS_PER_SECOND } from '../runtime/api.js';
+import { getImageUrl, TICKS_PER_SECOND, prefetchStreams } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   attachCardOptionsTrigger,
@@ -77,6 +77,27 @@ function episodeSubtitle(item) {
 // re-add next frame, a plain re-add on an already-present class is a
 // no-op) reads as a confirmation pop rather than a state change
 // nobody actually saw happen.
+// Fires Gelato's own speculative stream sync (runtime/api.js's own
+// prefetchStreams, its header documents the real bottleneck this is
+// chasing) the moment a card is actually noticed, mouse hover or D-pad/
+// keyboard focus arriving on it, well before a real click/Enter commits
+// to opening it. Series/Season/Person/etc never carry a real Gelato
+// stream sync at all (only Movie/Episode do, matching GetStaticMediaSources'
+// own real item-kind check), so skip firing a request nothing on the
+// server side is ever going to use.
+function attachStreamPrefetch(card, item) {
+  if (item.Type !== 'Movie' && item.Type !== 'Episode') return;
+  if (!item.Id) return;
+  let fired = false;
+  function fire() {
+    if (fired) return;
+    fired = true;
+    prefetchStreams(item.Id);
+  }
+  card.addEventListener('mouseenter', fire);
+  card.addEventListener('focus', fire);
+}
+
 function popConfirm(button) {
   button.classList.remove('jellio-card-action-pop');
   requestAnimationFrame(function () {
@@ -291,6 +312,8 @@ function buildLandscapeCard(item, options) {
     paintLandscapeProgress(imageWrap, updatedItem);
   }, options);
 
+  attachStreamPrefetch(card, item);
+
   return card;
 }
 
@@ -372,6 +395,8 @@ export function buildCard(item, options) {
     handleChanged,
     options,
   );
+
+  attachStreamPrefetch(card, item);
 
   return card;
 }

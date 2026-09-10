@@ -896,6 +896,35 @@ export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStre
   return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
 }
 
+// Real bottleneck traced through GetStaticMediaSources itself (Gelato's
+// own MediaSourceManagerDecorator.cs): the first time an item is ever
+// opened, it blocks on a live Stremio addon round trip before it can
+// answer at all, the same real delay a Nuvio/Gelato architecture
+// comparison found accounts for most of "card open feels slow" next to
+// Nuvio's own speculative resolution. Gelato now exposes POST
+// gelato/prefetch/{itemId} (added alongside this call) to run that same
+// sync ahead of time and cache it; card.js's own hover/focus listener is
+// what actually calls this, well before a reader who is just scanning a
+// row ever commits to opening one. Deliberately not run through postJson:
+// a server without Gelato installed, or one on an old build without this
+// route yet, must 404 or fail silently here, never surface as a real
+// error anywhere a reader could see it, so this only reuses the same
+// getServerAddress()+getAuthHeaders() plumbing, not requestJson's own
+// timeout/slot machinery or postJson's own response parsing.
+const prefetchedItemIds = new Set();
+export function prefetchStreams(itemId) {
+  if (!itemId || prefetchedItemIds.has(itemId)) return;
+  prefetchedItemIds.add(itemId);
+  fetch(getServerAddress() + '/gelato/prefetch/' + itemId, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  }).catch(function () {
+    // Best effort only. A failed prefetch just means the real open below
+    // falls back to its own existing synchronous sync, same as today.
+    prefetchedItemIds.delete(itemId);
+  });
+}
+
 // The item's own full list of real alternate sources (every stream
 // Gelato resolved for it, not just the one PlaybackInfo negotiates),
 // confirmed against DtoService.cs before writing this: MediaSources on
