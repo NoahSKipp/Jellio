@@ -697,6 +697,31 @@ export function searchItems(term, limit, signal) {
   });
 }
 
+// Real bottleneck traced through Gelato's own SearchActionFilter.cs: the
+// combined searchItems() call above waits on Task.WhenAll(movie search,
+// series search) server side before answering at all, even though this
+// runtime's own search.js already renders Movies and Series as two
+// independent sections. gelato/search/movie and gelato/search/series
+// (Controllers/GelatoApiController.cs, added alongside this call) expose
+// that exact same per-type search as two requests that resolve on their
+// own, so search.js can paint whichever section's real addon round trip
+// lands first instead of both waiting on the slower one. A server
+// without Gelato installed, or on an old build without these routes yet,
+// 404s here; search.js's own header explains the fallback that gives it.
+function searchByType(term, mediaType, signal) {
+  if (!term) return Promise.resolve([]);
+  const params = new URLSearchParams({ q: term });
+  return getJson('/gelato/search/' + mediaType + '?' + params.toString(), SEARCH_TIMEOUT_MS, signal);
+}
+
+export function searchMovies(term, signal) {
+  return searchByType(term, 'movie', signal);
+}
+
+export function searchSeries(term, signal) {
+  return searchByType(term, 'series', signal);
+}
+
 // Every watchlisted item, real endpoint (GET /Users/{id}/Items with
 // Filters=IsFavorite, Jellyfin's own real favorites concept underneath
 // this app's own Watchlist wording), the same #/home?tab=1 route the
@@ -894,6 +919,35 @@ export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStre
   // to a real server log why a bare GET alone was never enough.
   if (subtitleStreamIndex != null) body.SubtitleStreamIndex = subtitleStreamIndex;
   return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
+}
+
+// Real bottleneck traced through GetStaticMediaSources itself (Gelato's
+// own MediaSourceManagerDecorator.cs): the first time an item is ever
+// opened, it blocks on a live Stremio addon round trip before it can
+// answer at all, the same real delay a Nuvio/Gelato architecture
+// comparison found accounts for most of "card open feels slow" next to
+// Nuvio's own speculative resolution. Gelato now exposes POST
+// gelato/prefetch/{itemId} (added alongside this call) to run that same
+// sync ahead of time and cache it; card.js's own hover/focus listener is
+// what actually calls this, well before a reader who is just scanning a
+// row ever commits to opening one. Deliberately not run through postJson:
+// a server without Gelato installed, or one on an old build without this
+// route yet, must 404 or fail silently here, never surface as a real
+// error anywhere a reader could see it, so this only reuses the same
+// getServerAddress()+getAuthHeaders() plumbing, not requestJson's own
+// timeout/slot machinery or postJson's own response parsing.
+const prefetchedItemIds = new Set();
+export function prefetchStreams(itemId) {
+  if (!itemId || prefetchedItemIds.has(itemId)) return;
+  prefetchedItemIds.add(itemId);
+  fetch(getServerAddress() + '/gelato/prefetch/' + itemId, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  }).catch(function () {
+    // Best effort only. A failed prefetch just means the real open below
+    // falls back to its own existing synchronous sync, same as today.
+    prefetchedItemIds.delete(itemId);
+  });
 }
 
 // The item's own full list of real alternate sources (every stream
