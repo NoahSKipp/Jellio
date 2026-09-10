@@ -81,12 +81,17 @@ function episodeSubtitle(item) {
 // prefetchStreams, its header documents the real bottleneck this is
 // chasing) the moment a card is actually noticed, mouse hover or D-pad/
 // keyboard focus arriving on it, well before a real click/Enter commits
-// to opening it. Series/Season/Person/etc never carry a real Gelato
-// stream sync at all (only Movie/Episode do, matching GetStaticMediaSources'
-// own real item-kind check), so skip firing a request nothing on the
-// server side is ever going to use.
+// to opening it. Season/Person/etc never carry a real Gelato stream sync
+// or a real Gelato insert at all, so skip firing a request nothing on
+// the server side is ever going to use. Series is included alongside
+// Movie/Episode now too: a still-unopened search result (movie or
+// series alike) isn't a real library item yet at all, and Gelato's own
+// prefetch endpoint now warms that insert as well as the stream sync -
+// a real, already-inserted Series card simply gets a harmless no-op
+// response back (it has no streams of its own, only its episodes do),
+// same silent best-effort failure this already tolerates everywhere else.
 function attachStreamPrefetch(card, item) {
-  if (item.Type !== 'Movie' && item.Type !== 'Episode') return;
+  if (item.Type !== 'Movie' && item.Type !== 'Episode' && item.Type !== 'Series') return;
   if (!item.Id) return;
   let fired = false;
   function fire() {
