@@ -90,17 +90,39 @@ function episodeSubtitle(item) {
 // a real, already-inserted Series card simply gets a harmless no-op
 // response back (it has no streams of its own, only its episodes do),
 // same silent best-effort failure this already tolerates everywhere else.
+// Real gap found live right after this shipped: every focus/hover fired
+// immediately, so holding D-pad-right scrolling through a long row fired
+// one real request per card passed over, not just the one the reader
+// actually stopped on - wasted round trips against the reader's own
+// addon/debrid/TMDb rate limits for titles nobody was ever about to
+// open. PREFETCH_DEBOUNCE_MS below only fires once focus/hover actually
+// lingers past it; mouseleave/blur cancels a still-pending timer outright
+// rather than letting it fire for a card already left behind. No "fired
+// once" latch needed here anymore - prefetchStreams()'s own
+// prefetchedItemIds already dedupes a real repeat fire for the same
+// item, and still allows a genuine retry if an earlier attempt failed.
+const PREFETCH_DEBOUNCE_MS = 200;
+
 function attachStreamPrefetch(card, item) {
   if (item.Type !== 'Movie' && item.Type !== 'Episode' && item.Type !== 'Series') return;
   if (!item.Id) return;
-  let fired = false;
-  function fire() {
-    if (fired) return;
-    fired = true;
-    prefetchStreams(item.Id);
+  let timer = null;
+  function scheduleFire() {
+    if (timer) return;
+    timer = window.setTimeout(function () {
+      timer = null;
+      prefetchStreams(item.Id);
+    }, PREFETCH_DEBOUNCE_MS);
   }
-  card.addEventListener('mouseenter', fire);
-  card.addEventListener('focus', fire);
+  function cancelFire() {
+    if (!timer) return;
+    window.clearTimeout(timer);
+    timer = null;
+  }
+  card.addEventListener('mouseenter', scheduleFire);
+  card.addEventListener('mouseleave', cancelFire);
+  card.addEventListener('focus', scheduleFire);
+  card.addEventListener('blur', cancelFire);
 }
 
 function popConfirm(button) {
