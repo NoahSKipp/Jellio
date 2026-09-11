@@ -49,6 +49,7 @@ import {
   startJoinSync,
   clearJoinSync,
   getJoinSync,
+  prefetchStreams,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
@@ -2708,6 +2709,19 @@ export async function renderPlayer(root, params) {
       .then(function (result) {
         if (!result) return;
         nextEpisode = result;
+        // Real Nuvio-competitive gap, not a hypothetical one: the up
+        // next card itself doesn't show until shouldShowUpNextNow()
+        // near the very end of this episode, but the real id it needs
+        // is already known right here, at the very start of it. Firing
+        // Gelato's own gelato/prefetch/{itemId} (runtime/api.js's own
+        // header documents the real bottleneck it warms) this early
+        // hands it this whole episode's own runtime as lead time - far
+        // more than a poster's own hover/focus debounce ever gets - so
+        // a real binge watcher never sees a loading gap between
+        // episodes at all, matching AIOStreams' own precacheNextEpisode
+        // setting (aiostreams-config.json's own starter config already
+        // enables it) doing the equivalent one layer further upstream.
+        prefetchStreams(result.Id);
         const built = buildUpNextOverlay(result, playNextEpisode, dismissUpNext);
         upNextOverlay = built.overlay;
         upNextPlayButton = built.playButton;
