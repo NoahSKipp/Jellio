@@ -2859,6 +2859,22 @@ export async function renderPlayer(root, params) {
   // keeping in front of the reader at that point.
   video.addEventListener('error', function () {
     if (screenTornDown) return;
+    // Real gap found live: this handler discarded the browser's own
+    // MediaError entirely, so the one real diagnostic signal a failed
+    // <video> actually hands back (a real code - 1 ABORTED, 2 NETWORK,
+    // 3 DECODE, 4 SRC_NOT_SUPPORTED - plus, on Chromium, a real message
+    // string) never reached anywhere a reader debugging a real failure
+    // live could see it, this screen's own generic message the only
+    // thing anyone ever got. Console only, not the visible toast/error
+    // screen: this is for a real reader with devtools open chasing a
+    // real failure, not something every reader hitting a dead link
+    // needs to see.
+    var mediaError = video.error;
+    console.error(
+      'Jellio: video error',
+      mediaError ? 'code=' + mediaError.code + (mediaError.message ? ' message=' + mediaError.message : ' (no message)') : '(no MediaError on the element)',
+      'src=' + video.currentSrc,
+    );
     if (hasReportedStart) {
       showPlayerToast('Playback stopped unexpectedly. Try a different stream.');
       return;
