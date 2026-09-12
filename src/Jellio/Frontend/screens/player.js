@@ -2080,8 +2080,23 @@ export async function renderPlayer(root, params) {
   // cushion above already has, attemptPlay's own one retry covering
   // whatever real variance is left beyond even this.
   const PREBUFFER_TIMEOUT_MS = 12000;
+  // Gelato's own MediaSourceManagerDecorator only ever adds this marker
+  // when AIOStreams' PROVIDE_STREAM_DATA setting is on and this specific
+  // source came back with service.cached === true - a real "no download
+  // wait ahead" signal, not a guess. The 8s/12s cushion above exists
+  // entirely for the opposite case (an uncached torrent/usenet source
+  // still ramping up); a confirmed-cached source has no such ramp-up to
+  // wait out, so it gets a token cushion instead of the full one.
+  const CONFIRMED_CACHED_TARGET_SECONDS = 1;
+  const CONFIRMED_CACHED_TIMEOUT_MS = 2500;
+  function isConfirmedCachedSource() {
+    return !!(mediaSource && mediaSource.Formats && mediaSource.Formats.indexOf('gelato-cached') !== -1);
+  }
   function waitForPlayableBuffer(callback) {
     let settled = false;
+    const confirmedCached = isConfirmedCachedSource();
+    const targetSeconds = confirmedCached ? CONFIRMED_CACHED_TARGET_SECONDS : PREBUFFER_TARGET_SECONDS;
+    const timeoutMs = confirmedCached ? CONFIRMED_CACHED_TIMEOUT_MS : PREBUFFER_TIMEOUT_MS;
     function bufferedAheadSeconds() {
       const start = video.currentTime || 0;
       const buffered = video.buffered;
@@ -2101,9 +2116,9 @@ export async function renderPlayer(root, params) {
       callback();
     }
     function check() {
-      if (bufferedAheadSeconds() >= PREBUFFER_TARGET_SECONDS || video.readyState >= 4) settle();
+      if (bufferedAheadSeconds() >= targetSeconds || video.readyState >= 4) settle();
     }
-    const fallbackTimer = window.setTimeout(settle, PREBUFFER_TIMEOUT_MS);
+    const fallbackTimer = window.setTimeout(settle, timeoutMs);
     video.addEventListener('progress', check);
     video.addEventListener('canplaythrough', check);
     check();
