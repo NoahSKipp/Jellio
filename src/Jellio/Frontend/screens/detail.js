@@ -242,6 +242,23 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
     }),
   );
 
+  menu.appendChild(
+    buildEpisodeMenuOption('Mark season as unwatched', 'remove_done', function () {
+      Promise.all(
+        context.episodes.map(function (seasonEpisode) {
+          return setPlayed(seasonEpisode.Id, false).then(function (updated) {
+            seasonEpisode.UserData = updated;
+          });
+        }),
+      )
+        .then(context.onChanged)
+        .catch(function (err) {
+          console.warn('Jellio: could not mark season unwatched', err);
+          showToast('Could not mark season unwatched. Try again.');
+        });
+    }),
+  );
+
   document.body.appendChild(menu);
   document.addEventListener('keydown', handleEpisodeMenuKeydown);
   window.setTimeout(function () {
