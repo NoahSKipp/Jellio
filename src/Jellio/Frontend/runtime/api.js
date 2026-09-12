@@ -877,7 +877,7 @@ export async function setItemRating(itemId, likes) {
 // (RuntimeModules/api.js's own getVideoStreamUrl) before writing any of
 // this, not guessed at: POST /Items/{id}/PlaybackInfo negotiates a real
 // MediaSource, then a plain /Videos/{id}/stream URL carrying that source's
-// own id plus an api_key query param is something a bare <video> element
+// own id plus an ApiKey query param is something a bare <video> element
 // can just set as its src, no playbackManager involved at all. That
 // module export only orchestrates native's own OSD/queue UI on top of
 // exactly this same real HTTP flow.
@@ -1195,7 +1195,7 @@ export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
   const params = new URLSearchParams({
     MediaSourceId: mediaSourceId,
     DeviceId: getDeviceId(),
-    api_key: token || '',
+    ApiKey: token || '',
   });
   // Real bug, found live against a real server log: this runtime never
   // builds a segment URL itself, only this one master.m3u8 request,
@@ -1245,7 +1245,7 @@ export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
 // thumbnail-index-to-sheet-and-cell math this only ever needs a URL for.
 export function getTrickplayTileUrl(itemId, mediaSourceId, width, tileIndex) {
   const params = new URLSearchParams({
-    api_key: getAccessToken() || '',
+    ApiKey: getAccessToken() || '',
     mediaSourceId: mediaSourceId || itemId,
   });
   return getServerAddress() + '/Videos/' + itemId + '/Trickplay/' + width + '/' + tileIndex + '.jpg?' + params.toString();
@@ -1390,7 +1390,7 @@ export function getAvatarPresets() {
 // FrontendController's own {**path} already does, not a single encoded
 // %2F segment. Each real segment is still encoded on its own, in case a
 // filename itself carries a character that would otherwise break the URL.
-// Token goes on as an api_key query param rather than an Authorization
+// Token goes on as an ApiKey query param rather than an Authorization
 // header: this URL is handed straight to a plain <img> tag, which never
 // sends custom headers, the same reason getStreamUrl/getTrickplayUrl
 // already do this for <video>/trickplay requests against the same
@@ -1398,7 +1398,7 @@ export function getAvatarPresets() {
 export function getAvatarPresetUrl(id) {
   const encodedSegments = String(id).split('/').map(encodeURIComponent).join('/');
   const token = getAccessToken();
-  const query = token ? '?api_key=' + encodeURIComponent(token) : '';
+  const query = token ? '?ApiKey=' + encodeURIComponent(token) : '';
   return getServerAddress() + '/Jellio/avatars/' + encodedSegments + query;
 }
 
@@ -2370,11 +2370,11 @@ export function setProfileBio(bio) {
 // [Authorize]-gated same as every other endpoint here, but this URL is
 // handed straight to a plain <img> tag (screens/profile.js), which never
 // sends an Authorization header, so every real load 401'd. Token goes on
-// as an api_key query param instead, same real fix getAvatarPresetUrl
+// as an ApiKey query param instead, same real fix getAvatarPresetUrl
 // above already carries for the identical reason.
 export function getBannerUrl(userId) {
   const token = getAccessToken();
-  const query = token ? '?api_key=' + encodeURIComponent(token) : '';
+  const query = token ? '?ApiKey=' + encodeURIComponent(token) : '';
   return getServerAddress() + '/Jellio/profile/banner/' + userId + query;
 }
 
