@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.4.0] - 2026-09-12\n\n### 🚀 Features\n\n- Add Mark season as unwatched to the episode options menu\n",
+        "checksum": "12d8e0b1d2b7e3c32afa7b039123011c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.0/jellio_1.4.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-12T12:02:10Z",
+        "version": "1.4.0"
+      },
+      {
         "changelog": "## [1.3.6] - 2026-09-12\n\n### ⚡ Performance\n\n- Shorten the prebuffer wait for a confirmed-cached source\n",
         "checksum": "b4f651e0c05d9603c8be037929be5650",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.3.6/jellio_1.3.6.0.zip",
