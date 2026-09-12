@@ -528,6 +528,21 @@ export async function getRecommendationCandidates(seed, limit) {
     })
     .slice(0, 5);
 
+  // Real feedback, found live: SortBy=Random against a Recursive=true
+  // scan is one of the more expensive query shapes Jellyfin's own
+  // database layer supports (a random sort typically has to
+  // materialize far more rows than it returns, rather than walk an
+  // index), and this fires up to twice per seed, several seeds per
+  // home load, all concurrently - a real, measured contributor to
+  // "Top Picks for You and below" taking up to a minute on a Gelato
+  // library, which tends to be enormous next to a normal personal
+  // collection since it is a live virtual catalog, not a bounded set
+  // of owned files. CommunityRating is already the sort every sibling
+  // query in this file uses (getGenreItems, getPersonItems) and is a
+  // real indexed field, cheap either direction. shuffleInPlace() below
+  // gets the actual per-load variety Random was providing back
+  // client side, on however many rows this already-cheaper query
+  // returns, instead of asking the database to do it.
   const base =
     '/Users/' +
     userId +
@@ -537,7 +552,7 @@ export async function getRecommendationCandidates(seed, limit) {
     // recommend.js's own score() weighs how close a candidate's own
     // length sits to the seed's, the same kind of real signal era
     // already scores, not something this query fetched before.
-    '&Fields=Genres,ProductionYear,CommunityRating,RunTimeTicks&SortBy=Random';
+    '&Fields=Genres,ProductionYear,CommunityRating,RunTimeTicks&SortBy=CommunityRating&SortOrder=Descending';
 
   const jobs = [];
   if (genres.length) {
@@ -578,9 +593,27 @@ export async function getRecommendationCandidates(seed, limit) {
       if (result.tag === 'person') entry.viaPerson = true;
     });
   });
-  return Object.keys(byId).map(function (id) {
-    return byId[id];
-  });
+  // CommunityRating (above) replaced SortBy=Random for real query cost
+  // reasons, not because the per-load variety it gave stopped
+  // mattering: a bare top-by-rating candidate pool would otherwise
+  // score into the exact same row every time. Shuffling it back here
+  // costs nothing (already-fetched rows, in memory), unlike asking the
+  // database to do it.
+  return shuffleInPlace(
+    Object.keys(byId).map(function (id) {
+      return byId[id];
+    }),
+  );
+}
+
+function shuffleInPlace(items) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = items[i];
+    items[i] = items[j];
+    items[j] = tmp;
+  }
+  return items;
 }
 
 // Every real item crediting one specific person as Actor or Director,
