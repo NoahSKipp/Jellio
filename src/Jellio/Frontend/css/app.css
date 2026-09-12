@@ -3277,6 +3277,12 @@
 .jellio-player-episode-thumb {
   position: relative;
   flex: 0 0 auto;
+  /* A flex row's default align-items:stretch overrides this box's own
+     aspect-ratio-derived height with the row's height (driven by the
+     body's title/overview text), taller than 16:9 the moment an
+     overview wraps to more than one line - which pushes the badges
+     below down past where the image itself actually ends. */
+  align-self: flex-start;
   width: 10.5em;
   aspect-ratio: 16 / 9;
   border-radius: calc(var(--jellio-card-radius) - 4px);
