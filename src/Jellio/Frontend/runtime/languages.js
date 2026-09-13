@@ -15,6 +15,17 @@ const LANGUAGE_NAMES = {
   // German dub and an undubbed original release is a real choice too),
   // not just a tag with nothing behind it to filter by.
   __original__: 'Original Audio',
+  // Also not a real ISO code: components/streamPicker.js's own
+  // sourceAudioLanguages() second fallback, a release whose own Name
+  // self-tags as MULTi/Dual Audio (real scene-release convention, an
+  // animetosho-sourced title found live: "...MULTi AAC2.0 H.264-VARYG")
+  // but carries no MediaStreams Language field yet (pre-probe) and no
+  // flag emoji either. Real per-track languages are genuinely unknown
+  // until Jellyfin actually probes the chosen source, so this names
+  // what the release itself claims rather than guessing which
+  // language(s) that is, or silently folding it into Original Audio
+  // and losing the "more than one track here" signal outright.
+  __multi__: 'Multi-Audio',
 };
 
 export function languageName(code) {
