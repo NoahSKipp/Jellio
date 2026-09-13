@@ -249,6 +249,16 @@ function flagLanguages(text) {
 // not just a tag with nothing behind it to filter by.
 export const ORIGINAL_AUDIO_CODE = '__original__';
 
+// Also not a real ISO code: runtime/languages.js's own entry for it
+// explains the real gap this closes. Scene-release convention, not
+// guessed - an animetosho-sourced release found live self-tagged
+// "...MULTi AAC2.0 H.264-VARYG" in its own Name with no MediaStreams
+// data yet and no flag emoji either, and showed up as plain Original
+// Audio here despite the release itself claiming otherwise.
+export const MULTI_AUDIO_CODE = '__multi__';
+
+const MULTI_AUDIO_PATTERN = /\b(multi|dual)([-.\s]?audio)?\b/i;
+
 // Exported so screens/player.js's own in-player Sources panel can
 // filter by the exact same real codes this picker's own filter row
 // does, not a second, separately maintained detection pass.
@@ -262,6 +272,9 @@ export function sourceAudioLanguages(source) {
   flagLanguages(source.Name).forEach(function (code) {
     if (codes.indexOf(code) === -1) codes.push(code);
   });
+  if (!codes.length && MULTI_AUDIO_PATTERN.test(source.Name || '')) {
+    codes.push(MULTI_AUDIO_CODE);
+  }
   if (!codes.length) codes.push(ORIGINAL_AUDIO_CODE);
   return codes;
 }
