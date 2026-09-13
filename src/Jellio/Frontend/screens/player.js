@@ -30,6 +30,7 @@ import {
   getSubtitleStreams,
   getAudioStreams,
   matchAudioStreamIndex,
+  matchSubtitleStream,
   buildSubtitleUrl,
   getNextEpisode,
   getIntroSkipperSegments,
@@ -1574,7 +1575,32 @@ export async function renderPlayer(root, params) {
 
     renderSubtitleTrackList(subtitleStreams);
   }
-  rebuildSubtitleMenu();
+  // Real feedback: a saved default subtitle language preference
+  // (screens/settings.js's own Language section, the same
+  // Configuration.SubtitleLanguagePreference field matchAudioStreamIndex's
+  // own audio equivalent already reads above) never actually reached the
+  // player - nothing here ever auto-attached a track, only a reader's own
+  // manual pick into the Subtitles popover ever did, every single
+  // episode, with the real .vtt fetch (runtime/api.js's own
+  // buildSubtitleUrl, GelatoApiController's own prefetch now warms its
+  // server side cache ahead of time but still has to be asked for) only
+  // ever starting after that click, not before it. Matching and
+  // attaching here instead, the moment this menu first builds, starts
+  // that fetch as early as this screen possibly can - concurrent with
+  // waitForPlayableBuffer's own buffering below, not gated behind it.
+  (async function () {
+    let matched = null;
+    try {
+      const user = await currentUserPromise;
+      const preferredLanguage = user && user.Configuration && user.Configuration.SubtitleLanguagePreference;
+      matched = preferredLanguage ? matchSubtitleStream(mediaSource, preferredLanguage) : null;
+    } catch (err) {
+      console.warn('Jellio: could not match preferred subtitle language', err);
+    }
+    if (matched) activeSubtitleStreamIndex = matched.Index;
+    rebuildSubtitleMenu();
+    if (matched) attachSubtitleTrack(matched, 0);
+  })();
 
   registerPopover(subtitleButton, subtitleMenu);
 

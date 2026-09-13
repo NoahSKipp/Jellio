@@ -1163,6 +1163,30 @@ export function matchAudioStreamIndex(mediaSource, languagePreference) {
   return match ? match.Index : null;
 }
 
+// Same real match-by-resolved-name reasoning as matchAudioStreamIndex
+// above, for screens/player.js's own auto-select-on-load: real feedback
+// (a saved Configuration.SubtitleLanguagePreference already existed for
+// exactly this, confirmed against updateLanguagePreferences below's own
+// header, but nothing ever actually read it back to auto-attach a
+// track) asked for a saved subtitle language to just show up at the
+// start of an episode instead of requiring a manual pick, every single
+// time, before the .vtt fetch this needs even begins. A real text
+// stream is preferred outright over an image based one sharing the
+// same language: only a text stream can go out as a plain <track>,
+// an image one needs a whole separate forced-transcode round trip
+// (selectBurnedInSubtitle) nothing here should trigger automatically.
+export function matchSubtitleStream(mediaSource, languagePreference) {
+  if (!languagePreference) return null;
+  const wanted = languageName(languagePreference);
+  const streams = getSubtitleStreams(mediaSource).filter(function (stream) {
+    return stream.Language && languageName(stream.Language) === wanted;
+  });
+  if (!streams.length) return null;
+  return streams.find(function (stream) {
+    return stream.IsTextSubtitleStream;
+  }) || null;
+}
+
 // audioStreamIndex, when given, asks for a specific embedded audio
 // track by its own real MediaStreams index instead of whichever one
 // Jellyfin defaults to. Static=true serves the whole file's bytes as
