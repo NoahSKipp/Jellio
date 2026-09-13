@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.4.2] - 2026-09-13\n\n### 🐛 Bug Fixes\n\n- Give Season its own episode-resolving Play, not a raw stream picker\n",
+        "checksum": "fd3c55d83818ae590e0b03e5463bac4b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.2/jellio_1.4.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-13T11:34:43Z",
+        "version": "1.4.2"
+      },
+      {
         "changelog": "## [1.4.1] - 2026-09-12\n\n### ⚡ Performance\n\n- Replace SortBy=Random with CommunityRating + client shuffle\n",
         "checksum": "557ed644f76ac14d18a927b47036d066",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.1/jellio_1.4.1.0.zip",
