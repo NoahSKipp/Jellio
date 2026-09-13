@@ -439,7 +439,13 @@ export function buildLanguageFilterRow(sources, onSelect) {
   const languages = Object.keys(languageCounts).sort(function (a, b) {
     return languageCounts[b] - languageCounts[a] || languageName(a).localeCompare(languageName(b));
   });
-  if (languages.length <= 1) return null;
+  // Real feedback: even a single-language result set should still show
+  // this row as a plain badge confirming what that one language is,
+  // not just as a filter with nothing real left to filter between -
+  // sourceAudioLanguages() always returns at least one real code
+  // (ORIGINAL_AUDIO_CODE itself as its own last-resort fallback), so
+  // the only genuinely empty case is zero sources to begin with.
+  if (!languages.length) return null;
 
   const filterRow = el('div', 'jellio-stream-picker-filters');
   const chips = [];
