@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.5.0] - 2026-09-13\n\n### 🚀 Features\n\n- Auto-select a saved subtitle language preference on playback start\n- Detect MULTi/Dual Audio releases with no other language signal\n\n### 🐛 Bug Fixes\n\n- Show the language filter row even with a single language\n",
+        "checksum": "6860d1a89507ac021b0634e9bb2a0534",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.0/jellio_1.5.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-13T20:08:44Z",
+        "version": "1.5.0"
+      },
+      {
         "changelog": "## [1.4.2] - 2026-09-13\n\n### 🐛 Bug Fixes\n\n- Give Season its own episode-resolving Play, not a raw stream picker\n",
         "checksum": "fd3c55d83818ae590e0b03e5463bac4b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.2/jellio_1.4.2.0.zip",
