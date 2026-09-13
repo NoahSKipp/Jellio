@@ -418,6 +418,41 @@ async function resolveSeriesPlayTarget(seriesId) {
   return { episode: episode, resume: resume };
 }
 
+// Real bug, found live: a Season, same as a Series, carries no video of
+// its own (item.Type is 'Season' here, not 'Movie'/'Episode'), but used
+// to fall into the plain openStreamPicker(item) branch below anyway -
+// only isSeries was ever checked, nothing excluded Season from the
+// "has its own video" side. openStreamPicker(item) against a Season's
+// own id still reached the player, which still reports real playback
+// progress against whatever itemId it was handed - writing real
+// UserData.PlaybackPositionTicks onto the Season item itself, which
+// then surfaced in Continue Watching as a bare "Season 01"/"Specials"
+// card with none of a real episode's own context. Scoped to just this
+// season's own episodes (getSeriesNextUp isn't season-scoped, it looks
+// across the whole series), same resume-vs-play distinction
+// resolveSeriesPlayTarget above already makes.
+async function resolveSeasonPlayTarget(item) {
+  let episodes = [];
+  try {
+    episodes = await getEpisodes(item.SeriesId, item.Id);
+  } catch (err) {
+    console.warn('Jellio: could not load episodes for season', err);
+    return null;
+  }
+
+  if (!episodes.length) return null;
+
+  const episode =
+    episodes.filter(function (e) {
+      return !(e.UserData && e.UserData.Played);
+    })[0] || episodes[episodes.length - 1];
+
+  const isFirstEpisode = episode.Id === episodes[0].Id;
+  const hasProgress = !!(episode.UserData && episode.UserData.PlaybackPositionTicks > 0);
+  const resume = hasProgress || !isFirstEpisode;
+  return { episode: episode, resume: resume };
+}
+
 // Season tabs plus the current season's own episode track, appended in
 // place once seasons resolve rather than blocking the rest of the screen
 // on a series with a lot of them. Real endpoints, GET /Shows/{id}/Seasons
@@ -737,18 +772,23 @@ export async function renderDetail(root, params) {
   // has, so the same real collapsed-behind-More treatment applies here
   // too now, not a second, inconsistent always-expanded row.
   const isSeries = item.Type === 'Series';
+  // Season carries no video of its own either, same as Series - see
+  // resolveSeasonPlayTarget's own header for the real bug this avoids.
+  const isSeason = item.Type === 'Season';
+  const needsEpisodeResolution = isSeries || isSeason;
   const iconActionClass = 'jellio-detail-icon-action jellio-detail-icon-action-collapsible';
   const actions = el('div', 'jellio-detail-actions jellio-detail-actions-has-more');
 
-  // A series has no video of its own, only its episodes do (each already
-  // opens this same screen at its own item id, with its own working Play
-  // button), so Change Stream is skipped entirely here rather than
-  // pointing at nothing playable; Watchlist/Mark Watched still apply to
-  // the series itself. Play itself still belongs here though (real
-  // feedback: a series page with none at all, unlike a movie or an
-  // episode), just resolved lazily against whichever episode
-  // resolveSeriesPlayTarget() above actually decides is next.
-  if (!isSeries) {
+  // A series (or a season) has no video of its own, only its episodes
+  // do (each already opens this same screen at its own item id, with
+  // its own working Play button), so Change Stream is skipped entirely
+  // here rather than pointing at nothing playable; Watchlist/Mark
+  // Watched still apply to the series/season item itself. Play itself
+  // still belongs here though (real feedback: a series page with none
+  // at all, unlike a movie or an episode), just resolved lazily against
+  // whichever episode resolveSeriesPlayTarget/resolveSeasonPlayTarget
+  // above actually decides is next.
+  if (!needsEpisodeResolution) {
     const playButton = el('button', 'jellio-detail-play');
     playButton.type = 'button';
     playButton.appendChild(el('span', 'material-icons play_arrow'));
@@ -766,12 +806,14 @@ export async function renderDetail(root, params) {
     playButton.appendChild(playLabel);
     actions.appendChild(playButton);
 
-    const targetPromise = resolveSeriesPlayTarget(item.Id).then(function (result) {
-      if (result && result.resume) {
-        playLabel.textContent = 'Resume S' + result.episode.ParentIndexNumber + ' E' + result.episode.IndexNumber;
-      }
-      return result;
-    });
+    const targetPromise = (isSeason ? resolveSeasonPlayTarget(item) : resolveSeriesPlayTarget(item.Id)).then(
+      function (result) {
+        if (result && result.resume) {
+          playLabel.textContent = 'Resume S' + result.episode.ParentIndexNumber + ' E' + result.episode.IndexNumber;
+        }
+        return result;
+      },
+    );
 
     playButton.addEventListener('click', function () {
       playButton.disabled = true;
@@ -780,7 +822,7 @@ export async function renderDetail(root, params) {
           if (result && result.episode) openStreamPicker(result.episode);
         })
         .catch(function (err) {
-          console.warn('Jellio: could not resolve series play target', err);
+          console.warn('Jellio: could not resolve series/season play target', err);
         })
         .finally(function () {
           playButton.disabled = false;
@@ -960,7 +1002,7 @@ export async function renderDetail(root, params) {
   // its own), so this is skipped there the same as Play above; More
   // still applies to a series though, real feedback's own point,
   // collapsing Watchlist/Mark Watched behind it just the same.
-  if (!isSeries) {
+  if (!needsEpisodeResolution) {
     const changeStreamButton = el('button', iconActionClass);
     changeStreamButton.type = 'button';
     changeStreamButton.setAttribute('aria-label', 'Change Stream');
