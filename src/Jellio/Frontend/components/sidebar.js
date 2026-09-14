@@ -197,8 +197,21 @@ async function buildProfileButton() {
   // for two buttons doing two real jobs instead of one doing both.
   // Settings (and the switcher's own Manage Account entry) still reach
   // that screen.
+  //
+  // Real bug, found live: Jellyfin Media Player's own desktop shell (a
+  // native window around a QtWebEngine view, not a plain browser)
+  // opened this overlay and then closed it again within the same
+  // instant - real feedback described it as a flicker, no error either
+  // side of it. components/mobileNav.js's own identical trigger never
+  // called button.blur() the way this one did, the one real difference
+  // between a working open there and a flickering one here: forcing
+  // blur synchronously right before creating the overlay handed a
+  // native focus-change event to whatever sits under the web content
+  // in that shell, ahead of anything this runtime's own code could
+  // control. Purely cosmetic to begin with (only ever cleared this
+  // button's own focus ring after the click), not load-bearing for the
+  // overlay to open correctly either way.
   button.addEventListener('click', function () {
-    button.blur();
     openAccountSwitcher();
   });
 
