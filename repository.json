@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.5.2] - 2026-09-14\n\n### ⚡ Performance\n\n- Stop rebuilding catalog/genre rows on every playback session end\n",
+        "checksum": "5a54ba9baaa0409d1214952fb7dca7ec",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.2/jellio_1.5.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-14T17:22:38Z",
+        "version": "1.5.2"
+      },
+      {
         "changelog": "## [1.5.1] - 2026-09-14\n\n### 🐛 Bug Fixes\n\n- Stop forcing blur before opening the profile switcher\n",
         "checksum": "e9d3411991bdfc3d2e71a1bfeee04057",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.1/jellio_1.5.1.0.zip",
@@ -237,14 +245,6 @@
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.3.0/jellio_0.1.0.0.zip",
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:26Z",
-        "version": "0.1.0"
-      },
-      {
-        "changelog": "## [0.2.0] - 2026-08-17\n\nExpands media catalog browsing with grid views, coverflow carousels, and rich item details.\n\n### Features\n\n• Render a responsive library grid screen with query parameter routing\n• Add detailed item metadata endpoint and detail screen layout\n• Add season and episode endpoints with season tabs and episode lists\n• Add favorites endpoints and favorite toggle on detail screens\n• Implement Harbor-inspired coverflow carousel for library pages",
-        "checksum": "6a48c43df673074268f65b84a7699b5c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.2.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-09-03T15:45:25Z",
         "version": "0.1.0"
       }
     ]
