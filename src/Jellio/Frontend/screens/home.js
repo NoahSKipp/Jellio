@@ -102,7 +102,7 @@ function titleFor(name, kind) {
 
 // Split into a fetch phase (no dependency on seen/exclude at all) and
 // a build phase (the dedupe() call that reads and writes it) so
-// buildHomeSections() below can run every row source's own real
+// buildExpensiveSections() below can run every row source's own real
 // network fetch together, catalog, genre and recommendation alike,
 // and only sequence the synchronous dedupe step afterward, in the
 // priority order real feedback actually cares about.
@@ -430,15 +430,28 @@ async function renderWatchlist(root, activeList) {
 // traced to this screen firing every one of these calls fresh on its
 // own right as it rendered, on top of whatever the splash had already
 // asked for separately.
-let homeSectionsPromise = null;
+// Two separate caches, not one: real feedback was that every row,
+// "Top Picks"/catalog/genre rows included, took as long to reload as a
+// genuinely cold first visit, every single time a playback session
+// ended, since invalidateHomeSections() below used to null one combined
+// promise covering all of it. Only Continue Watching and Up Next
+// actually change when a playback session ends; the recommendation,
+// catalog and genre rows below them depend on none of that (Gelato's
+// own addon resolution, not a reader's own watch progress), so they get
+// their own cache here that survives invalidateHomeSections() and only
+// ever gets rebuilt on a genuine cold load (a fresh page load, or this
+// promise's own catch() clearing itself after a real failure).
+let cheapSectionsPromise = null;
+let expensiveSectionsPromise = null;
 
 // Reset on leaving playback (screens/player.js's own cleanup calls
 // this) rather than left to rot for the rest of the session: Up
 // Next and Continue Watching are exactly the two rows a real playback
 // session changes, so the next visit to home has to re-derive them,
-// not keep serving what was true before that session started.
+// not keep serving what was true before that session started. Deliberately
+// leaves expensiveSectionsPromise alone, see its own header above.
 export function invalidateHomeSections() {
-  homeSectionsPromise = null;
+  cheapSectionsPromise = null;
 }
 
 // Nuvio's own real incremental-channel pattern (search's per-addon fan
@@ -466,7 +479,7 @@ function notifySections(newSections) {
   });
 }
 
-async function buildHomeSections() {
+async function buildCheapSections() {
   const sections = [];
 
   function pushAll(newSections) {
@@ -505,6 +518,23 @@ async function buildHomeSections() {
   if (collections) {
     const hub = buildHubStrip(collections);
     if (hub) pushAll([wrapRowForCustomization(hub, 'studio-hubs')]);
+  }
+
+  return { sections: sections, collections: collections };
+}
+
+// Split out of what used to be one combined buildHomeSections(): the
+// expensive half (recommendation/catalog/genre rows), cached separately
+// via expensiveSectionsPromise above so a playback session ending only
+// ever forces buildCheapSections() above to run again, not this.
+async function buildExpensiveSections(collections) {
+  const sections = [];
+
+  function pushAll(newSections) {
+    newSections.forEach(function (section) {
+      sections.push(section);
+    });
+    if (newSections.length) notifySections(newSections);
   }
 
   // Shared with buildCatalogRows/buildGenreRows below via dedupe(): a
@@ -561,14 +591,25 @@ async function buildHomeSections() {
 // very next visit to home gets a real, fresh attempt instead of the
 // same dead promise served forever.
 export function preloadHomeSections() {
-  if (!homeSectionsPromise) {
-    homeSectionsPromise = buildHomeSections().catch(function (err) {
+  if (!cheapSectionsPromise) {
+    cheapSectionsPromise = buildCheapSections().catch(function (err) {
       console.warn('Jellio: could not build home sections', err);
-      homeSectionsPromise = null;
-      return [];
+      cheapSectionsPromise = null;
+      return { sections: [], collections: null };
     });
   }
-  return homeSectionsPromise;
+  return cheapSectionsPromise.then(function (cheap) {
+    if (!expensiveSectionsPromise) {
+      expensiveSectionsPromise = buildExpensiveSections(cheap.collections).catch(function (err) {
+        console.warn('Jellio: could not build home sections', err);
+        expensiveSectionsPromise = null;
+        return [];
+      });
+    }
+    return expensiveSectionsPromise.then(function (expensive) {
+      return cheap.sections.concat(expensive);
+    });
+  });
 }
 
 // renderHome's own real progressive-render path: subscribes onSection
