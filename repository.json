@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.5.1] - 2026-09-14\n\n### 🐛 Bug Fixes\n\n- Stop forcing blur before opening the profile switcher\n",
+        "checksum": "e9d3411991bdfc3d2e71a1bfeee04057",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.1/jellio_1.5.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-14T06:27:20Z",
+        "version": "1.5.1"
+      },
+      {
         "changelog": "## [1.5.0] - 2026-09-13\n\n### 🚀 Features\n\n- Auto-select a saved subtitle language preference on playback start\n- Detect MULTi/Dual Audio releases with no other language signal\n\n### 🐛 Bug Fixes\n\n- Show the language filter row even with a single language\n",
         "checksum": "6860d1a89507ac021b0634e9bb2a0534",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.0/jellio_1.5.0.0.zip",
@@ -235,14 +243,6 @@
         "changelog": "## [0.2.0] - 2026-08-17\n\nExpands media catalog browsing with grid views, coverflow carousels, and rich item details.\n\n### Features\n\n• Render a responsive library grid screen with query parameter routing\n• Add detailed item metadata endpoint and detail screen layout\n• Add season and episode endpoints with season tabs and episode lists\n• Add favorites endpoints and favorite toggle on detail screens\n• Implement Harbor-inspired coverflow carousel for library pages",
         "checksum": "6a48c43df673074268f65b84a7699b5c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.2.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-09-03T15:45:25Z",
-        "version": "0.1.0"
-      },
-      {
-        "changelog": "## [0.1.0] - 2026-08-16\n\nInitial vertical slice release of Jellio. Introduces the independent client runtime, persistent application shell, and initial media browsing interface.\n\n### Features\n\n• Patch index.html and serve the embedded frontend bundle\n• Add auth/session runtime independent of native ApiClient\n• Add direct-fetch API layer for screens to read from\n• Render a custom home screen with hero carousel and continue watching\n• Add hash-based navigation router and persistent sidebar component\n• Wire the sidebar and router into the main shell layout\n\n### Refactor\n\n• Extract a shared item card component with watched/progress badges\n\n### Miscellaneous Tasks\n\n• Scaffold plugin project and configure Net9 Jellyfin integration",
-        "checksum": "154b2b3e287e9d492e714601b4353bfd",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.1.0/jellio_0.1.0.0.zip",
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:25Z",
         "version": "0.1.0"
