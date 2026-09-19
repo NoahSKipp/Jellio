@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.5.4] - 2026-09-19\n\n### 🐛 Bug Fixes\n\n- Check activeElement too for list-membership-menu outside clicks\n",
+        "checksum": "32c1950a2037f76b84ab772123411448",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.4/jellio_1.5.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-19T16:25:16Z",
+        "version": "1.5.4"
+      },
+      {
         "changelog": "## [1.5.3] - 2026-09-19\n\n### 🐛 Bug Fixes\n\n- Stop Watchlist/Grouplist checks from collapsing Detail's actions row\n",
         "checksum": "e12e78a3e2f92af8dfdca1b248cd740c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.3/jellio_1.5.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:27Z",
         "version": "0.6.0"
-      },
-      {
-        "changelog": "## [0.4.0] - 2026-08-20\n\nFull video player implementation with playback session reporting, controls overlay, and sleep timer.\n\n### Features\n\n• Fullscreen HTML5 video player with PlaybackInfo negotiation\n• Report playback progress, start, and stop events to Jellyfin server\n• Port sleep timer backend service, controller, and in-player modal\n• Add pause screen overlay with item metadata and playback indicators\n• Full keyboard accessibility and navigation across player controls",
-        "checksum": "bfe625cfb1c541736e2df209a754eaf1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.4.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-09-03T15:45:27Z",
-        "version": "0.1.0"
       }
     ]
   }
