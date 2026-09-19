@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.6.0] - 2026-09-19\n\n### 🚀 Features\n\n- Add scroll arrows to the Studio Hubs row\n",
+        "checksum": "304010217b3d026e5f0e4376505b0270",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.6.0/jellio_1.6.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-19T20:13:01Z",
+        "version": "1.6.0"
+      },
+      {
         "changelog": "## [1.5.4] - 2026-09-19\n\n### 🐛 Bug Fixes\n\n- Check activeElement too for list-membership-menu outside clicks\n",
         "checksum": "32c1950a2037f76b84ab772123411448",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.4/jellio_1.5.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T15:45:30Z",
         "version": "0.9.0"
-      },
-      {
-        "changelog": "## [0.5.0] - 2026-08-22\n\nEnhances the playback engine with stream quality selection and customizable subtitle rendering.\n\n### Features\n\n• Add pre-playback stream picker and mid-playback quality switcher\n• Add audio language selection and track switching\n• WebVTT subtitle track selector with real-time stream URL resolution\n• Subtitle styling bar with custom font size, text color, and background opacity\n• Adaptive transcoding fallback for unsupported browser codecs",
-        "checksum": "c80c19d81da59c1cb91fd71732d05098",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.5.0/jellio_0.6.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-09-03T15:45:27Z",
-        "version": "0.6.0"
       }
     ]
   }
