@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.5.3] - 2026-09-19\n\n### 🐛 Bug Fixes\n\n- Stop Watchlist/Grouplist checks from collapsing Detail's actions row\n",
+        "checksum": "e12e78a3e2f92af8dfdca1b248cd740c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.3/jellio_1.5.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-19T15:18:42Z",
+        "version": "1.5.3"
+      },
+      {
         "changelog": "## [1.5.2] - 2026-09-14\n\n### ⚡ Performance\n\n- Stop rebuilding catalog/genre rows on every playback session end\n",
         "checksum": "5a54ba9baaa0409d1214952fb7dca7ec",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.2/jellio_1.5.2.0.zip",
@@ -237,14 +245,6 @@
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.4.0/jellio_0.1.0.0.zip",
         "targetAbi": "10.11.6.0",
         "timestamp": "2026-09-03T15:45:27Z",
-        "version": "0.1.0"
-      },
-      {
-        "changelog": "## [0.3.0] - 2026-08-18\n\nAdds real-time instant search with debounced queries and smooth navigation state restoration.\n\n### Features\n\n• Render live search screen with instant debounced queries\n• Add search endpoint integration with direct API layer\n• Preserve query parameters and results on back/forward navigation\n• Keyboard navigation support for search result cards",
-        "checksum": "29c0c72c84b12f5187ebf0297379ed6a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.3.0/jellio_0.1.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-09-03T15:45:26Z",
         "version": "0.1.0"
       }
     ]
