@@ -15,7 +15,7 @@ import { toggleWatched, toggleWatchlist, toggleRating } from '../components/card
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { buildRatingBadge } from '../components/ratingBadge.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
-import { openListMembershipMenu } from '../components/listMembershipMenu.js';
+import { openListMembershipMenu, isInsideListMembershipMenu } from '../components/listMembershipMenu.js';
 import { showToast } from '../components/toast.js';
 import { formatRuntime } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
@@ -1045,8 +1045,17 @@ export async function renderDetail(root, params) {
   moreButton.appendChild(el('span', 'material-icons more_vert'));
 
   let actionsExpanded = false;
+  // Real bug, found live: Watchlist's own list-membership popover
+  // (components/listMembershipMenu.js) mounts straight to document.body,
+  // a real sibling of this actions row rather than a descendant of it -
+  // that file's own header explains why. A genuine click inside it used
+  // to read as "outside" this row, collapsing it (and the still-open
+  // popover's own real anchor along with it) the instant a reader tried
+  // to check Watchlist or Grouplist, before ever seeing whether it took.
   function handleActionsOutsideClick(event) {
-    if (!actions.contains(event.target)) collapseActions();
+    if (actions.contains(event.target)) return;
+    if (isInsideListMembershipMenu(event.target)) return;
+    collapseActions();
   }
   function collapseActions() {
     if (!actionsExpanded) return;

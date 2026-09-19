@@ -13,6 +13,24 @@ import { el } from '../runtime/dom.js';
 
 const MENU_ID = 'jellioListMembershipMenu';
 
+// Real bug, found live: screens/detail.js's own expanded-actions row
+// has its own separate real "click outside collapses it" listener,
+// checking only whether a click landed inside that row's own real DOM
+// subtree. This menu is appended straight to document.body instead (the
+// same real clamp-to-viewport positioning components/cardOptionsMenu.js's
+// own menu already needs), a real sibling of that row rather than a
+// descendant of it, so a genuine click on Watchlist/Grouplist inside
+// this menu read as "outside" the actions row that opened it, collapsing
+// that row (and, with its own real anchor button now gone from the
+// layout, this menu along with it) the instant a reader tried to check
+// either box. Exported so any caller with its own competing outside-
+// click guard can recognize this menu as part of the same real
+// interaction rather than something foreign to it.
+export function isInsideListMembershipMenu(target) {
+  const menu = document.getElementById(MENU_ID);
+  return !!(menu && menu.contains(target));
+}
+
 function closeMenu() {
   const existing = document.getElementById(MENU_ID);
   if (existing) existing.remove();
