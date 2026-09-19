@@ -26,9 +26,25 @@ const MENU_ID = 'jellioListMembershipMenu';
 // either box. Exported so any caller with its own competing outside-
 // click guard can recognize this menu as part of the same real
 // interaction rather than something foreign to it.
+//
+// Real bug, round two, found live: fixing detail.js's own guard to skip
+// event.target when it lands inside this menu stopped the menu itself
+// closing, but its own actions row still collapsed - real evidence that
+// whatever real event this specific TV/remote platform actually
+// dispatches for a D-pad Select on a focused checkbox does not carry
+// the real target this file's own code assumed (some platforms
+// synthesize it at a stale or unrelated coordinate rather than
+// dispatching it through the real focused element the way a genuine
+// pointer/touch interaction would). document.activeElement has no such
+// platform-dependent ambiguity: paint()/the click handler below never
+// blurs these checkbox buttons mid-toggle, so whichever one the reader
+// just activated is still the real focused element regardless of what
+// event.target claims, and this second check catches it either way.
 export function isInsideListMembershipMenu(target) {
   const menu = document.getElementById(MENU_ID);
-  return !!(menu && menu.contains(target));
+  if (!menu) return false;
+  if (menu.contains(target)) return true;
+  return menu.contains(document.activeElement);
 }
 
 function closeMenu() {
@@ -43,8 +59,9 @@ function handleKeydown(event) {
 }
 
 function handleOutsideClick(event) {
-  const menu = document.getElementById(MENU_ID);
-  if (menu && !menu.contains(event.target)) closeMenu();
+  if (!document.getElementById(MENU_ID)) return;
+  if (isInsideListMembershipMenu(event.target)) return;
+  closeMenu();
 }
 
 // Same real clamp-to-viewport shape components/cardOptionsMenu.js's
