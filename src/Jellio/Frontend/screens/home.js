@@ -235,11 +235,26 @@ function buildHubStrip(collections) {
 
   const section = el('section', 'jellio-hub');
   section.appendChild(el('h2', 'jellio-row-title', 'Studio Hubs'));
+  // Real feedback live: this strip had no visible way to reach a tile
+  // scrolled past the edge on a smaller monitor except a mouse drag or
+  // a trackpad swipe, the exact real gap components/scrollArrows.js's
+  // own header already solved once for every other row on this screen
+  // (components/row.js's own buildRow(), screens/detail.js's own
+  // season tabs/episode track). jellio-hub-tiles itself used to be both
+  // the real wrap and the real scrolling track in one element;
+  // attachScrollArrows() needs them split (its own header explains
+  // why, a real position: relative anchor point for the absolutely
+  // positioned arrows themselves), so a plain wrap div takes over
+  // jellio-hub-tiles' own real position: relative job and this row's
+  // own scrolling/padding stays on the track underneath it, unchanged.
+  const tilesWrap = el('div', 'jellio-row-track-wrap');
   const tiles = el('div', 'jellio-hub-tiles');
   names.forEach(function (name) {
     tiles.appendChild(buildHubTile(name));
   });
-  section.appendChild(tiles);
+  tilesWrap.appendChild(tiles);
+  section.appendChild(tilesWrap);
+  attachScrollArrows(tilesWrap, tiles);
   return section;
 }
 
