@@ -40,6 +40,7 @@ import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
+import { UPNEXT_TRIGGER_OPTIONS, getUpNextTriggerSeconds, setUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
 import { el } from '../runtime/dom.js';
@@ -306,6 +307,19 @@ function buildPlaybackCard() {
       isRememberStreamEnabled(),
       function (checked) {
         setRememberStreamEnabled(checked);
+      },
+    ),
+  );
+  body.appendChild(
+    buildSelectRow(
+      null,
+      'Next episode timing',
+      'When the Up Next card appears near the end of an episode. Only used when this episode has no Intro Skipper credits data to time it off instead.',
+      UPNEXT_TRIGGER_OPTIONS,
+      String(getUpNextTriggerSeconds()),
+      function (value, select, status) {
+        setUpNextTriggerSeconds(Number(value));
+        status.textContent = 'Saved, takes effect on the next episode.';
       },
     ),
   );

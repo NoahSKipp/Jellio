@@ -52,6 +52,7 @@ import {
   getJoinSync,
   prefetchStreams,
 } from '../runtime/api.js';
+import { getUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages } from '../components/streamPicker.js';
@@ -216,11 +217,14 @@ function applySubtitleStyle(video, style) {
 }
 
 // Fallback only, when Intro Skipper has no Credits segment for this
-// episode: 2 minutes before the end, NuvioWeb's own real default
-// (js/ui/screens/player/playerNextEpisodeRules.js, MINUTES_BEFORE_END
-// mode), not re-derived. Real credits segments below make this the
-// less common path, not the whole rule.
-const UPNEXT_FALLBACK_TRIGGER_SECONDS = 120;
+// episode: runtime/upNextSettings.js's own real default (45s before
+// the end), readable and changeable from screens/settings.js's own
+// Playback category. Real credits segments below make this the less
+// common path, not the whole rule. Read fresh inside shouldShowUpNextNow
+// below rather than cached once at module load: this whole file's own
+// render function runs again for every new playback within the same
+// real session, and a reader who just changed this in Settings should
+// not need a full reload for the very next episode to honour it.
 // Real feedback: 15s read as far too short, an inaccurate or early
 // real Intro Skipper Credits detection (shouldShowUpNextNow below
 // trusts that segment outright the moment it exists) already showing
@@ -2656,7 +2660,7 @@ export async function renderPlayer(root, params) {
     if (credits && credits.End > 0 && credits.Start >= 0) {
       return currentTime >= credits.Start;
     }
-    return duration - currentTime <= UPNEXT_FALLBACK_TRIGGER_SECONDS;
+    return duration - currentTime <= getUpNextTriggerSeconds();
   }
 
   skipButton.addEventListener('click', function () {
