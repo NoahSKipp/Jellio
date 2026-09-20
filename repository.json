@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.8.0] - 2026-09-20\n\n### 🚀 Features\n\n- Show the TMDB rating badge on poster cards\n",
+        "checksum": "9684da0f3c13660b8c9510823d7b899d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.8.0/jellio_1.8.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-20T19:15:15Z",
+        "version": "1.8.0"
+      },
+      {
         "changelog": "## [1.7.1] - 2026-09-20\n\n### 🐛 Bug Fixes\n\n- Make Up Next timing configurable and lower its default trigger\n",
         "checksum": "2914040f9e118e75d04d3209d841388f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.7.1/jellio_1.7.1.0.zip",
@@ -222,14 +230,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T18:51:51Z",
         "version": "1.0.0"
-      },
-      {
-        "changelog": "## [0.8.0] - 2026-08-27\n\nImplements social group watching, synchronized playback, and interactive ranking sessions.\n\n### Features\n\n• Group Watch integration backed by native Jellyfin SyncPlay\n• Real-time in-player Group Watch chat panel with clickable watch cards\n• Interactive ranking sessions with voting brackets and countdown auto-resolve\n• Buffer synchronization across joining group members",
-        "checksum": "42726ff497bc0431afef046de98c983b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.8.0/jellio_0.81.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T15:45:29Z",
-        "version": "0.81.0"
       },
       {
         "changelog": "## [0.9.1] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Guard against a stale subtitle track load race\n\n### 💼 Other\n\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n",
