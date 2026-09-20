@@ -1192,6 +1192,24 @@
   font-size: 1em;
 }
 
+/* components/card.js's own buildCard(): the same real ratingBadge.js
+   mark screens/detail.js's own meta row and the player's own pause
+   overlay already use, real feedback asked for it directly on the
+   poster grid/rows too rather than only after opening a title. Top
+   left, the one corner .jellio-card-watched/.jellio-card-progress
+   below do not already claim. */
+.jellio-card-rating {
+  position: absolute;
+  top: 0.4em;
+  left: 0.4em;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.7);
+  color: #fff;
+  font-size: 0.72em;
+  font-weight: 700;
+}
+
 .jellio-card-progress {
   position: absolute;
   left: 0.4em;

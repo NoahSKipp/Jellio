@@ -662,7 +662,7 @@ export function getLibraryItems(parentId, collectionType, options) {
     IncludeItemTypes: itemTypesForKind(collectionType),
     SortBy: opts.sortBy || 'SortName',
     SortOrder: opts.sortOrder || 'Ascending',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,CommunityRating',
     Limit: String(opts.limit || 100),
     StartIndex: String(opts.startIndex || 0),
   });
@@ -767,7 +767,7 @@ export function getWatchlistItems(limit) {
     Filters: 'IsFavorite',
     Recursive: 'true',
     IncludeItemTypes: 'Movie,Series',
-    Fields: 'PrimaryImageAspectRatio',
+    Fields: 'PrimaryImageAspectRatio,CommunityRating',
     Limit: String(limit || 100),
   });
   const path = '/Users/' + userId + '/Items?' + params.toString();
@@ -805,7 +805,7 @@ export function getGrouplistItems() {
     if (!ids.length) return [];
     const params = new URLSearchParams({
       Ids: ids.join(','),
-      Fields: 'PrimaryImageAspectRatio',
+      Fields: 'PrimaryImageAspectRatio,CommunityRating',
     });
     return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
       return (result && result.Items) || [];
