@@ -84,5 +84,36 @@ export function attachScrollArrows(trackWrap, track) {
   }
 
   window.requestAnimationFrame(refresh);
+
+  // Real bug, found live: this used to only ever check once, at
+  // mount. A reader who shrinks the browser window afterward (real
+  // feedback's own explicit case, "on smaller monitors") never got a
+  // second check - a row that genuinely fit at the original width and
+  // correctly showed no arrows then had no real way to discover it now
+  // overflows at the new one, short of a full reload rebuilding this
+  // row from scratch. ResizeObserver on trackWrap itself rather than a
+  // window resize listener on purpose: a real window-level listener
+  // never gets removed once this row's own content is gone (window
+  // itself never is), silently keeping every row this whole app has
+  // ever built, and everything each one closes over, alive forever.
+  // Browsers do not extend an observed element's own real lifetime
+  // just for being observed, so this dies with trackWrap the same
+  // ordinary way its own scroll listener above already does, no
+  // explicit disconnect() needed. Also catches real width changes this
+  // whole class of bug was never really only about - the sidebar
+  // expanding over content, a page zoom, a font-size change - not just
+  // a literal window resize event. Debounced for the same reason a
+  // window resize listener would have needed it too: a real drag
+  // fires dozens of these a second, each one a real layout read this
+  // has no reason to repeat that often.
+  if (typeof ResizeObserver !== 'undefined') {
+    let resizeTimer = null;
+    const observer = new ResizeObserver(function () {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(refresh, 150);
+    });
+    observer.observe(trackWrap);
+  }
+
   return refresh;
 }
