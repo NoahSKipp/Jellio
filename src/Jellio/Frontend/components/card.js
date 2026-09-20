@@ -12,6 +12,7 @@ import {
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { openListMembershipMenu } from './listMembershipMenu.js';
 import { showToast } from './toast.js';
+import { buildRatingBadge } from './ratingBadge.js';
 import { el } from '../runtime/dom.js';
 
 // Rebuilds just the watched badge/progress bar over the poster image,
@@ -377,6 +378,16 @@ export function buildCard(item, options) {
     const placeholder = document.createElement('div');
     placeholder.className = 'jellio-card-image jellio-card-image-empty';
     imageWrap.appendChild(placeholder);
+  }
+
+  // Top-left, .jellio-card-watched's own real check badge already owns
+  // top-right. Movie/Series only in practice (isEpisode above already
+  // covers the one real case, Up Next/Continue Watching, that would
+  // otherwise clash with this exact same corner - those go through
+  // buildLandscapeCard instead, a separate real box with no rating
+  // badge of its own asked for yet).
+  if (item.CommunityRating) {
+    imageWrap.appendChild(buildRatingBadge(item.CommunityRating, 'jellio-card-rating'));
   }
 
   paintCardState(imageWrap, item);
