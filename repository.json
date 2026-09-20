@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.7.1] - 2026-09-20\n\n### 🐛 Bug Fixes\n\n- Make Up Next timing configurable and lower its default trigger\n",
+        "checksum": "2914040f9e118e75d04d3209d841388f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.7.1/jellio_1.7.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-20T18:26:14Z",
+        "version": "1.7.1"
+      },
+      {
         "changelog": "## [1.7.0] - 2026-09-20\n\n### 🚀 Features\n\n- Add a volume control to the player\n\n### 🐛 Bug Fixes\n\n- Re-check scroll arrows on resize, not just once at mount\n",
         "checksum": "02ab996ba9cb83cc4ed5f2e67b8e45fa",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.7.0/jellio_1.7.0.0.zip",
@@ -222,14 +230,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T15:45:29Z",
         "version": "0.81.0"
-      },
-      {
-        "changelog": "## [0.7.0] - 2026-08-25\n\nAdds brand identity assets, boot splash video reveal, and external streaming service directory.\n\n### Features\n\n• Streaming hub directory with service branding marks and external links\n• Animated jellyfish boot splash video reveal with smooth view transitions\n• Progressive asset preloading pipeline for hero carousels and row thumbnails\n• Studio hub pages with custom hero banners and catalog rows",
-        "checksum": "1148abd6f5812455cdb86dff717b47a0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.7.0/jellio_0.16.0.0.zip",
-        "targetAbi": "10.11.6.0",
-        "timestamp": "2026-09-03T15:45:29Z",
-        "version": "0.16.0"
       },
       {
         "changelog": "## [0.9.1] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Guard against a stale subtitle track load race\n\n### 💼 Other\n\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n- Guard against a stale subtitle track load race\n",
