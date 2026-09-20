@@ -109,6 +109,38 @@ const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // actually needs attention (paused, still negotiating) regardless of
 // this timer.
 const IDLE_HIDE_MS = 3000;
+const VOLUME_KEY = 'jellioPlayerVolume';
+
+// Real feedback: no visible volume control existed at all, ArrowUp/
+// ArrowDown/M already adjusted the real <video> element itself (this
+// file's own adjustVolume/toggleMute below, already wired into
+// onPlayerKeydown further down) but nothing showed the current level
+// or gave a reader with no keyboard a way to reach it. Persisted the
+// same real way subtitle style already is below: a plain client side
+// preference, carried across episodes/titles the same real way every
+// mainstream player already remembers volume rather than resetting to
+// 100% on every new video element.
+function loadVolumePreference() {
+  try {
+    const raw = window.localStorage.getItem(VOLUME_KEY);
+    if (!raw) return { volume: 1, muted: false };
+    const parsed = JSON.parse(raw);
+    const volume = typeof parsed.volume === 'number' && parsed.volume >= 0 && parsed.volume <= 1 ? parsed.volume : 1;
+    return { volume: volume, muted: !!parsed.muted };
+  } catch (err) {
+    return { volume: 1, muted: false };
+  }
+}
+
+function saveVolumePreference(volume, muted) {
+  try {
+    window.localStorage.setItem(VOLUME_KEY, JSON.stringify({ volume: volume, muted: muted }));
+  } catch (err) {
+    // A private/full storage quota is not worth surfacing here, the
+    // chosen volume still applies for the rest of this playback session.
+  }
+}
+
 const SUBTITLE_STYLE_KEY = 'jellioSubtitleStyle';
 const SUBTITLE_SIZES = [
   { value: 'small', label: 'Small', rem: 1 },
@@ -644,6 +676,9 @@ export async function renderPlayer(root, params) {
   video.className = 'jellio-player-video';
   video.src = streamUrl;
   video.playsInline = true;
+  const savedVolume = loadVolumePreference();
+  video.volume = savedVolume.volume;
+  video.muted = savedVolume.muted;
   // A bare <video> with nothing decoded yet paints its own flat grey
   // frame, real feedback landed on this screen as the show's own real
   // artwork replaced by a blank box for however long the first real
@@ -1124,6 +1159,7 @@ export async function renderPlayer(root, params) {
     return button;
   }
 
+  const volumeButton = buildPillButton('volume_up', 'Volume');
   const speedButton = buildPillButton('speed', '1x');
   const subtitleButton = buildPillButton('subtitles', 'Subtitles');
   const audioButton = buildPillButton('graphic_eq', 'Audio');
@@ -1133,6 +1169,7 @@ export async function renderPlayer(root, params) {
   episodesButton.disabled = true;
   const sleepButton = buildPillButton('bedtime', 'Sleep');
 
+  pill.appendChild(volumeButton);
   pill.appendChild(speedButton);
   pill.appendChild(subtitleButton);
   pill.appendChild(audioButton);
@@ -1187,6 +1224,58 @@ export async function renderPlayer(root, params) {
       wakeControls();
     });
   }
+
+  // === Volume popover: a mute toggle beside a real range slider bound
+  // straight to video.volume, the one real control this screen never
+  // had - ArrowUp/ArrowDown/M already worked (adjustVolume/toggleMute
+  // further down), nothing ever showed the current level or gave a
+  // reader with no keyboard a way to reach it. syncVolumeUI() is the
+  // one real place that keeps the pill's own icon/label, this slider,
+  // and the mute button all in agreement, called from here and from
+  // adjustVolume/toggleMute below so a keyboard shortcut and a slider
+  // drag both always leave every real piece of this in the same state. ===
+  const volumeMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden jellio-player-popover-volume');
+  const volumeMuteButton = el('button', 'jellio-player-popover-volume-mute');
+  volumeMuteButton.type = 'button';
+  volumeMuteButton.setAttribute('aria-label', 'Mute');
+  const volumeMuteIcon = el('span', 'material-icons volume_up');
+  volumeMuteIcon.setAttribute('aria-hidden', 'true');
+  volumeMuteButton.appendChild(volumeMuteIcon);
+  const volumeSlider = document.createElement('input');
+  volumeSlider.type = 'range';
+  volumeSlider.className = 'jellio-player-popover-volume-slider';
+  volumeSlider.min = '0';
+  volumeSlider.max = '100';
+  volumeSlider.setAttribute('aria-label', 'Volume');
+  const volumeLevelLabel = el('span', 'jellio-player-popover-volume-level', '100%');
+  volumeMenu.appendChild(volumeMuteButton);
+  volumeMenu.appendChild(volumeSlider);
+  volumeMenu.appendChild(volumeLevelLabel);
+
+  function syncVolumeUI() {
+    const pct = Math.round(video.volume * 100);
+    const effectivelyMuted = video.muted || video.volume === 0;
+    volumeSlider.value = String(pct);
+    volumeLevelLabel.textContent = effectivelyMuted ? 'Muted' : pct + '%';
+    const iconName = effectivelyMuted ? 'volume_off' : pct < 50 ? 'volume_down' : 'volume_up';
+    volumeMuteIcon.className = 'material-icons ' + iconName;
+    volumeMuteButton.setAttribute('aria-label', effectivelyMuted ? 'Unmute' : 'Mute');
+    const pillIcon = volumeButton.querySelector('.material-icons');
+    if (pillIcon) pillIcon.className = 'material-icons ' + iconName;
+    saveVolumePreference(video.volume, video.muted);
+  }
+  syncVolumeUI();
+
+  volumeSlider.addEventListener('input', function () {
+    video.volume = Number(volumeSlider.value) / 100;
+    video.muted = false;
+    syncVolumeUI();
+  });
+  volumeMuteButton.addEventListener('click', function () {
+    video.muted = !video.muted;
+    syncVolumeUI();
+  });
+  registerPopover(volumeButton, volumeMenu);
 
   // === Speed popover ===
   const speedMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
@@ -2353,6 +2442,7 @@ export async function renderPlayer(root, params) {
   shell.appendChild(centerControls);
   shell.appendChild(seekRow);
   shell.appendChild(pill);
+  shell.appendChild(volumeMenu);
   shell.appendChild(speedMenu);
   shell.appendChild(subtitleMenu);
   shell.appendChild(audioMenu);
@@ -2425,10 +2515,12 @@ export async function renderPlayer(root, params) {
   function adjustVolume(delta) {
     video.muted = false;
     video.volume = Math.min(1, Math.max(0, video.volume + delta));
+    syncVolumeUI();
     showPlayerToast('Volume ' + Math.round(video.volume * 100) + '%');
   }
   function toggleMute() {
     video.muted = !video.muted;
+    syncVolumeUI();
     showPlayerToast(video.muted ? 'Muted' : 'Unmuted');
   }
   function onPlayerKeydown(event) {
