@@ -3053,6 +3053,50 @@
   flex: 0 0 auto;
 }
 
+/* screens/player.js's own volumeMenu: a mute toggle beside a real
+   horizontal slider rather than the flat option-list shape every other
+   small popover here uses, the one real popover whose own content
+   is not a pickable list. */
+.jellio-player-popover-volume {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.6em 1em;
+  min-width: 14em;
+}
+
+.jellio-player-popover-volume-mute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.2em;
+  height: 2.2em;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--jellio-text-color);
+  cursor: pointer;
+}
+
+.jellio-player-popover-volume-mute:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-player-popover-volume-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--jellio-secondary-color);
+}
+
+.jellio-player-popover-volume-level {
+  flex: 0 0 auto;
+  min-width: 3.2em;
+  font-size: 0.8em;
+  color: var(--jellio-text-secondary);
+  text-align: right;
+}
+
 /* Subtitles/audio real feedback: the plain right anchored popover
    above read as a tiny corner dropdown next to Nuvio's own real
    Untertitel/Tonspuren screenshots, a real centred panel wide enough
