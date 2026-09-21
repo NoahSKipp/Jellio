@@ -33,6 +33,7 @@ import {
   matchSubtitleStream,
   buildSubtitleUrl,
   getNextEpisode,
+  getCommunitySkipSegments,
   getIntroSkipperSegments,
   getJellioIntroCredits,
   analyzeIntroCredits,
@@ -2730,23 +2731,40 @@ export async function renderPlayer(root, params) {
     performSeek(skipTargetSeconds);
   });
 
-  getIntroSkipperSegments(itemId).then(function (result) {
-    if (result && (result.Introduction || result.Credits)) {
-      skipSegments = result;
+  // Real feedback, explicit: a real community timestamp database
+  // (Controllers/IntroCreditsController.cs's own GET .../community/{id},
+  // the same real approach NuvioTV itself ships) is tried first now,
+  // ahead of every real tier this file already had - no stream or
+  // ffmpeg access needed at all, so it answers the same real instant a
+  // title is opened for the very first time. Everything below it stays
+  // exactly as it already was, a real last resort chain for whatever
+  // the community tier itself does not cover (anime only for now, and
+  // only once a server admin has actually configured a real Simkl
+  // client id).
+  getCommunitySkipSegments(itemId).then(function (community) {
+    if (community) {
+      skipSegments = community;
       return;
     }
-    const fromChapters = chapterFallbackSegments(item.Chapters, item.RunTimeTicks);
-    if (fromChapters) {
-      skipSegments = fromChapters;
-      return;
-    }
-    // Third and last tier: Jellio's own real cross-episode analyzer,
-    // only ever has something to say once at least one other episode of
-    // this exact season has already been fingerprinted in the
-    // background (analyzeIntroCredits below, fired every real playback
-    // start), never the very first time a season is opened at all.
-    getJellioIntroCredits(itemId).then(function (analyzed) {
-      if (analyzed) skipSegments = analyzed;
+
+    getIntroSkipperSegments(itemId).then(function (result) {
+      if (result && (result.Introduction || result.Credits)) {
+        skipSegments = result;
+        return;
+      }
+      const fromChapters = chapterFallbackSegments(item.Chapters, item.RunTimeTicks);
+      if (fromChapters) {
+        skipSegments = fromChapters;
+        return;
+      }
+      // Real last resort: Jellio's own real cross-episode analyzer,
+      // only ever has something to say once at least one other episode
+      // of this exact season has already been fingerprinted in the
+      // same real batch (analyzeIntroCredits below, fired every real
+      // playback start).
+      getJellioIntroCredits(itemId).then(function (analyzed) {
+        if (analyzed) skipSegments = analyzed;
+      });
     });
   });
 

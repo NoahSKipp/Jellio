@@ -1,5 +1,7 @@
+using System.Net.Http;
 using Jellio.Services;
 using Jellio.Services.Achievements;
+using Jellio.Services.CommunitySkip;
 using Jellio.Services.Grouplist;
 using Jellio.Services.IntroCredits;
 using Jellyfin.Data.Events.Users;
@@ -95,5 +97,20 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<IntroCreditsStore>();
         services.AddSingleton<ChromaprintExtractor>();
         services.AddSingleton<IntroCreditsAnalyzer>();
+
+        // Services/CommunitySkip: the real NuvioTV-style tier, tried
+        // before any of the above. A real named client, not the default
+        // one AddHttpClient() above already registers: Simkl's own real
+        // /redirect endpoint IS its own real answer as a 302, following
+        // it the normal way would discard the one real Location header
+        // SimklIdResolver.cs actually needs.
+        services.AddHttpClient("SimklRedirect").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+        });
+        services.AddSingleton<SimklIdResolver>();
+        services.AddSingleton<AniSkipClient>();
+        services.AddSingleton<AnimeSkipClient>();
+        services.AddSingleton<CommunitySkipProvider>();
     }
 }

@@ -2,43 +2,78 @@ using System;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellio.Services.CommunitySkip;
 using Jellio.Services.IntroCredits;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellio.Controllers;
 
 /// <summary>
-/// Jellio's own real intro/credits detection, not a reskin of Intro
-/// Skipper's own native /Episode/{id}/Timestamps or Media Segments
-/// endpoints (runtime/api.js's own getIntroSkipperSegments already
-/// reads both of those first, this is a real third tier underneath
-/// them): IntroCreditsAnalyzer cross-references a small forward-looking
-/// batch of a season's own episodes directly against the same resolved
-/// stream URL real playback already uses. Real feedback this whole file
-/// exists to answer was Intro Skipper's own analysis never running at
-/// all against a real .strm-backed remote library; real feedback again,
-/// later, was that Gelato's own resolution only works from inside a
-/// real request like this controller's own POST already is, not from a
-/// detached background job (IntroCreditsAnalyzer's own header explains
-/// why), which is why this stays a real request-scoped batch rather
-/// than a whole-library sweep.
+/// Jellio's own real Skip Intro/Credits detection, two real tiers deep.
+/// screens/player.js's own getIntroSkipperSegments chain now tries this
+/// controller's own GET .../community/{itemId} first (Services/CommunitySkip,
+/// the same real community-database approach a real open source
+/// reference, NuvioTV, already ships - no stream or ffmpeg access at
+/// all, real free coverage for anime specifically), before ever falling
+/// back to Intro Skipper's own native/legacy lookups, embedded chapter
+/// names, or this file's own GET .../{itemId} (Services/IntroCredits,
+/// this plugin's own cross-episode audio analyzer): real feedback was
+/// explicit that this plugin's own analysis should only ever be a real
+/// last resort once every other real signal has already come back
+/// empty, not the first thing tried.
 /// </summary>
 [ApiController]
 [Route("Jellio/introcredits")]
 [Authorize]
-public class IntroCreditsController(IntroCreditsStore store, IntroCreditsAnalyzer analyzer) : ControllerBase
+public class IntroCreditsController(
+    IntroCreditsStore store,
+    IntroCreditsAnalyzer analyzer,
+    CommunitySkipProvider communitySkipProvider,
+    ILibraryManager libraryManager) : ControllerBase
 {
     public record SegmentRange(double Start, double End);
 
     public record SegmentsResponse(SegmentRange? Introduction, SegmentRange? Credits);
 
-    // screens/player.js's own real getIntroSkipperSegments chain reads
-    // this last, after both Intro Skipper's own real lookups and the
-    // embedded chapter name fallback come back empty: this file's own
-    // real analyzer only ever has something to say once at least one
-    // other episode of the exact same season has already been
-    // fingerprinted, not the first time a season is ever opened at all.
+    // Tried first, screens/player.js's own real getIntroSkipperSegments
+    // chain reads this before Intro Skipper's own real lookups, the
+    // embedded chapter name fallback, or this file's own GET
+    // .../{itemId} below: a real community database lookup needs no
+    // stream, no ffmpeg, and answers the same real instant a season is
+    // opened for the very first time, unlike every other real tier this
+    // plugin has.
+    [HttpGet("community/{itemId}")]
+    public async Task<IActionResult> GetCommunity(Guid itemId, CancellationToken cancellationToken)
+    {
+        if (libraryManager.GetItemById(itemId) is not Episode episode)
+        {
+            return Ok(new SegmentsResponse(null, null));
+        }
+
+        var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
+        if (result is null)
+        {
+            return Ok(new SegmentsResponse(null, null));
+        }
+
+        var introduction = result.IntroductionStart is { } introStart && result.IntroductionEnd is { } introEnd && introEnd > introStart
+            ? new SegmentRange(introStart, introEnd)
+            : null;
+        var credits = result.CreditsStart is { } creditsStart && result.CreditsEnd is { } creditsEnd && creditsEnd > creditsStart
+            ? new SegmentRange(creditsStart, creditsEnd)
+            : null;
+
+        return Ok(new SegmentsResponse(introduction, credits));
+    }
+
+    // The real last resort: this plugin's own cross-episode audio
+    // analyzer, only ever has something to say once at least one other
+    // episode of the exact same season has already been fingerprinted
+    // in the same real batch, not the first time a season is ever
+    // opened at all.
     [HttpGet("{itemId}")]
     public IActionResult Get(Guid itemId)
     {

@@ -187,6 +187,33 @@
             <input is="emby-input" type="password" id="txtTmdbAccessToken" autocomplete="off" />
           </div>
 
+          <div class="verticalSection">
+            <div class="sectionTitleContainer flex align-items-center">
+              <h2 class="sectionTitle">Skip Intro/Credits</h2>
+            </div>
+            <div class="fieldDescription">
+              Real community timestamp databases (the same approach NuvioTV itself uses), tried
+              before this plugin's own cross-episode audio analysis: no stream or ffmpeg access
+              needed, so a title gets a real Skip Intro/Credits button the very first time it is
+              opened, not only once two episodes of a season have already been analyzed. Anime
+              only for now. A free Simkl client ID (simkl.com, under Settings &gt; Developer)
+              maps a title onto the MyAnimeList/AniList id AniSkip and Anime-Skip actually key off;
+              a free Anime-Skip client ID (anime-skip.com, a separate real signup) adds its own
+              fallback coverage for whatever AniSkip itself does not have. Either left blank, that
+              one tier is skipped and everything else keeps working as before.
+            </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtSimklClientId">Simkl Client ID</label>
+            <input is="emby-input" type="password" id="txtSimklClientId" autocomplete="off" />
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtAnimeSkipClientId">Anime-Skip Client ID</label>
+            <input is="emby-input" type="password" id="txtAnimeSkipClientId" autocomplete="off" />
+          </div>
+
           <div>
             <button is="emby-button" type="submit" class="raised button-submit block emby-button">
               <span>Save</span>
@@ -287,6 +314,8 @@
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
+          document.querySelector('#txtSimklClientId').value = withDefault(config.SimklClientId, '');
+          document.querySelector('#txtAnimeSkipClientId').value = withDefault(config.AnimeSkipClientId, '');
           Dashboard.hideLoadingMsg();
         });
       }
@@ -299,6 +328,8 @@
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
+          config.SimklClientId = document.querySelector('#txtSimklClientId').value.trim();
+          config.AnimeSkipClientId = document.querySelector('#txtAnimeSkipClientId').value.trim();
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });
