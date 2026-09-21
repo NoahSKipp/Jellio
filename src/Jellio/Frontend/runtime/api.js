@@ -2304,24 +2304,31 @@ export async function getJellioIntroCredits(itemId) {
   }
 }
 
-// components/cardOptionsMenu.js's own admin-only "Find Skip Intro/
-// Credits" right-click action, a Movie or a whole Series (every season)
-// at once. No longer fired automatically on playback the way this used
-// to be (real feedback: burning a reader's own debrid quota on every
-// single episode start, resolving several other episodes nobody asked
-// to watch just to cross-reference them, was too expensive a real cost
-// for something Services/CommunitySkip's own free tier already covers
-// most of the time) - this is now the one real, deliberate trigger left
-// for this plugin's own chromaprint fallback. A generous real timeout,
-// not 5s: Controllers/IntroCreditsController.cs's own POST awaits the
-// whole real scan server side (Gelato's own resolution only works from
-// inside a real request), and a full series can genuinely take minutes.
+// components/cardOptionsMenu.js's own admin-only "Quick Skip Search"/
+// "Deep Skip Search" right-click actions (screens/detail.js's own
+// episode options menu offers the same pair scoped to just an Episode
+// or its whole Season), a Movie, Episode, Season or Series at once.
+// useAnalyzerFallback is the one real difference between the two: false
+// (Quick) stops the instant Services/CommunitySkip's own free tier comes
+// back short; true (Deep) lets the server reach for this plugin's own
+// debrid-backed chromaprint fallback for whatever that tier leaves
+// uncovered. No longer fired automatically on playback the way this
+// used to be (real feedback: burning a reader's own debrid quota on
+// every single episode start, resolving several other episodes nobody
+// asked to watch just to cross-reference them, was too expensive a real
+// cost for something the community tier already covers most of the
+// time) - these are now the only real, deliberate triggers left for
+// this plugin's own chromaprint fallback. A generous real timeout, not
+// 5s: Controllers/IntroCreditsController.cs's own POST awaits the whole
+// real scan server side (Gelato's own resolution only works from inside
+// a real request), and a full series can genuinely take minutes.
 // Resolves with the real {EpisodesScanned, CommunityHits, AnalyzerHits}
 // counts on success so the caller can toast a real summary, same as
 // prefetchStreams's own callers never having to wait on it themselves.
-export function scanIntroCreditsForItem(itemId) {
+export function scanIntroCreditsForItem(itemId, useAnalyzerFallback) {
   if (!itemId) return Promise.reject(new Error('Missing item id'));
-  return postJson('/Jellio/introcredits/scan/' + itemId, {}, 600000);
+  const query = '?useAnalyzerFallback=' + (useAnalyzerFallback ? 'true' : 'false');
+  return postJson('/Jellio/introcredits/scan/' + itemId + query, {}, 600000);
 }
 
 // A person's own real item DTO (name, overview, image tag), the same

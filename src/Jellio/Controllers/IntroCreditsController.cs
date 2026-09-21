@@ -101,22 +101,27 @@ public class IntroCreditsController(
 
     // The one real explicit trigger left for this plugin's own
     // chromaprint analyzer - components/cardOptionsMenu.js's own real
-    // admin-only "Find Skip Intro/Credits" right-click action, a Movie
-    // or a whole Series (every season) at once. Awaited, not fired and
-    // forgotten: Gelato's own real resolution gate (IntroCreditsAnalyzer's
-    // own header explains it) only works from inside a real request this
-    // controller action already is, exiting early would hand the rest of
-    // the work a real HttpContext that no longer exists. A full series
-    // can genuinely take minutes (Services/CommunitySkip's own free tier
-    // first, this plugin's own debrid-backed fallback only for whatever
-    // it leaves uncovered), so runtime/api.js's own real caller fires
-    // this with a generous client side timeout and does not block on the
-    // response body, same non-blocking real shape prefetchStreams already
-    // uses - this server side keeps running to completion regardless of
-    // how long the client itself keeps listening.
+    // admin-only "Quick Skip Search"/"Deep Skip Search" right-click
+    // actions (screens/detail.js's own episode options menu offers the
+    // same pair scoped to just an Episode or its whole Season), a Movie,
+    // Episode, Season or Series at once. useAnalyzerFallback is the one
+    // real difference between the two: false stops the instant Services/
+    // CommunitySkip's own free tier comes back short, true lets
+    // IntroCreditsBulkScanner reach for IntroCreditsAnalyzer's own real
+    // debrid-backed fallback for whatever that tier leaves uncovered.
+    // Awaited, not fired and forgotten: Gelato's own real resolution
+    // gate (IntroCreditsAnalyzer's own header explains it) only works
+    // from inside a real request this controller action already is,
+    // exiting early would hand the rest of the work a real HttpContext
+    // that no longer exists. A full series can genuinely take minutes,
+    // so runtime/api.js's own real caller fires this with a generous
+    // client side timeout and does not block on the response body, same
+    // non-blocking real shape prefetchStreams already uses - this server
+    // side keeps running to completion regardless of how long the client
+    // itself keeps listening.
     [HttpPost("scan/{itemId}")]
     [Authorize(Policy = "RequiresElevation")]
-    public async Task<IActionResult> Scan(Guid itemId)
+    public async Task<IActionResult> Scan(Guid itemId, [FromQuery] bool useAnalyzerFallback)
     {
         var userId = GetUserId();
         if (userId == Guid.Empty)
@@ -128,7 +133,7 @@ public class IntroCreditsController(
         // see this method's own header for why a real client disconnect
         // (or a generous but still finite client side timeout) should
         // never cut a real still-running scan short.
-        var result = await bulkScanner.ScanAsync(itemId, userId, CancellationToken.None).ConfigureAwait(false);
+        var result = await bulkScanner.ScanAsync(itemId, useAnalyzerFallback, userId, CancellationToken.None).ConfigureAwait(false);
         return Ok(new ScanResponse(result.EpisodesScanned, result.CommunityHits, result.AnalyzerHits));
     }
 
