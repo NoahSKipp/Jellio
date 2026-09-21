@@ -15,6 +15,7 @@ import { openStreamPicker } from './streamPicker.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
 import { isAdminSync } from '../runtime/adminStatus.js';
+import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 
@@ -145,8 +146,12 @@ function restartFromBeginning(item) {
     });
 }
 
-// Admin only (components/cardOptionsMenu.js's own openCardOptionsMenu
-// below gates this entirely on isAdminSync()): kicks off Controllers/
+// Admin only, and only once the server side toggle itself is on
+// (openCardOptionsMenu below gates this entirely on isAdminSync() and
+// isSkipIntroCreditsMenuEnabled() - Configuration/config.html's own
+// "Show Find Skip Intro/Credits..." checkbox, off by default so this
+// entry does not sit on every single card's own right click menu):
+// kicks off Controllers/
 // IntroCreditsController.cs's own POST .../scan/{itemId}, a Movie or a
 // whole Series (every season at once) - Services/CommunitySkip's own
 // free tier first, this plugin's own debrid-backed chromaprint fallback
@@ -299,7 +304,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         });
       }),
     );
-    if (isAdminSync() && (item.Type === 'Movie' || item.Type === 'Series')) {
+    if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && (item.Type === 'Movie' || item.Type === 'Series')) {
       menu.appendChild(
         buildOption('Find Skip Intro/Credits', 'search', function () {
           findSkipTimestamps(item);

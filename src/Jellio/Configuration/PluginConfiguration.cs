@@ -101,4 +101,13 @@ public class PluginConfiguration : BasePluginConfiguration
     // this one tier alone is skipped, AniSkip and this plugin's own real
     // fallbacks still apply.
     public string AnimeSkipClientId { get; set; } = string.Empty;
+
+    // components/cardOptionsMenu.js's own real admin-only "Find Skip
+    // Intro/Credits" right-click action (Controllers/IntroCreditsController.cs's
+    // own POST .../scan/{itemId}, IntroCreditsBulkScanner's own real
+    // trigger). Real feedback: an admin does not always want that extra
+    // entry sitting on every single Movie/Series card's own right click
+    // menu - off by default, only shows up once explicitly switched on
+    // here, and can be switched back off again once a real sweep is done.
+    public bool SkipIntroCreditsAdminMenuEnabled { get; set; }
 }
