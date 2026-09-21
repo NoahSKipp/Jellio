@@ -2236,6 +2236,42 @@ export async function getIntroSkipperSegments(itemId) {
   }
 }
 
+// Jellio's own real analyzer (Controllers/IntroCreditsController.cs),
+// the third tier screens/player.js's own real getIntroSkipperSegments
+// chain falls back to once both Intro Skipper's own real lookups above
+// and the embedded chapter name fallback come back empty: real
+// cross-episode audio fingerprint matching against the same resolved
+// stream URL real playback already uses, run entirely server side.
+export async function getJellioIntroCredits(itemId) {
+  try {
+    const result = await getJson('/Jellio/introcredits/' + itemId);
+    if (!result) return null;
+    const introduction = result.Introduction ? { Start: result.Introduction.Start, End: result.Introduction.End } : null;
+    const credits = result.Credits ? { Start: result.Credits.Start, End: result.Credits.End } : null;
+    if (!introduction && !credits) return null;
+    return {
+      Introduction: introduction || { Start: 0, End: 0 },
+      Credits: credits || { Start: 0, End: 0 },
+    };
+  } catch (err) {
+    console.warn('Jellio: could not load Jellio-analyzed intro/credits for', itemId, err);
+    return null;
+  }
+}
+
+// Fire and forget, the same real non-blocking convention
+// prefetchStreams above already uses: screens/player.js's own real
+// playback start fires this right alongside it, so a season gets
+// progressively fingerprinted in the background as it is actually
+// watched, never something a reader's own real Play tap waits on.
+export function analyzeIntroCredits(itemId) {
+  if (!itemId) return;
+  postJson('/Jellio/introcredits/analyze/' + itemId, {}, 5000).catch(function () {
+    // Best effort only, same as prefetchStreams: a failed trigger just
+    // means this episode's own season stays unanalyzed a while longer.
+  });
+}
+
 // A person's own real item DTO (name, overview, image tag), the same
 // generic GET /Users/{id}/Items/{itemId} every other item detail lookup
 // in this file already uses, works for a Person item exactly like it

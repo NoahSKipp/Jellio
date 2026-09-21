@@ -34,6 +34,8 @@ import {
   buildSubtitleUrl,
   getNextEpisode,
   getIntroSkipperSegments,
+  getJellioIntroCredits,
+  analyzeIntroCredits,
   getSeasons,
   getEpisodes,
   getCurrentUser,
@@ -2713,8 +2715,24 @@ export async function renderPlayer(root, params) {
       skipSegments = result;
       return;
     }
-    skipSegments = chapterFallbackSegments(item.Chapters, item.RunTimeTicks);
+    const fromChapters = chapterFallbackSegments(item.Chapters, item.RunTimeTicks);
+    if (fromChapters) {
+      skipSegments = fromChapters;
+      return;
+    }
+    // Third and last tier: Jellio's own real cross-episode analyzer,
+    // only ever has something to say once at least one other episode of
+    // this exact season has already been fingerprinted in the
+    // background (analyzeIntroCredits below, fired every real playback
+    // start), never the very first time a season is opened at all.
+    getJellioIntroCredits(itemId).then(function (analyzed) {
+      if (analyzed) skipSegments = analyzed;
+    });
   });
+
+  if (item.Type === 'Episode') {
+    analyzeIntroCredits(itemId);
+  }
 
   root.appendChild(video);
   showLoadingLogo();
