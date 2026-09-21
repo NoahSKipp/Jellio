@@ -2633,6 +2633,47 @@ export async function renderPlayer(root, params) {
   let skipSegments = null;
   let skipTargetSeconds = 0;
 
+  // Real feedback, live, after Intro Skipper's own logs were checked
+  // directly: a .strm-backed remote title (this whole library, Gelato's
+  // own architecture) never gets a real chromaprint analysis at all, or
+  // Intro Skipper logs "did not modify any segments" and moves on -
+  // fingerprinting needs the real audio itself, something a scheduled
+  // task pointed at a debrid link cannot reliably pull and decode the
+  // way it can a local file. No fix for that sits on this runtime's own
+  // side of that gap, only a second, independent real signal that does
+  // not depend on Intro Skipper's own analysis succeeding at all: a
+  // chapter track embedded in the stream itself (common on WEB-DL
+  // sources, Jellyfin's own scanner already reads it off the same
+  // remote stream it already reads RunTimeTicks/codecs from, no
+  // separate real fingerprinting pass needed), named the same way
+  // Intro Skipper's own chapter analysis mode already looks for. Tried
+  // only once Intro Skipper's own real data (native store or its legacy
+  // endpoint) comes back with nothing, never overrides a real detection
+  // that already exists.
+  function chapterFallbackSegments(chapters, runTimeTicks) {
+    if (!chapters || !chapters.length) return null;
+    function ticksToSeconds(ticks) {
+      return (ticks || 0) / TICKS_PER_SECOND;
+    }
+    function findSegment(nameRegex) {
+      const index = chapters.findIndex(function (chapter) {
+        return chapter.Name && nameRegex.test(chapter.Name);
+      });
+      if (index === -1) return null;
+      const start = ticksToSeconds(chapters[index].StartPositionTicks);
+      const nextTicks = index + 1 < chapters.length ? chapters[index + 1].StartPositionTicks : runTimeTicks;
+      const end = ticksToSeconds(nextTicks);
+      return end > start ? { Start: start, End: end } : null;
+    }
+    const introduction = findSegment(/^(intro|introduction|opening)/i);
+    const credits = findSegment(/credit|outro/i);
+    if (!introduction && !credits) return null;
+    return {
+      Introduction: introduction || { Start: 0, End: 0 },
+      Credits: credits || { Start: 0, End: 0 },
+    };
+  }
+
   function activeSkipSegment(currentTime) {
     if (!skipSegments) return null;
     const intro = skipSegments.Introduction;
@@ -2668,7 +2709,11 @@ export async function renderPlayer(root, params) {
   });
 
   getIntroSkipperSegments(itemId).then(function (result) {
-    if (result && (result.Introduction || result.Credits)) skipSegments = result;
+    if (result && (result.Introduction || result.Credits)) {
+      skipSegments = result;
+      return;
+    }
+    skipSegments = chapterFallbackSegments(item.Chapters, item.RunTimeTicks);
   });
 
   root.appendChild(video);
