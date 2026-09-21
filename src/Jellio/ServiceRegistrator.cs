@@ -1,6 +1,7 @@
 using Jellio.Services;
 using Jellio.Services.Achievements;
 using Jellio.Services.Grouplist;
+using Jellio.Services.IntroCredits;
 using Jellyfin.Data.Events.Users;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
@@ -85,5 +86,13 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // has, no hosted service of its own: GroupWatchJoinSyncController
         // is this store's only writer.
         services.AddSingleton<GroupWatchJoinSyncService>();
+
+        // No hosted service of its own: IntroCreditsController's own
+        // POST is the only real trigger, IntroCreditsAnalyzer's own
+        // SemaphoreSlim already serializes every real background run
+        // across whatever concurrent playback session queued it.
+        services.AddSingleton<IntroCreditsStore>();
+        services.AddSingleton<ChromaprintExtractor>();
+        services.AddSingleton<IntroCreditsAnalyzer>();
     }
 }
