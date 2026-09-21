@@ -7,14 +7,6 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using Microsoft.Extensions.Logging;
-// Jellyfin.Controller 10.11.x's own real User entity: pre plugin-
-// visible database refactor, this is Jellyfin.Data.Entities.User, not
-// MediaBrowser.Controller.Entities.User (no such type) or the newer
-// Jellyfin.Database.Implementations.Entities.User a later server
-// version moved it to. Aliased so a version mismatch, if this plugin
-// ever targets one, is a one line fix here rather than a search and
-// replace through this whole file.
-using JellyfinUser = Jellyfin.Data.Entities.User;
 
 namespace Jellio.Services.IntroCredits;
 
@@ -122,6 +114,28 @@ public class IntroCreditsAnalyzer(
             return;
         }
 
+        // A local function rather than a private method taking a real
+        // User parameter: that type's own real namespace has already
+        // moved at least once across a real Jellyfin server version
+        // (Jellyfin.Data.Entities in one, Jellyfin.Database.Implementations.
+        // Entities in another), user itself captured straight off the
+        // var above sidesteps ever needing to spell either one out here.
+        async Task<MediaSourceInfo?> ResolveSourceAsync(Episode candidate)
+        {
+            try
+            {
+                var sources = await mediaSourceManager
+                    .GetPlaybackMediaSources(candidate, user, false, false, cancellationToken)
+                    .ConfigureAwait(false);
+                return sources.FirstOrDefault(source => !string.IsNullOrEmpty(source.Path));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Jellio: could not resolve a playable source for {ItemId}", candidate.Id);
+                return null;
+            }
+        }
+
         Episode? anchor = null;
         int[]? anchorIntroFingerprint = null;
         int[]? anchorCreditsFingerprint = null;
@@ -139,7 +153,7 @@ public class IntroCreditsAnalyzer(
                 continue;
             }
 
-            var source = await ResolveSourceAsync(episode, user, cancellationToken).ConfigureAwait(false);
+            var source = await ResolveSourceAsync(episode).ConfigureAwait(false);
             if (source is null)
             {
                 store.MarkAttempted(episode.Id);
@@ -233,22 +247,6 @@ public class IntroCreditsAnalyzer(
         if (matchB is { } b)
         {
             store(itemIdB, offsetSecondsB + b.StartSeconds, offsetSecondsB + b.EndSeconds);
-        }
-    }
-
-    private async Task<MediaSourceInfo?> ResolveSourceAsync(Episode episode, JellyfinUser user, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var sources = await mediaSourceManager
-                .GetPlaybackMediaSources(episode, user, false, false, cancellationToken)
-                .ConfigureAwait(false);
-            return sources.FirstOrDefault(source => !string.IsNullOrEmpty(source.Path));
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Jellio: could not resolve a playable source for {ItemId}", episode.Id);
-            return null;
         }
     }
 }
