@@ -12,14 +12,16 @@ namespace Jellio.Services.IntroCredits;
 // .strm-backed remote library, real feedback confirmed live against
 // this server's own container logs, chromaprint fingerprinting itself
 // needing real decoded audio a scheduled task pointed at a debrid link
-// cannot reliably pull the way it can a local file. IntroCreditsAnalyzer
-// is this store's only real writer, cross-episode audio fingerprint
-// matching run directly against the same resolved stream URL real
-// playback already uses (MediaSourceInfo.Path, IMediaSourceManager),
-// not Intro Skipper's own queue, which (real Intro Skipper source,
-// confirmed before writing this) gates its own analysis queue to a
-// local, seekable file path and skips a remote one outright rather than
-// even attempting an HTTP read.
+// cannot reliably pull the way it can a local file. Two real writers now:
+// IntroCreditsAnalyzer's own cross-episode audio fingerprint matching,
+// run directly against the same resolved stream URL real playback
+// already uses (MediaSourceInfo.Path, IMediaSourceManager), not Intro
+// Skipper's own queue, which (real Intro Skipper source, confirmed
+// before writing this) gates its own analysis queue to a local, seekable
+// file path and skips a remote one outright rather than even attempting
+// an HTTP read; and IntroCreditsBulkScanner, caching a real hit from
+// Services/CommunitySkip's own free tier here too, so a season already
+// fully covered by it does not need to ask again on its own next scan.
 public class IntroCreditsStore(IApplicationPaths applicationPaths)
 {
     private readonly object _lock = new();

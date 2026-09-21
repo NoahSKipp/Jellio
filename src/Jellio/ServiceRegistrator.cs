@@ -92,11 +92,14 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // No hosted service of its own any more: Gelato's own resolution
         // only works from inside a real request (IntroCreditsAnalyzer's
         // own header explains why, a real live bug found after the fact),
-        // so IntroCreditsController's own POST is the only real trigger,
-        // awaited there rather than a detached background sweep.
+        // so IntroCreditsController's own admin-only POST .../scan is the
+        // only real trigger for the analyzer's own expensive fallback,
+        // awaited there rather than a detached background sweep or
+        // anything fired automatically on playback.
         services.AddSingleton<IntroCreditsStore>();
         services.AddSingleton<ChromaprintExtractor>();
         services.AddSingleton<IntroCreditsAnalyzer>();
+        services.AddSingleton<IntroCreditsBulkScanner>();
 
         // Services/CommunitySkip: the real NuvioTV-style tier, tried
         // before any of the above. A real named client, not the default

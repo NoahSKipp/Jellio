@@ -9,11 +9,12 @@
 // manually/Start from beginning/Remove, every other card offers
 // Watchlist/Mark watched/Remove from Library, matched here rather than
 // one generic list either context has to squint past.
-import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp } from '../runtime/api.js';
+import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { openStreamPicker } from './streamPicker.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
+import { isAdminSync } from '../runtime/adminStatus.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 
@@ -141,6 +142,30 @@ function restartFromBeginning(item) {
       item.UserData = updated;
       navigateTo('#/play?id=' + item.Id);
       return updated;
+    });
+}
+
+// Admin only (components/cardOptionsMenu.js's own openCardOptionsMenu
+// below gates this entirely on isAdminSync()): kicks off Controllers/
+// IntroCreditsController.cs's own POST .../scan/{itemId}, a Movie or a
+// whole Series (every season at once) - Services/CommunitySkip's own
+// free tier first, this plugin's own debrid-backed chromaprint fallback
+// only for whatever that tier leaves uncovered. Can genuinely take
+// minutes for a big show, so this only ever toasts a start/finish
+// summary, same non-blocking real shape everything else in this file
+// already uses rather than a spinner the admin has to sit and watch.
+function findSkipTimestamps(item) {
+  showToast('Looking for skip timestamps for ' + (item.Name || 'this title') + '…');
+  scanIntroCreditsForItem(item.Id)
+    .then(function (result) {
+      const communityHits = (result && result.CommunityHits) || 0;
+      const analyzerHits = (result && result.AnalyzerHits) || 0;
+      const scanned = (result && result.EpisodesScanned) || 1;
+      showToast('Skip timestamps found for ' + (communityHits + analyzerHits) + ' of ' + scanned + ' item(s).');
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not scan for skip timestamps', err);
+      showToast('Could not scan for skip timestamps. Try again.');
     });
 }
 
@@ -274,6 +299,13 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         });
       }),
     );
+    if (isAdminSync() && (item.Type === 'Movie' || item.Type === 'Series')) {
+      menu.appendChild(
+        buildOption('Find Skip Intro/Credits', 'search', function () {
+          findSkipTimestamps(item);
+        }),
+      );
+    }
   }
 
   document.body.appendChild(menu);

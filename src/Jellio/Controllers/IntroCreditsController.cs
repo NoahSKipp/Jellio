@@ -17,20 +17,23 @@ namespace Jellio.Controllers;
 /// controller's own GET .../community/{itemId} first (Services/CommunitySkip,
 /// the same real community-database approach a real open source
 /// reference, NuvioTV, already ships - no stream or ffmpeg access at
-/// all, real free coverage for anime specifically), before ever falling
-/// back to Intro Skipper's own native/legacy lookups, embedded chapter
-/// names, or this file's own GET .../{itemId} (Services/IntroCredits,
-/// this plugin's own cross-episode audio analyzer): real feedback was
-/// explicit that this plugin's own analysis should only ever be a real
-/// last resort once every other real signal has already come back
-/// empty, not the first thing tried.
+/// all, general TV/movie coverage from TheIntroDB plus anime specific
+/// coverage from AniSkip/Anime-Skip), before ever falling back to Intro
+/// Skipper's own native/legacy lookups, embedded chapter names, or this
+/// file's own GET .../{itemId} (Services/IntroCredits, this plugin's own
+/// cross-episode audio analyzer): real feedback was explicit that this
+/// plugin's own analysis should only ever be a real last resort once
+/// every other real signal has already come back empty, and should
+/// never run automatically at a real cost to a reader's own debrid
+/// quota - see POST .../scan/{itemId} below for the one real, deliberate
+/// way it still runs at all.
 /// </summary>
 [ApiController]
 [Route("Jellio/introcredits")]
 [Authorize]
 public class IntroCreditsController(
     IntroCreditsStore store,
-    IntroCreditsAnalyzer analyzer,
+    IntroCreditsBulkScanner bulkScanner,
     CommunitySkipProvider communitySkipProvider,
     ILibraryManager libraryManager) : ControllerBase
 {
@@ -48,12 +51,14 @@ public class IntroCreditsController(
     [HttpGet("community/{itemId}")]
     public async Task<IActionResult> GetCommunity(Guid itemId, CancellationToken cancellationToken)
     {
-        if (libraryManager.GetItemById(itemId) is not Episode episode)
+        var item = libraryManager.GetItemById(itemId);
+        var result = item switch
         {
-            return Ok(new SegmentsResponse(null, null));
-        }
+            Episode episode => await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false),
+            MediaBrowser.Controller.Entities.Movies.Movie movie => await communitySkipProvider.GetSkipIntervalsForMovieAsync(movie, cancellationToken).ConfigureAwait(false),
+            _ => null,
+        };
 
-        var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
         if (result is null)
         {
             return Ok(new SegmentsResponse(null, null));
@@ -70,10 +75,9 @@ public class IntroCreditsController(
     }
 
     // The real last resort: this plugin's own cross-episode audio
-    // analyzer, only ever has something to say once at least one other
-    // episode of the exact same season has already been fingerprinted
-    // in the same real batch, not the first time a season is ever
-    // opened at all.
+    // analyzer, only ever has something to say once an admin has
+    // explicitly run POST .../scan/{itemId} below against this item's
+    // own season/show and the community tier itself came back short.
     [HttpGet("{itemId}")]
     public IActionResult Get(Guid itemId)
     {
@@ -93,18 +97,26 @@ public class IntroCreditsController(
         return Ok(new SegmentsResponse(introduction, credits));
     }
 
-    // Awaited, not fired and forgotten: Gelato's own real resolution
-    // gate (IntroCreditsAnalyzer's own header explains it) only works
-    // from inside a real request this controller action already is,
-    // exiting early would hand the rest of the work a real HttpContext
-    // that no longer exists. Still never something a reader's own real
-    // Play tap waits on: screens/player.js's own real caller fires this
-    // with a generous client side timeout and ignores whatever comes
-    // back, same non-blocking real shape prefetchStreams already uses,
-    // just a real request this server side keeps running to completion
-    // regardless of how long the client itself keeps listening.
-    [HttpPost("analyze/{itemId}")]
-    public async Task<IActionResult> Analyze(Guid itemId)
+    public record ScanResponse(int EpisodesScanned, int CommunityHits, int AnalyzerHits);
+
+    // The one real explicit trigger left for this plugin's own
+    // chromaprint analyzer - components/cardOptionsMenu.js's own real
+    // admin-only "Find Skip Intro/Credits" right-click action, a Movie
+    // or a whole Series (every season) at once. Awaited, not fired and
+    // forgotten: Gelato's own real resolution gate (IntroCreditsAnalyzer's
+    // own header explains it) only works from inside a real request this
+    // controller action already is, exiting early would hand the rest of
+    // the work a real HttpContext that no longer exists. A full series
+    // can genuinely take minutes (Services/CommunitySkip's own free tier
+    // first, this plugin's own debrid-backed fallback only for whatever
+    // it leaves uncovered), so runtime/api.js's own real caller fires
+    // this with a generous client side timeout and does not block on the
+    // response body, same non-blocking real shape prefetchStreams already
+    // uses - this server side keeps running to completion regardless of
+    // how long the client itself keeps listening.
+    [HttpPost("scan/{itemId}")]
+    [Authorize(Policy = "RequiresElevation")]
+    public async Task<IActionResult> Scan(Guid itemId)
     {
         var userId = GetUserId();
         if (userId == Guid.Empty)
@@ -113,14 +125,11 @@ public class IntroCreditsController(
         }
 
         // CancellationToken.None on purpose, not HttpContext.RequestAborted:
-        // screens/player.js's own real caller does not wait on this
-        // response at all, so the underlying connection can look
-        // "aborted" long before this real batch is actually done: tying
-        // this to that same real token would cut a real still-useful
-        // analysis short over a real client that was never going to read
-        // the result anyway.
-        await analyzer.AnalyzeBatchAsync(itemId, userId, CancellationToken.None);
-        return Accepted();
+        // see this method's own header for why a real client disconnect
+        // (or a generous but still finite client side timeout) should
+        // never cut a real still-running scan short.
+        var result = await bulkScanner.ScanAsync(itemId, userId, CancellationToken.None).ConfigureAwait(false);
+        return Ok(new ScanResponse(result.EpisodesScanned, result.CommunityHits, result.AnalyzerHits));
     }
 
     private static double TicksToSeconds(long ticks) => ticks / (double)TimeSpan.TicksPerSecond;

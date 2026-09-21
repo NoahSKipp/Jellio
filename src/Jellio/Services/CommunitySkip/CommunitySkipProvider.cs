@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using Microsoft.Extensions.Logging;
 
@@ -37,37 +39,75 @@ public class CommunitySkipProvider(
     AnimeSkipClient animeSkipClient,
     ILogger<CommunitySkipProvider> logger)
 {
-    public async Task<CommunitySkipResult?> GetSkipIntervalsAsync(Episode episode, CancellationToken cancellationToken)
+    public Task<CommunitySkipResult?> GetSkipIntervalsAsync(Episode episode, CancellationToken cancellationToken)
     {
         var tmdbIdString = TmdbIdFor(episode);
+        return GetSkipIntervalsCoreAsync(
+            tmdbIdString,
+            isMovie: false,
+            episode.ParentIndexNumber,
+            episode.IndexNumber,
+            episode.RunTimeTicks,
+            allowAnimeFallback: true,
+            episode.Name,
+            cancellationToken);
+    }
+
+    // Movies get the exact same real TheIntroDB tier (isMovie: true skips
+    // the season/episode query parameters GetSegmentsAsync itself already
+    // guards on), just no Simkl/AniSkip/Anime-Skip fallback below it: that
+    // whole chain is keyed on MyAnimeList/AniList's own real per-episode
+    // numbering, which a standalone movie has none of.
+    public Task<CommunitySkipResult?> GetSkipIntervalsForMovieAsync(BaseItem movie, CancellationToken cancellationToken)
+    {
+        var tmdbIdString = movie.ProviderIds.TryGetValue("Tmdb", out var id) && !string.IsNullOrWhiteSpace(id) ? id : null;
+        return GetSkipIntervalsCoreAsync(
+            tmdbIdString,
+            isMovie: true,
+            season: null,
+            episode: null,
+            movie.RunTimeTicks,
+            allowAnimeFallback: false,
+            movie.Name,
+            cancellationToken);
+    }
+
+    private async Task<CommunitySkipResult?> GetSkipIntervalsCoreAsync(
+        string? tmdbIdString,
+        bool isMovie,
+        int? season,
+        int? episode,
+        long? runTimeTicks,
+        bool allowAnimeFallback,
+        string? itemName,
+        CancellationToken cancellationToken)
+    {
         var tmdbId = int.TryParse(tmdbIdString, out var parsedTmdbId) ? parsedTmdbId : (int?)null;
-        var episodeNumber = episode.IndexNumber;
-        var seasonNumber = episode.ParentIndexNumber;
-        var durationSeconds = episode.RunTimeTicks is > 0 ? episode.RunTimeTicks.Value / (double)TimeSpan.TicksPerSecond : 0d;
+        var durationSeconds = runTimeTicks is > 0 ? runTimeTicks.Value / (double)TimeSpan.TicksPerSecond : 0d;
 
         var theIntroDbIntervals = new List<CommunitySkipInterval>();
-        if (tmdbId is not null && episodeNumber is not null && seasonNumber is not null)
+        if (tmdbId is not null && (isMovie || (season is not null && episode is not null)))
         {
             try
             {
                 var durationMs = durationSeconds > 0 ? (long)(durationSeconds * 1000) : (long?)null;
                 var response = await theIntroDbClient
-                    .GetSegmentsAsync(tmdbId.Value, false, seasonNumber, episodeNumber, durationMs, cancellationToken)
+                    .GetSegmentsAsync(tmdbId.Value, isMovie, season, episode, durationMs, cancellationToken)
                     .ConfigureAwait(false);
                 theIntroDbIntervals = ConvertTheIntroDb(response, durationSeconds);
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, "Jellio: TheIntroDB lookup failed for {EpisodeName}", episode.Name);
+                logger.LogDebug(ex, "Jellio: TheIntroDB lookup failed for {ItemName}", itemName);
             }
         }
 
         var hasBoth = theIntroDbIntervals.Any(i => i.Category == CommunitySkipCategory.Opening)
             && theIntroDbIntervals.Any(i => i.Category == CommunitySkipCategory.Ending);
 
-        var animeIntervals = hasBoth
+        var animeIntervals = !allowAnimeFallback || hasBoth
             ? []
-            : await GetAnimeIntervalsAsync(episode, tmdbIdString, episodeNumber, cancellationToken).ConfigureAwait(false);
+            : await GetAnimeIntervalsAsync(itemName, tmdbIdString, episode, cancellationToken).ConfigureAwait(false);
 
         var merged = MergeByPriority(theIntroDbIntervals, animeIntervals);
         if (merged.Count == 0)
@@ -79,8 +119,8 @@ public class CommunitySkipProvider(
         var ending = merged.GetValueOrDefault(CommunitySkipCategory.Ending);
 
         logger.LogInformation(
-            "Jellio: community skip data for {EpisodeName} - opening: {HasOpening} ({OpeningProvider}), ending: {HasEnding} ({EndingProvider})",
-            episode.Name,
+            "Jellio: community skip data for {ItemName} - opening: {HasOpening} ({OpeningProvider}), ending: {HasEnding} ({EndingProvider})",
+            itemName,
             opening is not null,
             opening?.Provider,
             ending is not null,
@@ -128,7 +168,7 @@ public class CommunitySkipProvider(
     }
 
     private async Task<List<CommunitySkipInterval>> GetAnimeIntervalsAsync(
-        Episode episode,
+        string? itemName,
         string? tmdbId,
         int? episodeNumber,
         CancellationToken cancellationToken)
@@ -160,7 +200,7 @@ public class CommunitySkipProvider(
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: anime community skip lookup failed for {EpisodeName}", episode.Name);
+            logger.LogDebug(ex, "Jellio: anime community skip lookup failed for {ItemName}", itemName);
             return [];
         }
     }

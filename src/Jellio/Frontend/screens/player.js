@@ -36,7 +36,6 @@ import {
   getCommunitySkipSegments,
   getIntroSkipperSegments,
   getJellioIntroCredits,
-  analyzeIntroCredits,
   getSeasons,
   getEpisodes,
   getCurrentUser,
@@ -2758,19 +2757,17 @@ export async function renderPlayer(root, params) {
         return;
       }
       // Real last resort: Jellio's own real cross-episode analyzer,
-      // only ever has something to say once at least one other episode
-      // of this exact season has already been fingerprinted in the
-      // same real batch (analyzeIntroCredits below, fired every real
-      // playback start).
+      // only ever has something to say once an admin has explicitly run
+      // components/cardOptionsMenu.js's own "Find Skip Intro/Credits"
+      // scan against this season/show - no longer fired automatically on
+      // every playback (real feedback: too expensive a real cost against
+      // a reader's own debrid quota for something the community tier
+      // above already covers most of the time).
       getJellioIntroCredits(itemId).then(function (analyzed) {
         if (analyzed) skipSegments = analyzed;
       });
     });
   });
-
-  if (item.Type === 'Episode') {
-    analyzeIntroCredits(itemId);
-  }
 
   root.appendChild(video);
   showLoadingLogo();
