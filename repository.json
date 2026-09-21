@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.10.4] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Give Gelato a synthetic HttpContext during background analysis\n",
+        "checksum": "aff743802755d36c7947a63d8b7bfb4e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.4/jellio_1.10.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-21T20:20:15Z",
+        "version": "1.10.4"
+      },
+      {
         "changelog": "## [1.10.3] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Log server-side analysis at Information, force manual re-attempts\n",
         "checksum": "29d807ff9891fc3b1c48b1bfd64d9892",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.3/jellio_1.10.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T20:30:13Z",
         "version": "1.0.4"
-      },
-      {
-        "changelog": "## [1.0.3] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Credit a real watch as soon as Up Next appears, not only on ended\n- Use the real observed duration for Continue Watching too, not just achievements\n- Mark a real watch played in native Jellyfin too, not just this plugin's own state\n",
-        "checksum": "edd9f685501cb499c34a02de3526d485",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.3/jellio_1.0.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T20:21:19Z",
-        "version": "1.0.3"
       }
     ]
   }
