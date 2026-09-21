@@ -147,21 +147,25 @@ function restartFromBeginning(item) {
 }
 
 // Admin only, and only once the server side toggle itself is on
-// (openCardOptionsMenu below gates this entirely on isAdminSync() and
+// (callers gate this entirely on isAdminSync() and
 // isSkipIntroCreditsMenuEnabled() - Configuration/config.html's own
-// "Show Find Skip Intro/Credits..." checkbox, off by default so this
-// entry does not sit on every single card's own right click menu):
-// kicks off Controllers/
-// IntroCreditsController.cs's own POST .../scan/{itemId}, a Movie or a
-// whole Series (every season at once) - Services/CommunitySkip's own
-// free tier first, this plugin's own debrid-backed chromaprint fallback
-// only for whatever that tier leaves uncovered. Can genuinely take
-// minutes for a big show, so this only ever toasts a start/finish
-// summary, same non-blocking real shape everything else in this file
-// already uses rather than a spinner the admin has to sit and watch.
-function findSkipTimestamps(item) {
-  showToast('Looking for skip timestamps for ' + (item.Name || 'this title') + '…');
-  scanIntroCreditsForItem(item.Id)
+// "Show Find Skip Intro/Credits..." checkbox, off by default so these
+// entries do not sit on every single card's own right click menu):
+// kicks off Controllers/IntroCreditsController.cs's own POST
+// .../scan/{itemId}, a Movie, Episode, Season or whole Series at once -
+// Services/CommunitySkip's own free tier first, this plugin's own
+// debrid-backed chromaprint fallback only ever reached when
+// useAnalyzerFallback is true and that tier leaves something uncovered.
+// Exported so screens/detail.js's own episode options menu can offer
+// the exact same pair scoped to just an Episode or its whole Season,
+// rather than a second copy of this same toast/error handling. Can
+// genuinely take minutes for a big show, so this only ever toasts a
+// start/finish summary, same non-blocking real shape everything else in
+// this file already uses rather than a spinner the admin has to sit and
+// watch.
+export function findSkipTimestamps(itemId, itemName, useAnalyzerFallback) {
+  showToast('Looking for skip timestamps for ' + (itemName || 'this title') + '…');
+  scanIntroCreditsForItem(itemId, useAnalyzerFallback)
     .then(function (result) {
       const communityHits = (result && result.CommunityHits) || 0;
       const analyzerHits = (result && result.AnalyzerHits) || 0;
@@ -304,10 +308,25 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         });
       }),
     );
-    if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && (item.Type === 'Movie' || item.Type === 'Series')) {
+    if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && item.Type === 'Movie') {
+      // No Quick/Deep split here: ScanMovieAsync (Services/IntroCredits/
+      // IntroCreditsBulkScanner.cs) never has a real fallback to reach
+      // for regardless, a standalone movie has no sibling of its own to
+      // cross-reference against.
       menu.appendChild(
         buildOption('Find Skip Intro/Credits', 'search', function () {
-          findSkipTimestamps(item);
+          findSkipTimestamps(item.Id, item.Name, false);
+        }),
+      );
+    } else if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && item.Type === 'Series') {
+      menu.appendChild(
+        buildOption('Quick Skip Search (Show)', 'bolt', function () {
+          findSkipTimestamps(item.Id, item.Name, false);
+        }),
+      );
+      menu.appendChild(
+        buildOption('Deep Skip Search (Show)', 'travel_explore', function () {
+          findSkipTimestamps(item.Id, item.Name, true);
         }),
       );
     }

@@ -13,14 +13,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.IntroCredits;
 
-// The one real explicit trigger left for this plugin's own chromaprint
-// analyzer (Controllers/IntroCreditsController.cs's own real right-click
-// "Find Skip Intro/Credits" action, gated admin only): Services/
-// CommunitySkip's own free tier runs first, no stream access at all, and
-// only whatever it leaves uncovered for a season ever reaches
-// IntroCreditsAnalyzer's own real debrid-backed fallback below it - real
-// feedback was explicit that a reader's own debrid quota should never be
-// spent automatically, only on a deliberate real ask.
+// Two real explicit triggers components/cardOptionsMenu.js and
+// screens/detail.js's own episode options menu both offer (admin only,
+// Configuration/config.html's own toggle): a "Quick Skip Search"
+// (Services/CommunitySkip's own free tier only, does nothing further
+// once that comes back short) and a "Deep Skip Search" (the same free
+// tier first, only reaching for IntroCreditsAnalyzer's own real
+// debrid-backed chromaprint fallback for whatever it leaves uncovered).
+// Real feedback was explicit that a reader's own debrid quota should
+// never be spent automatically, and that even a deliberate real ask
+// should let an admin choose whether that cost is worth paying, not
+// just how big a scope to pay it across (Episode/Season/Show).
 public class IntroCreditsBulkScanner(
     ILibraryManager libraryManager,
     CommunitySkipProvider communitySkipProvider,
@@ -30,13 +33,15 @@ public class IntroCreditsBulkScanner(
 {
     public record ScanResult(int EpisodesScanned, int CommunityHits, int AnalyzerHits);
 
-    public async Task<ScanResult> ScanAsync(Guid itemId, Guid userId, CancellationToken cancellationToken)
+    public async Task<ScanResult> ScanAsync(Guid itemId, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
     {
         var item = libraryManager.GetItemById(itemId);
         return item switch
         {
             Movie movie => await ScanMovieAsync(movie, cancellationToken).ConfigureAwait(false),
-            Series series => await ScanSeriesAsync(series, userId, cancellationToken).ConfigureAwait(false),
+            Episode episode => await ScanEpisodeAsync(episode, useAnalyzerFallback, userId, cancellationToken).ConfigureAwait(false),
+            Season season => await ScanSeasonAsync(season, useAnalyzerFallback, userId, cancellationToken).ConfigureAwait(false),
+            Series series => await ScanSeriesAsync(series, useAnalyzerFallback, userId, cancellationToken).ConfigureAwait(false),
             _ => new ScanResult(0, 0, 0),
         };
     }
@@ -47,6 +52,8 @@ public class IntroCreditsBulkScanner(
     // for one - same real limitation the community tier itself already
     // has (Services/CommunitySkip/CommunitySkipProvider.cs's own header),
     // just with no expensive fallback below it to reach for here at all.
+    // No Quick/Deep distinction on the frontend's own Movie card menu for
+    // exactly that reason, a single "Find Skip Intro/Credits" entry only.
     private async Task<ScanResult> ScanMovieAsync(Movie movie, CancellationToken cancellationToken)
     {
         var result = await communitySkipProvider.GetSkipIntervalsForMovieAsync(movie, cancellationToken).ConfigureAwait(false);
@@ -55,7 +62,40 @@ public class IntroCreditsBulkScanner(
         return new ScanResult(1, found ? 1 : 0, 0);
     }
 
-    private async Task<ScanResult> ScanSeriesAsync(Series series, Guid userId, CancellationToken cancellationToken)
+    // Deep Search on a single episode still has to reach the whole real
+    // season for IntroCreditsAnalyzer's own cross-episode comparison
+    // (chromaprint needs at least one other episode to anchor against, a
+    // real limitation this file cannot avoid), but only ever pays that
+    // real cost when this one episode's own community lookup came back
+    // short - a Quick miss on a well covered season never triggers it.
+    private async Task<ScanResult> ScanEpisodeAsync(Episode episode, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
+    {
+        var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
+        var communityHit = StoreCommunityResult(episode.Id, result);
+
+        if (communityHit || !useAnalyzerFallback || episode.SeasonId == Guid.Empty)
+        {
+            logger.LogInformation("Jellio: community skip scan for {EpisodeName} - found: {Found}", episode.Name, communityHit);
+            return new ScanResult(1, communityHit ? 1 : 0, 0);
+        }
+
+        var beforeIntro = store.Get(episode.Id)?.IntroEndTicks is > 0;
+        var beforeCredits = store.Get(episode.Id)?.CreditsEndTicks is > 0;
+
+        await analyzer.AnalyzeSeasonAsync(episode.SeasonId, userId, cancellationToken).ConfigureAwait(false);
+
+        var afterIntro = store.Get(episode.Id)?.IntroEndTicks is > 0;
+        var afterCredits = store.Get(episode.Id)?.CreditsEndTicks is > 0;
+        var analyzerHit = (afterIntro && !beforeIntro) || (afterCredits && !beforeCredits);
+
+        logger.LogInformation("Jellio: deep skip scan for {EpisodeName} - analyzer found: {Found}", episode.Name, analyzerHit);
+        return new ScanResult(1, 0, analyzerHit ? 1 : 0);
+    }
+
+    private Task<ScanResult> ScanSeasonAsync(Season season, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken) =>
+        ScanSeasonInternalAsync(season, useAnalyzerFallback, userId, cancellationToken);
+
+    private async Task<ScanResult> ScanSeriesAsync(Series series, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
     {
         var seasons = libraryManager.GetItemList(new InternalItemsQuery
         {
@@ -70,44 +110,10 @@ public class IntroCreditsBulkScanner(
         foreach (var season in seasons)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            var episodes = season.GetEpisodes().OfType<Episode>().Where(episode => episode.RunTimeTicks is > 0).ToList();
-            var stillMissing = new List<Episode>();
-
-            foreach (var episode in episodes)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                episodesScanned++;
-
-                var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
-                if (StoreCommunityResult(episode.Id, result))
-                {
-                    communityHits++;
-                }
-                else
-                {
-                    stillMissing.Add(episode);
-                }
-            }
-
-            // Only the episodes the community tier above could not
-            // already answer for ever reach the expensive fallback, and
-            // only when there are at least two of them left in this
-            // season for IntroCreditsAnalyzer's own cross-episode
-            // comparison to have anything to anchor against.
-            if (stillMissing.Count < 2)
-            {
-                continue;
-            }
-
-            var beforeIntro = stillMissing.Count(episode => store.Get(episode.Id)?.IntroEndTicks is > 0);
-            var beforeCredits = stillMissing.Count(episode => store.Get(episode.Id)?.CreditsEndTicks is > 0);
-
-            await analyzer.AnalyzeSeasonAsync(season.Id, userId, cancellationToken).ConfigureAwait(false);
-
-            var afterIntro = stillMissing.Count(episode => store.Get(episode.Id)?.IntroEndTicks is > 0);
-            var afterCredits = stillMissing.Count(episode => store.Get(episode.Id)?.CreditsEndTicks is > 0);
-            analyzerHits += Math.Max(afterIntro - beforeIntro, 0) + Math.Max(afterCredits - beforeCredits, 0);
+            var seasonResult = await ScanSeasonInternalAsync(season, useAnalyzerFallback, userId, cancellationToken).ConfigureAwait(false);
+            episodesScanned += seasonResult.EpisodesScanned;
+            communityHits += seasonResult.CommunityHits;
+            analyzerHits += seasonResult.AnalyzerHits;
         }
 
         logger.LogInformation(
@@ -116,6 +122,51 @@ public class IntroCreditsBulkScanner(
             episodesScanned,
             communityHits,
             analyzerHits);
+
+        return new ScanResult(episodesScanned, communityHits, analyzerHits);
+    }
+
+    private async Task<ScanResult> ScanSeasonInternalAsync(Season season, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
+    {
+        var episodes = season.GetEpisodes().OfType<Episode>().Where(episode => episode.RunTimeTicks is > 0).ToList();
+        var episodesScanned = 0;
+        var communityHits = 0;
+        var stillMissing = new List<Episode>();
+
+        foreach (var episode in episodes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            episodesScanned++;
+
+            var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
+            if (StoreCommunityResult(episode.Id, result))
+            {
+                communityHits++;
+            }
+            else
+            {
+                stillMissing.Add(episode);
+            }
+        }
+
+        // Quick Search stops right here - Deep Search only reaches the
+        // expensive fallback below for whatever the community tier above
+        // left uncovered, and only when there are at least two of them
+        // left in this season for IntroCreditsAnalyzer's own
+        // cross-episode comparison to have anything to anchor against.
+        if (!useAnalyzerFallback || stillMissing.Count < 2)
+        {
+            return new ScanResult(episodesScanned, communityHits, 0);
+        }
+
+        var beforeIntro = stillMissing.Count(episode => store.Get(episode.Id)?.IntroEndTicks is > 0);
+        var beforeCredits = stillMissing.Count(episode => store.Get(episode.Id)?.CreditsEndTicks is > 0);
+
+        await analyzer.AnalyzeSeasonAsync(season.Id, userId, cancellationToken).ConfigureAwait(false);
+
+        var afterIntro = stillMissing.Count(episode => store.Get(episode.Id)?.IntroEndTicks is > 0);
+        var afterCredits = stillMissing.Count(episode => store.Get(episode.Id)?.CreditsEndTicks is > 0);
+        var analyzerHits = Math.Max(afterIntro - beforeIntro, 0) + Math.Max(afterCredits - beforeCredits, 0);
 
         return new ScanResult(episodesScanned, communityHits, analyzerHits);
     }

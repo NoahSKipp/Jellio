@@ -11,11 +11,13 @@ import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
-import { toggleWatched, toggleWatchlist, toggleRating } from '../components/cardOptionsMenu.js';
+import { toggleWatched, toggleWatchlist, toggleRating, findSkipTimestamps } from '../components/cardOptionsMenu.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { buildRatingBadge } from '../components/ratingBadge.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { openListMembershipMenu, isInsideListMembershipMenu } from '../components/listMembershipMenu.js';
+import { isAdminSync } from '../runtime/adminStatus.js';
+import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from '../components/toast.js';
 import { formatRuntime } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
@@ -258,6 +260,39 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         });
     }),
   );
+
+  // Admin only, and only once the server side toggle itself is on
+  // (Configuration/config.html's own "Show Find Skip Intro/Credits..."
+  // checkbox, off by default): components/cardOptionsMenu.js's own
+  // findSkipTimestamps, the same Quick/Deep pair a Series card's own
+  // right click offers for the whole show, scoped here to just this one
+  // Episode or its whole Season instead - "Mark season as watched" right
+  // above already established this same menu as where a season wide
+  // action against an episode card belongs.
+  if (isAdminSync() && isSkipIntroCreditsMenuEnabled()) {
+    menu.appendChild(
+      buildEpisodeMenuOption('Quick Skip Search (Episode)', 'bolt', function () {
+        findSkipTimestamps(episode.Id, episode.Name, false);
+      }),
+    );
+    menu.appendChild(
+      buildEpisodeMenuOption('Deep Skip Search (Episode)', 'travel_explore', function () {
+        findSkipTimestamps(episode.Id, episode.Name, true);
+      }),
+    );
+    if (context.season) {
+      menu.appendChild(
+        buildEpisodeMenuOption('Quick Skip Search (Season)', 'bolt', function () {
+          findSkipTimestamps(context.season.Id, context.season.Name, false);
+        }),
+      );
+      menu.appendChild(
+        buildEpisodeMenuOption('Deep Skip Search (Season)', 'travel_explore', function () {
+          findSkipTimestamps(context.season.Id, context.season.Name, true);
+        }),
+      );
+    }
+  }
 
   document.body.appendChild(menu);
   document.addEventListener('keydown', handleEpisodeMenuKeydown);
@@ -510,16 +545,19 @@ async function buildSeasonsSection(seriesId) {
   // The exact array each episode card's own context menu mutates in
   // place (screens/detail.js's own openEpisodeOptionsMenu, above),
   // re-rendered straight from it again on a mark watched/unwatched
-  // rather than a second real fetch of the same season.
-  function renderTrack(episodes) {
+  // rather than a second real fetch of the same season. season itself
+  // rides along in context too now, findSkipTimestamps's own Season
+  // scope needs its own real id, not just the episode array.
+  function renderTrack(season, episodes) {
     track.textContent = '';
     episodes.forEach(function (episode, index) {
       track.appendChild(
         buildEpisodeCard(episode, {
           episodes: episodes,
           index: index,
+          season: season,
           onChanged: function () {
-            renderTrack(episodes);
+            renderTrack(season, episodes);
           },
         }),
       );
@@ -542,7 +580,9 @@ async function buildSeasonsSection(seriesId) {
     tabButton.setAttribute('aria-selected', 'true');
     track.textContent = '';
     getEpisodes(seriesId, season.Id)
-      .then(renderTrack)
+      .then(function (episodes) {
+        renderTrack(season, episodes);
+      })
       .catch(function (err) {
         console.warn('Jellio: could not load episodes', err);
       });
