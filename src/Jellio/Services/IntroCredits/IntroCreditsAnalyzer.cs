@@ -8,6 +8,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.IntroCredits;
@@ -25,6 +26,8 @@ public class IntroCreditsAnalyzer(
     ILibraryManager libraryManager,
     IUserManager userManager,
     IMediaSourceManager mediaSourceManager,
+    IHttpContextAccessor httpContextAccessor,
+    IServiceProvider serviceProvider,
     ChromaprintExtractor extractor,
     IntroCreditsStore store,
     ILogger<IntroCreditsAnalyzer> logger)
@@ -173,10 +176,31 @@ public class IntroCreditsAnalyzer(
         // (Jellyfin.Data.Entities in one, Jellyfin.Database.Implementations.
         // Entities in another), user itself captured straight off the
         // var above sidesteps ever needing to spell either one out here.
+        //
+        // Real bug, found live: Gelato's own IMediaSourceManager decorator
+        // (MediaSourceManagerDecorator.GetStaticMediaSources, confirmed
+        // from a real server's own stack trace) reads the ambient
+        // HttpContext (IHttpContextAccessor) to check the current real
+        // ASP.NET endpoint, something every real playback request always
+        // has and this background job never does - a real
+        // ArgumentNullException on every single call, 100% of this whole
+        // real feature's own source resolution failing silently behind
+        // "no playable source resolved" until now. A synthetic
+        // DefaultHttpContext set on the same real IHttpContextAccessor
+        // for the real duration of this one call is enough: Gelato's own
+        // GetEndpoint() reads a non-null real HttpContext.Features and
+        // finds no matched endpoint, the same real answer a genuine
+        // request to a route no controller ever claimed would already
+        // give it, not a special case this needs to know about.
+        // IHttpContextAccessor.HttpContext is itself an AsyncLocal under
+        // the hood, so this only ever affects this one real async call
+        // chain, never a real concurrent request elsewhere on the host.
         async Task<MediaSourceInfo?> ResolveSourceAsync(Episode candidate)
         {
+            var previousContext = httpContextAccessor.HttpContext;
             try
             {
+                httpContextAccessor.HttpContext = new DefaultHttpContext { RequestServices = serviceProvider };
                 var sources = await mediaSourceManager
                     .GetPlaybackMediaSources(candidate, user, false, false, cancellationToken)
                     .ConfigureAwait(false);
@@ -186,6 +210,10 @@ public class IntroCreditsAnalyzer(
             {
                 logger.LogWarning(ex, "Jellio: could not resolve a playable source for {ItemId}", candidate.Id);
                 return null;
+            }
+            finally
+            {
+                httpContextAccessor.HttpContext = previousContext;
             }
         }
 

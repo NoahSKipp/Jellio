@@ -97,5 +97,16 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<ChromaprintExtractor>();
         services.AddSingleton<IntroCreditsAnalyzer>();
         services.AddHostedService<IntroCreditsLibraryScanService>();
+
+        // IntroCreditsAnalyzer's own real fix for a real live bug: Gelato's
+        // own IMediaSourceManager decorator reads the ambient HttpContext
+        // to check the current real endpoint, something a background job
+        // never has, and throws instead of treating "no endpoint" as the
+        // real answer a genuine request to an unclaimed route would
+        // already get. AddHttpContextAccessor() is idempotent by design,
+        // same real reason AddHttpClient() above already is; Jellyfin's
+        // own host almost certainly already registers this, safe either
+        // way.
+        services.AddHttpContextAccessor();
     }
 }
