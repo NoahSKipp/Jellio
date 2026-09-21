@@ -2184,7 +2184,19 @@ export function getGenreItems(parentId, itemType, genre, limit) {
 // duration in this runtime already uses.
 async function getNativeMediaSegments(itemId) {
   const result = await getJson('/MediaSegments/' + itemId);
-  const items = (result && result.Items) || [];
+  // Defensive against either real shape: most Jellyfin list endpoints
+  // wrap in QueryResult ({ Items, TotalRecordCount }), but not every
+  // one always has, and a real mismatch here would silently read as
+  // "no segments" even when the server genuinely has some, no different
+  // from a real miss to every caller downstream. Logged either way,
+  // real feedback live was the native client showing a working Skip
+  // Intro for the exact same item this call came back empty for, worth
+  // being able to see the raw real response next time that happens
+  // rather than guessing blind again.
+  const items = Array.isArray(result) ? result : (result && result.Items) || [];
+  if (!items.length) {
+    console.debug('Jellio: native Media Segments came back with nothing for', itemId, result);
+  }
   function bySeconds(type) {
     const segment = items.find(function (s) {
       return s.Type === type;
