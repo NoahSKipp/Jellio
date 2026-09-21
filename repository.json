@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.9.0] - 2026-09-21\n\n### 🚀 Features\n\n- Build our own cross-episode intro/credits analyzer\n\n### 🐛 Bug Fixes\n\n- Fall back to embedded chapter names for Skip Intro/Credits\n- Stop naming Jellyfin's own User type directly\n",
+        "checksum": "cee70d6074760b82c4cdd7de48574a96",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.9.0/jellio_1.9.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-21T09:31:16Z",
+        "version": "1.9.0"
+      },
+      {
         "changelog": "## [1.8.0] - 2026-09-20\n\n### 🚀 Features\n\n- Show the TMDB rating badge on poster cards\n",
         "checksum": "9684da0f3c13660b8c9510823d7b899d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.8.0/jellio_1.8.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T17:41:19Z",
         "version": "0.9.1"
-      },
-      {
-        "changelog": "## [0.9.0] - 2026-09-03\n\nProduction release with comprehensive security audit hardening, memory optimizations, and architecture refactoring.\n\n### Features\n\n• Redesign settings screen with grouped list cards and admin dashboard link\n• Automatic Intro and Credits skip detection via native Media Segments API\n• Server administrator broadcast message notification service\n• Multi-tiered in-memory and ETag caching layer across navigation\n\n### Refactor\n\n• Consolidate disparate user JSON storage into unified atomic JsonUserStore\n• Unified DOM element builder helper and date/time formatting utilities\n\n### Bug Fixes\n\n• Enforce decode-time memory caps on profile banner uploads\n• Decouple request timeouts to prevent image starvation during slow fetches\n• Fix search result state restoration on browser back-button navigation",
-        "checksum": "318afa984050b4feb12090f09c3391db",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/0.9.0/jellio_0.9.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T15:45:30Z",
-        "version": "0.9.0"
       }
     ]
   }
