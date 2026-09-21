@@ -2304,26 +2304,24 @@ export async function getJellioIntroCredits(itemId) {
   }
 }
 
-// Fire and forget, the same real non-blocking convention
-// prefetchStreams above already uses: screens/player.js's own real
-// playback start fires this right alongside it, so a small forward
-// looking batch of this season's own episodes gets fingerprinted as it
-// is actually watched, never something a reader's own real Play tap
-// waits on. A generous real timeout, not 5s: Controllers/
-// IntroCreditsController.cs's own POST now awaits the whole real batch
-// server side (Gelato's own resolution only works from inside a real
-// request, confirmed live, so this can no longer return the instant it
-// is queued the way it used to), a real cold Stremio round trip per
-// episode plus ffmpeg easily clears a real few seconds. Nothing here
-// ever reads the response, so a client side timeout only ever means
-// this tab stops listening, never that the real server side work
-// itself gets cut short.
-export function analyzeIntroCredits(itemId) {
-  if (!itemId) return;
-  postJson('/Jellio/introcredits/analyze/' + itemId, {}, 120000).catch(function () {
-    // Best effort only, same as prefetchStreams: a failed trigger just
-    // means this episode's own season stays unanalyzed a while longer.
-  });
+// components/cardOptionsMenu.js's own admin-only "Find Skip Intro/
+// Credits" right-click action, a Movie or a whole Series (every season)
+// at once. No longer fired automatically on playback the way this used
+// to be (real feedback: burning a reader's own debrid quota on every
+// single episode start, resolving several other episodes nobody asked
+// to watch just to cross-reference them, was too expensive a real cost
+// for something Services/CommunitySkip's own free tier already covers
+// most of the time) - this is now the one real, deliberate trigger left
+// for this plugin's own chromaprint fallback. A generous real timeout,
+// not 5s: Controllers/IntroCreditsController.cs's own POST awaits the
+// whole real scan server side (Gelato's own resolution only works from
+// inside a real request), and a full series can genuinely take minutes.
+// Resolves with the real {EpisodesScanned, CommunityHits, AnalyzerHits}
+// counts on success so the caller can toast a real summary, same as
+// prefetchStreams's own callers never having to wait on it themselves.
+export function scanIntroCreditsForItem(itemId) {
+  if (!itemId) return Promise.reject(new Error('Missing item id'));
+  return postJson('/Jellio/introcredits/scan/' + itemId, {}, 600000);
 }
 
 // A person's own real item DTO (name, overview, image tag), the same

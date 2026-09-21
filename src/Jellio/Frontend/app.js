@@ -33,6 +33,7 @@ import { startNowPlaying } from './components/nowPlaying.js';
 import { startNotifications } from './components/notifications.js';
 import { startAchievementNotifier } from './components/achievementNotifier.js';
 import { loadGrouplistSetting } from './runtime/grouplistSettings.js';
+import { loadAdminStatus } from './runtime/adminStatus.js';
 import { startSyncPlay } from './runtime/syncPlay.js';
 import { startGroupWatchInvites } from './components/groupWatchInvites.js';
 import { showSplash, hideSplash, setSplashTotal, reportSplashStep } from './components/splash.js';
@@ -707,6 +708,7 @@ async function runSync() {
     startSyncPlay();
     startGroupWatchInvites();
     loadGrouplistSetting();
+    loadAdminStatus();
     // Overwrites whatever native's own unmatched route transition just
     // set the tab to (router.js's own setTitle() header explains why
     // that happens on every single route this runtime owns); a screen

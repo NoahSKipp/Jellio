@@ -25,11 +25,19 @@ namespace Jellio.Services.IntroCredits;
 // built to stop (a real debrid account has real rate limits and real
 // quotas, and this whole library ran to 5911 real seasons). So this no
 // longer tries to fight that gate with a background job at all -
-// AnalyzeBatchAsync is called directly, awaited, from
-// IntroCreditsController's own POST, a real request with a real
-// matched endpoint Gelato already recognizes, and only ever resolves a
-// small forward-looking batch from whichever episode a reader actually
-// started playing, not the whole library at once.
+// AnalyzeSeasonAsync is called directly, awaited, from
+// IntroCreditsBulkScanner, itself called from IntroCreditsController's
+// own POST, a real request with a real matched endpoint Gelato already
+// recognizes.
+//
+// Real feedback also moved when this ever runs at all: it used to fire
+// automatically on every single episode playback (a small forward
+// batch, resolving several other episodes nobody asked to watch just to
+// cross-reference them - a real cost against a reader's own debrid
+// quota). Now it only ever runs from a deliberate admin trigger (a
+// right-clicked "Find Skip Intro/Credits"), against a whole real season
+// at once, once Services/CommunitySkip's own free tier has already had
+// its chance to answer for cheap.
 public class IntroCreditsAnalyzer(
     ILibraryManager libraryManager,
     IUserManager userManager,
@@ -38,15 +46,6 @@ public class IntroCreditsAnalyzer(
     IntroCreditsStore store,
     ILogger<IntroCreditsAnalyzer> logger)
 {
-    // Real feedback shaped this number directly: a batch this size,
-    // resolved and fingerprinted together in one real pass, already has
-    // an anchor and at least one real comparison to make by the time it
-    // finishes, rather than needing a second real playback before the
-    // very first episode of a season ever gets a real result. Small
-    // enough that even a real cold Stremio round trip on every one of
-    // them stays a real seconds-not-minutes real request.
-    private const int BatchSize = 5;
-
     private const double WindowSeconds = 300;
 
     private static readonly TimeSpan MinReanalyzeGap = TimeSpan.FromDays(3);
@@ -59,29 +58,36 @@ public class IntroCreditsAnalyzer(
     private readonly Dictionary<Guid, SemaphoreSlim> _seasonGates = new();
     private readonly object _seasonGatesLock = new();
 
-    // Called directly from IntroCreditsController's own real POST,
-    // awaited there rather than fired and forgotten: the real request
-    // it runs inside of is the one real thing Gelato's own resolution
-    // gate actually needs, so this has to stay part of that same real
-    // async chain start to finish, unlike this file's own earlier
-    // design.
-    public async Task AnalyzeBatchAsync(Guid episodeId, Guid userId, CancellationToken cancellationToken)
+    // Real last-resort tier of Services/IntroCreditsBulkScanner's own
+    // explicit admin sweep (a right-clicked "Find Skip Intro/Credits"),
+    // never fired automatically any more - see this class's own header
+    // for why that changed. Cross-references every episode of the whole
+    // real season at once against a single anchor, since an admin
+    // explicitly asking for full coverage on a season/show is asking for
+    // exactly that, not a small forward-looking window.
+    public async Task AnalyzeSeasonAsync(Guid seasonId, Guid userId, CancellationToken cancellationToken)
     {
-        if (libraryManager.GetItemById(episodeId) is not Episode triggerEpisode || triggerEpisode.SeasonId == Guid.Empty)
+        if (libraryManager.GetItemById(seasonId) is not Season season)
         {
             return;
         }
 
-        if (libraryManager.GetItemById(triggerEpisode.SeasonId) is not Season season)
+        var episodes = OrderedEpisodes(season);
+        if (episodes.Count < 2)
         {
             return;
         }
 
+        await RunLockedAsync(season, episodes, userId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task RunLockedAsync(Season season, List<Episode> batch, Guid userId, CancellationToken cancellationToken)
+    {
         var gate = GetSeasonGate(season.Id);
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await AnalyzeBatchLockedAsync(season, triggerEpisode, userId, cancellationToken).ConfigureAwait(false);
+            await AnalyzeBatchLockedAsync(season, batch, userId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -92,6 +98,13 @@ public class IntroCreditsAnalyzer(
             gate.Release();
         }
     }
+
+    private static List<Episode> OrderedEpisodes(Season season) =>
+        season.GetEpisodes()
+            .OfType<Episode>()
+            .Where(episode => episode.RunTimeTicks is > 0)
+            .OrderBy(episode => episode.IndexNumber ?? int.MaxValue)
+            .ToList();
 
     private SemaphoreSlim GetSeasonGate(Guid seasonId)
     {
@@ -107,7 +120,7 @@ public class IntroCreditsAnalyzer(
         }
     }
 
-    private async Task AnalyzeBatchLockedAsync(Season season, Episode triggerEpisode, Guid userId, CancellationToken cancellationToken)
+    private async Task AnalyzeBatchLockedAsync(Season season, List<Episode> batch, Guid userId, CancellationToken cancellationToken)
     {
         var user = userManager.GetUserById(userId) ?? userManager.GetUsers().FirstOrDefault();
         if (user is null)
@@ -116,41 +129,11 @@ public class IntroCreditsAnalyzer(
             return;
         }
 
-        var episodes = season.GetEpisodes()
-            .OfType<Episode>()
-            .Where(episode => episode.RunTimeTicks is > 0)
-            .OrderBy(episode => episode.IndexNumber ?? int.MaxValue)
-            .ToList();
-
-        var triggerIndex = episodes.FindIndex(episode => episode.Id == triggerEpisode.Id);
-        if (triggerIndex == -1)
-        {
-            return;
-        }
-
-        // Forward from wherever a reader actually started playing, the
-        // same real "batches ahead of where someone's watching" shape
-        // real feedback asked for directly: reaching episode N of a
-        // batch that already covered N..N+4 needs no new real work at
-        // all, MinReanalyzeGap below already skips it, the next real
-        // batch only starts once a reader's own playback reaches an
-        // episode this season has not already queued.
-        var batch = episodes.Skip(triggerIndex).Take(BatchSize).ToList();
-        if (batch.Count < 2)
-        {
-            logger.LogInformation(
-                "Jellio: intro/credits batch for {SeasonName} starting at {EpisodeName} has only {Count} episode(s) left, nothing to cross reference",
-                season.Name,
-                triggerEpisode.Name,
-                batch.Count);
-            return;
-        }
-
         logger.LogInformation(
             "Jellio: analyzing {SeasonName}, batch of {Count} starting at {EpisodeName}",
             season.Name,
             batch.Count,
-            triggerEpisode.Name);
+            batch[0].Name);
 
         Episode? anchor = null;
         int[]? anchorIntroFingerprint = null;
