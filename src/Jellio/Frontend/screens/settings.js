@@ -34,7 +34,6 @@ import {
   getProfileSettings,
   setProfilePrivacy,
   setGrouplistEnabled,
-  analyzeIntroCreditsLibrary,
 } from '../runtime/api.js';
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
@@ -298,7 +297,19 @@ async function buildGrouplistCard() {
 // every time, same as before this setting existed. screens/detail.js's
 // own Change Stream button is the way back in either case, real
 // feedback asked for both together rather than only one.
-function buildPlaybackCard(user) {
+// Real feedback, live: this used to also carry an admin only "Analyze
+// library" row (IntroCreditsController's own now-removed analyze-library
+// route) queuing a whole-library background sweep. Dropped once a real
+// server's own stack trace showed why that could never actually work:
+// Gelato's own resolution only runs a real Stremio/debrid lookup from
+// inside a real ASP.NET request it recognizes, a detached background
+// job gets a cheap gelato://stub/... placeholder back instead, so that
+// button could queue work but never actually resolve a real stream for
+// any of it. IntroCreditsController.cs's own real POST /analyze/{itemId}
+// (screens/player.js's own real playback-start trigger) is the one
+// real path left, a small forward looking batch analyzed inside that
+// same real request every time a reader starts a new episode.
+function buildPlaybackCard() {
   const { card, body } = buildCard('play_circle', 'Playback');
   body.appendChild(
     buildToggleRow(
@@ -324,40 +335,7 @@ function buildPlaybackCard(user) {
       },
     ),
   );
-  // Admin only, the same real IntroCreditsController's own
-  // [Authorize(Policy = "RequiresElevation")] gate already enforces
-  // server side: IntroCreditsLibraryScanService's own periodic sweep
-  // already reaches every season eventually, this is the one real way
-  // to ask for that same real sweep by hand instead of waiting on it.
-  if (user && user.Policy && user.Policy.IsAdministrator) {
-    body.appendChild(buildIntroCreditsScanRow());
-  }
   return card;
-}
-
-function buildIntroCreditsScanRow() {
-  const status = el('p', 'jellio-settings-row-status');
-  const row = buildActionRow(
-    'graphic_eq',
-    'Analyze library for Skip Intro/Credits',
-    'Queues Jellio’s own cross-episode analyzer for every season in the library, the same real sweep that already runs on its own every 24 hours.',
-    function () {
-      status.textContent = 'Queuing…';
-      analyzeIntroCreditsLibrary()
-        .then(function () {
-          status.textContent =
-            'Queued, runs in the background. A season needs at least two analyzed episodes before Skip Intro/Credits starts showing for it.';
-        })
-        .catch(function (err) {
-          console.warn('Jellio: could not queue library intro/credits analysis', err);
-          status.textContent = 'Could not queue the analysis. Check the server logs.';
-        });
-    },
-  );
-  const fragment = document.createDocumentFragment();
-  fragment.appendChild(row);
-  fragment.appendChild(status);
-  return fragment;
 }
 
 // Real fields, UserDto.Configuration.AudioLanguagePreference/
@@ -594,7 +572,7 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
 
 function buildPlaybackCategory(user) {
   const wrap = el('div', 'jellio-settings-category');
-  wrap.appendChild(buildPlaybackCard(user));
+  wrap.appendChild(buildPlaybackCard());
   wrap.appendChild(buildLanguageCard(user));
   return wrap;
 }

@@ -2277,26 +2277,24 @@ export async function getJellioIntroCredits(itemId) {
 
 // Fire and forget, the same real non-blocking convention
 // prefetchStreams above already uses: screens/player.js's own real
-// playback start fires this right alongside it, so a season gets
-// progressively fingerprinted in the background as it is actually
-// watched, never something a reader's own real Play tap waits on.
+// playback start fires this right alongside it, so a small forward
+// looking batch of this season's own episodes gets fingerprinted as it
+// is actually watched, never something a reader's own real Play tap
+// waits on. A generous real timeout, not 5s: Controllers/
+// IntroCreditsController.cs's own POST now awaits the whole real batch
+// server side (Gelato's own resolution only works from inside a real
+// request, confirmed live, so this can no longer return the instant it
+// is queued the way it used to), a real cold Stremio round trip per
+// episode plus ffmpeg easily clears a real few seconds. Nothing here
+// ever reads the response, so a client side timeout only ever means
+// this tab stops listening, never that the real server side work
+// itself gets cut short.
 export function analyzeIntroCredits(itemId) {
   if (!itemId) return;
-  postJson('/Jellio/introcredits/analyze/' + itemId, {}, 5000).catch(function () {
+  postJson('/Jellio/introcredits/analyze/' + itemId, {}, 120000).catch(function () {
     // Best effort only, same as prefetchStreams: a failed trigger just
     // means this episode's own season stays unanalyzed a while longer.
   });
-}
-
-// Admin only (IntroCreditsController's own real [Authorize(Policy =
-// "RequiresElevation")] already enforces this server side, a non-admin
-// hitting it gets a real 403 back), screens/settings.js's own real
-// "Analyze library now" row: the one real manual trigger for the exact
-// same sweep IntroCreditsLibraryScanService's own periodic timer
-// already runs, not fire-and-forget like analyzeIntroCredits above,
-// this one has a real button waiting on it for a status line.
-export function analyzeIntroCreditsLibrary() {
-  return postJson('/Jellio/introcredits/analyze-library', {}, 5000);
 }
 
 // A person's own real item DTO (name, overview, image tag), the same

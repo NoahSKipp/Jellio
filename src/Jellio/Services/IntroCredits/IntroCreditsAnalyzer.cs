@@ -1,151 +1,114 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.IntroCredits;
 
-// Orchestrates the whole real cross-episode comparison a season needs:
-// resolve each episode's own real playable source the same real way
-// playback already does (IMediaSourceManager, not Intro Skipper's own
-// local-file-only queue), fingerprint its own real intro/credits
-// windows, and compare every one against a single real "anchor" episode
-// (the first one this season a real fingerprint could be pulled for)
-// rather than every real pair against every other - O(n) real ffmpeg
-// runs per season instead of O(n^2), the anchor itself only needs
-// fingerprinting once.
+// Real bug, found live, that reshaped this whole file: Gelato's own
+// IMediaSourceManager decorator (Gelato.ActionContextExtensions.
+// IsInsertableAction, confirmed from a real server's own stack trace)
+// only does its real expensive resolution (a live Stremio addon round
+// trip plus debrid lookup) when the current call is genuinely inside a
+// real ASP.NET request it recognizes - anything else, including a
+// synthetic HttpContext this file used to hand it, gets back a cheap
+// gelato://stub/... placeholder instead, not a real playable URL.
+// Almost certainly deliberate on Gelato's own part: a bulk background
+// sweep resolving real streams for a reader's entire library, unwatched
+// episodes included, is exactly the kind of load that gate reads as
+// built to stop (a real debrid account has real rate limits and real
+// quotas, and this whole library ran to 5911 real seasons). So this no
+// longer tries to fight that gate with a background job at all -
+// AnalyzeBatchAsync is called directly, awaited, from
+// IntroCreditsController's own POST, a real request with a real
+// matched endpoint Gelato already recognizes, and only ever resolves a
+// small forward-looking batch from whichever episode a reader actually
+// started playing, not the whole library at once.
 public class IntroCreditsAnalyzer(
     ILibraryManager libraryManager,
     IUserManager userManager,
     IMediaSourceManager mediaSourceManager,
-    IHttpContextAccessor httpContextAccessor,
-    IServiceProvider serviceProvider,
     ChromaprintExtractor extractor,
     IntroCreditsStore store,
     ILogger<IntroCreditsAnalyzer> logger)
 {
-    // Generous enough to hold a real cold open plus a real theme song,
-    // or a real full length end credits roll, without reading anywhere
-    // close to a whole real episode's own audio for it.
+    // Real feedback shaped this number directly: a batch this size,
+    // resolved and fingerprinted together in one real pass, already has
+    // an anchor and at least one real comparison to make by the time it
+    // finishes, rather than needing a second real playback before the
+    // very first episode of a season ever gets a real result. Small
+    // enough that even a real cold Stremio round trip on every one of
+    // them stays a real seconds-not-minutes real request.
+    private const int BatchSize = 5;
+
     private const double WindowSeconds = 300;
 
-    // A title genuinely without a shared intro/credits (an anthology,
-    // a one-off special, a real miss on this season's own anchor) would
-    // otherwise get re-fingerprinted on every single real playback
-    // within this gap, real wasted ffmpeg work for an already-known
-    // real answer.
     private static readonly TimeSpan MinReanalyzeGap = TimeSpan.FromDays(3);
 
-    // Serialized rather than one real analysis per concurrent playback:
-    // this runs on a real home server's own CPU alongside whatever else
-    // it is already doing (transcoding, Gelato's own real requests),
-    // real low priority background work, not a real race to finish
-    // first.
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly ConcurrentDictionary<Guid, byte> _queuedSeasons = new();
+    // Per-season, not global: two readers watching two different real
+    // shows at once should never wait on each other, only a real
+    // repeat/overlapping trigger for the exact same season (a reader
+    // pausing and un-pausing, or Up Next firing this again a moment
+    // after playback start already did) serializes against itself.
+    private readonly Dictionary<Guid, SemaphoreSlim> _seasonGates = new();
+    private readonly object _seasonGatesLock = new();
 
-    // Fire and forget on purpose: Controllers/IntroCreditsController.cs's
-    // own real POST already returns 202 the instant this is queued,
-    // components/player.js's own real playback start already fires this
-    // the same non-blocking real way it already fires prefetchStreams.
-    // force skips MinReanalyzeGap's own real skip for an episode
-    // already marked Attempted: real feedback live was a reader's own
-    // manual "Analyze library" click doing nothing at all, visible only
-    // once this file's own real ffmpeg failures stopped being logged at
-    // Debug - every earlier real attempt across this whole feature's
-    // own iteration already marked most episodes Attempted with a real
-    // miss, so a plain re-trigger silently skipped every one of them for
-    // MinReanalyzeGap's own real 3 days rather than actually retrying.
-    // An explicit real ask from a reader should always get a real fresh
-    // attempt; only the fully automatic real paths (playback start,
-    // ItemAdded, the periodic sweep) still respect the gap.
-    public void QueueSeasonAnalysis(Guid seasonId, Guid userId, bool force = false)
+    // Called directly from IntroCreditsController's own real POST,
+    // awaited there rather than fired and forgotten: the real request
+    // it runs inside of is the one real thing Gelato's own resolution
+    // gate actually needs, so this has to stay part of that same real
+    // async chain start to finish, unlike this file's own earlier
+    // design.
+    public async Task AnalyzeBatchAsync(Guid episodeId, Guid userId, CancellationToken cancellationToken)
     {
-        _ = RunGuardedAsync(seasonId, userId, force);
-    }
-
-    // screens/player.js's own real playback start only ever knows the
-    // episode it is about to play, not that episode's own real
-    // SeasonId - resolved here once rather than asking every real
-    // caller (IntroCreditsController's own POST included) to look
-    // that up itself first.
-    public void QueueSeasonAnalysisForEpisode(Guid episodeId, Guid userId, bool force = false)
-    {
-        if (libraryManager.GetItemById(episodeId) is not Episode episode || episode.SeasonId == Guid.Empty)
+        if (libraryManager.GetItemById(episodeId) is not Episode triggerEpisode || triggerEpisode.SeasonId == Guid.Empty)
         {
             return;
         }
 
-        QueueSeasonAnalysis(episode.SeasonId, userId, force);
-    }
-
-    // IntroCreditsLibraryScanService's own real periodic sweep and its
-    // own real "run now" endpoint both call this: every real Season in
-    // the library, each queued the exact same real deduped way a single
-    // playback's own real trigger already is, so a run already in
-    // progress against a season a reader just happens to also be
-    // watching right now is never started twice.
-    public void QueueLibraryAnalysis(Guid userId, bool force = false)
-    {
-        var seasons = libraryManager.GetItemList(new InternalItemsQuery
-        {
-            IncludeItemTypes = [BaseItemKind.Season],
-            Recursive = true,
-        });
-
-        logger.LogInformation("Jellio: queuing intro/credits analysis for {Count} seasons (force={Force})", seasons.Count, force);
-
-        foreach (var season in seasons)
-        {
-            QueueSeasonAnalysis(season.Id, userId, force);
-        }
-    }
-
-    private async Task RunGuardedAsync(Guid seasonId, Guid userId, bool force)
-    {
-        if (!_queuedSeasons.TryAdd(seasonId, 0))
+        if (libraryManager.GetItemById(triggerEpisode.SeasonId) is not Season season)
         {
             return;
         }
 
+        var gate = GetSeasonGate(season.Id);
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await _gate.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                await AnalyzeSeasonAsync(seasonId, userId, force, CancellationToken.None).ConfigureAwait(false);
-            }
-            finally
-            {
-                _gate.Release();
-            }
+            await AnalyzeBatchLockedAsync(season, triggerEpisode, userId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Jellio: intro/credits analysis failed for season {SeasonId}", seasonId);
+            logger.LogWarning(ex, "Jellio: intro/credits batch analysis failed for {SeasonName}", season.Name);
         }
         finally
         {
-            _queuedSeasons.TryRemove(seasonId, out _);
+            gate.Release();
         }
     }
 
-    private async Task AnalyzeSeasonAsync(Guid seasonId, Guid userId, bool force, CancellationToken cancellationToken)
+    private SemaphoreSlim GetSeasonGate(Guid seasonId)
     {
-        if (libraryManager.GetItemById(seasonId) is not Season season)
+        lock (_seasonGatesLock)
         {
-            logger.LogWarning("Jellio: intro/credits analysis skipped, {SeasonId} is not a Season", seasonId);
-            return;
-        }
+            if (!_seasonGates.TryGetValue(seasonId, out var gate))
+            {
+                gate = new SemaphoreSlim(1, 1);
+                _seasonGates[seasonId] = gate;
+            }
 
+            return gate;
+        }
+    }
+
+    private async Task AnalyzeBatchLockedAsync(Season season, Episode triggerEpisode, Guid userId, CancellationToken cancellationToken)
+    {
         var user = userManager.GetUserById(userId) ?? userManager.GetUsers().FirstOrDefault();
         if (user is null)
         {
@@ -159,63 +122,35 @@ public class IntroCreditsAnalyzer(
             .OrderBy(episode => episode.IndexNumber ?? int.MaxValue)
             .ToList();
 
-        if (episodes.Count < 2)
+        var triggerIndex = episodes.FindIndex(episode => episode.Id == triggerEpisode.Id);
+        if (triggerIndex == -1)
         {
-            logger.LogInformation(
-                "Jellio: intro/credits analysis skipped for {SeasonName}, only {Count} episode(s) with a known runtime",
-                season.Name,
-                episodes.Count);
             return;
         }
 
-        logger.LogInformation("Jellio: analyzing {SeasonName}, {Count} episodes (force={Force})", season.Name, episodes.Count, force);
-
-        // A local function rather than a private method taking a real
-        // User parameter: that type's own real namespace has already
-        // moved at least once across a real Jellyfin server version
-        // (Jellyfin.Data.Entities in one, Jellyfin.Database.Implementations.
-        // Entities in another), user itself captured straight off the
-        // var above sidesteps ever needing to spell either one out here.
-        //
-        // Real bug, found live: Gelato's own IMediaSourceManager decorator
-        // (MediaSourceManagerDecorator.GetStaticMediaSources, confirmed
-        // from a real server's own stack trace) reads the ambient
-        // HttpContext (IHttpContextAccessor) to check the current real
-        // ASP.NET endpoint, something every real playback request always
-        // has and this background job never does - a real
-        // ArgumentNullException on every single call, 100% of this whole
-        // real feature's own source resolution failing silently behind
-        // "no playable source resolved" until now. A synthetic
-        // DefaultHttpContext set on the same real IHttpContextAccessor
-        // for the real duration of this one call is enough: Gelato's own
-        // GetEndpoint() reads a non-null real HttpContext.Features and
-        // finds no matched endpoint, the same real answer a genuine
-        // request to a route no controller ever claimed would already
-        // give it, not a special case this needs to know about.
-        // IHttpContextAccessor.HttpContext is itself an AsyncLocal under
-        // the hood, so this only ever affects this one real async call
-        // chain, never a real concurrent request elsewhere on the host.
-        async Task<MediaSourceInfo?> ResolveSourceAsync(Episode candidate)
+        // Forward from wherever a reader actually started playing, the
+        // same real "batches ahead of where someone's watching" shape
+        // real feedback asked for directly: reaching episode N of a
+        // batch that already covered N..N+4 needs no new real work at
+        // all, MinReanalyzeGap below already skips it, the next real
+        // batch only starts once a reader's own playback reaches an
+        // episode this season has not already queued.
+        var batch = episodes.Skip(triggerIndex).Take(BatchSize).ToList();
+        if (batch.Count < 2)
         {
-            var previousContext = httpContextAccessor.HttpContext;
-            try
-            {
-                httpContextAccessor.HttpContext = new DefaultHttpContext { RequestServices = serviceProvider };
-                var sources = await mediaSourceManager
-                    .GetPlaybackMediaSources(candidate, user, false, false, cancellationToken)
-                    .ConfigureAwait(false);
-                return sources.FirstOrDefault(source => !string.IsNullOrEmpty(source.Path));
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Jellio: could not resolve a playable source for {ItemId}", candidate.Id);
-                return null;
-            }
-            finally
-            {
-                httpContextAccessor.HttpContext = previousContext;
-            }
+            logger.LogInformation(
+                "Jellio: intro/credits batch for {SeasonName} starting at {EpisodeName} has only {Count} episode(s) left, nothing to cross reference",
+                season.Name,
+                triggerEpisode.Name,
+                batch.Count);
+            return;
         }
+
+        logger.LogInformation(
+            "Jellio: analyzing {SeasonName}, batch of {Count} starting at {EpisodeName}",
+            season.Name,
+            batch.Count,
+            triggerEpisode.Name);
 
         Episode? anchor = null;
         int[]? anchorIntroFingerprint = null;
@@ -224,21 +159,37 @@ public class IntroCreditsAnalyzer(
         var anchorCreditsWindow = 0d;
         var anchorCreditsOffset = 0d;
 
-        foreach (var episode in episodes)
+        foreach (var episode in batch)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var existing = store.Get(episode.Id);
-            if (!force && existing is { Attempted: true } && DateTimeOffset.UtcNow - existing.AttemptedAt < MinReanalyzeGap)
+            if (existing is { Attempted: true } && DateTimeOffset.UtcNow - existing.AttemptedAt < MinReanalyzeGap)
             {
-                logger.LogInformation(
-                    "Jellio: skipping {EpisodeName}, already attempted at {AttemptedAt} (pass force to retry sooner)",
-                    episode.Name,
-                    existing.AttemptedAt);
+                logger.LogInformation("Jellio: skipping {EpisodeName}, already attempted at {AttemptedAt}", episode.Name, existing.AttemptedAt);
                 continue;
             }
 
-            var source = await ResolveSourceAsync(episode).ConfigureAwait(false);
+            MediaSourceInfo? source;
+            try
+            {
+                // Real, unfaked ambient HttpContext: this whole method
+                // only ever runs as part of the real request
+                // IntroCreditsController's own POST is already inside,
+                // so Gelato's own decorator sees the same real endpoint
+                // that request matched and does its real resolution
+                // rather than handing back a gelato://stub/... placeholder.
+                var sources = await mediaSourceManager
+                    .GetPlaybackMediaSources(episode, user, false, false, cancellationToken)
+                    .ConfigureAwait(false);
+                source = sources.FirstOrDefault(candidate => !string.IsNullOrEmpty(candidate.Path));
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Jellio: could not resolve a playable source for {EpisodeName}", episode.Name);
+                source = null;
+            }
+
             if (source is null)
             {
                 logger.LogWarning("Jellio: no playable source resolved for {EpisodeName}, skipping", episode.Name);
@@ -277,7 +228,7 @@ public class IntroCreditsAnalyzer(
                 anchorCreditsWindow = creditsWindow;
                 anchorCreditsOffset = creditsOffset;
                 store.MarkAttempted(episode.Id);
-                logger.LogInformation("Jellio: {EpisodeName} set as this season's own anchor", episode.Name);
+                logger.LogInformation("Jellio: {EpisodeName} set as this batch's own anchor", episode.Name);
                 continue;
             }
 

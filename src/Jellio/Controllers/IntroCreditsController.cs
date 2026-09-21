@@ -1,5 +1,7 @@
 using System;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 using Jellio.Services.IntroCredits;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +13,16 @@ namespace Jellio.Controllers;
 /// Skipper's own native /Episode/{id}/Timestamps or Media Segments
 /// endpoints (runtime/api.js's own getIntroSkipperSegments already
 /// reads both of those first, this is a real third tier underneath
-/// them): IntroCreditsAnalyzer cross-references a season's own episodes
-/// directly against the same resolved stream URL real playback already
-/// uses, real feedback this whole file exists to answer was Intro
-/// Skipper's own analysis never running at all against a real
-/// .strm-backed remote library.
+/// them): IntroCreditsAnalyzer cross-references a small forward-looking
+/// batch of a season's own episodes directly against the same resolved
+/// stream URL real playback already uses. Real feedback this whole file
+/// exists to answer was Intro Skipper's own analysis never running at
+/// all against a real .strm-backed remote library; real feedback again,
+/// later, was that Gelato's own resolution only works from inside a
+/// real request like this controller's own POST already is, not from a
+/// detached background job (IntroCreditsAnalyzer's own header explains
+/// why), which is why this stays a real request-scoped batch rather
+/// than a whole-library sweep.
 /// </summary>
 [ApiController]
 [Route("Jellio/introcredits")]
@@ -51,13 +58,18 @@ public class IntroCreditsController(IntroCreditsStore store, IntroCreditsAnalyze
         return Ok(new SegmentsResponse(introduction, credits));
     }
 
-    // Fire and forget: screens/player.js's own real playback start
-    // fires this the same non-blocking real way it already fires
-    // Gelato's own prefetchStreams, no reason for a reader's own actual
-    // Play tap to wait on a real background fingerprinting pass that
-    // can take real minutes once ffmpeg itself is involved.
+    // Awaited, not fired and forgotten: Gelato's own real resolution
+    // gate (IntroCreditsAnalyzer's own header explains it) only works
+    // from inside a real request this controller action already is,
+    // exiting early would hand the rest of the work a real HttpContext
+    // that no longer exists. Still never something a reader's own real
+    // Play tap waits on: screens/player.js's own real caller fires this
+    // with a generous client side timeout and ignores whatever comes
+    // back, same non-blocking real shape prefetchStreams already uses,
+    // just a real request this server side keeps running to completion
+    // regardless of how long the client itself keeps listening.
     [HttpPost("analyze/{itemId}")]
-    public IActionResult Analyze(Guid itemId)
+    public async Task<IActionResult> Analyze(Guid itemId)
     {
         var userId = GetUserId();
         if (userId == Guid.Empty)
@@ -65,35 +77,14 @@ public class IntroCreditsController(IntroCreditsStore store, IntroCreditsAnalyze
             return BadRequest("Invalid user session");
         }
 
-        analyzer.QueueSeasonAnalysisForEpisode(itemId, userId);
-        return Accepted();
-    }
-
-    // Real feedback asked for both a periodic sweep (IntroCreditsLibraryScanService's
-    // own real timer already covers that) and a way to kick the exact
-    // same real work off by hand rather than waiting on it - admin only,
-    // the same real gate every other whole-library operation in native
-    // Jellyfin already sits behind, this one included: IntroCreditsAnalyzer's
-    // own real per-season dedup already makes a redundant real call here
-    // (this endpoint hit twice, or hit while the timer's own real sweep
-    // is still mid-run) a harmless no-op rather than a second real pass.
-    [HttpPost("analyze-library")]
-    [Authorize(Policy = "RequiresElevation")]
-    public IActionResult AnalyzeLibrary()
-    {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-        {
-            return BadRequest("Invalid user session");
-        }
-
-        // force: true - an explicit real click here should always get a
-        // real fresh attempt, not silently do nothing because
-        // MinReanalyzeGap already thinks every episode was tried
-        // recently. IntroCreditsLibraryScanService's own periodic sweep
-        // still respects that gap, this button is the one real way
-        // around it.
-        analyzer.QueueLibraryAnalysis(userId, force: true);
+        // CancellationToken.None on purpose, not HttpContext.RequestAborted:
+        // screens/player.js's own real caller does not wait on this
+        // response at all, so the underlying connection can look
+        // "aborted" long before this real batch is actually done: tying
+        // this to that same real token would cut a real still-useful
+        // analysis short over a real client that was never going to read
+        // the result anyway.
+        await analyzer.AnalyzeBatchAsync(itemId, userId, CancellationToken.None);
         return Accepted();
     }
 
