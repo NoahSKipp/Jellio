@@ -192,16 +192,24 @@
               <h2 class="sectionTitle">Skip Intro/Credits</h2>
             </div>
             <div class="fieldDescription">
-              Real community timestamp databases (the same approach NuvioTV itself uses), tried
-              before this plugin's own cross-episode audio analysis: no stream or ffmpeg access
-              needed, so a title gets a real Skip Intro/Credits button the very first time it is
-              opened, not only once two episodes of a season have already been analyzed. Anime
-              only for now. A free Simkl client ID (simkl.com, under Settings &gt; Developer)
-              maps a title onto the MyAnimeList/AniList id AniSkip and Anime-Skip actually key off;
-              a free Anime-Skip client ID (anime-skip.com, a separate real signup) adds its own
-              fallback coverage for whatever AniSkip itself does not have. Either left blank, that
-              one tier is skipped and everything else keeps working as before.
+              Real community timestamp databases, tried before this plugin's own cross-episode
+              audio analysis: no stream or ffmpeg access needed, so a title gets a real Skip
+              Intro/Credits button the very first time it is opened. TheIntroDB
+              (theintrodb.org) covers general TV/movies and already works anonymously straight
+              off this item's own TMDB id, no key required; an optional API key from its own
+              website just weights a reader's own submissions higher. AniSkip and Anime-Skip
+              (the same approach NuvioTV itself uses) cover anime specifically, whatever
+              TheIntroDB does not have: a free Simkl client ID (simkl.com, under Settings &gt;
+              Developer) maps a title onto the MyAnimeList/AniList id they key off, and a
+              separate free Anime-Skip client ID (anime-skip.com) adds its own fallback coverage
+              for whatever AniSkip alone does not have. Any of these left blank, that one piece
+              is skipped and everything else keeps working as before.
             </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtTheIntroDbApiKey">TheIntroDB API Key (optional)</label>
+            <input is="emby-input" type="password" id="txtTheIntroDbApiKey" autocomplete="off" />
           </div>
 
           <div class="inputContainer">
@@ -314,6 +322,7 @@
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
+          document.querySelector('#txtTheIntroDbApiKey').value = withDefault(config.TheIntroDbApiKey, '');
           document.querySelector('#txtSimklClientId').value = withDefault(config.SimklClientId, '');
           document.querySelector('#txtAnimeSkipClientId').value = withDefault(config.AnimeSkipClientId, '');
           Dashboard.hideLoadingMsg();
@@ -328,6 +337,7 @@
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
+          config.TheIntroDbApiKey = document.querySelector('#txtTheIntroDbApiKey').value.trim();
           config.SimklClientId = document.querySelector('#txtSimklClientId').value.trim();
           config.AnimeSkipClientId = document.querySelector('#txtAnimeSkipClientId').value.trim();
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {

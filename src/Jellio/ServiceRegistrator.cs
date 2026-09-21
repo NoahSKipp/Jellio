@@ -108,6 +108,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         {
             AllowAutoRedirect = false,
         });
+        services.AddSingleton<TheIntroDbClient>();
         services.AddSingleton<SimklIdResolver>();
         services.AddSingleton<AniSkipClient>();
         services.AddSingleton<AnimeSkipClient>();
