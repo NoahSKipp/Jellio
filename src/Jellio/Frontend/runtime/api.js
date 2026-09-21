@@ -2195,7 +2195,11 @@ async function getNativeMediaSegments(itemId) {
   // rather than guessing blind again.
   const items = Array.isArray(result) ? result : (result && result.Items) || [];
   if (!items.length) {
-    console.debug('Jellio: native Media Segments came back with nothing for', itemId, result);
+    // console.warn, not console.debug: real feedback live was this
+    // logging nothing visible at all, most browser devtools consoles
+    // hide Verbose/debug level messages by default, a reader would have
+    // had to know to flip that filter on first to ever see this.
+    console.warn('Jellio: native Media Segments came back with nothing for', itemId, result);
   }
   function bySeconds(type) {
     const segment = items.find(function (s) {
