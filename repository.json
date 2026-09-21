@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.12.0] - 2026-09-21\n\n### 🚀 Features\n\n- Add TheIntroDB as the primary Skip Intro/Credits source\n",
+        "checksum": "c7e439bca6ab48c35ed03eeba22e38be",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.12.0/jellio_1.12.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-21T20:57:16Z",
+        "version": "1.12.0"
+      },
+      {
         "changelog": "## [1.11.0] - 2026-09-21\n\n### 🚀 Features\n\n- Add NuvioTV-style community Skip Intro/Credits as the primary tier\n\n### 🐛 Bug Fixes\n\n- Analyze forward-looking batches inside a real request, not a background sweep\n",
         "checksum": "942bfac5bb152fa5ae3e279af7101829",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.11.0/jellio_1.11.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-04T18:17:42Z",
         "version": "1.1.0"
-      },
-      {
-        "changelog": "## [1.0.5] - 2026-09-04\n\n### 🐛 Bug Fixes\n\n- Pin subtitle cues to a fixed real percentage, not auto line stacking\n\n### 📚 Documentation\n\n- Add a README\n",
-        "checksum": "c9f858570a9ddd1513b99498de0df432",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.5/jellio_1.0.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-04T15:33:25Z",
-        "version": "1.0.5"
       }
     ]
   }
