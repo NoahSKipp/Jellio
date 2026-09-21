@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.11.0] - 2026-09-21\n\n### 🚀 Features\n\n- Add NuvioTV-style community Skip Intro/Credits as the primary tier\n\n### 🐛 Bug Fixes\n\n- Analyze forward-looking batches inside a real request, not a background sweep\n",
+        "checksum": "942bfac5bb152fa5ae3e279af7101829",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.11.0/jellio_1.11.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-21T20:50:18Z",
+        "version": "1.11.0"
+      },
+      {
         "changelog": "## [1.10.4] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Give Gelato a synthetic HttpContext during background analysis\n",
         "checksum": "aff743802755d36c7947a63d8b7bfb4e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.4/jellio_1.10.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-04T15:33:25Z",
         "version": "1.0.5"
-      },
-      {
-        "changelog": "## [1.0.4] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- Stop the final playback-stopped report from undoing a real watch\n",
-        "checksum": "b2740746051927b8fc6be52c2ea7818f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.4/jellio_1.0.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T20:30:13Z",
-        "version": "1.0.4"
       }
     ]
   }
