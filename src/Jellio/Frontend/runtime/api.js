@@ -339,7 +339,10 @@ export function getItemDetails(itemId) {
     // live, and RemoteTrailers is screens/detail.js's own real Trailers
     // row's one data source (TMDb's own metadata provider, already
     // installed, populates it server side with no extra work here).
-    Fields: 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,Trickplay',
+    // Chapters alongside the rest: screens/player.js's own chapter-name
+    // fallback for Skip Intro/Credits needs it on the exact item this
+    // call already fetches for playback, no separate round trip.
+    Fields: 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,Trickplay,Chapters',
   });
   const path = '/Users/' + userId + '/Items/' + itemId + '?' + params.toString();
   return cached('details:' + itemId, function () {
