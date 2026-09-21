@@ -63,7 +63,15 @@ public class ChromaprintExtractor(IMediaEncoder mediaEncoder, ILogger<Chromaprin
             if (process.ExitCode != 0)
             {
                 var stderr = await stderrTask.ConfigureAwait(false);
-                logger.LogDebug(
+                // LogWarning, not LogDebug: same real mistake the browser
+                // console side of this exact feature already made twice
+                // (console.debug never showing up in a real reader's own
+                // devtools). Jellyfin's own default server log level is
+                // Information, Debug is invisible there unless an admin
+                // already knows to turn it on first - exactly the one
+                // real reason ffmpeg failing here would look identical to
+                // "no match found" from the outside.
+                logger.LogWarning(
                     "Jellio: chromaprint extraction exited {Code} for {Path} at {Offset}s: {Err}",
                     process.ExitCode,
                     source.Path,
@@ -77,13 +85,13 @@ public class ChromaprintExtractor(IMediaEncoder mediaEncoder, ILogger<Chromaprin
         catch (OperationCanceledException)
         {
             TryKill(process);
-            logger.LogDebug("Jellio: chromaprint extraction timed out for {Path} at {Offset}s", source.Path, offsetSeconds);
+            logger.LogWarning("Jellio: chromaprint extraction timed out for {Path} at {Offset}s", source.Path, offsetSeconds);
             return null;
         }
         catch (Exception ex)
         {
             TryKill(process);
-            logger.LogDebug(ex, "Jellio: chromaprint extraction threw for {Path}", source.Path);
+            logger.LogWarning(ex, "Jellio: chromaprint extraction threw for {Path}", source.Path);
             return null;
         }
     }

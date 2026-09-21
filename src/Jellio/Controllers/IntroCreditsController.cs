@@ -87,7 +87,13 @@ public class IntroCreditsController(IntroCreditsStore store, IntroCreditsAnalyze
             return BadRequest("Invalid user session");
         }
 
-        analyzer.QueueLibraryAnalysis(userId);
+        // force: true - an explicit real click here should always get a
+        // real fresh attempt, not silently do nothing because
+        // MinReanalyzeGap already thinks every episode was tried
+        // recently. IntroCreditsLibraryScanService's own periodic sweep
+        // still respects that gap, this button is the one real way
+        // around it.
+        analyzer.QueueLibraryAnalysis(userId, force: true);
         return Accepted();
     }
 
