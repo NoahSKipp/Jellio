@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.10.1] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Use console.warn for the native Media Segments diagnostic\n",
+        "checksum": "a2df6bb6874d67d78a56d71278c2bd02",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.1/jellio_1.10.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-21T15:27:18Z",
+        "version": "1.10.1"
+      },
+      {
         "changelog": "## [1.10.0] - 2026-09-21\n\n### 🚀 Features\n\n- Sweep the whole library for intro/credits, auto-trigger on import\n\n### 🐛 Bug Fixes\n\n- Harden and log the native Media Segments read\n",
         "checksum": "b0e2bd52fcbad993dc86b2c05cf34d17",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.0/jellio_1.10.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T19:14:01Z",
         "version": "1.0.1"
-      },
-      {
-        "changelog": "Restarts Jellio's version counter past Jellio-Plugin's last release (0.89.5.0), fixing the version-comparison mismatch that kept the plugin catalog from offering updates.",
-        "checksum": "11e8cef93f72b3b7e71cad96258d448d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.0/jellio_1.0.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T18:51:51Z",
-        "version": "1.0.0"
       }
     ]
   }
