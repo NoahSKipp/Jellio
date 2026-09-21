@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.10.3] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Log server-side analysis at Information, force manual re-attempts\n",
+        "checksum": "29d807ff9891fc3b1c48b1bfd64d9892",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.3/jellio_1.10.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-21T19:47:16Z",
+        "version": "1.10.3"
+      },
+      {
         "changelog": "## [1.10.2] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Log why the chapter fallback finds nothing, visibly\n",
         "checksum": "ca7c12e94d472bbd2642e68ae40e03bb",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.2/jellio_1.10.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-03T20:21:19Z",
         "version": "1.0.3"
-      },
-      {
-        "changelog": "## [1.0.2] - 2026-09-03\n\n### 🐛 Bug Fixes\n\n- *(release)* Stop git-cliff from splitting commit bodies into duplicate changelog entries\n- Credit a real watch on natural playback end, not just the 90% ratio\n",
-        "checksum": "3ba66a0fe3c3c9b23e12b7eb9f266f22",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.0.2/jellio_1.0.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-03T19:47:31Z",
-        "version": "1.0.2"
       }
     ]
   }
