@@ -53,9 +53,20 @@ public class IntroCreditsAnalyzer(
     // own real POST already returns 202 the instant this is queued,
     // components/player.js's own real playback start already fires this
     // the same non-blocking real way it already fires prefetchStreams.
-    public void QueueSeasonAnalysis(Guid seasonId, Guid userId)
+    // force skips MinReanalyzeGap's own real skip for an episode
+    // already marked Attempted: real feedback live was a reader's own
+    // manual "Analyze library" click doing nothing at all, visible only
+    // once this file's own real ffmpeg failures stopped being logged at
+    // Debug - every earlier real attempt across this whole feature's
+    // own iteration already marked most episodes Attempted with a real
+    // miss, so a plain re-trigger silently skipped every one of them for
+    // MinReanalyzeGap's own real 3 days rather than actually retrying.
+    // An explicit real ask from a reader should always get a real fresh
+    // attempt; only the fully automatic real paths (playback start,
+    // ItemAdded, the periodic sweep) still respect the gap.
+    public void QueueSeasonAnalysis(Guid seasonId, Guid userId, bool force = false)
     {
-        _ = RunGuardedAsync(seasonId, userId);
+        _ = RunGuardedAsync(seasonId, userId, force);
     }
 
     // screens/player.js's own real playback start only ever knows the
@@ -63,14 +74,14 @@ public class IntroCreditsAnalyzer(
     // SeasonId - resolved here once rather than asking every real
     // caller (IntroCreditsController's own POST included) to look
     // that up itself first.
-    public void QueueSeasonAnalysisForEpisode(Guid episodeId, Guid userId)
+    public void QueueSeasonAnalysisForEpisode(Guid episodeId, Guid userId, bool force = false)
     {
         if (libraryManager.GetItemById(episodeId) is not Episode episode || episode.SeasonId == Guid.Empty)
         {
             return;
         }
 
-        QueueSeasonAnalysis(episode.SeasonId, userId);
+        QueueSeasonAnalysis(episode.SeasonId, userId, force);
     }
 
     // IntroCreditsLibraryScanService's own real periodic sweep and its
@@ -79,7 +90,7 @@ public class IntroCreditsAnalyzer(
     // playback's own real trigger already is, so a run already in
     // progress against a season a reader just happens to also be
     // watching right now is never started twice.
-    public void QueueLibraryAnalysis(Guid userId)
+    public void QueueLibraryAnalysis(Guid userId, bool force = false)
     {
         var seasons = libraryManager.GetItemList(new InternalItemsQuery
         {
@@ -87,13 +98,15 @@ public class IntroCreditsAnalyzer(
             Recursive = true,
         });
 
+        logger.LogInformation("Jellio: queuing intro/credits analysis for {Count} seasons (force={Force})", seasons.Count, force);
+
         foreach (var season in seasons)
         {
-            QueueSeasonAnalysis(season.Id, userId);
+            QueueSeasonAnalysis(season.Id, userId, force);
         }
     }
 
-    private async Task RunGuardedAsync(Guid seasonId, Guid userId)
+    private async Task RunGuardedAsync(Guid seasonId, Guid userId, bool force)
     {
         if (!_queuedSeasons.TryAdd(seasonId, 0))
         {
@@ -105,7 +118,7 @@ public class IntroCreditsAnalyzer(
             await _gate.WaitAsync().ConfigureAwait(false);
             try
             {
-                await AnalyzeSeasonAsync(seasonId, userId, CancellationToken.None).ConfigureAwait(false);
+                await AnalyzeSeasonAsync(seasonId, userId, force, CancellationToken.None).ConfigureAwait(false);
             }
             finally
             {
@@ -122,16 +135,18 @@ public class IntroCreditsAnalyzer(
         }
     }
 
-    private async Task AnalyzeSeasonAsync(Guid seasonId, Guid userId, CancellationToken cancellationToken)
+    private async Task AnalyzeSeasonAsync(Guid seasonId, Guid userId, bool force, CancellationToken cancellationToken)
     {
         if (libraryManager.GetItemById(seasonId) is not Season season)
         {
+            logger.LogWarning("Jellio: intro/credits analysis skipped, {SeasonId} is not a Season", seasonId);
             return;
         }
 
         var user = userManager.GetUserById(userId) ?? userManager.GetUsers().FirstOrDefault();
         if (user is null)
         {
+            logger.LogWarning("Jellio: intro/credits analysis skipped for {SeasonName}, no user to resolve sources as", season.Name);
             return;
         }
 
@@ -143,8 +158,14 @@ public class IntroCreditsAnalyzer(
 
         if (episodes.Count < 2)
         {
+            logger.LogInformation(
+                "Jellio: intro/credits analysis skipped for {SeasonName}, only {Count} episode(s) with a known runtime",
+                season.Name,
+                episodes.Count);
             return;
         }
+
+        logger.LogInformation("Jellio: analyzing {SeasonName}, {Count} episodes (force={Force})", season.Name, episodes.Count, force);
 
         // A local function rather than a private method taking a real
         // User parameter: that type's own real namespace has already
@@ -163,7 +184,7 @@ public class IntroCreditsAnalyzer(
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, "Jellio: could not resolve a playable source for {ItemId}", candidate.Id);
+                logger.LogWarning(ex, "Jellio: could not resolve a playable source for {ItemId}", candidate.Id);
                 return null;
             }
         }
@@ -180,14 +201,19 @@ public class IntroCreditsAnalyzer(
             cancellationToken.ThrowIfCancellationRequested();
 
             var existing = store.Get(episode.Id);
-            if (existing is { Attempted: true } && DateTimeOffset.UtcNow - existing.AttemptedAt < MinReanalyzeGap)
+            if (!force && existing is { Attempted: true } && DateTimeOffset.UtcNow - existing.AttemptedAt < MinReanalyzeGap)
             {
+                logger.LogInformation(
+                    "Jellio: skipping {EpisodeName}, already attempted at {AttemptedAt} (pass force to retry sooner)",
+                    episode.Name,
+                    existing.AttemptedAt);
                 continue;
             }
 
             var source = await ResolveSourceAsync(episode).ConfigureAwait(false);
             if (source is null)
             {
+                logger.LogWarning("Jellio: no playable source resolved for {EpisodeName}, skipping", episode.Name);
                 store.MarkAttempted(episode.Id);
                 continue;
             }
@@ -199,6 +225,14 @@ public class IntroCreditsAnalyzer(
 
             var introFingerprint = await extractor.ExtractAsync(source, 0, introWindow, cancellationToken).ConfigureAwait(false);
             var creditsFingerprint = await extractor.ExtractAsync(source, creditsOffset, creditsWindow, cancellationToken).ConfigureAwait(false);
+
+            if (introFingerprint is null && creditsFingerprint is null)
+            {
+                logger.LogWarning(
+                    "Jellio: ffmpeg produced no fingerprint at all for {EpisodeName} ({Path}), see the warning above for the real ffmpeg failure",
+                    episode.Name,
+                    source.Path);
+            }
 
             if (anchor is null)
             {
@@ -215,12 +249,14 @@ public class IntroCreditsAnalyzer(
                 anchorCreditsWindow = creditsWindow;
                 anchorCreditsOffset = creditsOffset;
                 store.MarkAttempted(episode.Id);
+                logger.LogInformation("Jellio: {EpisodeName} set as this season's own anchor", episode.Name);
                 continue;
             }
 
+            var introMatched = false;
             if (introFingerprint is not null && anchorIntroFingerprint is not null)
             {
-                MatchAndStore(
+                introMatched = MatchAndStore(
                     anchor.Id,
                     anchorIntroFingerprint,
                     anchorIntroWindow,
@@ -232,9 +268,10 @@ public class IntroCreditsAnalyzer(
                     store.SetIntroduction);
             }
 
+            var creditsMatched = false;
             if (creditsFingerprint is not null && anchorCreditsFingerprint is not null)
             {
-                MatchAndStore(
+                creditsMatched = MatchAndStore(
                     anchor.Id,
                     anchorCreditsFingerprint,
                     anchorCreditsWindow,
@@ -245,6 +282,13 @@ public class IntroCreditsAnalyzer(
                     creditsOffset,
                     store.SetCredits);
             }
+
+            logger.LogInformation(
+                "Jellio: {EpisodeName} vs anchor {AnchorName} - intro matched: {IntroMatched}, credits matched: {CreditsMatched}",
+                episode.Name,
+                anchor.Name,
+                introMatched,
+                creditsMatched);
 
             store.MarkAttempted(episode.Id);
         }
@@ -258,7 +302,7 @@ public class IntroCreditsAnalyzer(
     // episode's own real creditsOffset for a credits one) added back in
     // since FindMatch itself only ever knows about the real window it
     // was handed, not where that window sat in the real full episode.
-    private static void MatchAndStore(
+    private static bool MatchAndStore(
         Guid itemIdA,
         int[] fingerprintA,
         double windowSecondsA,
@@ -269,16 +313,21 @@ public class IntroCreditsAnalyzer(
         double offsetSecondsB,
         Action<Guid, double, double> store)
     {
+        var matched = false;
         var matchA = FingerprintMatcher.FindMatch(fingerprintA, fingerprintB, windowSecondsA);
         if (matchA is { } a)
         {
             store(itemIdA, offsetSecondsA + a.StartSeconds, offsetSecondsA + a.EndSeconds);
+            matched = true;
         }
 
         var matchB = FingerprintMatcher.FindMatch(fingerprintB, fingerprintA, windowSecondsB);
         if (matchB is { } b)
         {
             store(itemIdB, offsetSecondsB + b.StartSeconds, offsetSecondsB + b.EndSeconds);
+            matched = true;
         }
+
+        return matched;
     }
 }
