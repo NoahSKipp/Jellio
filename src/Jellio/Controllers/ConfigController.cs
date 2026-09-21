@@ -26,7 +26,7 @@ public class ConfigController : ControllerBase
 
     public record SeasonalEffectConfig(bool Enabled, SeasonalRange Range);
 
-    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects);
+    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects, bool SkipIntroCreditsAdminMenuEnabled);
 
     [HttpGet]
     public ActionResult<ClientConfig> Get()
@@ -53,6 +53,6 @@ public class ConfigController : ControllerBase
             ),
         };
 
-        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects));
+        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects, cfg.SkipIntroCreditsAdminMenuEnabled));
     }
 }

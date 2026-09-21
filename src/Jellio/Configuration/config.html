@@ -207,6 +207,19 @@
             </div>
           </div>
 
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="chkSkipIntroCreditsAdminMenuEnabled" />
+              <span>Show "Find Skip Intro/Credits" on Movie/Series right click</span>
+            </label>
+            <div class="fieldDescription">
+              An admin only entry that runs this plugin's own last-resort cross-episode audio
+              analyzer against a whole Movie or Series (every season). Off by default so it does
+              not sit on every single card's own right click menu - turn it on while actually
+              running a sweep, then back off again once done.
+            </div>
+          </div>
+
           <div class="inputContainer">
             <label class="inputLabel" for="txtTheIntroDbApiKey">TheIntroDB API Key (optional)</label>
             <input is="emby-input" type="password" id="txtTheIntroDbApiKey" autocomplete="off" />
@@ -325,6 +338,7 @@
           document.querySelector('#txtTheIntroDbApiKey').value = withDefault(config.TheIntroDbApiKey, '');
           document.querySelector('#txtSimklClientId').value = withDefault(config.SimklClientId, '');
           document.querySelector('#txtAnimeSkipClientId').value = withDefault(config.AnimeSkipClientId, '');
+          document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked = withDefault(config.SkipIntroCreditsAdminMenuEnabled, false);
           Dashboard.hideLoadingMsg();
         });
       }
@@ -340,6 +354,7 @@
           config.TheIntroDbApiKey = document.querySelector('#txtTheIntroDbApiKey').value.trim();
           config.SimklClientId = document.querySelector('#txtSimklClientId').value.trim();
           config.AnimeSkipClientId = document.querySelector('#txtAnimeSkipClientId').value.trim();
+          config.SkipIntroCreditsAdminMenuEnabled = document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked;
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });
