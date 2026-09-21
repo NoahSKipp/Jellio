@@ -2653,7 +2653,18 @@ export async function renderPlayer(root, params) {
   // endpoint) comes back with nothing, never overrides a real detection
   // that already exists.
   function chapterFallbackSegments(chapters, runTimeTicks) {
-    if (!chapters || !chapters.length) return null;
+    if (!chapters || !chapters.length) {
+      // Same real visibility reasoning as getNativeMediaSegments's own
+      // console.warn: no chapters at all is the expected, silent common
+      // case for most real remote titles, but worth being able to see
+      // when it is not - real feedback live was a native client's own
+      // Skip Intro showing for an item this file's own two Intro
+      // Skipper lookups both genuinely came back empty for, and native
+      // clients commonly read that straight off embedded chapters
+      // rather than any Intro Skipper segment at all.
+      console.warn('Jellio: item has no Chapters to fall back on', itemId, chapters);
+      return null;
+    }
     function ticksToSeconds(ticks) {
       return (ticks || 0) / TICKS_PER_SECOND;
     }
@@ -2669,7 +2680,16 @@ export async function renderPlayer(root, params) {
     }
     const introduction = findSegment(/^(intro|introduction|opening)/i);
     const credits = findSegment(/credit|outro/i);
-    if (!introduction && !credits) return null;
+    if (!introduction && !credits) {
+      console.warn(
+        'Jellio: item has Chapters but none matched an intro/credits name',
+        itemId,
+        chapters.map(function (chapter) {
+          return chapter.Name;
+        }),
+      );
+      return null;
+    }
     return {
       Introduction: introduction || { Start: 0, End: 0 },
       Credits: credits || { Start: 0, End: 0 },
