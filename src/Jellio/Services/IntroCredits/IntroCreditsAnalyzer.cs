@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
@@ -51,19 +53,49 @@ public class IntroCreditsAnalyzer(
     // own real POST already returns 202 the instant this is queued,
     // components/player.js's own real playback start already fires this
     // the same non-blocking real way it already fires prefetchStreams.
-    public void QueueSeasonAnalysis(Guid episodeId, Guid userId)
+    public void QueueSeasonAnalysis(Guid seasonId, Guid userId)
     {
-        _ = RunGuardedAsync(episodeId, userId);
+        _ = RunGuardedAsync(seasonId, userId);
     }
 
-    private async Task RunGuardedAsync(Guid episodeId, Guid userId)
+    // screens/player.js's own real playback start only ever knows the
+    // episode it is about to play, not that episode's own real
+    // SeasonId - resolved here once rather than asking every real
+    // caller (IntroCreditsController's own POST included) to look
+    // that up itself first.
+    public void QueueSeasonAnalysisForEpisode(Guid episodeId, Guid userId)
     {
         if (libraryManager.GetItemById(episodeId) is not Episode episode || episode.SeasonId == Guid.Empty)
         {
             return;
         }
 
-        if (!_queuedSeasons.TryAdd(episode.SeasonId, 0))
+        QueueSeasonAnalysis(episode.SeasonId, userId);
+    }
+
+    // IntroCreditsLibraryScanService's own real periodic sweep and its
+    // own real "run now" endpoint both call this: every real Season in
+    // the library, each queued the exact same real deduped way a single
+    // playback's own real trigger already is, so a run already in
+    // progress against a season a reader just happens to also be
+    // watching right now is never started twice.
+    public void QueueLibraryAnalysis(Guid userId)
+    {
+        var seasons = libraryManager.GetItemList(new InternalItemsQuery
+        {
+            IncludeItemTypes = [BaseItemKind.Season],
+            Recursive = true,
+        });
+
+        foreach (var season in seasons)
+        {
+            QueueSeasonAnalysis(season.Id, userId);
+        }
+    }
+
+    private async Task RunGuardedAsync(Guid seasonId, Guid userId)
+    {
+        if (!_queuedSeasons.TryAdd(seasonId, 0))
         {
             return;
         }
@@ -73,7 +105,7 @@ public class IntroCreditsAnalyzer(
             await _gate.WaitAsync().ConfigureAwait(false);
             try
             {
-                await AnalyzeSeasonAsync(episode.SeasonId, userId, CancellationToken.None).ConfigureAwait(false);
+                await AnalyzeSeasonAsync(seasonId, userId, CancellationToken.None).ConfigureAwait(false);
             }
             finally
             {
@@ -82,11 +114,11 @@ public class IntroCreditsAnalyzer(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Jellio: intro/credits analysis failed for season {SeasonId}", episode.SeasonId);
+            logger.LogWarning(ex, "Jellio: intro/credits analysis failed for season {SeasonId}", seasonId);
         }
         finally
         {
-            _queuedSeasons.TryRemove(episode.SeasonId, out _);
+            _queuedSeasons.TryRemove(seasonId, out _);
         }
     }
 

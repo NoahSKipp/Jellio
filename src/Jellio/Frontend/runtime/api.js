@@ -2272,6 +2272,17 @@ export function analyzeIntroCredits(itemId) {
   });
 }
 
+// Admin only (IntroCreditsController's own real [Authorize(Policy =
+// "RequiresElevation")] already enforces this server side, a non-admin
+// hitting it gets a real 403 back), screens/settings.js's own real
+// "Analyze library now" row: the one real manual trigger for the exact
+// same sweep IntroCreditsLibraryScanService's own periodic timer
+// already runs, not fire-and-forget like analyzeIntroCredits above,
+// this one has a real button waiting on it for a status line.
+export function analyzeIntroCreditsLibrary() {
+  return postJson('/Jellio/introcredits/analyze-library', {}, 5000);
+}
+
 // A person's own real item DTO (name, overview, image tag), the same
 // generic GET /Users/{id}/Items/{itemId} every other item detail lookup
 // in this file already uses, works for a Person item exactly like it

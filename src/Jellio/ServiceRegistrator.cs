@@ -87,12 +87,15 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // is this store's only writer.
         services.AddSingleton<GroupWatchJoinSyncService>();
 
-        // No hosted service of its own: IntroCreditsController's own
-        // POST is the only real trigger, IntroCreditsAnalyzer's own
-        // SemaphoreSlim already serializes every real background run
-        // across whatever concurrent playback session queued it.
+        // IntroCreditsAnalyzer's own SemaphoreSlim already serializes
+        // every real background run regardless of what queued it (a
+        // live playback's own trigger, IntroCreditsLibraryScanService's
+        // own periodic sweep, or its own ItemAdded subscription), so all
+        // three sharing this one real singleton is safe by design, not
+        // just convenient.
         services.AddSingleton<IntroCreditsStore>();
         services.AddSingleton<ChromaprintExtractor>();
         services.AddSingleton<IntroCreditsAnalyzer>();
+        services.AddHostedService<IntroCreditsLibraryScanService>();
     }
 }

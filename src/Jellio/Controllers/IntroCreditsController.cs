@@ -65,7 +65,29 @@ public class IntroCreditsController(IntroCreditsStore store, IntroCreditsAnalyze
             return BadRequest("Invalid user session");
         }
 
-        analyzer.QueueSeasonAnalysis(itemId, userId);
+        analyzer.QueueSeasonAnalysisForEpisode(itemId, userId);
+        return Accepted();
+    }
+
+    // Real feedback asked for both a periodic sweep (IntroCreditsLibraryScanService's
+    // own real timer already covers that) and a way to kick the exact
+    // same real work off by hand rather than waiting on it - admin only,
+    // the same real gate every other whole-library operation in native
+    // Jellyfin already sits behind, this one included: IntroCreditsAnalyzer's
+    // own real per-season dedup already makes a redundant real call here
+    // (this endpoint hit twice, or hit while the timer's own real sweep
+    // is still mid-run) a harmless no-op rather than a second real pass.
+    [HttpPost("analyze-library")]
+    [Authorize(Policy = "RequiresElevation")]
+    public IActionResult AnalyzeLibrary()
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        analyzer.QueueLibraryAnalysis(userId);
         return Accepted();
     }
 
