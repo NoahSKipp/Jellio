@@ -2228,6 +2228,35 @@ async function getNativeMediaSegments(itemId) {
 // above does not already cover: an Intro Skipper release old enough to
 // predate its own real IMediaSegmentProvider integration, never
 // writing to the native store at all.
+// Tried first, screens/player.js's own real getIntroSkipperSegments
+// chain reads this before any of Intro Skipper's own real lookups
+// below, the embedded chapter name fallback, or this plugin's own
+// cross-episode analyzer: Controllers/IntroCreditsController.cs's own
+// GET .../community/{itemId}, the same real community timestamp
+// database approach NuvioTV itself ships (AniSkip/Anime-Skip, resolved
+// through Simkl), no stream or ffmpeg access needed at all so it
+// answers the same real instant a title is opened for the very first
+// time. Anime only for now, and only once a server admin has set a
+// real Simkl client id in this plugin's own real config page - left
+// unset, this always comes back null and every other real tier below
+// keeps working exactly as it already does.
+export async function getCommunitySkipSegments(itemId) {
+  try {
+    const result = await getJson('/Jellio/introcredits/community/' + itemId);
+    if (!result) return null;
+    const introduction = result.Introduction ? { Start: result.Introduction.Start, End: result.Introduction.End } : null;
+    const credits = result.Credits ? { Start: result.Credits.Start, End: result.Credits.End } : null;
+    if (!introduction && !credits) return null;
+    return {
+      Introduction: introduction || { Start: 0, End: 0 },
+      Credits: credits || { Start: 0, End: 0 },
+    };
+  } catch (err) {
+    console.warn('Jellio: community skip data lookup failed for', itemId, err);
+    return null;
+  }
+}
+
 export async function getIntroSkipperSegments(itemId) {
   try {
     const native = await getNativeMediaSegments(itemId);
