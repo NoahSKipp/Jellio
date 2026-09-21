@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Entities.TV;
@@ -9,18 +10,28 @@ namespace Jellio.Services.CommunitySkip;
 
 public record CommunitySkipResult(double? IntroductionStart, double? IntroductionEnd, double? CreditsStart, double? CreditsEnd);
 
-// Orchestrates the whole real NuvioTV-style community lookup: resolve
-// this episode's own Series-level ProviderIds.Tmdb onto Simkl's own
-// real MAL/AniList ids, then ask AniSkip and Anime-Skip for real
-// timestamps the exact same real priority order NuvioTV's own real
-// mergeByPriority already uses (AniSkip first, Anime-Skip fills
-// whatever category AniSkip itself did not have) - IntroDB, the third
-// real tier NuvioTV's own source also has, is deliberately not ported:
-// confirmed against that real source before writing any of this, its
-// own real INTRODB_API_URL is read from a real local build config file,
-// a private/self-hosted real deployment with no real public URL this
-// plugin could call the same way.
+// Orchestrates the whole real NuvioTV-style community lookup, two real
+// independent sources merged by priority (the same real "first
+// provider to have a category wins" shape NuvioTV's own
+// mergeByPriority already uses):
+//
+// 1. TheIntroDB (api.theintrodb.org, its own official real Jellyfin
+//    plugin's own TheIntroDbClient.cs read directly before writing
+//    this): general TV/movie coverage, works anonymously straight off
+//    ProviderIds.Tmdb, no id resolution round trip needed at all. Tried
+//    first for exactly that reason - it answers in one real request,
+//    everything below it needs at least two.
+// 2. AniSkip/Anime-Skip, resolved through Simkl: anime specific
+//    coverage TheIntroDB itself does not have, the exact same real
+//    NuvioTV stack this file started out porting.
+//
+// NuvioTV's own third real source, IntroDB, is deliberately not ported
+// a second time: confirmed against its own real source that its
+// INTRODB_API_URL is a private, self-hosted build config value, no
+// public URL this plugin could call the same way TheIntroDB's own real
+// public API already can be.
 public class CommunitySkipProvider(
+    TheIntroDbClient theIntroDbClient,
     SimklIdResolver simklIdResolver,
     AniSkipClient aniSkipClient,
     AnimeSkipClient animeSkipClient,
@@ -28,22 +39,104 @@ public class CommunitySkipProvider(
 {
     public async Task<CommunitySkipResult?> GetSkipIntervalsAsync(Episode episode, CancellationToken cancellationToken)
     {
-        var simklClientId = JellioPlugin.Instance?.Configuration.SimklClientId;
-        if (string.IsNullOrWhiteSpace(simklClientId))
-        {
-            return null;
-        }
-
-        var tmdbId = TmdbIdFor(episode);
-        if (tmdbId is null)
-        {
-            return null;
-        }
-
+        var tmdbIdString = TmdbIdFor(episode);
+        var tmdbId = int.TryParse(tmdbIdString, out var parsedTmdbId) ? parsedTmdbId : (int?)null;
         var episodeNumber = episode.IndexNumber;
-        if (episodeNumber is null)
+        var seasonNumber = episode.ParentIndexNumber;
+        var durationSeconds = episode.RunTimeTicks is > 0 ? episode.RunTimeTicks.Value / (double)TimeSpan.TicksPerSecond : 0d;
+
+        var theIntroDbIntervals = new List<CommunitySkipInterval>();
+        if (tmdbId is not null && episodeNumber is not null && seasonNumber is not null)
+        {
+            try
+            {
+                var durationMs = durationSeconds > 0 ? (long)(durationSeconds * 1000) : (long?)null;
+                var response = await theIntroDbClient
+                    .GetSegmentsAsync(tmdbId.Value, false, seasonNumber, episodeNumber, durationMs, cancellationToken)
+                    .ConfigureAwait(false);
+                theIntroDbIntervals = ConvertTheIntroDb(response, durationSeconds);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Jellio: TheIntroDB lookup failed for {EpisodeName}", episode.Name);
+            }
+        }
+
+        var hasBoth = theIntroDbIntervals.Any(i => i.Category == CommunitySkipCategory.Opening)
+            && theIntroDbIntervals.Any(i => i.Category == CommunitySkipCategory.Ending);
+
+        var animeIntervals = hasBoth
+            ? []
+            : await GetAnimeIntervalsAsync(episode, tmdbIdString, episodeNumber, cancellationToken).ConfigureAwait(false);
+
+        var merged = MergeByPriority(theIntroDbIntervals, animeIntervals);
+        if (merged.Count == 0)
         {
             return null;
+        }
+
+        var opening = merged.GetValueOrDefault(CommunitySkipCategory.Opening);
+        var ending = merged.GetValueOrDefault(CommunitySkipCategory.Ending);
+
+        logger.LogInformation(
+            "Jellio: community skip data for {EpisodeName} - opening: {HasOpening} ({OpeningProvider}), ending: {HasEnding} ({EndingProvider})",
+            episode.Name,
+            opening is not null,
+            opening?.Provider,
+            ending is not null,
+            ending?.Provider);
+
+        return new CommunitySkipResult(opening?.StartSeconds, opening?.EndSeconds, ending?.StartSeconds, ending?.EndSeconds);
+    }
+
+    // TheIntroDB's own real segment validation (Api/SegmentTimestamp.cs,
+    // its own real HasValidRange): intro/recap leave start_ms optional
+    // (defaults to the real start of the episode) but require end_ms;
+    // credits/preview require start_ms but leave end_ms optional (means
+    // "runs to the real end of the media"), carried over unchanged here.
+    private static List<CommunitySkipInterval> ConvertTheIntroDb(MediaResponse? response, double durationSeconds)
+    {
+        var result = new List<CommunitySkipInterval>();
+        if (response is null)
+        {
+            return result;
+        }
+
+        var intro = response.Intro.FirstOrDefault();
+        if (intro?.EndMs is { } introEndMs && introEndMs > 0)
+        {
+            var start = (intro.StartMs ?? 0) / 1000.0;
+            var end = introEndMs / 1000.0;
+            if (end > start)
+            {
+                result.Add(new CommunitySkipInterval(start, end, CommunitySkipCategory.Opening, "theintrodb"));
+            }
+        }
+
+        var credits = response.Credits.FirstOrDefault();
+        if (credits?.StartMs is { } creditsStartMs)
+        {
+            var start = creditsStartMs / 1000.0;
+            var end = credits.EndMs.HasValue ? credits.EndMs.Value / 1000.0 : durationSeconds;
+            if (end > start)
+            {
+                result.Add(new CommunitySkipInterval(start, end, CommunitySkipCategory.Ending, "theintrodb"));
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<List<CommunitySkipInterval>> GetAnimeIntervalsAsync(
+        Episode episode,
+        string? tmdbId,
+        int? episodeNumber,
+        CancellationToken cancellationToken)
+    {
+        var simklClientId = JellioPlugin.Instance?.Configuration.SimklClientId;
+        if (string.IsNullOrWhiteSpace(simklClientId) || tmdbId is null || episodeNumber is null)
+        {
+            return [];
         }
 
         try
@@ -51,7 +144,7 @@ public class CommunitySkipProvider(
             var ids = await simklIdResolver.ResolveIdsAsync("tmdb", tmdbId, simklClientId, cancellationToken).ConfigureAwait(false);
             if (ids is null || (ids.Mal is null && ids.Anilist is null))
             {
-                return null;
+                return [];
             }
 
             var aniSkipIntervals = ids.Mal is not null
@@ -63,42 +156,19 @@ public class CommunitySkipProvider(
                 ? await animeSkipClient.GetTimestampsAsync(ids.Anilist, episodeNumber.Value, animeSkipClientId, cancellationToken).ConfigureAwait(false)
                 : [];
 
-            var merged = MergeByPriority(aniSkipIntervals, animeSkipIntervals);
-            if (merged.Count == 0)
-            {
-                return null;
-            }
-
-            var opening = merged.GetValueOrDefault(CommunitySkipCategory.Opening);
-            var ending = merged.GetValueOrDefault(CommunitySkipCategory.Ending);
-
-            logger.LogInformation(
-                "Jellio: community skip data for {EpisodeName} - opening: {HasOpening} ({OpeningProvider}), ending: {HasEnding} ({EndingProvider})",
-                episode.Name,
-                opening is not null,
-                opening?.Provider,
-                ending is not null,
-                ending?.Provider);
-
-            return new CommunitySkipResult(
-                opening?.StartSeconds,
-                opening?.EndSeconds,
-                ending?.StartSeconds,
-                ending?.EndSeconds);
+            return [.. aniSkipIntervals, .. animeSkipIntervals];
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: community skip lookup failed for {EpisodeName}", episode.Name);
-            return null;
+            logger.LogDebug(ex, "Jellio: anime community skip lookup failed for {EpisodeName}", episode.Name);
+            return [];
         }
     }
 
-    // First provider in priority order to have a given category wins,
-    // the same real "putIfAbsent" shape NuvioTV's own mergeByPriority
-    // already uses: a partial real result from AniSkip (opening only,
-    // say) never gets its own missing ending shadowed by Anime-Skip
-    // simply because Anime-Skip's own real response happened to include
-    // both.
+    // First provider in priority order to have a given category wins:
+    // a partial real result from TheIntroDB (opening only, say) never
+    // gets its own missing ending shadowed by AniSkip simply because
+    // AniSkip's own real response happened to include both.
     private static Dictionary<CommunitySkipCategory, CommunitySkipInterval> MergeByPriority(
         params IEnumerable<CommunitySkipInterval>[] providerResults)
     {

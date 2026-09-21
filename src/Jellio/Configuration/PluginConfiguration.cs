@@ -72,12 +72,23 @@ public class PluginConfiguration : BasePluginConfiguration
     // same real approach a real open source reference (NuvioTV's own
     // SkipIntroRepository.kt, read before writing any of this) already
     // ships: a community timestamp database keyed by a title's own real
-    // external ids, not this plugin's own audio analysis, real free
-    // coverage for anime specifically without ever needing a real
-    // resolved stream at all. A free client_id from simkl.com's own
-    // developer settings, used only to map a Gelato import's own real
+    // external ids, not this plugin's own audio analysis. Tried first,
+    // no key required at all: TheIntroDB's own real public GET /media
+    // (api.theintrodb.org, its own official Jellyfin plugin's own real
+    // TheIntroDbClient.cs read directly before writing this) already
+    // works anonymously off ProviderIds.Tmdb alone, general TV/movie
+    // coverage, not anime only. An optional Bearer key from
+    // theintrodb.org just weights a reader's own pending/accepted
+    // submissions higher and likely raises the real shared rate limit,
+    // never required for this tier to answer at all.
+    public string TheIntroDbApiKey { get; set; } = string.Empty;
+
+    // AniSkip/Anime-Skip below cover what TheIntroDB itself does not:
+    // anime specifically, submitted against MyAnimeList/AniList rather
+    // than TMDB. A free client_id from simkl.com's own developer
+    // settings, used only to map a Gelato import's own real
     // ProviderIds.Tmdb onto the MyAnimeList/AniList id AniSkip/Anime-Skip
-    // below actually key off. Left blank, this whole tier is skipped,
+    // below actually key off. Left blank, that whole tier is skipped,
     // same real graceful-miss behaviour TmdbAccessToken above already
     // has.
     public string SimklClientId { get; set; } = string.Empty;
