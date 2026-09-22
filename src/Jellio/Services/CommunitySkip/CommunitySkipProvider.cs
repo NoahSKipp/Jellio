@@ -40,10 +40,14 @@ public record CommunitySkipResult(double? IntroductionStart, double? Introductio
 // plugin to publish its own local IntroCreditsStore cache back out
 // publicly the moment it ever cached one of SkipDB's own results (read
 // straight from their own real DATA-LICENSE before deciding this, not
-// assumed), and its own real public data dump turned out to be a
-// stalled ~3 month old snapshot covering only 51 real titles with zero
-// coverage for either real show this was tested against - not worth
-// that real cost for that little real coverage.
+// assumed). Its own real public data dump (github.com/SkipDB-TV/skipdb's
+// own real dated GitHub Releases, not the "data-latest" alias tag,
+// which turned out to point at a stale, months-old snapshot) is
+// genuinely large and actively growing - 102,347 real segments across
+// 2,865 real titles as of the 2026-09-21 dump - so this is not a "too
+// small to bother with" call, but it still had zero real coverage for
+// the one real sparse show this whole search started over, so the real
+// reciprocity cost above was not worth paying for zero real gain there.
 //
 // NuvioTV's own third real source, a different IntroDB, is a separate,
 // deliberately-not-ported project: confirmed against its own real
