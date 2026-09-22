@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.13.1] - 2026-09-22\n\n### 🐛 Bug Fixes\n\n- Stop caching the Skip Intro/Credits admin menu toggle forever\n",
+        "checksum": "fc7704c0100234fad903552b23df8665",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.13.1/jellio_1.13.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-22T06:45:18Z",
+        "version": "1.13.1"
+      },
+      {
         "changelog": "## [1.13.0] - 2026-09-22\n\n### 🚀 Features\n\n- Stop expensive Skip Intro/Credits analysis on playback, add admin-triggered scan\n- Add a server side toggle for the Skip Intro/Credits admin menu\n- Split the Skip Intro/Credits scan into Quick and Deep, add Episode/Season scope\n",
         "checksum": "ccebd06f9c7c69f6138e341407053bd8",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.13.0/jellio_1.13.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-04T19:52:40Z",
         "version": "1.2.1"
-      },
-      {
-        "changelog": "## [1.2.0] - 2026-09-04\n\n### 🚀 Features\n\n- Split search results into Movies and Series sections\n\n### 🐛 Bug Fixes\n\n- Let the language filter treat original-audio-only as its own choice\n",
-        "checksum": "c1dde90a0730127f1c7cf16ba2e13e89",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.2.0/jellio_1.2.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-04T18:36:03Z",
-        "version": "1.2.0"
       }
     ]
   }
