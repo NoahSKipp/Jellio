@@ -22,6 +22,15 @@ public class TmdbExternalIdResolver(IHttpClientFactory httpClientFactory, ILogge
 {
     private readonly ConcurrentDictionary<int, string?> _cache = new();
 
+    // Logged once per real plugin lifetime, not once per episode: real
+    // feedback found this tier running completely silent whenever
+    // TmdbAccessToken was unset, indistinguishable in the logs from a
+    // real IMDb id genuinely not existing for a title - one real warning
+    // the first time it matters says which one it actually is without
+    // spamming a real log line on every single one of this tier's own
+    // real misses afterward.
+    private bool _warnedMissingToken;
+
     public async Task<string?> ResolveTvImdbIdAsync(int tmdbId, CancellationToken cancellationToken)
     {
         if (_cache.TryGetValue(tmdbId, out var cached))
@@ -32,6 +41,13 @@ public class TmdbExternalIdResolver(IHttpClientFactory httpClientFactory, ILogge
         var accessToken = JellioPlugin.Instance?.Configuration.TmdbAccessToken;
         if (string.IsNullOrWhiteSpace(accessToken))
         {
+            if (!_warnedMissingToken)
+            {
+                _warnedMissingToken = true;
+                logger.LogInformation(
+                    "Jellio: IntroDB's own Skip Intro/Credits tier needs TmdbAccessToken configured to resolve an IMDb id, none set - that tier stays skipped until it is");
+            }
+
             return null;
         }
 
@@ -52,7 +68,7 @@ public class TmdbExternalIdResolver(IHttpClientFactory httpClientFactory, ILogge
                 // forever, only a real successful lookup (even one that
                 // genuinely comes back without an imdb_id) is worth
                 // remembering below.
-                logger.LogDebug("Jellio: TMDB external_ids request failed, {StatusCode} for tmdbId {TmdbId}", response.StatusCode, tmdbId);
+                logger.LogWarning("Jellio: TMDB external_ids request failed, {StatusCode} for tmdbId {TmdbId}", response.StatusCode, tmdbId);
                 return null;
             }
 
@@ -60,6 +76,7 @@ public class TmdbExternalIdResolver(IHttpClientFactory httpClientFactory, ILogge
             var payload = await JsonSerializer.DeserializeAsync<TmdbExternalIdsResponse>(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
             var imdbId = string.IsNullOrWhiteSpace(payload?.ImdbId) ? null : payload.ImdbId;
             _cache[tmdbId] = imdbId;
+            logger.LogInformation("Jellio: TMDB external_ids for tmdbId {TmdbId} resolved to imdbId {ImdbId}", tmdbId, imdbId ?? "(none)");
             return imdbId;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -68,7 +85,7 @@ public class TmdbExternalIdResolver(IHttpClientFactory httpClientFactory, ILogge
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: TMDB external_ids request threw for tmdbId {TmdbId}", tmdbId);
+            logger.LogWarning(ex, "Jellio: TMDB external_ids request threw for tmdbId {TmdbId}", tmdbId);
             return null;
         }
     }

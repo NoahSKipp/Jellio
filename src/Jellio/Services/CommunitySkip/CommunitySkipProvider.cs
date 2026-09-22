@@ -141,6 +141,15 @@ public class CommunitySkipProvider(
         var merged = MergeByPriority(tiers.ToArray());
         if (merged.Count == 0)
         {
+            // Real gap, found live: returning here with no log line at
+            // all made every single one of this episode's own real
+            // tiers indistinguishable from "never ran" in the logs -
+            // exactly the ambiguity that made a real, separate
+            // IntroDB/TmdbExternalIdResolver bug (silent on a 404 or a
+            // missing IMDb id) impossible to diagnose from logs alone.
+            // This one line now fires regardless of outcome, same as
+            // the real hit case below already does.
+            logger.LogInformation("Jellio: community skip data for {ItemName} - no tier found anything", itemName);
             return null;
         }
 
@@ -177,7 +186,7 @@ public class CommunitySkipProvider(
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: TheIntroDB lookup failed for {ItemName}", itemName);
+            logger.LogWarning(ex, "Jellio: TheIntroDB lookup failed for {ItemName}", itemName);
             return [];
         }
     }
@@ -239,7 +248,7 @@ public class CommunitySkipProvider(
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: SkipMe.db lookup failed for {ItemName}", itemName);
+            logger.LogWarning(ex, "Jellio: SkipMe.db lookup failed for {ItemName}", itemName);
             return [];
         }
     }
@@ -294,15 +303,30 @@ public class CommunitySkipProvider(
             var imdbId = await tmdbExternalIdResolver.ResolveTvImdbIdAsync(tmdbId, cancellationToken).ConfigureAwait(false);
             if (imdbId is null)
             {
+                // Real gap, found live: this used to return here with no
+                // log line at all, indistinguishable in the logs from
+                // this whole tier never having run in the first place.
+                logger.LogInformation(
+                    "Jellio: IntroDB skipped for {ItemName} - no IMDb id resolved for TMDB id {TmdbId} (TmdbAccessToken unset, or TMDB genuinely has none on file)",
+                    itemName,
+                    tmdbId);
                 return [];
             }
 
             var response = await introDbClient.GetSegmentsAsync(imdbId, season, episode, cancellationToken).ConfigureAwait(false);
-            return ConvertIntroDb(response);
+            var intervals = ConvertIntroDb(response);
+            logger.LogInformation(
+                "Jellio: IntroDB lookup for {ItemName} (imdb {ImdbId} S{Season}E{Episode}) - found: {Found}",
+                itemName,
+                imdbId,
+                season,
+                episode,
+                intervals.Count > 0);
+            return intervals;
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: IntroDB lookup failed for {ItemName}", itemName);
+            logger.LogWarning(ex, "Jellio: IntroDB lookup failed for {ItemName}", itemName);
             return [];
         }
     }
@@ -375,7 +399,7 @@ public class CommunitySkipProvider(
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: anime community skip lookup failed for {ItemName}", itemName);
+            logger.LogWarning(ex, "Jellio: anime community skip lookup failed for {ItemName}", itemName);
             return [];
         }
     }

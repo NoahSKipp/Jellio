@@ -71,7 +71,7 @@ public class SkipMeDbClient(IHttpClientFactory httpClientFactory, ILogger<SkipMe
     {
         if (DateTime.UtcNow < _rateLimitedUntilUtc)
         {
-            logger.LogDebug("Jellio: SkipMe.db rate limit still active until {Until} UTC, skipping", _rateLimitedUntilUtc);
+            logger.LogWarning("Jellio: SkipMe.db rate limit still active until {Until} UTC, skipping", _rateLimitedUntilUtc);
             return null;
         }
 
@@ -106,7 +106,7 @@ public class SkipMeDbClient(IHttpClientFactory httpClientFactory, ILogger<SkipMe
 
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogDebug("Jellio: SkipMe.db request failed, {StatusCode} for {Uri}", response.StatusCode, requestUri);
+                logger.LogWarning("Jellio: SkipMe.db request failed, {StatusCode} for {Uri}", response.StatusCode, requestUri);
                 return null;
             }
 
@@ -125,7 +125,7 @@ public class SkipMeDbClient(IHttpClientFactory httpClientFactory, ILogger<SkipMe
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: SkipMe.db request threw for {Uri}", requestUri);
+            logger.LogWarning(ex, "Jellio: SkipMe.db request threw for {Uri}", requestUri);
             return null;
         }
     }
