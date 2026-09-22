@@ -44,7 +44,7 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
     {
         if (DateTime.UtcNow < _rateLimitedUntilUtc)
         {
-            logger.LogDebug("Jellio: TheIntroDB rate limit still active until {Until} UTC, skipping", _rateLimitedUntilUtc);
+            logger.LogWarning("Jellio: TheIntroDB rate limit still active until {Until} UTC, skipping", _rateLimitedUntilUtc);
             return null;
         }
 
@@ -97,7 +97,7 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
 
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogDebug("Jellio: TheIntroDB request failed, {StatusCode} for {Uri}", response.StatusCode, requestUri);
+                logger.LogWarning("Jellio: TheIntroDB request failed, {StatusCode} for {Uri}", response.StatusCode, requestUri);
                 return null;
             }
 
@@ -110,7 +110,7 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: TheIntroDB request threw for {Uri}", requestUri);
+            logger.LogWarning(ex, "Jellio: TheIntroDB request threw for {Uri}", requestUri);
             return null;
         }
     }

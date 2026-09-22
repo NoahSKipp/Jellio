@@ -32,7 +32,7 @@ public class IntroDbClient(IHttpClientFactory httpClientFactory, ILogger<IntroDb
     {
         if (DateTime.UtcNow < _rateLimitedUntilUtc)
         {
-            logger.LogDebug("Jellio: IntroDB rate limit still active until {Until} UTC, skipping", _rateLimitedUntilUtc);
+            logger.LogWarning("Jellio: IntroDB rate limit still active until {Until} UTC, skipping", _rateLimitedUntilUtc);
             return null;
         }
 
@@ -64,12 +64,16 @@ public class IntroDbClient(IHttpClientFactory httpClientFactory, ILogger<IntroDb
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
+                // Real gap, found live: this used to return here with no
+                // log line at all, indistinguishable from this whole
+                // tier never having run in the first place.
+                logger.LogInformation("Jellio: IntroDB has no data for {Uri}", requestUri);
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogDebug("Jellio: IntroDB request failed, {StatusCode} for {Uri}", response.StatusCode, requestUri);
+                logger.LogWarning("Jellio: IntroDB request failed, {StatusCode} for {Uri}", response.StatusCode, requestUri);
                 return null;
             }
 
@@ -82,7 +86,7 @@ public class IntroDbClient(IHttpClientFactory httpClientFactory, ILogger<IntroDb
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Jellio: IntroDB request threw for {Uri}", requestUri);
+            logger.LogWarning(ex, "Jellio: IntroDB request threw for {Uri}", requestUri);
             return null;
         }
     }
