@@ -96,10 +96,13 @@ public class PluginConfiguration : BasePluginConfiguration
     // explicitly permits local caching of this data for the one real
     // purpose this plugin already uses it for, unlike SkipDB's own real
     // reciprocity clause (checked before adding this, not assumed) -
-    // SkipDB itself was left out entirely: its own public data dump
-    // turned out to be a stalled ~3 month old snapshot covering only 51
-    // real titles, with zero coverage for either real show this was
-    // tested against.
+    // SkipDB itself was left out entirely: not for being too small (its
+    // own real dated GitHub Releases, not its "data-latest" alias tag
+    // which pointed at a stale snapshot, show a genuinely large and
+    // actively growing 102,347 real segments across 2,865 real titles),
+    // but because it still had zero real coverage for the one real
+    // sparse show this whole search started over, not worth its own
+    // real reciprocity cost for zero real gain there.
     // No config field needed here: SkipMe.db's own real API takes no key
     // of any kind, reads or writes.
 
