@@ -195,11 +195,16 @@
               Real community timestamp databases, tried before this plugin's own cross-episode
               audio analysis: no stream or ffmpeg access needed, so a title gets a real Skip
               Intro/Credits button the very first time it is opened. TheIntroDB
-              (theintrodb.org) covers general TV/movies and already works anonymously straight
-              off this item's own TMDB id, no key required; an optional API key from its own
-              website just weights a reader's own submissions higher. AniSkip and Anime-Skip
-              (the same approach NuvioTV itself uses) cover anime specifically, whatever
-              TheIntroDB does not have: a free Simkl client ID (simkl.com, under Settings &gt;
+              (theintrodb.org) and SkipMe.db cover general TV/movies and both already work
+              anonymously straight off this item's own TMDB id, no key required for either -
+              two independently crowdsourced databases, so a title one of them has nothing for
+              is still worth asking the other. An optional API key from TheIntroDB's own website
+              just weights a reader's own submissions higher. IntroDB (introdb.app) adds a third
+              TV-specific database, keyed by IMDb id instead - it needs the TMDB Access Token
+              above configured to resolve one first, and an optional API key from its own
+              website works the same graceful-blank way TheIntroDB's does. AniSkip and Anime-Skip
+              (the same approach NuvioTV itself uses) cover anime specifically, whatever none of
+              the three above have: a free Simkl client ID (simkl.com, under Settings &gt;
               Developer) maps a title onto the MyAnimeList/AniList id they key off, and a
               separate free Anime-Skip client ID (anime-skip.com) adds its own fallback coverage
               for whatever AniSkip alone does not have. Any of these left blank, that one piece
@@ -223,6 +228,11 @@
           <div class="inputContainer">
             <label class="inputLabel" for="txtTheIntroDbApiKey">TheIntroDB API Key (optional)</label>
             <input is="emby-input" type="password" id="txtTheIntroDbApiKey" autocomplete="off" />
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtIntroDbApiKey">IntroDB API Key (optional)</label>
+            <input is="emby-input" type="password" id="txtIntroDbApiKey" autocomplete="off" />
           </div>
 
           <div class="inputContainer">
@@ -336,6 +346,7 @@
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
           document.querySelector('#txtTheIntroDbApiKey').value = withDefault(config.TheIntroDbApiKey, '');
+          document.querySelector('#txtIntroDbApiKey').value = withDefault(config.IntroDbApiKey, '');
           document.querySelector('#txtSimklClientId').value = withDefault(config.SimklClientId, '');
           document.querySelector('#txtAnimeSkipClientId').value = withDefault(config.AnimeSkipClientId, '');
           document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked = withDefault(config.SkipIntroCreditsAdminMenuEnabled, false);
@@ -352,6 +363,7 @@
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
           config.TheIntroDbApiKey = document.querySelector('#txtTheIntroDbApiKey').value.trim();
+          config.IntroDbApiKey = document.querySelector('#txtIntroDbApiKey').value.trim();
           config.SimklClientId = document.querySelector('#txtSimklClientId').value.trim();
           config.AnimeSkipClientId = document.querySelector('#txtAnimeSkipClientId').value.trim();
           config.SkipIntroCreditsAdminMenuEnabled = document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked;

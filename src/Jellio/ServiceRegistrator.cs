@@ -112,6 +112,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
             AllowAutoRedirect = false,
         });
         services.AddSingleton<TheIntroDbClient>();
+        services.AddSingleton<SkipMeDbClient>();
+        services.AddSingleton<IntroDbClient>();
+        services.AddSingleton<TmdbExternalIdResolver>();
         services.AddSingleton<SimklIdResolver>();
         services.AddSingleton<AniSkipClient>();
         services.AddSingleton<AnimeSkipClient>();
