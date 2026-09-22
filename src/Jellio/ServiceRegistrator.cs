@@ -111,6 +111,20 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         {
             AllowAutoRedirect = false,
         });
+
+        // Real bug, found live: SkipMe.db's own real Cloudflare Worker
+        // rejects every single request with a real 403 "Client not
+        // supported" unless it carries this exact literal User-Agent -
+        // confirmed against their own real PluginServiceRegistrator.cs
+        // (github.com/intro-skipper/skipme.db-plugin) and against a real
+        // curl repro from both a real host and inside the Jellyfin
+        // container itself, a spoofed real Chrome UA included, neither
+        // one satisfying it. A real named client for exactly this reason,
+        // same shape SimklRedirect above already uses.
+        services.AddHttpClient(nameof(SkipMeDbClient)).ConfigureHttpClient(c =>
+        {
+            c.DefaultRequestHeaders.UserAgent.ParseAdd(SkipMeDbClient.RequiredUserAgent);
+        });
         services.AddSingleton<TheIntroDbClient>();
         services.AddSingleton<SkipMeDbClient>();
         services.AddSingleton<IntroDbClient>();
