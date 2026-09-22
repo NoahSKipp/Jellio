@@ -83,6 +83,40 @@ public class PluginConfiguration : BasePluginConfiguration
     // never required for this tier to answer at all.
     public string TheIntroDbApiKey { get; set; } = string.Empty;
 
+    // SkipMe.db, tried right alongside TheIntroDB above (Services/
+    // CommunitySkip/SkipMeDbClient.cs, ported from the official
+    // intro-skipper org's own real skipme.db-plugin, GPL-3.0, its own
+    // Services/SkipMeApiClient.cs read directly before writing this):
+    // another genuinely public, free, general TV/movie database, also
+    // keyed directly off ProviderIds.Tmdb, no key of any kind needed.
+    // Independently crowdsourced from TheIntroDB, so a title one of them
+    // has nothing for is still worth asking the other - real coverage
+    // gain confirmed live against a real sparse show (TheIntroDB alone
+    // only covered 12 of 128 real episodes). Their own real NOTICE file
+    // explicitly permits local caching of this data for the one real
+    // purpose this plugin already uses it for, unlike SkipDB's own real
+    // reciprocity clause (checked before adding this, not assumed) -
+    // SkipDB itself was left out entirely: its own public data dump
+    // turned out to be a stalled ~3 month old snapshot covering only 51
+    // real titles, with zero coverage for either real show this was
+    // tested against.
+    // No config field needed here: SkipMe.db's own real API takes no key
+    // of any kind, reads or writes.
+
+    // IntroDB (Services/CommunitySkip/IntroDbClient.cs, api.introdb.app,
+    // ported from a real third party open source client's own
+    // IntroDBClient.swift/Models.swift read directly before writing
+    // this - api.introdb.app itself unreachable from this environment to
+    // read their own real docs page directly): a third independently
+    // crowdsourced TV show database, unlike TheIntroDB/SkipMe.db above
+    // keyed by IMDb id rather than TMDB id, so this tier only ever runs
+    // once Services/CommunitySkip/TmdbExternalIdResolver.cs has resolved
+    // one (needs TmdbAccessToken above configured, one real extra round
+    // trip per series, cached after that). An optional API key here
+    // mirrors TheIntroDbApiKey's own real graceful-blank behaviour;
+    // never required for this tier to answer at all.
+    public string IntroDbApiKey { get; set; } = string.Empty;
+
     // AniSkip/Anime-Skip below cover what TheIntroDB itself does not:
     // anime specifically, submitted against MyAnimeList/AniList rather
     // than TMDB. A free client_id from simkl.com's own developer
