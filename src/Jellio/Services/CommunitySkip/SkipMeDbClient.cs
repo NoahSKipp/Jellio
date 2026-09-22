@@ -31,6 +31,18 @@ public class SkipMeDbClient(IHttpClientFactory httpClientFactory, ILogger<SkipMe
     // private CI secret, never checked into source.
     private const string BaseUrl = "https://db.skipme.workers.dev";
 
+    // Real bug, found live: their own real Cloudflare Worker rejects
+    // every single request with a real 403 "Client not supported"
+    // unless it carries this exact literal User-Agent - confirmed
+    // against a real curl repro from both the host and inside the
+    // Jellyfin container itself, a spoofed real Chrome UA included, and
+    // against their own real source (PluginServiceRegistrator.cs's own
+    // real ConfigureHttpClient call), not guessed at. ServiceRegistrator.cs
+    // registers this same real named client with the exact same real
+    // header, the one real reason GetItemSegmentsAsync below asks for a
+    // named client rather than IHttpClientFactory's own real default one.
+    internal const string RequiredUserAgent = "SkipMe.db/0.0";
+
     private static readonly JsonSerializerOptions RequestJsonOptions = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -79,7 +91,7 @@ public class SkipMeDbClient(IHttpClientFactory httpClientFactory, ILogger<SkipMe
         {
             await WaitForRateLimitAsync(cancellationToken).ConfigureAwait(false);
 
-            var client = httpClientFactory.CreateClient();
+            var client = httpClientFactory.CreateClient(nameof(SkipMeDbClient));
             using var response = await client
                 .PostAsJsonAsync(requestUri, items, RequestJsonOptions, cancellationToken)
                 .ConfigureAwait(false);
