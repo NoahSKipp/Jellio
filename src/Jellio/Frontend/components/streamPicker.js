@@ -279,7 +279,12 @@ export function sourceAudioLanguages(source) {
   return codes;
 }
 
-function playHash(itemId, mediaSourceId) {
+// Exported for screens/player.js's own playNextEpisode(): the exact
+// same real #/play URL shape a remembered/explicit source choice here
+// already navigates with, so a next-episode advance that resolves its
+// own matching source (see that file's own header) lands on it through
+// the identical real route rather than a second, drifting copy of this.
+export function playHash(itemId, mediaSourceId) {
   return '#/play?id=' + itemId + (mediaSourceId ? '&mediaSourceId=' + mediaSourceId : '');
 }
 
