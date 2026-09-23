@@ -57,7 +57,7 @@ import {
 import { getUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
-import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages } from '../components/streamPicker.js';
+import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { languageName } from '../runtime/languages.js';
@@ -2878,12 +2878,60 @@ export async function renderPlayer(root, params) {
   let upNextCountdownInterval = null;
   let upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
 
-  function playNextEpisode() {
+  // Real bug, found live: this used to navigate straight to the next
+  // episode's own #/play route with no mediaSourceId at all, so the
+  // fresh PlaybackInfo negotiation there just took Gelato's own
+  // MediaSources[0] - whichever release happened to resolve first,
+  // never checked against the language actually playing. A multi
+  // source Gelato title often keeps separate dubs as entirely separate
+  // sources, not just separate audio tracks within one, so that could
+  // hand back a completely different language mid-binge. This now
+  // reads the currently playing source's own active audio track,
+  // fetches the next episode's own real sources (the exact same
+  // getMediaSources() call components/streamPicker.js's own picker
+  // already uses), and looks for one whose own sourceAudioLanguages()
+  // already includes that same code - the exact same real language
+  // detection (embedded MediaStreams first, the release name's own
+  // language flags next) that picker's own filter row already trusts.
+  // Falls through to the old default-negotiation behaviour untouched
+  // whenever there is no active language to match, or none of the next
+  // episode's own sources carry it.
+  function activeAudioLanguageCode() {
+    if (!mediaSource) return null;
+    const audioStreams = (mediaSource.MediaStreams || []).filter(function (stream) {
+      return stream.Type === 'Audio';
+    });
+    const wantedIndex = currentAudioStreamIndex != null ? currentAudioStreamIndex : mediaSource.DefaultAudioStreamIndex;
+    const active = audioStreams.find(function (stream) {
+      return stream.Index === wantedIndex;
+    });
+    return active && active.Language ? active.Language.toLowerCase() : null;
+  }
+
+  async function playNextEpisode() {
     if (upNextCountdownInterval) {
       window.clearInterval(upNextCountdownInterval);
       upNextCountdownInterval = null;
     }
-    if (nextEpisode) navigateTo('#/play?id=' + nextEpisode.Id);
+    const target = nextEpisode;
+    if (!target) return;
+    nextEpisode = null;
+
+    const languageCode = activeAudioLanguageCode();
+    let mediaSourceId;
+    if (languageCode) {
+      try {
+        const sources = await getMediaSources(target.Id);
+        const matched = sources.find(function (source) {
+          return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
+        });
+        if (matched) mediaSourceId = matched.Id;
+      } catch (err) {
+        console.warn('Jellio: could not check next episode sources for a matching audio language', err);
+      }
+    }
+
+    navigateTo(playHash(target.Id, mediaSourceId));
   }
 
   function updateUpNextCountdown() {
