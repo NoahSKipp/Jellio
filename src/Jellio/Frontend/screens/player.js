@@ -722,6 +722,22 @@ export async function renderPlayer(root, params) {
     );
   }
 
+  // Real bug, found live: showLoadingLogo()'s own overlay only ever had
+  // a success path, video's own real 'playing' event. A source slow
+  // enough to time out at the proxy in front of this server (a real
+  // 524 from a still-resolving Gelato/debrid source, confirmed against
+  // a real browser console) aborts video.play() instead, 'playing'
+  // never fires, and attemptPlay()'s own toast a few lines down used to
+  // fire with this same real logo still sitting there over top of it,
+  // covering the one real message telling a reader what happened.
+  // attemptPlay's own final failure branch calls this directly now.
+  function hideLoadingLogo() {
+    if (loadingLogo) {
+      loadingLogo.remove();
+      loadingLogo = null;
+    }
+  }
+
   let subtitleStyle = loadSubtitleStyle();
   applySubtitleStyle(video, subtitleStyle);
 
@@ -2173,6 +2189,7 @@ export async function renderPlayer(root, params) {
           return;
         }
         console.warn('Jellio: could not start playback', err);
+        hideLoadingLogo();
         showPlayerToast('Could not start playback. Try pressing play again.');
       });
     }
