@@ -7239,14 +7239,45 @@
   position: relative;
 }
 
-.jellio-profile-avatar {
+.jellio-profile-avatar-wrap {
+  position: relative;
   flex: 0 0 auto;
+}
+
+.jellio-profile-avatar {
   width: clamp(84px, 9vw, 128px);
   height: clamp(84px, 9vw, 128px);
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid var(--jellio-bg-color);
   background: var(--jellio-card-bg);
+}
+
+/* Same real "blurred pill floating over the art" language
+   .jellio-profile-banner-edit above already uses, a small circular
+   badge here instead - a whole pill would swallow most of a real
+   avatar this size. */
+.jellio-profile-avatar-edit {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  padding: 0;
+  border: 2px solid var(--jellio-bg-color);
+  border-radius: 50%;
+  background: rgb(13 13 13 / 0.75);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.jellio-profile-avatar-edit-icon {
+  font-size: 1.1em;
 }
 
 .jellio-profile-identity {
