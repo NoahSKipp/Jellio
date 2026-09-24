@@ -103,8 +103,19 @@ public class PluginConfiguration : BasePluginConfiguration
     // but because it still had zero real coverage for the one real
     // sparse show this whole search started over, not worth its own
     // real reciprocity cost for zero real gain there.
-    // No config field needed here: SkipMe.db's own real API takes no key
-    // of any kind, reads or writes.
+    // No key needed - SkipMe.db's own real API takes none, reads or
+    // writes. Off by default though: the public db.skipme.workers.dev
+    // endpoint this plugin's own real SkipMeDbClient.cs calls rejects
+    // every request with a 403 "Client not supported" unless it carries
+    // the one exact User-Agent their own private CI build bakes in at
+    // build time, a secret that never ships in their public source and
+    // this plugin has no way to obtain (confirmed live, host and
+    // container, spoofed Chrome UA included, same 403 every time). Until
+    // there is ever a working credential, calling this tier at all is a
+    // guaranteed-failed round trip plus its own real rate-limit pacing on
+    // every single episode, for zero possible benefit - left here as an
+    // opt-in in case that ever changes, not removed outright.
+    public bool EnableSkipMeDb { get; set; }
 
     // IntroDB (Services/CommunitySkip/IntroDbClient.cs, api.introdb.app,
     // ported from a real third party open source client's own

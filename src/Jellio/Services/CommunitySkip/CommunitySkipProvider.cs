@@ -27,6 +27,11 @@ public record CommunitySkipResult(double? IntroductionStart, double? Introductio
 //    another independently crowdsourced general TV/movie database, also
 //    keyed straight off ProviderIds.Tmdb - real coverage gain confirmed
 //    live against a real sparse show TheIntroDB alone barely covered.
+//    Off by default (PluginConfiguration.EnableSkipMeDb): their own
+//    public endpoint rejects every request with a 403 unless it carries
+//    a private CI-only User-Agent this plugin has no way to obtain,
+//    confirmed live - calling it unconditionally would be a guaranteed
+//    failed round trip on every episode of every scan for no benefit.
 // 3. IntroDB (api.introdb.app): a third independently crowdsourced TV
 //    show database, this one keyed by IMDb id, so it only ever runs
 //    once TmdbExternalIdResolver has resolved one.
@@ -120,7 +125,8 @@ public class CommunitySkipProvider(
             : [];
         tiers.Add(theIntroDbIntervals);
 
-        if (hasTmdbTarget && !HasBothCategories(tiers))
+        var skipMeDbEnabled = JellioPlugin.Instance?.Configuration.EnableSkipMeDb ?? false;
+        if (hasTmdbTarget && skipMeDbEnabled && !HasBothCategories(tiers))
         {
             var skipMeDbIntervals = await GetSkipMeDbIntervalsAsync(tmdbId!.Value, isMovie, season, episode, durationSeconds, itemName, cancellationToken).ConfigureAwait(false);
             tiers.Add(skipMeDbIntervals);

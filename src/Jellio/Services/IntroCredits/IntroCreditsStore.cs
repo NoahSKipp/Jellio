@@ -81,6 +81,22 @@ public class IntroCreditsStore(IApplicationPaths applicationPaths)
         }
     }
 
+    // Recorded whether the community tier found anything or not, same
+    // unconditional shape MarkAttempted above already uses for the
+    // analyzer - a known miss is exactly as worth remembering as a hit,
+    // it just gets remembered for a much shorter gap.
+    public void MarkCommunityAttempted(Guid itemId)
+    {
+        lock (_lock)
+        {
+            var all = LoadLocked();
+            var record = GetOrCreate(all, itemId);
+            record.CommunityAttempted = true;
+            record.CommunityAttemptedAt = DateTimeOffset.UtcNow;
+            SaveLocked(all);
+        }
+    }
+
     private static IntroCreditsRecord GetOrCreate(Dictionary<string, IntroCreditsRecord> all, Guid itemId)
     {
         var key = Key(itemId);

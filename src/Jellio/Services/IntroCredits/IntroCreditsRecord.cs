@@ -20,4 +20,14 @@ public class IntroCreditsRecord
     public bool Attempted { get; set; }
 
     public DateTimeOffset AttemptedAt { get; set; }
+
+    // Separate from Attempted/AttemptedAt above, which track the
+    // expensive analyzer fallback: this tracks the free community tier
+    // instead, on a much shorter gap (IntroCreditsBulkScanner's own
+    // CommunityRecheckGap), so a season the community sources have
+    // nothing for at all does not repeat the same round of HTTP lookups
+    // every single scan.
+    public bool CommunityAttempted { get; set; }
+
+    public DateTimeOffset CommunityAttemptedAt { get; set; }
 }
