@@ -2747,6 +2747,47 @@ export async function renderPlayer(root, params) {
     performSeek(skipTargetSeconds);
   });
 
+  function isValidSegment(segment) {
+    return !!(segment && segment.End > 0 && segment.End > segment.Start);
+  }
+
+  // Real bug, found live against Re:Zero: every one of this chain's own
+  // real tiers used to be "first one that returns anything wins
+  // outright," even when that first tier only actually had ONE of
+  // Introduction/Credits for real - getCommunitySkipSegments,
+  // getIntroSkipperSegments (through getNativeMediaSegments) and
+  // chapterFallbackSegments all default whichever category they did not
+  // find to a degenerate {Start:0, End:0} placeholder, truthy enough to
+  // satisfy the old "did this tier find anything at all" check and
+  // permanently block every lower tier from ever being asked to fill in
+  // just the one real category still missing. A community hit with a
+  // real Credits segment but no real Introduction locked in immediately
+  // - Skip Intro never showing again for that episode no matter what
+  // native Intro Skipper, chapters or this plugin's own analyzer had -
+  // and Up Next fired off whatever Credits.Start that same tier
+  // happened to have, even where a lower tier's own real match would
+  // have been more accurate, with nothing here ever giving it the
+  // chance to try.
+  //
+  // Merges per category instead, the exact same real priority order
+  // "first real result for THIS category wins" shape Services/
+  // CommunitySkip/CommunitySkipProvider.cs's own MergeByPriority already
+  // uses server side for its own four tiers: a lower tier only ever
+  // fills in whichever one real category is still missing, never
+  // discards a real, valid category a higher tier already had just
+  // because that same response also lacked the other one.
+  function mergeSkipSegments(current, candidate) {
+    if (!candidate) return current;
+    return {
+      Introduction: isValidSegment(current && current.Introduction) ? current.Introduction : candidate.Introduction,
+      Credits: isValidSegment(current && current.Credits) ? current.Credits : candidate.Credits,
+    };
+  }
+
+  function segmentsComplete(segments) {
+    return !!(segments && isValidSegment(segments.Introduction) && isValidSegment(segments.Credits));
+  }
+
   // Real feedback, explicit: a real community timestamp database
   // (Controllers/IntroCreditsController.cs's own GET .../community/{id},
   // the same real approach NuvioTV itself ships) is tried first now,
@@ -2756,23 +2797,21 @@ export async function renderPlayer(root, params) {
   // exactly as it already was, a real last resort chain for whatever
   // the community tier itself does not cover (anime only for now, and
   // only once a server admin has actually configured a real Simkl
-  // client id).
+  // client id) - now only ever reached for whichever one real category
+  // the community tier above did not already answer, not discarded
+  // outright the moment community answers anything at all.
   getCommunitySkipSegments(itemId).then(function (community) {
-    if (community) {
-      skipSegments = community;
-      return;
-    }
+    skipSegments = mergeSkipSegments(skipSegments, community);
+    if (segmentsComplete(skipSegments)) return;
 
     getIntroSkipperSegments(itemId).then(function (result) {
-      if (result && (result.Introduction || result.Credits)) {
-        skipSegments = result;
-        return;
-      }
+      skipSegments = mergeSkipSegments(skipSegments, result);
+      if (segmentsComplete(skipSegments)) return;
+
       const fromChapters = chapterFallbackSegments(item.Chapters, item.RunTimeTicks);
-      if (fromChapters) {
-        skipSegments = fromChapters;
-        return;
-      }
+      skipSegments = mergeSkipSegments(skipSegments, fromChapters);
+      if (segmentsComplete(skipSegments)) return;
+
       // Real last resort: Jellio's own real cross-episode analyzer,
       // only ever has something to say once an admin has explicitly run
       // components/cardOptionsMenu.js's own "Find Skip Intro/Credits"
@@ -2781,7 +2820,7 @@ export async function renderPlayer(root, params) {
       // a reader's own debrid quota for something the community tier
       // above already covers most of the time).
       getJellioIntroCredits(itemId).then(function (analyzed) {
-        if (analyzed) skipSegments = analyzed;
+        skipSegments = mergeSkipSegments(skipSegments, analyzed);
       });
     });
   });
