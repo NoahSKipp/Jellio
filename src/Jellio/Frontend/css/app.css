@@ -5454,31 +5454,75 @@
   background: rgb(255 255 255 / 0.18);
 }
 
+/* Same glass card treatment as .jellio-player-upnext above, and the
+   same corner - the two never show at once (see !upNextShown in
+   screens/player.js's own timeupdate handler). */
 .jellio-player-skip {
   position: absolute;
   right: clamp(16px, 3vw, 40px);
   bottom: 6.5em;
   z-index: 2;
-  padding: 0.6em 1.4em;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-  color: var(--jellio-text-color);
-  font-family: var(--jellio-font-family);
-  font-weight: 700;
-  font-size: 0.85em;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+  width: min(20em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
+  padding: 1em 1.2em;
+  border-radius: var(--jellio-card-radius);
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  box-shadow: 0 0.5em 2em rgb(0 0 0 / 0.45);
   opacity: 1;
-  transition: opacity 0.2s ease;
-}
-
-.jellio-player-skip:hover {
-  background: rgb(255 255 255 / 0.2);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .jellio-player-skip-hidden {
   opacity: 0;
+  transform: translateY(8px);
   pointer-events: none;
+}
+
+.jellio-player-skip-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jellio-player-skip-eyebrow {
+  color: var(--jellio-text-tertiary);
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.jellio-player-skip-title {
+  margin-top: 0.3em;
+  color: var(--jellio-text-color);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-player-skip-actions {
+  flex: 0 0 auto;
+}
+
+.jellio-player-skip-action {
+  padding: 0.5em 1.2em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.jellio-player-skip-action:hover {
+  background: var(--jellio-secondary-variant);
 }
 
 .jellio-hero {
