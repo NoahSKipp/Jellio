@@ -26,6 +26,8 @@ import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
 import { formatRelativeTime } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
+import { openAvatarPicker } from '../components/avatarPicker.js';
+import { refreshProfileAvatar } from '../components/navShared.js';
 
 const BIO_MAX_LENGTH = 240;
 
@@ -108,6 +110,42 @@ function buildBanner(userId, isOwner, onChanged) {
   }
 
   return banner;
+}
+
+// Real feedback: changing a profile picture only ever lived behind
+// Settings' own "Change avatar" row, a real extra hop away from the one
+// real page that already shows it full size. Same real picker
+// components/avatarPicker.js already opens from there (a real full
+// overlay of its own, upload or pick from presets), just triggered from
+// here too now - onChanged refreshes both the sidebar/nav's own real
+// avatar mounts (refreshProfileAvatar, the same real live nudge
+// Settings' own row already needed since neither rail rebuilds on its
+// own past its first real render) and this whole screen, so the new
+// real picture actually shows here immediately rather than only after
+// a real reload.
+function buildAvatar(userId, imageTag, isOwner, onChanged) {
+  const wrap = el('div', 'jellio-profile-avatar-wrap');
+  const avatar = document.createElement('img');
+  avatar.className = 'jellio-profile-avatar';
+  avatar.alt = '';
+  avatar.src = getUserImageUrl(userId, imageTag, { maxWidth: 200 });
+  wrap.appendChild(avatar);
+
+  if (isOwner) {
+    const editButton = el('button', 'jellio-profile-avatar-edit');
+    editButton.type = 'button';
+    editButton.setAttribute('aria-label', 'Change profile picture');
+    editButton.appendChild(el('span', 'material-icons jellio-profile-avatar-edit-icon photo_camera'));
+    editButton.addEventListener('click', function () {
+      openAvatarPicker(function () {
+        refreshProfileAvatar();
+        onChanged();
+      });
+    });
+    wrap.appendChild(editButton);
+  }
+
+  return wrap;
 }
 
 function buildBioSection(userId, bio, isOwner, onChanged) {
@@ -316,11 +354,11 @@ export async function renderProfile(root, params) {
 
   const header = el('div', 'jellio-profile-header');
   const imageTag = user.PrimaryImageTag;
-  const avatar = document.createElement('img');
-  avatar.className = 'jellio-profile-avatar';
-  avatar.alt = '';
-  avatar.src = getUserImageUrl(userId, imageTag, { maxWidth: 200 });
-  header.appendChild(avatar);
+  header.appendChild(
+    buildAvatar(userId, imageTag, isOwner, function () {
+      renderProfile(root, params);
+    }),
+  );
 
   const identity = el('div', 'jellio-profile-identity');
   const nameRow = el('div', 'jellio-profile-name-row');
