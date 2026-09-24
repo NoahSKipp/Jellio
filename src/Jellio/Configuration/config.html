@@ -195,11 +195,13 @@
               Real community timestamp databases, tried before this plugin's own cross-episode
               audio analysis: no stream or ffmpeg access needed, so a title gets a real Skip
               Intro/Credits button the very first time it is opened. TheIntroDB
-              (theintrodb.org) and SkipMe.db cover general TV/movies and both already work
-              anonymously straight off this item's own TMDB id, no key required for either -
-              two independently crowdsourced databases, so a title one of them has nothing for
-              is still worth asking the other. An optional API key from TheIntroDB's own website
-              just weights a reader's own submissions higher. IntroDB (introdb.app) adds a third
+              (theintrodb.org) covers general TV/movies and already works anonymously straight
+              off this item's own TMDB id, no key required. An optional API key from TheIntroDB's
+              own website just weights a reader's own submissions higher. SkipMe.db is a second,
+              independently crowdsourced general TV/movie database on the same TMDB id, but its
+              public endpoint currently rejects every request without a private credential this
+              plugin cannot obtain - left off below until that changes, since leaving it on today
+              would only add a guaranteed-failed lookup to every scan. IntroDB (introdb.app) adds a third
               TV-specific database, keyed by IMDb id instead - it needs the TMDB Access Token
               above configured to resolve one first, and an optional API key from its own
               website works the same graceful-blank way TheIntroDB's does. AniSkip and Anime-Skip
@@ -222,6 +224,18 @@
               analyzer against a whole Movie or Series (every season). Off by default so it does
               not sit on every single card's own right click menu - turn it on while actually
               running a sweep, then back off again once done.
+            </div>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="chkEnableSkipMeDb" />
+              <span>Try SkipMe.db (currently rejects every request, off by default)</span>
+            </label>
+            <div class="fieldDescription">
+              Leave this off unless a working credential for SkipMe.db's public endpoint ever
+              becomes available - enabling it today adds a guaranteed-failed network round trip
+              to every episode of every scan for no benefit.
             </div>
           </div>
 
@@ -345,6 +359,7 @@
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
+          document.querySelector('#chkEnableSkipMeDb').checked = withDefault(config.EnableSkipMeDb, false);
           document.querySelector('#txtTheIntroDbApiKey').value = withDefault(config.TheIntroDbApiKey, '');
           document.querySelector('#txtIntroDbApiKey').value = withDefault(config.IntroDbApiKey, '');
           document.querySelector('#txtSimklClientId').value = withDefault(config.SimklClientId, '');
@@ -362,6 +377,7 @@
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
+          config.EnableSkipMeDb = document.querySelector('#chkEnableSkipMeDb').checked;
           config.TheIntroDbApiKey = document.querySelector('#txtTheIntroDbApiKey').value.trim();
           config.IntroDbApiKey = document.querySelector('#txtIntroDbApiKey').value.trim();
           config.SimklClientId = document.querySelector('#txtSimklClientId').value.trim();

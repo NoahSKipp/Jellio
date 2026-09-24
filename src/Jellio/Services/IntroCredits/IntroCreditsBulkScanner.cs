@@ -33,6 +33,14 @@ public class IntroCreditsBulkScanner(
 {
     public record ScanResult(int EpisodesScanned, int CommunityHits, int AnalyzerHits);
 
+    // Much shorter than the analyzer's own MinReanalyzeGap (3 days too,
+    // deliberately the same number - real coverage keeps arriving on the
+    // free community sources at a similar real pace to how often the
+    // expensive analyzer fallback is worth retrying, not a faster one):
+    // a known-empty season should still catch new community coverage
+    // within a few days, just not re-ask every single scan in between.
+    private static readonly TimeSpan CommunityRecheckGap = TimeSpan.FromDays(3);
+
     public async Task<ScanResult> ScanAsync(Guid itemId, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
     {
         var item = libraryManager.GetItemById(itemId);
@@ -56,8 +64,15 @@ public class IntroCreditsBulkScanner(
     // exactly that reason, a single "Find Skip Intro/Credits" entry only.
     private async Task<ScanResult> ScanMovieAsync(Movie movie, CancellationToken cancellationToken)
     {
+        if (ShouldSkipCommunityLookup(movie.Id))
+        {
+            logger.LogInformation("Jellio: community skip scan for {MovieName} - skipped, already attempted recently", movie.Name);
+            return new ScanResult(1, 0, 0);
+        }
+
         var result = await communitySkipProvider.GetSkipIntervalsForMovieAsync(movie, cancellationToken).ConfigureAwait(false);
         var found = StoreCommunityResult(movie.Id, result);
+        store.MarkCommunityAttempted(movie.Id);
         logger.LogInformation("Jellio: community skip scan for {MovieName} - found: {Found}", movie.Name, found);
         return new ScanResult(1, found ? 1 : 0, 0);
     }
@@ -70,8 +85,18 @@ public class IntroCreditsBulkScanner(
     // short - a Quick miss on a well covered season never triggers it.
     private async Task<ScanResult> ScanEpisodeAsync(Episode episode, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
     {
-        var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
-        var communityHit = StoreCommunityResult(episode.Id, result);
+        bool communityHit;
+        if (ShouldSkipCommunityLookup(episode.Id))
+        {
+            logger.LogInformation("Jellio: community skip scan for {EpisodeName} - skipped, already attempted recently", episode.Name);
+            communityHit = false;
+        }
+        else
+        {
+            var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
+            communityHit = StoreCommunityResult(episode.Id, result);
+            store.MarkCommunityAttempted(episode.Id);
+        }
 
         if (communityHit || !useAnalyzerFallback || episode.SeasonId == Guid.Empty)
         {
@@ -138,7 +163,14 @@ public class IntroCreditsBulkScanner(
             cancellationToken.ThrowIfCancellationRequested();
             episodesScanned++;
 
+            if (ShouldSkipCommunityLookup(episode.Id))
+            {
+                stillMissing.Add(episode);
+                continue;
+            }
+
             var result = await communitySkipProvider.GetSkipIntervalsAsync(episode, cancellationToken).ConfigureAwait(false);
+            store.MarkCommunityAttempted(episode.Id);
             if (StoreCommunityResult(episode.Id, result))
             {
                 communityHits++;
@@ -171,11 +203,18 @@ public class IntroCreditsBulkScanner(
         return new ScanResult(episodesScanned, communityHits, analyzerHits);
     }
 
-    // Only ever stores a real hit: leaving a miss unstored (rather than
-    // MarkAttempted-ing it the way the expensive analyzer's own store
-    // calls do) keeps this cheap tier retryable on the very next scan
-    // with no gap to wait out, since a plain community lookup costs this
-    // plugin nothing to just ask again.
+    private bool ShouldSkipCommunityLookup(Guid itemId)
+    {
+        var record = store.Get(itemId);
+        return record is { CommunityAttempted: true } && DateTimeOffset.UtcNow - record.CommunityAttemptedAt < CommunityRecheckGap;
+    }
+
+    // Stores whichever categories a real hit covered - MarkCommunityAttempted
+    // above (called by every caller right after this, hit or miss alike)
+    // is what actually gates the next lookup, so a miss no longer means
+    // "ask again for free on the very next scan" the way it used to: a
+    // known-empty season was re-running its whole real HTTP chain, every
+    // episode, on every future scan, forever.
     private bool StoreCommunityResult(Guid itemId, CommunitySkipResult? result)
     {
         if (result is null)
