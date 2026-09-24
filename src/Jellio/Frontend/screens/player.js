@@ -2647,8 +2647,30 @@ export async function renderPlayer(root, params) {
   }
   pauseOverlay.appendChild(pauseContent);
 
-  const skipButton = el('button', 'jellio-player-skip jellio-player-skip-hidden', 'Skip Intro');
-  skipButton.type = 'button';
+  // A real card now, the same glass-panel treatment buildUpNextOverlay
+  // above already uses, not the tiny corner pill this used to be - real
+  // feedback was that a small badge easy to miss entirely undersold a
+  // real, actionable prompt the reader should actually notice.
+  function buildSkipOverlay(onSkip) {
+    const overlay = el('div', 'jellio-player-skip jellio-player-skip-hidden');
+
+    const body = el('div', 'jellio-player-skip-body');
+    const eyebrow = el('div', 'jellio-player-skip-eyebrow', '');
+    body.appendChild(eyebrow);
+    const title = el('div', 'jellio-player-skip-title', '');
+    body.appendChild(title);
+    overlay.appendChild(body);
+
+    const actions = el('div', 'jellio-player-skip-actions');
+    const actionButton = el('button', 'jellio-player-skip-action', 'Skip');
+    actionButton.type = 'button';
+    actionButton.addEventListener('click', onSkip);
+    actions.appendChild(actionButton);
+    overlay.appendChild(actions);
+
+    return { overlay: overlay, eyebrowEl: eyebrow, titleEl: title };
+  }
+
   let skipSegments = null;
   let skipTargetSeconds = 0;
 
@@ -2717,11 +2739,11 @@ export async function renderPlayer(root, params) {
     if (!skipSegments) return null;
     const intro = skipSegments.Introduction;
     if (intro && intro.End > 0 && currentTime >= intro.Start && currentTime < intro.End) {
-      return { label: 'Skip Intro', target: intro.End };
+      return { eyebrow: 'Introduction', label: 'Skip Intro', target: intro.End };
     }
     const credits = skipSegments.Credits;
     if (credits && credits.End > 0 && currentTime >= credits.Start && currentTime < credits.End) {
-      return { label: 'Skip Credits', target: credits.End };
+      return { eyebrow: 'Credits', label: 'Skip Credits', target: credits.End };
     }
     return null;
   }
@@ -2743,7 +2765,7 @@ export async function renderPlayer(root, params) {
     return duration - currentTime <= getUpNextTriggerSeconds();
   }
 
-  skipButton.addEventListener('click', function () {
+  const skipOverlay = buildSkipOverlay(function () {
     performSeek(skipTargetSeconds);
   });
 
@@ -2829,7 +2851,7 @@ export async function renderPlayer(root, params) {
   showLoadingLogo();
   root.appendChild(pauseOverlay);
   root.appendChild(syncWaitBanner);
-  root.appendChild(skipButton);
+  root.appendChild(skipOverlay.overlay);
   root.appendChild(shell);
 
   if (hasResumePosition) {
@@ -3344,13 +3366,20 @@ export async function renderPlayer(root, params) {
       }
     }
 
+    // !upNextShown: both cards anchor to the same bottom-right corner,
+    // and a real Credits segment is what drives both of them (Skip
+    // Credits above, Up Next via shouldShowUpNextNow's own Credits.Start
+    // check) - once the Up Next card has actually taken that spot, Skip
+    // Credits would otherwise sit directly behind it for the rest of
+    // the episode with no way for a reader to ever see or reach it.
     const activeSegment = activeSkipSegment(positionSeconds);
-    if (activeSegment) {
+    if (activeSegment && !upNextShown) {
       skipTargetSeconds = activeSegment.target;
-      skipButton.textContent = activeSegment.label;
-      skipButton.classList.remove('jellio-player-skip-hidden');
+      skipOverlay.eyebrowEl.textContent = activeSegment.eyebrow;
+      skipOverlay.titleEl.textContent = activeSegment.label;
+      skipOverlay.overlay.classList.remove('jellio-player-skip-hidden');
     } else {
-      skipButton.classList.add('jellio-player-skip-hidden');
+      skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
     }
   });
 
