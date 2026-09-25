@@ -1039,6 +1039,60 @@ const DIRECT_PLAY_CONTAINERS = new Set(['mp4', 'webm', 'm4v']);
 const DIRECT_PLAY_VIDEO_CODECS = new Set(['h264', 'vp8', 'vp9', 'av1']);
 const DIRECT_PLAY_AUDIO_CODECS = new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac']);
 
+// mkv was left out of DIRECT_PLAY_CONTAINERS above entirely, even
+// though virtually every real Gelato/debrid release this runtime ever
+// plays is one: real feedback, found live, was that this forecloses
+// genuine zero-cost Direct Play (Static=true, no ffmpeg process at
+// all) for a codec-compatible source that would otherwise qualify -
+// h264/aac already permitted straight through mp4/webm gets routed
+// into a real forced transcode purely on the container, even where
+// Jellyfin's own encoder just downgrades that to -codec:v copy once it
+// notices, and even that cheap-copy case still pays for the heavier
+// HLS segmented pipeline on a native-HLS client instead of a single
+// direct stream.
+//
+// Not added to the plain Set above though: unlike mp4/webm/m4v, a
+// browser's own real Matroska support is not a safe fixed assumption
+// the way DIRECT_PLAY_VIDEO_CODECS/AUDIO_CODECS already are. Safari/
+// WebKit (the exact engine this same file's own Static-fallback header
+// above already documents a hard-won live lesson about, the macOS
+// Desktop app's WKWebView included) has no Matroska demuxer at all -
+// silently allowing it through here would not fall back to a real
+// transcode the way an unsupported codec already does, it would just
+// hand that one engine a source it cannot play at all. Feature
+// detected instead, the exact same real canPlayType() approach
+// supportsNativeHls() below already trusts for the exact same class of
+// problem, not a UA sniff or a hardcoded per-browser assumption.
+const MATROSKA_CONTAINERS = new Set(['mkv', 'matroska']);
+let matroskaContainerSupport;
+
+function supportsMatroskaContainer() {
+  if (matroskaContainerSupport !== undefined) return matroskaContainerSupport;
+  if (typeof document === 'undefined') {
+    matroskaContainerSupport = false;
+    return matroskaContainerSupport;
+  }
+  const probe = document.createElement('video');
+  if (typeof probe.canPlayType !== 'function') {
+    matroskaContainerSupport = false;
+    return matroskaContainerSupport;
+  }
+  const support = probe.canPlayType('video/x-matroska; codecs="avc1.640028, mp4a.40.2"');
+  matroskaContainerSupport = support === 'probably' || support === 'maybe';
+  return matroskaContainerSupport;
+}
+
+// mediaSource.Container can come back as either short form ("mkv") or
+// ffprobe's own longer format name ("matroska"), a real Container
+// value Jellyfin itself already hands back for a Matroska source, not
+// something to send onward to /Videos/{id}/stream.{container} as is:
+// "mkv" is the one real extension that endpoint (and every real client
+// or proxy sniffing this URL's own file extension) actually recognises.
+function normalizeStreamContainer(rawContainer) {
+  const container = String(rawContainer || '').toLowerCase();
+  return MATROSKA_CONTAINERS.has(container) ? 'mkv' : container;
+}
+
 // Real bug found live: the exact same forced transcode fallback below
 // (a server side remux/re-encode to a fragmented stream.mp4, no static
 // file to just serve as is) played fine in Chrome and failed outright
@@ -1096,7 +1150,8 @@ export function canBrowserDirectPlay(mediaSource) {
     return false;
   }
   const container = String(mediaSource.Container || '').toLowerCase();
-  if (!DIRECT_PLAY_CONTAINERS.has(container)) return false;
+  const matroskaEligible = MATROSKA_CONTAINERS.has(container) && supportsMatroskaContainer();
+  if (!DIRECT_PLAY_CONTAINERS.has(container) && !matroskaEligible) return false;
 
   const streams = mediaSource.MediaStreams || [];
   const video = streams.filter(function (stream) {
@@ -1250,7 +1305,7 @@ export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
   // playlist directly, no MSE shim needed, unlike everywhere else this
   // runtime targets.
   const useHls = !directPlay && supportsNativeHls();
-  const container = directPlay ? (mediaSource && mediaSource.Container) || 'mp4' : 'mp4';
+  const container = directPlay ? normalizeStreamContainer(mediaSource && mediaSource.Container) || 'mp4' : 'mp4';
 
   const params = new URLSearchParams({
     MediaSourceId: mediaSourceId,
