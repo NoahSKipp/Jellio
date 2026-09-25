@@ -2651,7 +2651,7 @@ export async function renderPlayer(root, params) {
   // above already uses, not the tiny corner pill this used to be - real
   // feedback was that a small badge easy to miss entirely undersold a
   // real, actionable prompt the reader should actually notice.
-  function buildSkipOverlay(onSkip) {
+  function buildSkipOverlay(onSkip, onDismiss) {
     const overlay = el('div', 'jellio-player-skip jellio-player-skip-hidden');
 
     const body = el('div', 'jellio-player-skip-body');
@@ -2659,14 +2659,19 @@ export async function renderPlayer(root, params) {
     body.appendChild(eyebrow);
     const title = el('div', 'jellio-player-skip-title', '');
     body.appendChild(title);
-    overlay.appendChild(body);
 
     const actions = el('div', 'jellio-player-skip-actions');
-    const actionButton = el('button', 'jellio-player-skip-action', 'Skip');
-    actionButton.type = 'button';
-    actionButton.addEventListener('click', onSkip);
-    actions.appendChild(actionButton);
-    overlay.appendChild(actions);
+    const skipActionButton = el('button', 'jellio-player-skip-play', 'Skip');
+    skipActionButton.type = 'button';
+    skipActionButton.addEventListener('click', onSkip);
+    const dismissButton = el('button', 'jellio-player-skip-dismiss', 'Dismiss');
+    dismissButton.type = 'button';
+    dismissButton.setAttribute('aria-label', 'Dismiss skip prompt');
+    dismissButton.addEventListener('click', onDismiss);
+    actions.appendChild(skipActionButton);
+    actions.appendChild(dismissButton);
+    body.appendChild(actions);
+    overlay.appendChild(body);
 
     return { overlay: overlay, eyebrowEl: eyebrow, titleEl: title };
   }
@@ -2765,9 +2770,24 @@ export async function renderPlayer(root, params) {
     return duration - currentTime <= getUpNextTriggerSeconds();
   }
 
-  const skipOverlay = buildSkipOverlay(function () {
-    performSeek(skipTargetSeconds);
-  });
+  // Which segment kind ('Introduction' or 'Credits') the reader has
+  // already dismissed, so Dismiss hides the card for that segment's own
+  // real remaining window instead of it popping straight back up on the
+  // very next timeupdate tick - cleared the moment activeSkipSegment's
+  // own kind changes, the same one real dismissal Up Next's own
+  // dismissUpNext() gives for the rest of the whole episode, just
+  // scoped to one segment here since Introduction and Credits are two
+  // separate real prompts, not one.
+  let dismissedSkipKind = null;
+  const skipOverlay = buildSkipOverlay(
+    function () {
+      performSeek(skipTargetSeconds);
+    },
+    function () {
+      dismissedSkipKind = skipOverlay.eyebrowEl.textContent;
+      skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
+    },
+  );
 
   function isValidSegment(segment) {
     return !!(segment && segment.End > 0 && segment.End > segment.Start);
@@ -3373,7 +3393,10 @@ export async function renderPlayer(root, params) {
     // Credits would otherwise sit directly behind it for the rest of
     // the episode with no way for a reader to ever see or reach it.
     const activeSegment = activeSkipSegment(positionSeconds);
-    if (activeSegment && !upNextShown) {
+    if (activeSegment && activeSegment.eyebrow !== dismissedSkipKind) {
+      dismissedSkipKind = null;
+    }
+    if (activeSegment && !upNextShown && activeSegment.eyebrow !== dismissedSkipKind) {
       skipTargetSeconds = activeSegment.target;
       skipOverlay.eyebrowEl.textContent = activeSegment.eyebrow;
       skipOverlay.titleEl.textContent = activeSegment.label;
