@@ -5462,11 +5462,8 @@
   right: clamp(16px, 3vw, 40px);
   bottom: 6.5em;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 1.2em;
   width: min(20em, calc(100vw - 2 * clamp(16px, 3vw, 40px)));
-  padding: 1em 1.2em;
+  padding: 0.9em 1em;
   border-radius: var(--jellio-card-radius);
   background: rgb(var(--jellio-bg-elevated-rgb) / 0.82);
   border: 1px solid rgb(255 255 255 / 0.1);
@@ -5484,7 +5481,6 @@
 }
 
 .jellio-player-skip-body {
-  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -5497,7 +5493,7 @@
 }
 
 .jellio-player-skip-title {
-  margin-top: 0.3em;
+  margin: 0.3em 0 0.7em;
   color: var(--jellio-text-color);
   font-weight: 700;
   overflow: hidden;
@@ -5506,11 +5502,12 @@
 }
 
 .jellio-player-skip-actions {
-  flex: 0 0 auto;
+  display: flex;
+  gap: 0.5em;
 }
 
-.jellio-player-skip-action {
-  padding: 0.5em 1.2em;
+.jellio-player-skip-play {
+  padding: 0.5em 1.1em;
   border: 0;
   border-radius: 999px;
   background: var(--jellio-secondary-color);
@@ -5521,8 +5518,15 @@
   cursor: pointer;
 }
 
-.jellio-player-skip-action:hover {
-  background: var(--jellio-secondary-variant);
+.jellio-player-skip-dismiss {
+  padding: 0.5em 1em;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.8em;
+  cursor: pointer;
 }
 
 .jellio-hero {
