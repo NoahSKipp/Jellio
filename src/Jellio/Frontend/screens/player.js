@@ -3718,7 +3718,7 @@ export async function renderPlayer(root, params) {
   // above now calls this same real teardown itself on a dead first
   // load rather than duplicating what it already does, and needs to
   // reach it from earlier in this same function body.
-  function cleanup() {
+  async function cleanup() {
     if (screenTornDown) return;
     screenTornDown = true;
     document.removeEventListener('keydown', onPlayerKeydown);
@@ -3793,7 +3793,20 @@ export async function renderPlayer(root, params) {
       // native Jellyfin's own math in its own "ignore progress during
       // the beginning" branch instead, which only ever touches
       // positionTicks, not Played.
-      reportPlaybackStopped(itemId, mediaSource.Id, hasCreditedRealWatch ? 0 : currentPositionTicks());
+      // Real bug, found live: this used to fire-and-forget, so the very
+      // next screen (almost always Home, invalidateHomeSections() right
+      // below already anticipating that) could have its own Up
+      // Next/Continue Watching fetch reach the server before this
+      // report did - a real race, not a real ordering guarantee, that
+      // read as "sometimes Up Next/Continue Watching don't update until
+      // a real page refresh" live: a refresh's own fresh fetch only
+      // ever looked correct because enough real time had passed for
+      // this same report to land by then, nothing about the refresh
+      // itself actually fixed anything. Awaited now, and app.js's own
+      // teardownActiveScreen() awaits this whole cleanup() in turn, so
+      // the next screen's own first fetch cannot start until Jellyfin
+      // has actually processed this report.
+      await reportPlaybackStopped(itemId, mediaSource.Id, hasCreditedRealWatch ? 0 : currentPositionTicks());
       // Up Next and Continue Watching are exactly the two home rows a
       // real playback session changes, so home's own preloaded sections
       // have to be re-derived the next time it's visited rather than
