@@ -221,10 +221,18 @@ function routeKey(route) {
   return route.path + '?' + route.params.toString();
 }
 
-function teardownActiveScreen() {
+// Real bug, found live: this used to call activeCleanup() and move
+// straight on to mounting the next screen with no regard for whether
+// that cleanup was still doing real async work of its own - screens/
+// player.js's own cleanup() reports the stopped position to Jellyfin
+// (screens/home.js's own Up Next/Continue Watching rows read straight
+// off that), and racing ahead of it meant Home's own very next fetch
+// could reach the server before that report had. Awaited now: every
+// real call site below already sits inside an async function.
+async function teardownActiveScreen() {
   if (activeCleanup) {
     try {
-      activeCleanup();
+      await activeCleanup();
     } catch (err) {
       console.warn('Jellio: screen cleanup failed', err);
     }
@@ -273,7 +281,7 @@ async function sync() {
 // login page is what the previous codebase's quick sign-in work was
 // actually trying to route around in the first place.
 async function renderUnauthenticated() {
-  teardownActiveScreen();
+  await teardownActiveScreen();
 
   const root = getRoot();
   root.classList.add('jellio-root-visible', 'jellio-root-fullscreen');
@@ -652,7 +660,7 @@ async function runSync() {
     if (!isAuthenticated()) {
       lastRenderedRouteKey = null;
       if (loginScreenBypassed()) {
-        teardownActiveScreen();
+        await teardownActiveScreen();
         hide();
         return;
       }
@@ -693,7 +701,7 @@ async function runSync() {
 
     if (!screen) {
       lastRenderedRouteKey = null;
-      teardownActiveScreen();
+      await teardownActiveScreen();
       hide();
       return;
     }
@@ -702,7 +710,7 @@ async function runSync() {
     if (key === lastRenderedRouteKey) return;
     lastRenderedRouteKey = key;
 
-    teardownActiveScreen();
+    await teardownActiveScreen();
     startNowPlaying();
     startNotifications();
     startAchievementNotifier();
