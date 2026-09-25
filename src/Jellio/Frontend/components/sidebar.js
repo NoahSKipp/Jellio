@@ -11,6 +11,7 @@ import { toggleNotificationsPanel, notificationsUnreadCount } from './notificati
 import { openAccountSwitcher } from './accountSwitcher.js';
 import { openGroupWatch } from './groupWatch.js';
 import { getCurrentUser } from '../runtime/api.js';
+import { loadAudiobookshelfSetting } from '../runtime/audiobookshelfSetting.js';
 
 // Tagged with its own hash so updateActiveLinks() can find it again
 // without rebuilding it: real feedback was that the whole rail
@@ -49,6 +50,30 @@ function buildLink(link) {
     // one real place navigation and this rail's own focus state meet.
     button.blur();
     navigateTo(link.hash);
+  });
+  return button;
+}
+
+// A separate self-hosted service (Audiobookshelf), not one of this
+// reader's own Jellyfin libraries - opened in a new tab rather than
+// navigated to, since nothing here reskins it the way the rest of this
+// rail's links reach a real screen inside this runtime.
+function buildExternalLink(icon, label, url) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'jellio-sidebar-link';
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.appendChild(buildIconElement(icon));
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'jellio-sidebar-label';
+  labelEl.textContent = label;
+  button.appendChild(labelEl);
+
+  button.addEventListener('click', function () {
+    button.blur();
+    window.open(url, '_blank', 'noopener');
   });
   return button;
 }
@@ -326,5 +351,19 @@ export async function renderSidebar(container) {
     })
     .catch(function (err) {
       console.warn('Jellio: sidebar library links failed', err);
+    });
+
+  // Configuration/PluginConfiguration.cs's own real AudiobookshelfUrl,
+  // blank by default: this rail's own initial build only ever happens
+  // once (container.dataset.jellioBuilt above), same real reason the
+  // library links just above append asynchronously rather than
+  // blocking this whole function on either fetch first.
+  loadAudiobookshelfSetting()
+    .then(function (url) {
+      if (!url) return;
+      scroll.appendChild(buildExternalLink('auto_stories', 'Books', url));
+    })
+    .catch(function (err) {
+      console.warn('Jellio: sidebar Audiobookshelf link failed', err);
     });
 }
