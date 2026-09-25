@@ -54,30 +54,6 @@ function buildLink(link) {
   return button;
 }
 
-// A separate self-hosted service (Audiobookshelf), not one of this
-// reader's own Jellyfin libraries - opened in a new tab rather than
-// navigated to, since nothing here reskins it the way the rest of this
-// rail's links reach a real screen inside this runtime.
-function buildExternalLink(icon, label, url) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'jellio-sidebar-link';
-  button.title = label;
-  button.setAttribute('aria-label', label);
-  button.appendChild(buildIconElement(icon));
-
-  const labelEl = document.createElement('span');
-  labelEl.className = 'jellio-sidebar-label';
-  labelEl.textContent = label;
-  button.appendChild(labelEl);
-
-  button.addEventListener('click', function () {
-    button.blur();
-    window.open(url, '_blank', 'noopener');
-  });
-  return button;
-}
-
 function updateActiveLinks(container) {
   container.querySelectorAll('[data-jellio-hash]').forEach(function (link) {
     const active = isActive(link.dataset.jellioHash);
@@ -357,11 +333,15 @@ export async function renderSidebar(container) {
   // blank by default: this rail's own initial build only ever happens
   // once (container.dataset.jellioBuilt above), same real reason the
   // library links just above append asynchronously rather than
-  // blocking this whole function on either fetch first.
+  // blocking this whole function on either fetch first. A plain
+  // buildLink() straight to #/audiobookshelf (screens/audiobookshelf.js
+  // embeds it in an iframe there), not a real new tab: real feedback
+  // was that leaving this rail behind entirely for a separate service
+  // read as a dead end.
   loadAudiobookshelfSetting()
     .then(function (url) {
       if (!url) return;
-      scroll.appendChild(buildExternalLink('auto_stories', 'Books', url));
+      scroll.appendChild(buildLink({ icon: 'auto_stories', label: 'Books', hash: '#/audiobookshelf' }));
     })
     .catch(function (err) {
       console.warn('Jellio: sidebar Audiobookshelf link failed', err);

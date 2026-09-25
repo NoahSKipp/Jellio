@@ -25,6 +25,7 @@ import { renderPerson } from './screens/person.js';
 import { renderProfile } from './screens/profile.js';
 import { renderFeed } from './screens/feed.js';
 import { renderCalendar } from './screens/calendar.js';
+import { renderAudiobookshelf } from './screens/audiobookshelf.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
 import { getPrimaryNavLinks } from './components/navShared.js';
@@ -84,6 +85,7 @@ const SCREENS = {
   profile: renderProfile,
   feed: renderFeed,
   calendar: renderCalendar,
+  audiobookshelf: renderAudiobookshelf,
   movies: renderLibrary,
   tv: renderLibrary,
   music: renderLibrary,
