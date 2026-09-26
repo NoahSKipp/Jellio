@@ -718,6 +718,9 @@ export async function renderDetail(root, params) {
   }
 
   root.textContent = '';
+  // One AudioBook item per file: the book's own title lives on Album,
+  // the item's own Name is just this one track's.
+  if (item.Type === 'AudioBook' && item.Album) item.Name = item.Album;
   setTitle((item.Type === 'Episode' && item.SeriesName ? item.SeriesName : item.Name) + ' - Jellio');
 
   // A title reached straight from a search result carries a synthetic
@@ -816,6 +819,9 @@ export async function renderDetail(root, params) {
   // resolveSeasonPlayTarget's own header for the real bug this avoids.
   const isSeason = item.Type === 'Season';
   const needsEpisodeResolution = isSeries || isSeason;
+  // Books and audiobooks open Jellio's own reader/listener screens, not
+  // the video stream picker - there is no stream to pick for either.
+  const readerKind = item.Type === 'Book' ? 'read' : item.Type === 'AudioBook' ? 'listen' : null;
   const iconActionClass = 'jellio-detail-icon-action jellio-detail-icon-action-collapsible';
   const actions = el('div', 'jellio-detail-actions jellio-detail-actions-has-more');
 
@@ -828,7 +834,17 @@ export async function renderDetail(root, params) {
   // at all, unlike a movie or an episode), just resolved lazily against
   // whichever episode resolveSeriesPlayTarget/resolveSeasonPlayTarget
   // above actually decides is next.
-  if (!needsEpisodeResolution) {
+  if (readerKind) {
+    const hasProgress = !!(item.UserData && item.UserData.PlaybackPositionTicks > 0);
+    const readButton = el('button', 'jellio-detail-play');
+    readButton.type = 'button';
+    readButton.appendChild(el('span', 'material-icons ' + (readerKind === 'read' ? 'menu_book' : 'headphones')));
+    readButton.appendChild(el('span', null, readerKind === 'read' ? 'Read' : hasProgress ? 'Resume' : 'Listen'));
+    readButton.addEventListener('click', function () {
+      navigateTo('#/' + readerKind + '?id=' + item.Id);
+    });
+    actions.appendChild(readButton);
+  } else if (!needsEpisodeResolution) {
     const playButton = el('button', 'jellio-detail-play');
     playButton.type = 'button';
     playButton.appendChild(el('span', 'material-icons play_arrow'));
@@ -1042,7 +1058,7 @@ export async function renderDetail(root, params) {
   // its own), so this is skipped there the same as Play above; More
   // still applies to a series though, real feedback's own point,
   // collapsing Watchlist/Mark Watched behind it just the same.
-  if (!needsEpisodeResolution) {
+  if (!needsEpisodeResolution && !readerKind) {
     const changeStreamButton = el('button', iconActionClass);
     changeStreamButton.type = 'button';
     changeStreamButton.setAttribute('aria-label', 'Change Stream');

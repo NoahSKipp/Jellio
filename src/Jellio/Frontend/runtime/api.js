@@ -647,8 +647,36 @@ export function getPersonItems(personId, limit) {
 // libraryBrowse.js: a BoxSet mixed into a movie/series catalog by an addon
 // import has no stream of its own and should never render as a browsable
 // card in a movie or show grid.
+// A Jellyfin Books library holds both item kinds (Jellyfin 12 files
+// audiobooks under the same Books CollectionType, typed per item).
 export function itemTypesForKind(collectionType) {
-  return collectionType === 'movies' ? 'Movie' : 'Series';
+  if (collectionType === 'movies') return 'Movie';
+  if (collectionType === 'books') return 'Book,AudioBook';
+  return 'Series';
+}
+
+// Jellyfin keeps a multi-file audiobook as one AudioBook item per file,
+// so a Books grid would otherwise show one card per track. Tracks of the
+// same book share a folder and an Album tag; distinct single-file books
+// sitting loose in one author folder differ by Album, so they survive.
+export function audiobookGroupKey(item) {
+  return (item.ParentId || '') + '|' + (item.Album || '');
+}
+
+export function collapseAudiobookTracks(items) {
+  const seen = new Set();
+  const out = [];
+  (items || []).forEach(function (item) {
+    if (!item || item.Type !== 'AudioBook') {
+      out.push(item);
+      return;
+    }
+    const key = audiobookGroupKey(item);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(item.Album ? Object.assign({}, item, { Name: item.Album }) : item);
+  });
+  return out;
 }
 
 // The full grid for one library, real endpoint (GET /Users/{id}/Items),
@@ -673,6 +701,9 @@ export function getLibraryItems(parentId, collectionType, options) {
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {
     return getJson(path);
+  }).then(function (result) {
+    if (collectionType !== 'books' || !result) return result;
+    return Object.assign({}, result, { Items: collapseAudiobookTracks(result.Items) });
   });
 }
 
@@ -2215,7 +2246,7 @@ export function getGenreItems(parentId, itemType, genre, limit) {
   return cached(path, function () {
     return getJson(path);
   }).then(function (result) {
-    return (result && result.Items) || [];
+    return collapseAudiobookTracks((result && result.Items) || []);
   });
 }
 

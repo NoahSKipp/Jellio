@@ -181,7 +181,7 @@ export async function getPrimaryNavLinks() {
     // link at all rather than one that goes nowhere useful, real
     // feedback asked for it gone outright, not just deprioritised.
     if (view.CollectionType === 'boxsets') return;
-    links.push({ icon: 'library', label: view.Name, hash: libraryHash(view) });
+    links.push({ icon: view.CollectionType === 'books' ? 'auto_stories' : 'library', label: view.Name, hash: libraryHash(view) });
   });
 
   return links;
