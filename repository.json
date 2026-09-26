@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.27.0] - 2026-09-26\n\n### 🚀 Features\n\n- Open CBR and CB7 comics in the reader\n- Give Manga a full shelf with requests and manga/manhwa/manhua Discover\n",
+        "checksum": "651f473a833c5a5eac20fffd50e3cfe7",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.27.0/jellio_1.27.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T16:09:39Z",
+        "version": "1.27.0"
+      },
+      {
         "changelog": "## [1.26.0] - 2026-09-26\n\n### 🚀 Features\n\n- Add a Manga shelf and a comic reader, and divide reading from video in the nav\n- Post reading and listening to the Feed and add reading achievements\n\n### 🐛 Bug Fixes\n\n- Only count monitored or downloaded books as already in Chaptarr\n- Space Discover's rows like Home's and label trending by its source\n- Keep Home's personal rows when watch state changes mid-load\n",
         "checksum": "43754a5e058c54dee81c756e7a909ccc",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.26.0/jellio_1.26.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-19T20:13:01Z",
         "version": "1.6.0"
-      },
-      {
-        "changelog": "## [1.5.4] - 2026-09-19\n\n### 🐛 Bug Fixes\n\n- Check activeElement too for list-membership-menu outside clicks\n",
-        "checksum": "32c1950a2037f76b84ab772123411448",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.4/jellio_1.5.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-19T16:25:16Z",
-        "version": "1.5.4"
       }
     ]
   }
