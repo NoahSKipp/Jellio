@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.24.0] - 2026-09-26\n\n### 🚀 Features\n\n- Show pages left on books in progress\n\n### 🐛 Bug Fixes\n\n- Show a book's real author instead of Chaptarr's lowercase sort key\n",
+        "checksum": "6fec6f50a3df09300128a2b97adcb546",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.24.0/jellio_1.24.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T13:20:02Z",
+        "version": "1.24.0"
+      },
+      {
         "changelog": "## [1.23.0] - 2026-09-26\n\n### 🚀 Features\n\n- Give books and audiobooks their own shelves with author and series rows\n- Upgrade the book reader with layouts, search and a PDF text layer\n- Add highlight, vocabulary, translation and dictionary endpoints for the reader\n- Highlight, annotate, look up and translate text in the reader\n- Add a vocabulary screen with flashcard review and Anki export\n\n### 🐛 Bug Fixes\n\n- Rename book search scope parameter clashing with a loop local\n",
         "checksum": "10d585167c91b9ff8bbdbc7aec072f38",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.23.0/jellio_1.23.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-14T17:22:38Z",
         "version": "1.5.2"
-      },
-      {
-        "changelog": "## [1.5.1] - 2026-09-14\n\n### 🐛 Bug Fixes\n\n- Stop forcing blur before opening the profile switcher\n",
-        "checksum": "e9d3411991bdfc3d2e71a1bfeee04057",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.1/jellio_1.5.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-14T06:27:20Z",
-        "version": "1.5.1"
       }
     ]
   }
