@@ -4,6 +4,7 @@ using Jellio.Services.Achievements;
 using Jellio.Services.CommunitySkip;
 using Jellio.Services.Grouplist;
 using Jellio.Services.IntroCredits;
+using Jellio.Services.Shelfarr;
 using Jellyfin.Data.Events.Users;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
@@ -133,5 +134,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<AniSkipClient>();
         services.AddSingleton<AnimeSkipClient>();
         services.AddSingleton<CommunitySkipProvider>();
+
+        services.AddHttpClient(nameof(ShelfarrClient));
+        services.AddSingleton<ShelfarrUserMapStore>();
+        services.AddSingleton<ShelfarrClient>();
     }
 }
