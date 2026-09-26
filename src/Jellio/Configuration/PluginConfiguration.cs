@@ -159,19 +159,6 @@ public class PluginConfiguration : BasePluginConfiguration
     // here, and can be switched back off again once a real sweep is done.
     public bool SkipIntroCreditsAdminMenuEnabled { get; set; }
 
-    // Audiobookshelf is its own separate self-hosted service, not
-    // something this plugin reskins the way it does Jellyfin itself -
-    // real feedback was explicit that building a real EPUB/audiobook
-    // reader from scratch inside Jellio would duplicate a tool that
-    // already does this well, rather than something worth this
-    // codebase's own real effort. Left blank, components/sidebar.js's
-    // own Books entry stays hidden entirely rather than linking
-    // somewhere with nothing behind it; set once an admin has actually
-    // deployed one, no restart needed (Controllers/ConfigController.cs's
-    // own real short lived client cache picks it up on the reader's own
-    // very next navigation).
-    public string AudiobookshelfUrl { get; set; } = string.Empty;
-
     // Shelfarr (shelfarr.org), a separate self-hosted service too, real
     // API confirmed directly against its own source (Pedro-Revez-Silva/
     // shelfarr, a Rails app) before writing Services/Shelfarr/ShelfarrClient.cs
