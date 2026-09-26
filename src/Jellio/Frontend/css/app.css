@@ -1894,6 +1894,23 @@
   font-weight: 800;
 }
 
+/* A book's own cover in place of the backdrop it never has. */
+.jellio-detail-book-cover {
+  display: block;
+  width: clamp(7em, 14vw, 11em);
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  margin-bottom: 1em;
+  border-radius: calc(var(--jellio-card-radius) * 0.6);
+  box-shadow: 0 0.75em 2em rgb(0 0 0 / 0.5);
+}
+
+.jellio-detail-book-author {
+  margin: -0.1em 0 0.4em;
+  color: var(--jellio-text-secondary);
+  font-size: 1.05em;
+}
+
 /* screens/detail.js's own real back-to-series link, an Episode item
    only: sits above the title as a plain eyebrow rather than another
    action button, styled to read as where the reader already is,

@@ -46,6 +46,31 @@ function renderDetailError(root, message, onRetry) {
 // series' own backdrop (ParentBackdropItemId/ParentBackdropImageTags,
 // populated whenever that series has one) rather than a blank hero for
 // the rare episode with neither.
+function bookCoverUrl(item, id) {
+  if (item.ImageTags && item.ImageTags.Primary) {
+    return getImageUrl(id, 'Primary', { tag: item.ImageTags.Primary, maxWidth: 500 });
+  }
+  if (item.AlbumId && item.AlbumPrimaryImageTag) {
+    return getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 500 });
+  }
+  return null;
+}
+
+// Jellyfin's Bookshelf plugin files a book's authors as People of type
+// Author; an audiobook's tags carry them as AlbumArtist/Artists.
+function bookAuthors(item) {
+  const people = (item.People || [])
+    .filter(function (person) {
+      return person.Type === 'Author';
+    })
+    .map(function (person) {
+      return person.Name;
+    });
+  if (people.length) return people.join(', ');
+  if (item.AlbumArtist) return item.AlbumArtist;
+  return (item.Artists || []).join(', ');
+}
+
 function heroBackdropUrl(item, id) {
   if (item.BackdropImageTags && item.BackdropImageTags[0]) {
     return getImageUrl(id, 'Backdrop', { tag: item.BackdropImageTags[0], maxWidth: 1920 });
@@ -753,6 +778,19 @@ export async function renderDetail(root, params) {
 
   const heroContent = el('div', 'jellio-detail-hero-content');
 
+  // Books and audiobooks never carry a backdrop, only a cover: show the
+  // cover itself above the title, plus who wrote it.
+  if (item.Type === 'Book' || item.Type === 'AudioBook') {
+    const coverUrl = bookCoverUrl(item, canonicalId);
+    if (coverUrl) {
+      const cover = document.createElement('img');
+      cover.className = 'jellio-detail-book-cover';
+      cover.src = coverUrl;
+      cover.alt = '';
+      heroContent.appendChild(cover);
+    }
+  }
+
   // An episode reached from Up Next/Continue Watching (components/
   // card.js's own click handler hands off to this exact route for any
   // item, episodes included) used to land here with no way back to
@@ -777,6 +815,10 @@ export async function renderDetail(root, params) {
       ? 'S' + item.ParentIndexNumber + ' E' + item.IndexNumber + ' · ' + (item.Name || '')
       : item.Name || '';
   heroContent.appendChild(el('h1', 'jellio-detail-title', titleText));
+  if (item.Type === 'Book' || item.Type === 'AudioBook') {
+    const authors = bookAuthors(item);
+    if (authors) heroContent.appendChild(el('div', 'jellio-detail-book-author', 'by ' + authors));
+  }
 
   const meta = el('div', 'jellio-detail-meta');
   if (item.Type === 'Episode' && item.PremiereDate) {

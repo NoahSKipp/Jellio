@@ -3,7 +3,16 @@
 // Chaptarr, which then searches for it. Collapsed behind one button until
 // opened, so it never crowds the shelf for readers who are just browsing.
 import { searchBooksToRequest, requestBook } from '../runtime/api.js';
+import { getAccessToken, getServerAddress } from '../runtime/auth.js';
 import { el } from '../runtime/dom.js';
+
+// Covers Chaptarr only has as its own cached copy come through Jellio's
+// server (Jellio/books/cover), which an <img> can only authenticate to
+// via the token in the query string.
+function coverSrc(url) {
+  if (url.indexOf('/Jellio/') !== 0) return url;
+  return getServerAddress() + url + '&ApiKey=' + encodeURIComponent(getAccessToken() || '');
+}
 
 const STATUS_LABELS = { added: 'Requested', pending: 'Queued', exists: 'Already requested' };
 
@@ -54,7 +63,10 @@ function buildResult(result) {
   const cover = el('div', 'jellio-book-request-cover');
   if (result.CoverUrl) {
     const img = document.createElement('img');
-    img.src = result.CoverUrl;
+    img.src = coverSrc(result.CoverUrl);
+    img.addEventListener('error', function () {
+      img.replaceWith(el('span', 'material-icons menu_book'));
+    });
     img.alt = '';
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';

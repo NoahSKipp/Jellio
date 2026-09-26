@@ -6,6 +6,8 @@
 export function formatRuntime(ticks) {
   if (!ticks) return '';
   const minutes = Math.round(ticks / 600000000);
+  // A book item can carry a few stray ticks of "runtime"; never print "0m".
+  if (minutes < 1) return '';
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
