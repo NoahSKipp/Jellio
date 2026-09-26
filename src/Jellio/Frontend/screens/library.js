@@ -19,8 +19,10 @@ import {
   getCollections,
   getCollectionItems,
   isAnimeCollection,
+  getJellioConfig,
 } from '../runtime/api.js';
 import { buildRow } from '../components/row.js';
+import { buildBookRequestPanel } from '../components/bookRequest.js';
 import { buildLibraryCoverflow } from '../components/libraryCoverflow.js';
 import { showsEditorial } from '../runtime/editorial.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
@@ -194,6 +196,17 @@ export async function renderLibrary(root, params) {
   genreSelect.disabled = true;
   filterBar.appendChild(genreSelect);
   root.appendChild(filterBar);
+
+  // Only offered once an admin has actually wired up Shelfarr.
+  if (collectionType === 'books') {
+    const requestMount = el('div', 'jellio-book-request-mount');
+    root.appendChild(requestMount);
+    getJellioConfig()
+      .then(function (config) {
+        if (config && config.ShelfarrEnabled) requestMount.appendChild(buildBookRequestPanel());
+      })
+      .catch(function () {});
+  }
 
   const rows = el('div', 'jellio-rows');
   root.appendChild(rows);

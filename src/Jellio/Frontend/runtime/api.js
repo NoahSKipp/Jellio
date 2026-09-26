@@ -525,6 +525,31 @@ export function buildAudioStreamUrl(itemId, transcode) {
   return getServerAddress() + '/Audio/' + itemId + '/stream?' + params.toString();
 }
 
+// Controllers/BookRequestController.cs, proxied through to Shelfarr.
+// Results keep Shelfarr's own snake_case field names (work_id, cover_url).
+export function searchBooksToRequest(query) {
+  const params = new URLSearchParams({ q: query, contentKind: 'book', limit: '20' });
+  return getJson('/Jellio/books/search?' + params.toString(), 30000).then(function (result) {
+    return (result && result.results) || [];
+  });
+}
+
+// bookType is Shelfarr's own "ebook" or "audiobook".
+export function requestBook(result, bookType) {
+  return postJson(
+    '/Jellio/books/request',
+    {
+      WorkId: result.work_id,
+      BookType: bookType,
+      Title: result.title,
+      Author: result.author,
+      CoverUrl: result.cover_url,
+      ContentKind: result.content_kind || 'book',
+    },
+    30000,
+  );
+}
+
 // The raw EPUB/PDF bytes for the in-browser reader. Fetched with auth
 // headers and handed to epub.js/pdf.js as an ArrayBuffer, so neither
 // library ever needs to know how to authenticate against the server.

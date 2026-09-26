@@ -1616,6 +1616,186 @@
   cursor: default;
 }
 
+/* "Request a book" on the Books shelf (components/bookRequest.js). */
+.jellio-book-request {
+  padding: 0 var(--jellio-safe-gutter) clamp(12px, 1.6vw, 20px);
+}
+
+.jellio-book-request-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.5em 1em 0.5em 0.8em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-book-request-toggle .material-icons {
+  font-size: 1.3em;
+  transition: transform 0.2s var(--jellio-ease-out);
+}
+
+.jellio-book-request-toggle-open .material-icons {
+  transform: rotate(45deg);
+}
+
+.jellio-book-request-body {
+  margin-top: 0.9em;
+}
+
+.jellio-book-request-form {
+  display: flex;
+  gap: 0.5em;
+  max-width: 36em;
+}
+
+.jellio-book-request-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.6em 1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.9em;
+}
+
+.jellio-book-request-submit {
+  padding: 0.6em 1.2em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.jellio-book-request-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.jellio-book-request-status {
+  margin: 0.75em 0 0;
+  color: var(--jellio-text-secondary);
+  font-size: 0.9em;
+}
+
+.jellio-book-request-status:empty {
+  display: none;
+}
+
+.jellio-book-request-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22em), 1fr));
+  gap: var(--jellio-card-gap);
+  margin-top: 0.9em;
+}
+
+.jellio-book-request-results:empty {
+  display: none;
+}
+
+.jellio-book-request-result {
+  display: flex;
+  gap: 0.9em;
+  padding: 0.75em;
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-bg-elevated);
+}
+
+.jellio-book-request-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5em;
+  aspect-ratio: 2 / 3;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 0.5em;
+  background: var(--jellio-card-bg);
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-book-request-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jellio-book-request-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  min-width: 0;
+}
+
+.jellio-book-request-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.jellio-book-request-byline {
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+}
+
+.jellio-book-request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-top: auto;
+  padding-top: 0.5em;
+}
+
+.jellio-book-request-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.4em 0.8em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.jellio-book-request-action .material-icons {
+  font-size: 1.2em;
+}
+
+.jellio-book-request-action:hover:not(:disabled),
+.jellio-book-request-action:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-book-request-action:disabled {
+  cursor: default;
+}
+
+.jellio-book-request-action-done {
+  border-color: var(--jellio-trending-color);
+}
+
+.jellio-book-request-action-error {
+  border-color: #c0392b;
+}
+
 .jellio-library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

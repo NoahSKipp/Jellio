@@ -26,7 +26,7 @@ public class ConfigController : ControllerBase
 
     public record SeasonalEffectConfig(bool Enabled, SeasonalRange Range);
 
-    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects, bool SkipIntroCreditsAdminMenuEnabled, string AudiobookshelfUrl);
+    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects, bool SkipIntroCreditsAdminMenuEnabled, string AudiobookshelfUrl, bool ShelfarrEnabled);
 
     [HttpGet]
     public ActionResult<ClientConfig> Get()
@@ -53,6 +53,8 @@ public class ConfigController : ControllerBase
             ),
         };
 
-        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects, cfg.SkipIntroCreditsAdminMenuEnabled, cfg.AudiobookshelfUrl ?? string.Empty));
+        // Only whether book requests are available, never the token itself.
+        var shelfarrEnabled = !string.IsNullOrWhiteSpace(cfg.ShelfarrUrl) && !string.IsNullOrWhiteSpace(cfg.ShelfarrApiToken);
+        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects, cfg.SkipIntroCreditsAdminMenuEnabled, cfg.AudiobookshelfUrl ?? string.Empty, shelfarrEnabled));
     }
 }
