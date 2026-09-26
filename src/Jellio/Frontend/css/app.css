@@ -1599,6 +1599,201 @@
 }
 
 /* "Request a book" on the Books shelf (components/bookRequest.js). */
+/* screens/bookshelf.js: the Books and Audiobooks shelves. */
+.jellio-bookshelf-header {
+  padding-bottom: clamp(6px, 1vw, 10px);
+}
+
+.jellio-bookshelf-stats {
+  margin: 0.3em 0 0;
+  color: var(--jellio-text-secondary);
+  font-size: 0.9em;
+}
+
+.jellio-bookshelf-stats:empty {
+  display: none;
+}
+
+.jellio-bookshelf-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0 var(--jellio-safe-gutter) clamp(12px, 1.6vw, 18px);
+}
+
+.jellio-bookshelf-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  flex: 1 1 16em;
+  max-width: 28em;
+  padding: 0.4em 0.9em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-bookshelf-search:focus-within {
+  border-color: var(--jellio-text-secondary);
+}
+
+.jellio-bookshelf-search .material-icons {
+  font-size: 1.2em;
+}
+
+.jellio-bookshelf-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.9em;
+}
+
+.jellio-bookshelf-rows[hidden],
+.jellio-bookshelf-authors[hidden],
+.jellio-bookshelf-all[hidden] {
+  display: none;
+}
+
+.jellio-bookshelf-authors {
+  padding: 0 0 clamp(12px, 2vw, 24px);
+}
+
+.jellio-bookshelf-authors > .jellio-row-title {
+  padding: 0 var(--jellio-safe-gutter);
+}
+
+.jellio-bookshelf-author-strip {
+  display: flex;
+  gap: 0.6em;
+  overflow-x: auto;
+  padding: 0.2em var(--jellio-safe-gutter) 0.6em;
+  scrollbar-width: none;
+}
+
+.jellio-bookshelf-author-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.jellio-bookshelf-author-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.35em 0.9em 0.35em 0.35em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.88em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.jellio-bookshelf-author-chip:hover,
+.jellio-bookshelf-author-chip:focus-visible {
+  border-color: var(--jellio-text-secondary);
+}
+
+.jellio-bookshelf-author-chip-active {
+  background: var(--jellio-text-color);
+  border-color: var(--jellio-text-color);
+  color: var(--jellio-bg-color);
+}
+
+.jellio-bookshelf-author-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  font-weight: 700;
+}
+
+.jellio-bookshelf-author-chip-active .jellio-bookshelf-author-initial {
+  background: rgb(0 0 0 / 0.12);
+}
+
+.jellio-bookshelf-author-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.jellio-bookshelf-author-count {
+  color: inherit;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-bookshelf-all-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0 var(--jellio-safe-gutter);
+}
+
+.jellio-bookshelf-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.3em 0.8em 0.3em 0.55em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.jellio-bookshelf-clear[hidden] {
+  display: none;
+}
+
+.jellio-bookshelf-clear .material-icons {
+  font-size: 1.1em;
+}
+
+.jellio-bookshelf-grid {
+  grid-template-columns: repeat(auto-fill, minmax(clamp(120px, 11vw, 170px), 1fr));
+  padding-top: 0.6em;
+}
+
+.jellio-bookshelf-empty-inline {
+  grid-column: 1 / -1;
+  margin: 1em 0;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-bookshelf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6em;
+  padding: clamp(40px, 8vw, 96px) var(--jellio-safe-gutter);
+  color: var(--jellio-text-secondary);
+  text-align: center;
+}
+
+.jellio-bookshelf-empty .material-icons {
+  font-size: 3em;
+  opacity: 0.5;
+}
+
+/* A soft drop shadow lifts covers off the page like books on a shelf. */
+.jellio-screen-bookshelf .jellio-card-image-wrap {
+  border-radius: var(--jellio-card-radius);
+  box-shadow: 0 0.4em 1.2em rgb(0 0 0 / 0.35);
+}
+
 .jellio-book-request {
   padding: 0 var(--jellio-safe-gutter) clamp(12px, 1.6vw, 20px);
 }

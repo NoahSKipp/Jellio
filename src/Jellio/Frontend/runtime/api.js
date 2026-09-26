@@ -525,6 +525,50 @@ export function buildAudioStreamUrl(itemId, transcode) {
   return getServerAddress() + '/Audio/' + itemId + '/stream?' + params.toString();
 }
 
+// Every book (kind 'ebook') or audiobook (kind 'audiobook') in one Books
+// library, one card per audiobook rather than per track file.
+export function getBookshelfItems(parentId, kind) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    ParentId: parentId,
+    Recursive: 'true',
+    IncludeItemTypes: kind === 'audiobook' ? 'AudioBook' : 'Book',
+    SortBy: 'SortName',
+    SortOrder: 'Ascending',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks',
+    Limit: '2000',
+  });
+  const path = '/Users/' + userId + '/Items?' + params.toString();
+  return cached(
+    path,
+    function () {
+      return getJson(path, 30000);
+    },
+    SHORT_CACHE_TTL_MS,
+  ).then(function (result) {
+    return collapseAudiobookTracks((result && result.Items) || []);
+  });
+}
+
+// Controllers/BookMetadataController.cs's shelf-info: { itemId (no
+// dashes): { Authors, Genres, Year, SeriesTitle } }, Jellyfin's own
+// fields with Chaptarr filling the gaps. Empty when it fails; the shelf
+// still works, just without author and series rows.
+export function getBookShelfInfo(parentId) {
+  const path = '/Jellio/books/shelf-info?parentId=' + encodeURIComponent(parentId);
+  return cached(
+    path,
+    function () {
+      return getJson(path, 30000);
+    },
+    SHORT_CACHE_TTL_MS,
+  ).catch(function (err) {
+    console.warn('Jellio: book shelf info failed', err);
+    return {};
+  });
+}
+
 // Controllers/BookMetadataController.cs: Chaptarr's cover and edition
 // data for a book already in the library, for when Jellyfin's own fields
 // are empty. The cover is an <img> source, so it authenticates via the
@@ -560,8 +604,9 @@ export function getBookMetadata(itemId) {
 // Controllers/BookRequestController.cs, backed by Chaptarr. One result per
 // work: { WorkId, Title, Author, Year, CoverUrl, SeriesTitle, HasEbook,
 // HasAudiobook }, the Has* flags meaning Chaptarr already has that format.
-export function searchBooksToRequest(query) {
-  return getJson('/Jellio/books/search?q=' + encodeURIComponent(query), 30000).then(function (results) {
+export function searchBooksToRequest(query, mediaType) {
+  const scope = mediaType ? '&mediaType=' + encodeURIComponent(mediaType) : '';
+  return getJson('/Jellio/books/search?q=' + encodeURIComponent(query) + scope, 30000).then(function (results) {
     return results || [];
   });
 }
