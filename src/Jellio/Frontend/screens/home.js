@@ -4,6 +4,8 @@
 import {
   getCurrentUser,
   getResumeItems,
+  getContinueReading,
+  getContinueListening,
   getNextUp,
   getWatchlistItems,
   getGrouplistItems,
@@ -504,12 +506,15 @@ async function buildCheapSections() {
     if (newSections.length) notifySections(newSections);
   }
 
-  const [nextUpResult, resumeResult, collectionsResult, comingSoonRow] = await Promise.allSettled([
-    getNextUp(20),
-    getResumeItems(20),
-    getCollections(),
-    buildComingSoonRow(),
-  ]);
+  const [nextUpResult, resumeResult, collectionsResult, comingSoonRow, readingResult, listeningResult] =
+    await Promise.allSettled([
+      getNextUp(20),
+      getResumeItems(20),
+      getCollections(),
+      buildComingSoonRow(),
+      getContinueReading(20),
+      getContinueListening(20),
+    ]);
 
   // Continue Watching, then Up Next, then the recommendation rows,
   // real feedback's own updated order: a title actually left mid
@@ -518,6 +523,18 @@ async function buildCheapSections() {
   if (resumeResult.status === 'fulfilled') {
     const row = buildRow('Continue Watching', resumeResult.value, { continueWatching: true });
     if (row) pushAll([wrapRowForCustomization(row, 'continue-watching')]);
+  }
+
+  // Both simply absent (buildRow returns null) on a server with no Books
+  // library, or for a reader who has not opened a book yet.
+  if (readingResult.status === 'fulfilled') {
+    const row = buildRow('Continue Reading', readingResult.value, { openReader: true });
+    if (row) pushAll([wrapRowForCustomization(row, 'continue-reading')]);
+  }
+
+  if (listeningResult.status === 'fulfilled') {
+    const row = buildRow('Continue Listening', listeningResult.value, { openReader: true });
+    if (row) pushAll([wrapRowForCustomization(row, 'continue-listening')]);
   }
 
   if (nextUpResult.status === 'fulfilled') {
