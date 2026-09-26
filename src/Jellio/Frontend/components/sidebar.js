@@ -11,7 +11,6 @@ import { toggleNotificationsPanel, notificationsUnreadCount } from './notificati
 import { openAccountSwitcher } from './accountSwitcher.js';
 import { openGroupWatch } from './groupWatch.js';
 import { getCurrentUser } from '../runtime/api.js';
-import { loadAudiobookshelfSetting } from '../runtime/audiobookshelfSetting.js';
 
 // Tagged with its own hash so updateActiveLinks() can find it again
 // without rebuilding it: real feedback was that the whole rail
@@ -327,23 +326,5 @@ export async function renderSidebar(container) {
     })
     .catch(function (err) {
       console.warn('Jellio: sidebar library links failed', err);
-    });
-
-  // Configuration/PluginConfiguration.cs's own real AudiobookshelfUrl,
-  // blank by default: this rail's own initial build only ever happens
-  // once (container.dataset.jellioBuilt above), same real reason the
-  // library links just above append asynchronously rather than
-  // blocking this whole function on either fetch first. A plain
-  // buildLink() straight to #/audiobookshelf (screens/audiobookshelf.js
-  // embeds it in an iframe there), not a real new tab: real feedback
-  // was that leaving this rail behind entirely for a separate service
-  // read as a dead end.
-  loadAudiobookshelfSetting()
-    .then(function (url) {
-      if (!url) return;
-      scroll.appendChild(buildLink({ icon: 'auto_stories', label: 'Books', hash: '#/audiobookshelf' }));
-    })
-    .catch(function (err) {
-      console.warn('Jellio: sidebar Audiobookshelf link failed', err);
     });
 }

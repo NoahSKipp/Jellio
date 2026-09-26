@@ -34,17 +34,9 @@
               <h2 class="sectionTitle">Integrations</h2>
             </div>
             <div class="fieldDescription">
-              Separate self-hosted services Jellio links out to rather than reimplementing.
-              Left blank, the corresponding sidebar entry stays hidden entirely.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtAudiobookshelfUrl">Audiobookshelf URL</label>
-            <input is="emby-input" type="url" id="txtAudiobookshelfUrl" autocomplete="off"
-              placeholder="http://192.168.1.10:13378" />
-            <div class="fieldDescription">
-              Adds a Books entry to the sidebar linking to this address. Leave blank to hide it.
+              Separate self-hosted services Jellio talks to rather than reimplementing. Books and
+              audiobooks themselves need no setup here - add a Jellyfin library of type Books and
+              Jellio reads and plays it natively. Shelfarr below adds book requests on top.
             </div>
           </div>
 
@@ -392,7 +384,6 @@
         Dashboard.showLoadingMsg();
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           document.querySelector('#chkEnableReskin').checked = withDefault(config.EnableReskin, true);
-          document.querySelector('#txtAudiobookshelfUrl').value = withDefault(config.AudiobookshelfUrl, '');
           document.querySelector('#txtShelfarrUrl').value = withDefault(config.ShelfarrUrl, '');
           document.querySelector('#txtShelfarrApiToken').value = withDefault(config.ShelfarrApiToken, '');
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
@@ -413,7 +404,6 @@
         Dashboard.showLoadingMsg();
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
-          config.AudiobookshelfUrl = document.querySelector('#txtAudiobookshelfUrl').value.trim();
           config.ShelfarrUrl = document.querySelector('#txtShelfarrUrl').value.trim();
           config.ShelfarrApiToken = document.querySelector('#txtShelfarrApiToken').value.trim();
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
