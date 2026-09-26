@@ -1788,6 +1788,289 @@
   opacity: 0.5;
 }
 
+.jellio-bookshelf-vocab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.5em 1em 0.5em 0.8em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-bookshelf-vocab .material-icons {
+  font-size: 1.2em;
+}
+
+/* screens/vocab.js: the vocabulary deck and flashcard review. */
+.jellio-vocab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  padding: 0 var(--jellio-safe-gutter) clamp(12px, 1.6vw, 18px);
+}
+
+.jellio-vocab-actions[hidden],
+.jellio-bookshelf-toolbar[hidden],
+.jellio-vocab-list[hidden],
+.jellio-vocab-review[hidden] {
+  display: none;
+}
+
+.jellio-vocab-review-button,
+.jellio-vocab-primary {
+  padding: 0.6em 1.2em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-text-color);
+  color: var(--jellio-bg-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.9em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.jellio-vocab-review-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.jellio-vocab-secondary {
+  padding: 0.55em 1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.jellio-vocab-secondary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.jellio-vocab-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22em), 1fr));
+  gap: 0.8em;
+  padding: 0 var(--jellio-safe-gutter) clamp(32px, 4vw, 64px);
+}
+
+.jellio-vocab-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  padding: 0.9em 1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-bg-elevated);
+}
+
+.jellio-vocab-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5em;
+}
+
+.jellio-vocab-word {
+  margin: 0;
+  font-size: 1.15em;
+}
+
+.jellio-vocab-translation {
+  color: var(--jellio-text-secondary);
+  font-weight: 600;
+}
+
+.jellio-vocab-due {
+  margin-left: auto;
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.07);
+  color: var(--jellio-text-secondary);
+  font-size: 0.72em;
+  font-weight: 600;
+}
+
+.jellio-vocab-definition {
+  margin: 0;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+
+.jellio-vocab-sentence {
+  margin: 0;
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.jellio-vocab-sentence strong {
+  color: var(--jellio-text-color);
+  font-style: normal;
+}
+
+.jellio-vocab-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-top: auto;
+  padding-top: 0.3em;
+}
+
+.jellio-vocab-source {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--jellio-text-secondary);
+  font-size: 0.75em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-vocab-link {
+  padding: 0.3em 0.7em;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.75em;
+  cursor: pointer;
+}
+
+.jellio-vocab-icon {
+  display: inline-flex;
+  padding: 0.3em;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+}
+
+.jellio-vocab-icon .material-icons {
+  font-size: 1.1em;
+}
+
+.jellio-vocab-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.78em;
+}
+
+.jellio-vocab-field textarea {
+  padding: 0.5em 0.7em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 0.6em;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 1.15em;
+  resize: vertical;
+}
+
+.jellio-vocab-review {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2em;
+  padding: 0 var(--jellio-safe-gutter) clamp(32px, 4vw, 64px);
+}
+
+.jellio-vocab-review-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(36em, 100%);
+  color: var(--jellio-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-vocab-flashcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8em;
+  width: min(36em, 100%);
+  min-height: 14em;
+  padding: 2em 1.5em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: calc(var(--jellio-card-radius) * 1.5);
+  background: var(--jellio-bg-elevated);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.jellio-vocab-flash-word {
+  font-size: clamp(1.8em, 4vw, 2.6em);
+  font-weight: 700;
+}
+
+.jellio-vocab-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  width: 100%;
+  padding-top: 0.8em;
+  border-top: 1px solid var(--jellio-border-color);
+}
+
+.jellio-vocab-flash-translation {
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+.jellio-vocab-grades {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+.jellio-vocab-show {
+  min-width: 12em;
+}
+
+.jellio-vocab-grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.65em 1.2em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.jellio-vocab-grade kbd {
+  font-family: inherit;
+  font-size: 0.75em;
+  opacity: 0.5;
+}
+
+.jellio-vocab-grade-0 {
+  border-color: #e05a5a;
+}
+
+.jellio-vocab-grade-3 {
+  border-color: #5fd35f;
+}
+
 /* A soft drop shadow lifts covers off the page like books on a shelf. */
 .jellio-screen-bookshelf .jellio-card-image-wrap {
   border-radius: var(--jellio-card-radius);

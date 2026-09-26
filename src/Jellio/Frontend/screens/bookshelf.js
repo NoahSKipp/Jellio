@@ -16,7 +16,7 @@ import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildBookRequestPanel } from '../components/bookRequest.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
-import { setTitle } from '../runtime/router.js';
+import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
 const KINDS = {
@@ -195,6 +195,16 @@ export function renderBookshelf(root, params, parentId) {
   });
   sortSelect.value = sort;
   toolbar.appendChild(sortSelect);
+
+  // Words saved while reading, reviewed as flashcards (screens/vocab.js).
+  const vocabButton = el('button', 'jellio-bookshelf-vocab');
+  vocabButton.type = 'button';
+  vocabButton.appendChild(el('span', 'material-icons translate'));
+  vocabButton.appendChild(el('span', null, 'Vocabulary'));
+  vocabButton.addEventListener('click', function () {
+    navigateTo('#/vocab');
+  });
+  toolbar.appendChild(vocabButton);
   root.appendChild(toolbar);
 
   // Only offered once an admin has wired up Chaptarr, and scoped to this
