@@ -301,7 +301,9 @@ async function openEpub(stage, buffer, savedLocator, settings, handlers) {
     })
     .then(function () {
       locationsReady = true;
-      handlers.onScrubReady(SCRUB_STEPS);
+      // A location is ~1600 characters, close to a printed page, so the
+      // location count stands in for the book's page count.
+      handlers.onScrubReady(SCRUB_STEPS, book.locations.length());
       if (lastCfi) {
         const location = rendition.currentLocation();
         handlers.onLocation(lastCfi, book.locations.percentageFromCfi(lastCfi), {
@@ -764,7 +766,7 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
   });
 
   paintTint();
-  handlers.onScrubReady(pdf.numPages);
+  handlers.onScrubReady(pdf.numPages, pdf.numPages);
   await renderPage();
 
   return {
@@ -997,6 +999,7 @@ export async function renderReader(root, params) {
   let dirty = false;
   let scrubbing = false;
   let reader = null;
+  let totalPages = saved && saved.TotalPages ? saved.TotalPages : null;
   let study = null;
 
   function paintBookmarkButton() {
@@ -1014,7 +1017,7 @@ export async function renderReader(root, params) {
     }
     if (!dirty || !latestLocator) return;
     dirty = false;
-    saveReadingProgress(itemId, latestLocator, latestProgress).catch(function (err) {
+    saveReadingProgress(itemId, latestLocator, latestProgress, totalPages).catch(function (err) {
       console.warn('Jellio: could not save reading progress', err);
     });
   }
@@ -1025,7 +1028,10 @@ export async function renderReader(root, params) {
     if (typeof progress === 'number' && !Number.isNaN(progress)) latestProgress = progress;
     dirty = true;
     const percent = Math.round(latestProgress * 100) + '%';
-    progressLabel.textContent = info.pageCount ? 'Page ' + info.pageNumber + ' of ' + info.pageCount + ' · ' + percent : percent;
+    const pagesLeft = totalPages ? Math.round(totalPages * (1 - latestProgress)) : 0;
+    progressLabel.textContent = info.pageCount
+      ? 'Page ' + info.pageNumber + ' of ' + info.pageCount + ' · ' + percent
+      : percent + (pagesLeft > 0 ? ' · ' + pagesLeft + (pagesLeft === 1 ? ' page left' : ' pages left') : '');
     if (typeof info.chapter === 'string') chapterLabel.textContent = info.chapter;
     if (reader && !scrubbing) scrubber.value = String(reader.scrubValue(latestProgress));
     if (study) paintBookmarkButton();
@@ -1039,7 +1045,11 @@ export async function renderReader(root, params) {
     saveTimer = window.setTimeout(flushSave, SAVE_DEBOUNCE_MS);
   }
 
-  function onScrubReady(max) {
+  function onScrubReady(max, pageCount) {
+    if (pageCount > 0) {
+      totalPages = pageCount;
+      dirty = true;
+    }
     scrubber.max = String(max);
     scrubber.disabled = max <= Number(scrubber.min);
     if (reader) scrubber.value = String(reader.scrubValue(latestProgress));

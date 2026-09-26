@@ -17,6 +17,10 @@ public class ReadingProgressRecord
     // card's own progress bar read.
     public double Progress { get; set; }
 
+    // The book's length in pages (a PDF's real page count, an EPUB's
+    // location count), for "pages left"; null until the reader knows it.
+    public int? TotalPages { get; set; }
+
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
@@ -40,7 +44,7 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
-    public ReadingProgressRecord Set(Guid userId, Guid itemId, string locator, double progress)
+    public ReadingProgressRecord Set(Guid userId, Guid itemId, string locator, double progress, int? totalPages)
     {
         lock (_lock)
         {
@@ -55,6 +59,7 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
             {
                 Locator = locator,
                 Progress = Math.Clamp(progress, 0, 1),
+                TotalPages = totalPages ?? items.GetValueOrDefault(Key(itemId))?.TotalPages,
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
             items[Key(itemId)] = record;

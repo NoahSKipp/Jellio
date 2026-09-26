@@ -445,8 +445,12 @@ export function getReadingProgress(itemId) {
   return getJson('/Jellio/reading/progress/' + itemId);
 }
 
-export function saveReadingProgress(itemId, locator, progress) {
-  return postJson('/Jellio/reading/progress/' + itemId, { Locator: locator, Progress: progress });
+export function saveReadingProgress(itemId, locator, progress, totalPages) {
+  return postJson('/Jellio/reading/progress/' + itemId, {
+    Locator: locator,
+    Progress: progress,
+    TotalPages: totalPages || null,
+  });
 }
 
 // Books started but not finished, most recently read first, with their
@@ -455,8 +459,10 @@ export function getContinueReading(limit) {
   return getJson('/Jellio/reading/in-progress?limit=' + (limit || 20)).then(function (entries) {
     const list = entries || [];
     const progressById = new Map();
+    const pagesById = new Map();
     list.forEach(function (entry) {
       progressById.set(entry.ItemId, entry.Progress);
+      if (entry.TotalPages) pagesById.set(entry.ItemId, entry.TotalPages);
     });
     return getItemsByIds(
       list.map(function (entry) {
@@ -464,9 +470,13 @@ export function getContinueReading(limit) {
       }),
     ).then(function (items) {
       return items.map(function (item) {
-        const progress = progressById.get(String(item.Id).replace(/-/g, '')) || 0;
+        const key = String(item.Id).replace(/-/g, '');
+        const progress = progressById.get(key) || 0;
+        const pages = pagesById.get(key);
         return Object.assign({}, item, {
           UserData: Object.assign({}, item.UserData, { PlayedPercentage: progress * 100 }),
+          // Pages still to read, for the card's "Xp left" badge.
+          JellioPagesLeft: pages ? Math.max(1, Math.round(pages * (1 - progress))) : null,
         });
       });
     });
