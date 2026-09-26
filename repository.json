@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.20.0] - 2026-09-26\n\n### 🚀 Features\n\n- Proxy book search/requests through Shelfarr, backend only\n- Show a native Jellyfin Books library as real book shelves\n- Track book reading progress and add Continue Reading/Listening rows\n- Add a native EPUB/PDF reader for Jellyfin Book items\n- Add a native audiobook player for Jellyfin AudioBook items\n- Request books from Shelfarr right on the Books shelf\n\n### 🚜 Refactor\n\n- Remove the Audiobookshelf integration now that books are native\n",
+        "checksum": "cb4eab5b9d2fc5a25053cb5bb5a5a780",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.20.0/jellio_1.20.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T00:40:55Z",
+        "version": "1.20.0"
+      },
+      {
         "changelog": "## [1.19.0] - 2026-09-25\n\n### 🚀 Features\n\n- Re-embed Audiobookshelf in an iframe now that its CSP is fixed\n\n### ◀️ Revert\n\n- Open Audiobookshelf in a new tab, not an iframe\n",
         "checksum": "24dbf8afe7e5c6a72ef7f5855f2e50b7",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.19.0/jellio_1.19.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-12T12:02:10Z",
         "version": "1.4.0"
-      },
-      {
-        "changelog": "## [1.3.6] - 2026-09-12\n\n### ⚡ Performance\n\n- Shorten the prebuffer wait for a confirmed-cached source\n",
-        "checksum": "b4f651e0c05d9603c8be037929be5650",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.3.6/jellio_1.3.6.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-12T11:11:29Z",
-        "version": "1.3.6"
       }
     ]
   }
