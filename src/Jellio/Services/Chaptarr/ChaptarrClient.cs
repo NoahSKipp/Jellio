@@ -90,6 +90,10 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
     public async Task<JsonArray?> GetBooksAsync(CancellationToken cancellationToken) =>
         await GetJsonAsync("/api/v1/book", cancellationToken).ConfigureAwait(false) as JsonArray;
 
+    // GET /api/v1/book/{id}: one tracked book in full, author included.
+    public async Task<JsonObject?> GetBookAsync(int bookId, CancellationToken cancellationToken) =>
+        await GetJsonAsync("/api/v1/book/" + bookId.ToString(System.Globalization.CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(false) as JsonObject;
+
     // GET /api/v1/edition?bookId= (EditionController): every edition of one
     // tracked book, with publisher, ISBNs, page count and edition covers.
     public async Task<JsonArray?> GetEditionsAsync(int bookId, CancellationToken cancellationToken) =>

@@ -100,7 +100,7 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
             byWork[workId] = new BookSearchResult(
                 workId,
                 title,
-                ChaptarrClient.ReadString(book["author"]?["authorName"]) ?? ChaptarrClient.ReadString(book["authorTitle"]),
+                ChaptarrClient.ReadString(book["author"]?["authorName"]),
                 ReadYear(book["releaseDate"]),
                 CoverUrl(book),
                 ChaptarrClient.ReadString(book["seriesTitle"]),

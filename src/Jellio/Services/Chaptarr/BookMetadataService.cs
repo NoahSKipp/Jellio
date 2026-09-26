@@ -133,13 +133,17 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
                 continue;
             }
 
+            // The index is Chaptarr's lean listing (no author object, no
+            // overview), so the matched book itself is fetched in full.
             JsonArray? editions = null;
+            var book = tracked;
             if (tracked["id"] is JsonValue idValue && idValue.TryGetValue<int>(out var bookId) && bookId > 0)
             {
+                book = await chaptarrClient.GetBookAsync(bookId, cancellationToken).ConfigureAwait(false) ?? tracked;
                 editions = await chaptarrClient.GetEditionsAsync(bookId, cancellationToken).ConfigureAwait(false);
             }
 
-            return new Resolution(ToMetadata(tracked, editions ?? tracked["editions"] as JsonArray), false);
+            return new Resolution(ToMetadata(book, editions ?? book["editions"] as JsonArray), false);
         }
 
         var lookupFailed = false;
@@ -239,8 +243,9 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
         return b.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(aWords.Contains);
     }
 
-    private static string? AuthorName(JsonObject book) =>
-        ChaptarrClient.ReadString(book["author"]?["authorName"]) ?? ChaptarrClient.ReadString(book["authorTitle"]);
+    // authorTitle is Chaptarr's lowercase "author title" sort key, never a
+    // display name, so only the author object's own name is used.
+    private static string? AuthorName(JsonObject book) => ChaptarrClient.ReadString(book["author"]?["authorName"]);
 
     private static BookMetadata ToMetadata(JsonObject book, JsonArray? editions)
     {
