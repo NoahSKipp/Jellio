@@ -562,7 +562,17 @@ export function buildAudioStreamUrl(itemId, transcode) {
 
 // Every book (kind 'ebook') or audiobook (kind 'audiobook') in one Books
 // library, one card per audiobook rather than per track file.
-export function getBookshelfItems(parentId, kind) {
+// Comic archives: these belong on the Manga shelf, not the Books one.
+const COMIC_FILE = /\.(cbz|cbr|cb7|cbt)$/i;
+
+export function isComicItem(item) {
+  return !!(item && item.Path && COMIC_FILE.test(item.Path));
+}
+
+// mangaLibrary: the library is a dedicated manga/comics one, so every
+// book in it is manga; otherwise the Manga shelf takes the comic files
+// from a shared Books library and the Books shelf everything else.
+export function getBookshelfItems(parentId, kind, mangaLibrary) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -572,7 +582,7 @@ export function getBookshelfItems(parentId, kind) {
     IncludeItemTypes: kind === 'audiobook' ? 'AudioBook' : 'Book',
     SortBy: 'SortName',
     SortOrder: 'Ascending',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
     Limit: '2000',
   });
   const path = '/Users/' + userId + '/Items?' + params.toString();
@@ -583,7 +593,10 @@ export function getBookshelfItems(parentId, kind) {
     },
     SHORT_CACHE_TTL_MS,
   ).then(function (result) {
-    return collapseAudiobookTracks((result && result.Items) || []);
+    let items = (result && result.Items) || [];
+    if (kind === 'manga' && !mangaLibrary) items = items.filter(isComicItem);
+    else if (kind === 'ebook') items = items.filter((item) => !isComicItem(item));
+    return collapseAudiobookTracks(items);
   });
 }
 
@@ -655,6 +668,23 @@ export function requestBook(result, bookType) {
     { WorkId: result.WorkId, BookType: bookType, Title: result.Title || null, Author: result.Author || null },
     30000,
   );
+}
+
+// Controllers/BookRequestController.cs's discover-manga: manga, manhwa
+// and manhua series from AniList. options: sort ('trending', 'popular',
+// 'top'), genre, country ('JP', 'KR', 'CN'), q (title search), page.
+export function discoverManga(options) {
+  const opts = options || {};
+  const params = new URLSearchParams({ sort: opts.sort || 'trending', page: String(opts.page || 0) });
+  if (opts.genre) params.set('genre', opts.genre);
+  if (opts.country) params.set('country', opts.country);
+  if (opts.q) params.set('q', opts.q);
+  const path = '/Jellio/books/discover-manga?' + params.toString();
+  return cached(path, function () {
+    return getJson(path, 30000);
+  }).then(function (results) {
+    return results || [];
+  });
 }
 
 // Controllers/BookRequestController.cs's discover: books to browse and

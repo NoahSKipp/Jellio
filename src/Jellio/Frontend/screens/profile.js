@@ -383,31 +383,42 @@ export async function renderProfile(root, params) {
   if (achievements.IsPrivate) {
     body.appendChild(buildLockedPanel());
   } else {
-    const stats = el('div', 'jellio-profile-stats');
+    // Watching and reading side by side, reading always shown (zeroes
+    // included) so it reads as part of the profile, not an add-on.
     [
-      ['Movies', achievements.MoviesCompleted],
-      ['Episodes', achievements.EpisodesCompleted],
-      ['Total watched', achievements.TotalCompleted],
-      ['Best binge', achievements.BestBingeStreak],
-    ]
-      // Reading stats only once there are some, so a watch-only profile
-      // isn't padded with zeroes.
-      .concat(
+      [
+        'Watching',
         [
-          ['Books read', achievements.BooksCompleted],
+          ['Movies', achievements.MoviesCompleted],
+          ['Episodes', achievements.EpisodesCompleted],
+          ['Total watched', achievements.TotalCompleted],
+          ['Best binge', achievements.BestBingeStreak],
+        ],
+      ],
+      [
+        'Reading',
+        [
+          ['Books', achievements.BooksCompleted],
           ['Pages read', achievements.PagesRead],
+          // Manga, manhwa and manhua volumes alike.
+          ['Manga · manhwa · manhua', achievements.MangaVolumesCompleted],
           ['Audiobooks', achievements.AudiobooksCompleted],
           ['Hours listened', achievements.ListenedHours],
-          ['Manga volumes', achievements.MangaVolumesCompleted],
-        ].filter((pair) => pair[1] > 0),
-      )
-      .forEach(function (pair) {
+        ],
+      ],
+    ].forEach(function (group) {
+      const section = el('section', 'jellio-profile-stat-group');
+      section.appendChild(el('h3', 'jellio-profile-stat-group-title', group[0]));
+      const stats = el('div', 'jellio-profile-stats');
+      group[1].forEach(function (pair) {
         const stat = el('div', 'jellio-profile-stat');
-        stat.appendChild(el('span', 'jellio-profile-stat-value', String(pair[1])));
+        stat.appendChild(el('span', 'jellio-profile-stat-value', Number(pair[1] || 0).toLocaleString()));
         stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
         stats.appendChild(stat);
       });
-    body.appendChild(stats);
+      section.appendChild(stats);
+      body.appendChild(section);
+    });
     const refresh = function () {
       renderProfile(root, params);
     };

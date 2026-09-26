@@ -174,6 +174,28 @@ export async function getPrimaryNavLinks() {
     links.push({ icon: 'anime', label: 'Anime', hash: libraryHash(tvView) + '&jellioKind=anime' });
   }
 
+  // Manga always has a shelf of its own: a dedicated manga/comics library
+  // when there is one, otherwise the comic files in the Books library.
+  const mangaView = views.filter(function (view) {
+    return view.CollectionType === 'books' && MANGA_LIBRARY.test(view.Name || '');
+  })[0];
+  const booksView = views.filter(function (view) {
+    return view.CollectionType === 'books' && view !== mangaView;
+  })[0];
+  let mangaLinkAdded = false;
+  function pushMangaLink() {
+    if (mangaLinkAdded) return;
+    mangaLinkAdded = true;
+    const source = mangaView || booksView;
+    if (!source) return;
+    links.push({
+      icon: 'collections_bookmark',
+      label: 'Manga',
+      hash: libraryHash(source) + '&bookKind=manga' + (mangaView ? '&mangaLibrary=1' : ''),
+      group: 'reading',
+    });
+  }
+
   views.forEach(function (view) {
     if (view === moviesView || view === tvView || view === realAnimeView) return;
     if (!view.CollectionType) return;
@@ -188,17 +210,17 @@ export async function getPrimaryNavLinks() {
     // own Manga shelf instead. group: 'reading' puts these after the
     // video libraries, below their own divider.
     if (view.CollectionType === 'books') {
-      if (MANGA_LIBRARY.test(view.Name || '')) {
-        links.push({ icon: 'collections_bookmark', label: view.Name, hash: libraryHash(view) + '&bookKind=manga', group: 'reading' });
-        return;
-      }
+      if (view === mangaView) return;
       links.push({ icon: 'auto_stories', label: 'Books', hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
       links.push({ icon: 'headphones', label: 'Audiobooks', hash: libraryHash(view) + '&bookKind=audiobook', group: 'reading' });
+      if (view === booksView) pushMangaLink();
       return;
     }
     links.push({ icon: 'library', label: view.Name, hash: libraryHash(view) });
   });
 
+  // A manga library with no other Books library still gets its entry.
+  pushMangaLink();
   return links;
 }
 

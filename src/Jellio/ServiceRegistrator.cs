@@ -142,6 +142,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<BookMetadataService>();
         services.AddHttpClient(nameof(OpenLibraryClient));
         services.AddSingleton<OpenLibraryClient>();
+        services.AddHttpClient(nameof(Jellio.Services.Manga.AniListClient));
+        services.AddSingleton<Jellio.Services.Manga.AniListClient>();
 
         services.AddSingleton<ReadingProgressStore>();
         services.AddSingleton<AnnotationStore>();

@@ -29,6 +29,7 @@ public partial class BookRequestController(
     ChaptarrClient chaptarrClient,
     OpenLibraryClient openLibraryClient,
     BookMetadataService metadataService,
+    Jellio.Services.Manga.AniListClient aniListClient,
     IUserManager userManager,
     ILogger<BookRequestController> logger) : ControllerBase
 {
@@ -169,6 +170,55 @@ public partial class BookRequestController(
                 .Aggregate((Ebook: false, Audiobook: false), (all, one) => (all.Ebook || one.Item1, all.Audiobook || one.Item2));
             return new DiscoverResult(book.WorkId, book.Title, book.Author, book.Year, book.CoverUrl, formats.Ebook, formats.Audiobook);
         }));
+    }
+
+    /// <summary>
+    /// Browse manga, manhwa and manhua to request (AniList): sort
+    /// "trending", "popular" or "top"; optional genre, country (JP, KR,
+    /// CN) or a title search. Requests then go through Chaptarr volume by
+    /// volume, from the series title.
+    /// </summary>
+    [HttpGet("discover-manga")]
+    public async Task<IActionResult> DiscoverManga(
+        [FromQuery] string? sort,
+        [FromQuery] string? genre,
+        [FromQuery] string? country,
+        [FromQuery] string? q,
+        [FromQuery] int page,
+        CancellationToken cancellationToken)
+    {
+        var anilistSort = sort switch
+        {
+            "popular" => "POPULARITY_DESC",
+            "top" => "SCORE_DESC",
+            _ => "TRENDING_DESC",
+        };
+        var trimmedGenre = genre?.Trim();
+        if (trimmedGenre is { Length: > 40 })
+        {
+            return BadRequest("genre is too long");
+        }
+
+        var countryCode = country?.Trim().ToUpperInvariant();
+        if (countryCode is not (null or "" or "JP" or "KR" or "CN" or "TW"))
+        {
+            return BadRequest("country must be JP, KR, CN or TW");
+        }
+
+        var search = q?.Trim();
+        if (search is { Length: > 120 })
+        {
+            return BadRequest("q is too long");
+        }
+
+        var series = await aniListClient.BrowseAsync(
+            anilistSort,
+            string.IsNullOrEmpty(trimmedGenre) ? null : trimmedGenre,
+            string.IsNullOrEmpty(countryCode) ? null : countryCode,
+            string.IsNullOrEmpty(search) ? null : search,
+            Math.Clamp(page, 0, 20),
+            cancellationToken).ConfigureAwait(false);
+        return series is null ? StatusCode(502, "AniList could not be reached") : Ok(series);
     }
 
     [HttpPost("request")]

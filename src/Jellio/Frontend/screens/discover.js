@@ -15,6 +15,7 @@ import {
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { el } from '../runtime/dom.js';
+import { renderMangaDiscover } from './discoverManga.js';
 
 // Open Library subjects; labels are what the chips say.
 const GENRES = [
@@ -72,6 +73,7 @@ function genreLabel(subject) {
 }
 
 export async function renderDiscover(root, params) {
+  if (params.get('kind') === 'manga') return renderMangaDiscover(root, params);
   const kind = params.get('kind') === 'audiobook' ? 'audiobook' : 'ebook';
   const parentId = params.get('parent') || '';
   const noun = kind === 'audiobook' ? 'audiobooks' : 'books';
