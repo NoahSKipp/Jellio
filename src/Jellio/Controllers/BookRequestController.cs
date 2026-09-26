@@ -47,7 +47,7 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
     public record RequestBookResult(string Status, string? Message);
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? mediaType, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery(Name = "mediaType")] string? scope, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(q))
         {
@@ -56,13 +56,13 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
 
         // The Books shelf searches ebooks only, the Audiobooks shelf
         // audiobooks only.
-        mediaType = mediaType?.Trim().ToLowerInvariant();
-        if (mediaType is not (null or "" or "ebook" or "audiobook"))
+        var scopedType = scope?.Trim().ToLowerInvariant();
+        if (scopedType is not (null or "" or "ebook" or "audiobook"))
         {
             return BadRequest("mediaType must be ebook or audiobook");
         }
 
-        var lookup = await chaptarrClient.LookupAsync(q.Trim(), string.IsNullOrEmpty(mediaType) ? null : mediaType, cancellationToken).ConfigureAwait(false);
+        var lookup = await chaptarrClient.LookupAsync(q.Trim(), string.IsNullOrEmpty(scopedType) ? null : scopedType, cancellationToken).ConfigureAwait(false);
         if (lookup is null)
         {
             return StatusCode(502, "Chaptarr search failed or is not configured");
