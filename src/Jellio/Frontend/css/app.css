@@ -2591,6 +2591,277 @@
   }
 }
 
+/* Audiobook player (screens/listen.js). */
+.jellio-screen-listen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--jellio-bg-color);
+  color: var(--jellio-text-color);
+}
+
+.jellio-listen-backdrop {
+  position: absolute;
+  inset: -10%;
+  background-image: var(--listen-cover, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(48px) saturate(1.2);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.jellio-listen-topbar {
+  position: relative;
+  display: flex;
+  padding: 0.5em 0.75em;
+  flex: 0 0 auto;
+}
+
+.jellio-listen-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1em;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(34em, calc(100% - 2em));
+  margin: 0 auto;
+  padding-bottom: 2em;
+}
+
+.jellio-listen-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(18em, 42vh, 70vw);
+  aspect-ratio: 1;
+  flex: 0 1 auto;
+  overflow: hidden;
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-card-bg);
+  box-shadow: 0 1em 3em rgb(0 0 0 / 0.5);
+}
+
+.jellio-listen-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jellio-listen-cover .material-icons {
+  font-size: 5em;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-listen-meta {
+  width: 100%;
+  text-align: center;
+}
+
+.jellio-listen-title {
+  margin: 0;
+  font-size: 1.4em;
+}
+
+.jellio-listen-author {
+  margin-top: 0.25em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-listen-chapter {
+  margin-top: 0.5em;
+  min-height: 1.3em;
+  color: var(--jellio-text-tertiary);
+  font-size: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-listen-scrub {
+  width: 100%;
+}
+
+.jellio-listen-scrub-track {
+  position: relative;
+}
+
+.jellio-listen-scrub-input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--jellio-secondary-color);
+  cursor: pointer;
+}
+
+.jellio-listen-scrub-tick {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 0.6em;
+  transform: translate(-1px, -50%);
+  background: rgb(255 255 255 / 0.35);
+  pointer-events: none;
+}
+
+.jellio-listen-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.35em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-listen-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+}
+
+.jellio-listen-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75em;
+  height: 2.75em;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.jellio-listen-button:hover,
+.jellio-listen-button:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.jellio-listen-button .material-icons {
+  font-size: 1.8em;
+}
+
+.jellio-listen-play {
+  width: 4em;
+  height: 4em;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+}
+
+.jellio-listen-play:hover,
+.jellio-listen-play:focus-visible {
+  background: var(--jellio-secondary-variant);
+}
+
+.jellio-listen-play .material-icons {
+  font-size: 2.4em;
+}
+
+.jellio-listen-extras {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+.jellio-listen-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.45em 0.9em;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.jellio-listen-pill .material-icons {
+  font-size: 1.2em;
+}
+
+.jellio-listen-pill:hover,
+.jellio-listen-pill:focus-visible {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.jellio-listen-pill-active {
+  border-color: var(--jellio-trending-color);
+}
+
+.jellio-listen-panel {
+  position: absolute;
+  right: 0.75em;
+  bottom: 0.75em;
+  top: 3.5em;
+  z-index: 5;
+  width: min(24em, calc(100% - 1.5em));
+  overflow-y: auto;
+  padding: 1em;
+  border-radius: var(--jellio-card-radius);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.97);
+  box-shadow: 0 0.5em 2em rgb(0 0 0 / 0.45);
+}
+
+.jellio-listen-panel-hidden {
+  display: none;
+}
+
+.jellio-listen-panel-title {
+  margin: 0 0 0.75em;
+  font-size: 1em;
+}
+
+.jellio-listen-chapter-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+  width: 100%;
+  padding: 0.55em 0.75em;
+  border: 0;
+  border-radius: 0.5em;
+  background: transparent;
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  font-size: 0.9em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-listen-chapter-row:hover,
+.jellio-listen-chapter-row:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-listen-chapter-row-active {
+  background: rgb(255 255 255 / 0.12);
+  font-weight: 600;
+}
+
+.jellio-listen-chapter-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-listen-chapter-time {
+  flex: 0 0 auto;
+  color: var(--jellio-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
 .jellio-screen-player {
   position: relative;
   width: 100%;

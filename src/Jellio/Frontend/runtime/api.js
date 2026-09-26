@@ -473,6 +473,58 @@ export function getContinueReading(limit) {
   });
 }
 
+// Every file of the audiobook a given AudioBook item belongs to, in play
+// order: the other AudioBook items in the same folder sharing its Album
+// tag (same grouping collapseAudiobookTracks uses for the shelf).
+export function getAudiobookTracks(item) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  if (!item.ParentId) return Promise.resolve([item]);
+  const params = new URLSearchParams({
+    ParentId: item.ParentId,
+    IncludeItemTypes: 'AudioBook',
+    SortBy: 'ParentIndexNumber,IndexNumber,SortName',
+    SortOrder: 'Ascending',
+    Fields: 'RunTimeTicks,Chapters',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    const key = audiobookGroupKey(item);
+    const tracks = ((result && result.Items) || []).filter(function (track) {
+      return audiobookGroupKey(track) === key;
+    });
+    return tracks.length ? tracks : [item];
+  });
+}
+
+// Optional: the third-party AudiobookLibrary Jellyfin plugin
+// (github.com/adSORRYvance/Jellyfin-Audiobook) builds a whole-book chapter
+// timeline across multi-file books. Used when installed, null otherwise
+// (404 when absent), in which case screens/listen.js builds its own.
+let audiobookLibraryMissing = false;
+
+export function getAudiobookLibraryChapters(itemId) {
+  if (audiobookLibraryMissing) return Promise.resolve(null);
+  return getJson('/AudiobookLibrary/Books/' + itemId + '/Chapters').catch(function (err) {
+    // A 404 on the route itself most likely means the plugin isn't
+    // installed at all; stop asking for the rest of this page's life.
+    if (err && err.status === 404) audiobookLibraryMissing = true;
+    return null;
+  });
+}
+
+// The audiobook file itself, served as is. transcode asks Jellyfin for
+// MP3 instead, the fallback when a browser cannot decode the original.
+export function buildAudioStreamUrl(itemId, transcode) {
+  const params = new URLSearchParams({ ApiKey: getAccessToken() || '', DeviceId: getDeviceId() });
+  if (transcode) {
+    params.set('AudioCodec', 'mp3');
+    params.set('AudioBitRate', '128000');
+    return getServerAddress() + '/Audio/' + itemId + '/stream.mp3?' + params.toString();
+  }
+  params.set('static', 'true');
+  return getServerAddress() + '/Audio/' + itemId + '/stream?' + params.toString();
+}
+
 // The raw EPUB/PDF bytes for the in-browser reader. Fetched with auth
 // headers and handed to epub.js/pdf.js as an ArrayBuffer, so neither
 // library ever needs to know how to authenticate against the server.
