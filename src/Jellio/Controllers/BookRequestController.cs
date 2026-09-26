@@ -221,6 +221,25 @@ public partial class BookRequestController(
         return series is null ? StatusCode(502, "AniList could not be reached") : Ok(series);
     }
 
+    // Discover's AniList covers, through the server (AniListClient.GetCoverAsync).
+    [HttpGet("manga-cover")]
+    public async Task<IActionResult> MangaCover([FromQuery] string? url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(url) || url.Length > 300)
+        {
+            return BadRequest("url is required");
+        }
+
+        var image = await aniListClient.GetCoverAsync(url, cancellationToken).ConfigureAwait(false);
+        if (image is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.CacheControl = "private, max-age=604800";
+        return File(image.Value.Bytes, image.Value.ContentType);
+    }
+
     [HttpPost("request")]
     public async Task<IActionResult> RequestBook([FromBody] RequestBookBody body, CancellationToken cancellationToken)
     {
