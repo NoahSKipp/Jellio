@@ -71,23 +71,41 @@ const ITEM_DETAILS_TIMEOUT_MS = 30000;
 // browser's own 6-connection ceiling rather than at it, leaving real
 // headroom for whatever image tags the same screen is also loading
 // through that same shared per-origin pool.
-const MAX_CONCURRENT_REQUESTS = 5;
+const MAX_CONCURRENT_REQUESTS = 4;
+// Priority requests (the reader's own Continue Watching/Reading and Up
+// Next, see getPriorityJson) jump the queue and may use two extra
+// slots, so slow catalog or calendar lookups already in flight can
+// never hold them back. 4 + 2 is exactly a browser's six connections
+// per host over HTTP/1.1: any more and a priority request would just
+// queue inside the browser instead of here.
+const PRIORITY_EXTRA_SLOTS = 2;
 let activeRequestCount = 0;
 const queuedRequestStarts = [];
 
-function acquireRequestSlot() {
+function slotLimit(priority) {
+  return MAX_CONCURRENT_REQUESTS + (priority ? PRIORITY_EXTRA_SLOTS : 0);
+}
+
+function acquireRequestSlot(priority) {
   return new Promise(function (resolve) {
     function start() {
       activeRequestCount++;
       resolve(function releaseRequestSlot() {
         activeRequestCount--;
-        if (queuedRequestStarts.length && activeRequestCount < MAX_CONCURRENT_REQUESTS) {
-          queuedRequestStarts.shift()();
+        const next = queuedRequestStarts[0];
+        if (next && activeRequestCount < slotLimit(next.priority)) {
+          queuedRequestStarts.shift().start();
         }
       });
     }
-    if (activeRequestCount < MAX_CONCURRENT_REQUESTS) start();
-    else queuedRequestStarts.push(start);
+    if (activeRequestCount < slotLimit(priority)) start();
+    else if (priority) {
+      // Behind any priority requests already waiting, ahead of the rest.
+      const firstNormal = queuedRequestStarts.findIndex(function (entry) {
+        return !entry.priority;
+      });
+      queuedRequestStarts.splice(firstNormal === -1 ? queuedRequestStarts.length : firstNormal, 0, { start: start, priority: true });
+    } else queuedRequestStarts.push({ start: start, priority: false });
   });
 }
 
@@ -109,8 +127,8 @@ function fetchWithTimeout(url, options, timeoutMs, externalSignal) {
   });
 }
 
-async function requestJson(url, options, path, timeoutMs, externalSignal) {
-  const releaseRequestSlot = await acquireRequestSlot();
+async function requestJson(url, options, path, timeoutMs, externalSignal, priority) {
+  const releaseRequestSlot = await acquireRequestSlot(priority);
   try {
     // A request cancelled while still queued for a slot (search.js's own
     // superseded-query case) has no real fetch to abort yet: skip
@@ -192,7 +210,7 @@ function notifySessionExpired() {
   document.dispatchEvent(new CustomEvent('jellio:session-expired'));
 }
 
-async function getJson(path, timeoutMs, signal) {
+async function getJson(path, timeoutMs, signal, priority) {
   const response = await requestJson(
     getServerAddress() + path,
     // Real bug, found live: a library missing from a fresh boot's own
@@ -208,8 +226,15 @@ async function getJson(path, timeoutMs, signal) {
     path,
     timeoutMs || DEFAULT_TIMEOUT_MS,
     signal,
+    priority,
   );
   return response.json();
+}
+
+// The home screen's personal rows: small, fast, and what a reader is
+// waiting for, so they skip ahead of background lookups.
+function getPriorityJson(path, timeoutMs) {
+  return getJson(path, timeoutMs, undefined, true);
 }
 
 // Fire and forget by design: a session report failing should never break
@@ -399,7 +424,7 @@ export function getResumeItems(limit) {
     // Continue Listening row (getContinueListening below), not here.
     '&MediaTypes=Video' +
     '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb';
-  return getJson(query).then(function (result) {
+  return getPriorityJson(query).then(function (result) {
     return applyRealDurationOverrides((result && result.Items) || []);
   });
 }
@@ -415,7 +440,7 @@ export function getContinueListening(limit) {
     IncludeItemTypes: 'AudioBook',
     Fields: 'PrimaryImageAspectRatio,RunTimeTicks',
   });
-  return getJson('/Users/' + userId + '/Items/Resume?' + params.toString()).then(function (result) {
+  return getPriorityJson('/Users/' + userId + '/Items/Resume?' + params.toString()).then(function (result) {
     return collapseAudiobookTracks((result && result.Items) || []);
   });
 }
@@ -427,7 +452,7 @@ export function getItemsByIds(ids) {
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!ids || !ids.length) return Promise.resolve([]);
   const params = new URLSearchParams({ Ids: ids.join(','), Fields: 'PrimaryImageAspectRatio' });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  return getPriorityJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
     const byId = new Map();
     ((result && result.Items) || []).forEach(function (item) {
       byId.set(String(item.Id).replace(/-/g, ''), item);
@@ -456,7 +481,7 @@ export function saveReadingProgress(itemId, locator, progress, totalPages) {
 // Books started but not finished, most recently read first, with their
 // reading progress folded into UserData so cards paint a progress bar.
 export function getContinueReading(limit) {
-  return getJson('/Jellio/reading/in-progress?limit=' + (limit || 20)).then(function (entries) {
+  return getPriorityJson('/Jellio/reading/in-progress?limit=' + (limit || 20)).then(function (entries) {
     const list = entries || [];
     const progressById = new Map();
     const pagesById = new Map();
@@ -767,7 +792,7 @@ export function getNextUp(limit) {
   const path = '/Shows/NextUp?' + params.toString();
   return Promise.all([
     cached(path, function () {
-      return getJson(path);
+      return getPriorityJson(path);
     }, SHORT_CACHE_TTL_MS),
     getHiddenNextUpSeries(),
   ]).then(function (results) {
@@ -790,7 +815,7 @@ export function getNextUp(limit) {
 // row's own very next fetch rather than up to a minute later.
 function getHiddenNextUpSeries() {
   return cached('next-up-hidden', function () {
-    return getJson('/Jellio/next-up-hidden');
+    return getPriorityJson('/Jellio/next-up-hidden');
   }, SHORT_CACHE_TTL_MS).catch(function () {
     return [];
   });
@@ -2881,7 +2906,7 @@ export function reportRealDuration(itemId, durationTicks) {
 // trip, not twenty.
 function getRealDurationOverrides(itemIds) {
   if (!itemIds.length) return Promise.resolve({});
-  return getJson('/Jellio/real-duration?ids=' + itemIds.join(',')).catch(function () {
+  return getPriorityJson('/Jellio/real-duration?ids=' + itemIds.join(',')).catch(function () {
     return {};
   });
 }
