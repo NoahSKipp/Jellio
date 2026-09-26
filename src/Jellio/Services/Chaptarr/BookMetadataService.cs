@@ -40,7 +40,7 @@ public record BookMetadata(
 /// Book/AudioBook is matched to Chaptarr by title (and author when Jellyfin
 /// knows one): first against the books Chaptarr tracks, then its metadata
 /// lookup. Results are cached per item, and concurrent requests for the
-/// same item (a whole shelf of covers loading at once) share one lookup.
+/// same book (a whole shelf of covers loading at once) share one lookup.
 /// </summary>
 public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibraryManager libraryManager, ILogger<BookMetadataService> logger)
 {
@@ -74,7 +74,9 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
             return null;
         }
 
-        var key = item.Id.ToString("N") + "|" + queries[0].Title + "|" + queries[0].Author;
+        // Keyed by what is looked up, not by item: every track file of one
+        // audiobook shares the same title and author, so one lookup.
+        var key = queries[0].Title + "|" + queries[0].Author;
         while (true)
         {
             var entry = _cache.GetOrAdd(key, _ => new CacheEntry(ResolveWithTimeoutAsync(queries), DateTime.UtcNow));
@@ -329,7 +331,7 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
         return queries;
     }
 
-    private string? KnownAuthor(BaseItem item)
+    public string? KnownAuthor(BaseItem item)
     {
         if (item is AudioBook audioBook && audioBook.AlbumArtists is { Count: > 0 } albumArtists)
         {

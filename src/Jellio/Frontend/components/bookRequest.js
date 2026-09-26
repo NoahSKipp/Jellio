@@ -58,7 +58,7 @@ function requestButton(result, bookType, label, icon, alreadyHave) {
   return button;
 }
 
-function buildResult(result) {
+function buildResult(result, bookType) {
   const card = el('div', 'jellio-book-request-result');
   const cover = el('div', 'jellio-book-request-cover');
   if (result.CoverUrl) {
@@ -82,19 +82,26 @@ function buildResult(result) {
   if (byline) info.appendChild(el('div', 'jellio-book-request-byline', byline));
   if (result.SeriesTitle) info.appendChild(el('div', 'jellio-book-request-byline', result.SeriesTitle));
   const actions = el('div', 'jellio-book-request-actions');
-  actions.appendChild(requestButton(result, 'ebook', 'Ebook', 'menu_book', result.HasEbook));
-  actions.appendChild(requestButton(result, 'audiobook', 'Audiobook', 'headphones', result.HasAudiobook));
+  if (bookType !== 'audiobook') {
+    actions.appendChild(requestButton(result, 'ebook', 'Request ebook', 'menu_book', result.HasEbook));
+  }
+  if (bookType !== 'ebook') {
+    actions.appendChild(requestButton(result, 'audiobook', 'Request audiobook', 'headphones', result.HasAudiobook));
+  }
   info.appendChild(actions);
   card.appendChild(info);
   return card;
 }
 
-export function buildBookRequestPanel() {
+// bookType 'ebook' or 'audiobook' scopes the search and the request
+// buttons to that one format (the Books and Audiobooks shelves); omitted,
+// both are offered.
+export function buildBookRequestPanel(bookType) {
   const section = el('section', 'jellio-book-request');
   const toggle = el('button', 'jellio-book-request-toggle');
   toggle.type = 'button';
   toggle.appendChild(el('span', 'material-icons add'));
-  toggle.appendChild(el('span', null, 'Request a book'));
+  toggle.appendChild(el('span', null, bookType === 'audiobook' ? 'Request an audiobook' : 'Request a book'));
   section.appendChild(toggle);
 
   const body = el('div', 'jellio-book-request-body');
@@ -131,12 +138,12 @@ export function buildBookRequestPanel() {
     results.textContent = '';
     status.textContent = 'Searching…';
     submit.disabled = true;
-    searchBooksToRequest(query)
+    searchBooksToRequest(query, bookType)
       .then(function (found) {
         if (token !== searchToken) return;
         status.textContent = found.length ? '' : 'No books found for “' + query + '”.';
         found.forEach(function (result) {
-          if (result && result.WorkId) results.appendChild(buildResult(result));
+          if (result && result.WorkId) results.appendChild(buildResult(result, bookType));
         });
       })
       .catch(function (err) {

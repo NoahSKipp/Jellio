@@ -181,7 +181,14 @@ export async function getPrimaryNavLinks() {
     // link at all rather than one that goes nowhere useful, real
     // feedback asked for it gone outright, not just deprioritised.
     if (view.CollectionType === 'boxsets') return;
-    links.push({ icon: view.CollectionType === 'books' ? 'auto_stories' : 'library', label: view.Name, hash: libraryHash(view) });
+    // One Jellyfin Books library holds both ebooks and audiobooks; they
+    // get a shelf each.
+    if (view.CollectionType === 'books') {
+      links.push({ icon: 'auto_stories', label: 'Books', hash: libraryHash(view) + '&bookKind=ebook' });
+      links.push({ icon: 'headphones', label: 'Audiobooks', hash: libraryHash(view) + '&bookKind=audiobook' });
+      return;
+    }
+    links.push({ icon: 'library', label: view.Name, hash: libraryHash(view) });
   });
 
   return links;
