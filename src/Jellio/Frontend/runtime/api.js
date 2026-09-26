@@ -568,6 +568,7 @@ export function getBookshelfItems(parentId, kind) {
   const params = new URLSearchParams({
     ParentId: parentId,
     Recursive: 'true',
+    // Manga volumes are Book items too, in their own library.
     IncludeItemTypes: kind === 'audiobook' ? 'AudioBook' : 'Book',
     SortBy: 'SortName',
     SortOrder: 'Ascending',

@@ -11,6 +11,7 @@ import {
   getContinueReading,
   getContinueListening,
   getJellioConfig,
+  audiobookGroupKey,
 } from '../runtime/api.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
@@ -35,6 +36,18 @@ const KINDS = {
     continueTitle: 'Continue listening',
     loadContinue: getContinueListening,
     emptyIcon: 'headphones',
+  },
+  // A Books library named for manga or comics (components/navShared.js).
+  // Series lead: volumes are read in order, one series at a time.
+  manga: {
+    title: 'Manga',
+    one: 'volume',
+    many: 'volumes',
+    continueTitle: 'Continue reading',
+    loadContinue: getContinueReading,
+    emptyIcon: 'collections_bookmark',
+    seriesRows: 24,
+    noRequests: true,
   },
 };
 
@@ -157,7 +170,8 @@ function groupBy(entries, keyOf, labelOf) {
 }
 
 export function renderBookshelf(root, params, parentId) {
-  const kind = params.get('bookKind') === 'audiobook' ? 'audiobook' : 'ebook';
+  const requestedKind = params.get('bookKind');
+  const kind = requestedKind === 'audiobook' || requestedKind === 'manga' ? requestedKind : 'ebook';
   const copy = KINDS[kind];
   setTitle(copy.title + ' - Jellio');
   root.classList.add('jellio-screen-bookshelf');
@@ -213,7 +227,8 @@ export function renderBookshelf(root, params, parentId) {
   root.appendChild(requestMount);
   getJellioConfig()
     .then(function (config) {
-      if (cancelled) return;
+      // Chaptarr and Open Library cover books, not manga.
+      if (cancelled || copy.noRequests) return;
       const discover = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
       discover.type = 'button';
       discover.appendChild(el('span', 'material-icons explore'));
@@ -325,10 +340,17 @@ export function renderBookshelf(root, params, parentId) {
   function renderRows(continueItems, authorGroups) {
     rows.textContent = '';
 
+    // Only what's on this shelf: the Books shelf doesn't show manga in
+    // progress, and vice versa. Audiobooks match by book (folder and
+    // album), since the track in progress needn't be the shelf's card.
     const byId = new Map(entries.map((entry) => [idKey(entry.item.Id), entry]));
-    const continueEntries = continueItems.map(
-      (item) => byId.get(idKey(item.Id)) || { item: item, author: item.AlbumArtist || '' },
-    );
+    const byBook = new Map(entries.map((entry) => [audiobookGroupKey(entry.item), entry]));
+    const continueEntries = continueItems
+      .map(function (item) {
+        const entry = byId.get(idKey(item.Id)) || (item.Type === 'AudioBook' ? byBook.get(audiobookGroupKey(item)) : null);
+        return entry ? Object.assign({}, entry, { item: item }) : null;
+      })
+      .filter(Boolean);
     const continueRow = bookRow(copy.continueTitle, continueEntries, { openReader: true });
     if (continueRow) rows.appendChild(continueRow);
 
@@ -347,7 +369,7 @@ export function renderBookshelf(root, params, parentId) {
       (entry) => entry.series,
     ).filter((group) => group.entries.length >= 2);
     const inSeriesRow = new Set();
-    seriesGroups.slice(0, MAX_SERIES_ROWS).forEach(function (group) {
+    seriesGroups.slice(0, copy.seriesRows || MAX_SERIES_ROWS).forEach(function (group) {
       group.entries.forEach((entry) => inSeriesRow.add(entry));
       const row = bookRow(group.label, group.entries.slice().sort(compareBy('year-asc')).slice(0, ROW_LIMIT));
       if (row) {

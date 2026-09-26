@@ -75,6 +75,8 @@ export const FIXED_NAV_LINKS = [
   { icon: 'dynamic_feed', label: 'Feed', hash: '#/feed' },
 ];
 
+export const MANGA_LIBRARY = /manga|comic|manhwa|webtoon/i;
+
 function libraryHash(view) {
   const route = view.CollectionType && LIBRARY_ROUTES[view.CollectionType];
   if (route) {
@@ -182,10 +184,16 @@ export async function getPrimaryNavLinks() {
     // feedback asked for it gone outright, not just deprioritised.
     if (view.CollectionType === 'boxsets') return;
     // One Jellyfin Books library holds both ebooks and audiobooks; they
-    // get a shelf each.
+    // get a shelf each. A Books library named for manga or comics is its
+    // own Manga shelf instead. group: 'reading' puts these after the
+    // video libraries, below their own divider.
     if (view.CollectionType === 'books') {
-      links.push({ icon: 'auto_stories', label: 'Books', hash: libraryHash(view) + '&bookKind=ebook' });
-      links.push({ icon: 'headphones', label: 'Audiobooks', hash: libraryHash(view) + '&bookKind=audiobook' });
+      if (MANGA_LIBRARY.test(view.Name || '')) {
+        links.push({ icon: 'collections_bookmark', label: view.Name, hash: libraryHash(view) + '&bookKind=manga', group: 'reading' });
+        return;
+      }
+      links.push({ icon: 'auto_stories', label: 'Books', hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
+      links.push({ icon: 'headphones', label: 'Audiobooks', hash: libraryHash(view) + '&bookKind=audiobook', group: 'reading' });
       return;
     }
     links.push({ icon: 'library', label: view.Name, hash: libraryHash(view) });
