@@ -485,7 +485,10 @@ export async function fetchBookFile(itemId) {
     err.status = response.status;
     throw err;
   }
-  return response.arrayBuffer();
+  return {
+    contentType: response.headers.get('Content-Type') || '',
+    buffer: await response.arrayBuffer(),
+  };
 }
 
 // Real endpoint, GET /Shows/NextUp (Jellyfin.Api's own TvShowsController,

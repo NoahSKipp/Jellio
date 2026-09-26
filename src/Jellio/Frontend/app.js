@@ -25,6 +25,7 @@ import { renderPerson } from './screens/person.js';
 import { renderProfile } from './screens/profile.js';
 import { renderFeed } from './screens/feed.js';
 import { renderCalendar } from './screens/calendar.js';
+import { renderReader } from './screens/reader.js';
 import { renderAudiobookshelf } from './screens/audiobookshelf.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
@@ -85,6 +86,7 @@ const SCREENS = {
   profile: renderProfile,
   feed: renderFeed,
   calendar: renderCalendar,
+  read: renderReader,
   audiobookshelf: renderAudiobookshelf,
   movies: renderLibrary,
   tv: renderLibrary,
@@ -97,7 +99,7 @@ const SCREENS = {
 
 // The player owns the whole viewport, no persistent sidebar competing
 // with video controls for space or attention.
-const FULLSCREEN_ROUTES = new Set(['play']);
+const FULLSCREEN_ROUTES = new Set(['play', 'read']);
 
 // The inner shell used to be built only at the moment #jellioRoot itself
 // was first created, on the assumption a node already in the document
