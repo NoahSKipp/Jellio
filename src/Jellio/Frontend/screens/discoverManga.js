@@ -3,7 +3,7 @@
 // discover-manga, never prose books. AniList knows series, Chaptarr knows
 // volumes, so a card's "Request" opens Chaptarr's search for that series
 // and each volume is requested from there.
-import { discoverManga, getBookshelfItems, getJellioConfig } from '../runtime/api.js';
+import { discoverManga, getBookshelfItems, getJellioConfig, getMangaCoverUrl } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { openMangaRequestSheet } from '../components/mangaRequest.js';
@@ -122,11 +122,18 @@ export async function renderMangaDiscover(root, params) {
     const cover = el('div', 'jellio-discover-cover');
     if (series.CoverUrl) {
       const img = document.createElement('img');
-      img.src = series.CoverUrl;
+      // Through the server first; straight from AniList if that fails.
+      let triedDirect = false;
+      img.src = getMangaCoverUrl(series.CoverUrl);
       img.alt = '';
       img.loading = 'lazy';
       img.referrerPolicy = 'no-referrer';
       img.addEventListener('error', function () {
+        if (!triedDirect) {
+          triedDirect = true;
+          img.src = series.CoverUrl;
+          return;
+        }
         img.replaceWith(el('span', 'material-icons collections_bookmark'));
       });
       cover.appendChild(img);

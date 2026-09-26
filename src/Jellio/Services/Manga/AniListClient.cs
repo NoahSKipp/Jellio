@@ -125,6 +125,45 @@ public class AniListClient(IHttpClientFactory httpClientFactory, ILogger<AniList
         }
     }
 
+    /// <summary>
+    /// A cover from AniList's image CDN, fetched by the server so covers
+    /// show even when the reader's browser can't reach AniList (ad or DNS
+    /// blockers, some networks). Only AniList's own CDN host is fetched.
+    /// </summary>
+    public async Task<(byte[] Bytes, string ContentType)?> GetCoverAsync(string url, CancellationToken cancellationToken)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps
+            || !string.Equals(uri.Host, "s4.anilist.co", StringComparison.OrdinalIgnoreCase)
+            || !uri.AbsolutePath.StartsWith("/file/anilistcdn/", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        try
+        {
+            var client = httpClientFactory.CreateClient(nameof(AniListClient));
+            using var response = await client.GetAsync(uri, cancellationToken).ConfigureAwait(false);
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            if (!response.IsSuccessStatusCode || contentType is null || !contentType.StartsWith("image/", StringComparison.Ordinal))
+            {
+                logger.LogDebug("Jellio: AniList cover {Url} failed, {StatusCode}", url, response.StatusCode);
+                return null;
+            }
+
+            return (await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false), contentType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Jellio: AniList cover {Url} threw", url);
+            return null;
+        }
+    }
+
     private static MangaSeries? ToSeries(JsonObject media)
     {
         if (media["id"] is not JsonValue idValue || !idValue.TryGetValue<int>(out var id))

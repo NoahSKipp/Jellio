@@ -622,6 +622,18 @@ export function getBookShelfInfo(parentId) {
 // data for a book already in the library, for when Jellyfin's own fields
 // are empty. The cover is an <img> source, so it authenticates via the
 // token in the query string; it 404s when Chaptarr has no match.
+// Manga Discover's AniList covers, fetched by the server
+// (BookRequestController.MangaCover).
+export function getMangaCoverUrl(url) {
+  return (
+    getServerAddress() +
+    '/Jellio/books/manga-cover?url=' +
+    encodeURIComponent(url) +
+    '&ApiKey=' +
+    encodeURIComponent(getAccessToken() || '')
+  );
+}
+
 export function getBookCoverUrl(itemId) {
   return (
     getServerAddress() +
