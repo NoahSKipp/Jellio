@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.21.0] - 2026-09-26\n\n### 🚀 Features\n\n- Request books straight from Chaptarr instead of Shelfarr\n",
+        "checksum": "9ce48eaee0c89c856dbeed74fc203531",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.21.0/jellio_1.21.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T01:34:44Z",
+        "version": "1.21.0"
+      },
+      {
         "changelog": "## [1.20.0] - 2026-09-26\n\n### 🚀 Features\n\n- Proxy book search/requests through Shelfarr, backend only\n- Show a native Jellyfin Books library as real book shelves\n- Track book reading progress and add Continue Reading/Listening rows\n- Add a native EPUB/PDF reader for Jellyfin Book items\n- Add a native audiobook player for Jellyfin AudioBook items\n- Request books from Shelfarr right on the Books shelf\n\n### 🚜 Refactor\n\n- Remove the Audiobookshelf integration now that books are native\n",
         "checksum": "cb4eab5b9d2fc5a25053cb5bb5a5a780",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.20.0/jellio_1.20.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-12T22:15:02Z",
         "version": "1.4.1"
-      },
-      {
-        "changelog": "## [1.4.0] - 2026-09-12\n\n### 🚀 Features\n\n- Add Mark season as unwatched to the episode options menu\n",
-        "checksum": "12d8e0b1d2b7e3c32afa7b039123011c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.0/jellio_1.4.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-12T12:02:10Z",
-        "version": "1.4.0"
       }
     ]
   }
