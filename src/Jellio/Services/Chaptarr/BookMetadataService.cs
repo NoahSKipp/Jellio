@@ -183,13 +183,19 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
         var index = await GetIndexAsync().ConfigureAwait(false);
         foreach (var book in index?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
         {
-            var mediaType = ChaptarrClient.ReadString(book["mediaType"]);
+            // Unmonitored catalogue entries (a tracked author's other books)
+            // don't count; only books actually wanted or on disk do.
+            var ebook = ChaptarrClient.IsWanted(book, "ebook");
+            var audiobook = ChaptarrClient.IsWanted(book, "audiobook");
+            if (!ebook && !audiobook)
+            {
+                continue;
+            }
+
             foreach (var key in TitleKeys(ChaptarrClient.ReadString(book["title"])))
             {
                 result.TryGetValue(key, out var formats);
-                result[key] = (
-                    formats.Ebook || mediaType is null or "ebook",
-                    formats.Audiobook || mediaType is null or "audiobook");
+                result[key] = (formats.Ebook || ebook, formats.Audiobook || audiobook);
             }
         }
 
