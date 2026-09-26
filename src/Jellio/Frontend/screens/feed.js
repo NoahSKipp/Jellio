@@ -6,11 +6,11 @@
 // per user version of the same real watch data). A private user's own
 // entries, watch or badge, are already gone by the time this file sees
 // them, server side, nothing to filter here.
-import { getActivityFeed, getUserImageUrl, getImageUrl } from '../runtime/api.js';
+import { getActivityFeed, getUserImageUrl, getImageUrl, getBookCoverUrl } from '../runtime/api.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
-import { formatRelativeTime } from '../runtime/format.js';
+import { formatRelativeTime, isReadingActivity, describeReading } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
 
 // AniList's own real activity card shape (screenshot checked before
@@ -22,6 +22,13 @@ import { el } from '../runtime/dom.js';
 // per episode here, real feedback specifically asked not to drown the
 // rest of this feed out under a single sitting.
 function appendWatchDescription(container, entry) {
+  if (isReadingActivity(entry)) {
+    const reading = describeReading(entry);
+    container.appendChild(document.createTextNode(reading.lead));
+    container.appendChild(el('span', 'jellio-feed-title', reading.title));
+    if (reading.detail) container.appendChild(el('div', 'jellio-feed-badge-desc', reading.detail));
+    return;
+  }
   if (entry.ItemType === 'Episode' && entry.SeriesName) {
     container.appendChild(document.createTextNode('Watched '));
     if (entry.EpisodeCount > 1) {
@@ -77,8 +84,15 @@ function buildFeedRow(entry) {
     poster.className = 'jellio-feed-poster';
     poster.alt = '';
     poster.src = getImageUrl(entry.SeriesId || entry.ItemId, 'Primary', { maxWidth: 200, quality: 85 });
+    // Books rarely have Jellyfin art; fall back to their Chaptarr cover.
+    let triedBookCover = false;
     poster.addEventListener('error', function () {
-      poster.replaceWith(el('span', 'material-icons movie jellio-feed-poster-empty'));
+      if (isReadingActivity(entry) && !triedBookCover) {
+        triedBookCover = true;
+        poster.src = getBookCoverUrl(entry.ItemId);
+        return;
+      }
+      poster.replaceWith(el('span', 'material-icons ' + (isReadingActivity(entry) ? 'menu_book' : 'movie') + ' jellio-feed-poster-empty'));
     });
     row.appendChild(poster);
   }

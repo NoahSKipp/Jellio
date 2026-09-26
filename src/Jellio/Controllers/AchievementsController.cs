@@ -230,6 +230,16 @@ public class AchievementsController(AchievementStore store, AchievementService a
             s.UnlockedAt = fresh.UnlockedAt;
             s.SuppressedBadgeIds = fresh.SuppressedBadgeIds;
             s.RecentActivity = fresh.RecentActivity;
+            s.BooksCompleted = fresh.BooksCompleted;
+            s.AudiobooksCompleted = fresh.AudiobooksCompleted;
+            s.MangaVolumesCompleted = fresh.MangaVolumesCompleted;
+            s.PagesRead = fresh.PagesRead;
+            s.MangaPagesRead = fresh.MangaPagesRead;
+            s.ListenedTicks = fresh.ListenedTicks;
+            s.CompletedReadingIds = fresh.CompletedReadingIds;
+            s.LastReadingDate = fresh.LastReadingDate;
+            s.CurrentReadingStreak = fresh.CurrentReadingStreak;
+            s.BestReadingStreak = fresh.BestReadingStreak;
         });
 
         return Ok(Build(userId, stats));
@@ -255,6 +265,11 @@ public class AchievementsController(AchievementStore store, AchievementService a
             stats.EpisodesCompleted,
             stats.TotalCompleted,
             stats.BestBingeStreak,
+            stats.BooksCompleted,
+            stats.AudiobooksCompleted,
+            stats.MangaVolumesCompleted,
+            stats.PagesRead,
+            ListenedHours = (int)(stats.ListenedTicks / TimeSpan.TicksPerHour),
             Badges = badges,
             RecentActivity = ActivityGrouping.Group(stats.RecentActivity),
         };

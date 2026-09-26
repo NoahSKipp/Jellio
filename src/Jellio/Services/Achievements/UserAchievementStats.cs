@@ -80,6 +80,29 @@ public class UserAchievementStats
     // event pipeline just for this.
     public List<ActivityEntry> RecentActivity { get; set; } = [];
 
+    // Books, audiobooks and manga (AchievementService.CreditReadingSessionAsync,
+    // fed by the reader and the audiobook player). A volume counts as
+    // finished once, however many times it is reread.
+    public int BooksCompleted { get; set; }
+
+    public int AudiobooksCompleted { get; set; }
+
+    public int MangaVolumesCompleted { get; set; }
+
+    public long PagesRead { get; set; }
+
+    public long MangaPagesRead { get; set; }
+
+    public long ListenedTicks { get; set; }
+
+    public HashSet<string> CompletedReadingIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public DateTime? LastReadingDate { get; set; }
+
+    public int CurrentReadingStreak { get; set; }
+
+    public int BestReadingStreak { get; set; }
+
     public int TotalCompleted => MoviesCompleted + EpisodesCompleted;
 
     public int MaxGenreCompletions
@@ -108,6 +131,11 @@ public class UserAchievementStats
 // getImageUrl(entry.SeriesId || entry.ItemId, ...)), same real series
 // poster over episode thumbnail preference NowPlayingPanel already
 // makes for this exact reason.
+//
+// Reading/listening entries (ItemType "Book", "Manga" or "AudioBook")
+// also carry what that session covered: pages read and where the reader
+// got to out of how many, or how long they listened, and whether they
+// finished. Sessions on the same book the same day merge into one entry.
 public record ActivityEntry(
     Guid ItemId,
     string ItemName,
@@ -116,4 +144,9 @@ public record ActivityEntry(
     Guid? SeriesId,
     DateTime CompletedAtUtc,
     int? SeasonNumber = null,
-    int? EpisodeNumber = null);
+    int? EpisodeNumber = null,
+    int? PagesRead = null,
+    int? CurrentPage = null,
+    int? PageCount = null,
+    long? ListenedTicks = null,
+    bool Finished = false);

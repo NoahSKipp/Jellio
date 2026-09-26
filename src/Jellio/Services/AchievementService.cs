@@ -269,6 +269,122 @@ public class AchievementService(
         }
     }
 
+    public record ReadingSession(string Kind, int PagesRead, int? CurrentPage, int? PageCount, long ListenedTicks, bool Finished);
+
+    // A reading or listening session from screens/reader.js or
+    // screens/listen.js, reported when the reader leaves it: pages read
+    // (or time listened), where they got to, and whether they finished.
+    // Client-reported like CreditRealWatchAsync; the controller has
+    // already checked the item and clamped the numbers.
+    public async Task CreditReadingSessionAsync(Guid userId, BaseItem item, ReadingSession session)
+    {
+        var itemType = session.Kind switch
+        {
+            "manga" => "Manga",
+            "audiobook" => "AudioBook",
+            _ => "Book",
+        };
+        var hasActivity = session.PagesRead > 0 || session.ListenedTicks >= TimeSpan.TicksPerMinute || session.Finished;
+        if (!hasActivity)
+        {
+            return;
+        }
+
+        await _writeLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var stats = store.Load(userId);
+            var now = DateTime.Now;
+            var nowUtc = DateTime.UtcNow;
+
+            stats.PagesRead += session.PagesRead;
+            if (itemType == "Manga")
+            {
+                stats.MangaPagesRead += session.PagesRead;
+            }
+
+            stats.ListenedTicks += session.ListenedTicks;
+
+            // An audiobook's tracks all belong to one book (its album).
+            var bookName = item is AudioBook && !string.IsNullOrWhiteSpace(item.Album) ? item.Album : item.Name;
+            var completionKey = itemType == "AudioBook" ? "audiobook:" + (item.ParentId.ToString("N") + "|" + bookName) : item.Id.ToString("N");
+            var newlyFinished = session.Finished && stats.CompletedReadingIds.Add(completionKey);
+            if (newlyFinished)
+            {
+                switch (itemType)
+                {
+                    case "Manga":
+                        stats.MangaVolumesCompleted++;
+                        break;
+                    case "AudioBook":
+                        stats.AudiobooksCompleted++;
+                        break;
+                    default:
+                        stats.BooksCompleted++;
+                        break;
+                }
+            }
+
+            var today = now.Date;
+            if (stats.LastReadingDate != today)
+            {
+                stats.CurrentReadingStreak = stats.LastReadingDate == today.AddDays(-1) ? stats.CurrentReadingStreak + 1 : 1;
+                stats.LastReadingDate = today;
+                stats.BestReadingStreak = Math.Max(stats.BestReadingStreak, stats.CurrentReadingStreak);
+            }
+
+            // Several sessions on the same book the same day are one feed
+            // entry, not one per sitting.
+            var seriesName = (item as IHasSeries)?.SeriesName;
+            var latest = stats.RecentActivity.Count > 0 ? stats.RecentActivity[0] : null;
+            if (latest is not null
+                && latest.ItemType == itemType
+                && string.Equals(latest.ItemName, bookName, StringComparison.Ordinal)
+                && latest.CompletedAtUtc.ToLocalTime().Date == today)
+            {
+                stats.RecentActivity[0] = latest with
+                {
+                    CompletedAtUtc = nowUtc,
+                    PagesRead = (latest.PagesRead ?? 0) + session.PagesRead,
+                    CurrentPage = session.CurrentPage ?? latest.CurrentPage,
+                    PageCount = session.PageCount ?? latest.PageCount,
+                    ListenedTicks = (latest.ListenedTicks ?? 0) + session.ListenedTicks,
+                    Finished = latest.Finished || newlyFinished,
+                };
+            }
+            else
+            {
+                stats.RecentActivity.Insert(
+                    0,
+                    new ActivityEntry(
+                        item.Id,
+                        bookName,
+                        itemType,
+                        string.IsNullOrWhiteSpace(seriesName) ? null : seriesName,
+                        null,
+                        nowUtc,
+                        null,
+                        null,
+                        session.PagesRead,
+                        session.CurrentPage,
+                        session.PageCount,
+                        session.ListenedTicks,
+                        newlyFinished));
+                if (stats.RecentActivity.Count > MaxRecentActivity)
+                {
+                    stats.RecentActivity.RemoveRange(MaxRecentActivity, stats.RecentActivity.Count - MaxRecentActivity);
+                }
+            }
+
+            ApplyCatalog(stats, nowUtc);
+            store.Save(userId, stats);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
     // Group Watch state (is this reader currently in a group, how many
     // others are actually in it right now) is only ever known client
     // side, components/groupWatch.js's own real SyncPlay WebSocket

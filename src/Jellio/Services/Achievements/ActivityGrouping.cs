@@ -48,7 +48,12 @@ public static class ActivityGrouping
                 end - i + 1,
                 first.SeasonNumber,
                 episodeNumbers.Count > 0 ? episodeNumbers.Min() : null,
-                episodeNumbers.Count > 0 ? episodeNumbers.Max() : null);
+                episodeNumbers.Count > 0 ? episodeNumbers.Max() : null,
+                first.PagesRead,
+                first.CurrentPage,
+                first.PageCount,
+                first.ListenedTicks,
+                first.Finished);
 
             i = end + 1;
         }

@@ -12,4 +12,9 @@ public record GroupedActivityEntry(
     int EpisodeCount,
     int? SeasonNumber,
     int? FirstEpisodeNumber,
-    int? LastEpisodeNumber);
+    int? LastEpisodeNumber,
+    int? PagesRead = null,
+    int? CurrentPage = null,
+    int? PageCount = null,
+    long? ListenedTicks = null,
+    bool Finished = false);
