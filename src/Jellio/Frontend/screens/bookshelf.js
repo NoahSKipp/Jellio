@@ -47,7 +47,12 @@ const KINDS = {
     loadContinue: getContinueReading,
     emptyIcon: 'collections_bookmark',
     seriesRows: 24,
-    noRequests: true,
+    // Volumes are requested from Chaptarr as ebooks; Discover browses
+    // AniList for manga, manhwa and manhua.
+    requestType: 'ebook',
+    requestLabel: 'Request manga',
+    requestPlaceholder: 'Series and volume, e.g. Berserk Vol. 1',
+    requestButton: 'Request',
   },
 };
 
@@ -228,16 +233,26 @@ export function renderBookshelf(root, params, parentId) {
   getJellioConfig()
     .then(function (config) {
       // Chaptarr and Open Library cover books, not manga.
-      if (cancelled || copy.noRequests) return;
+      if (cancelled) return;
       const discover = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
       discover.type = 'button';
       discover.appendChild(el('span', 'material-icons explore'));
       discover.appendChild(el('span', null, 'Discover'));
       discover.addEventListener('click', function () {
-        navigateTo('#/discover?kind=' + kind + '&parent=' + encodeURIComponent(parentId));
+        navigateTo(
+          '#/discover?kind=' +
+            kind +
+            '&parent=' +
+            encodeURIComponent(parentId) +
+            (params.get('mangaLibrary') === '1' ? '&mangaLibrary=1' : ''),
+        );
       });
       if (config && config.BookRequestsEnabled) {
-        const panel = buildBookRequestPanel(kind);
+        const panel = buildBookRequestPanel(copy.requestType || kind, {
+          label: copy.requestLabel,
+          placeholder: copy.requestPlaceholder,
+          ebookLabel: copy.requestButton,
+        });
         panel.querySelector('.jellio-book-request-toggle').after(discover);
         requestMount.appendChild(panel);
       } else {
@@ -416,7 +431,7 @@ export function renderBookshelf(root, params, parentId) {
   });
 
   Promise.all([
-    getBookshelfItems(parentId, kind),
+    getBookshelfItems(parentId, kind, params.get('mangaLibrary') === '1'),
     getBookShelfInfo(parentId),
     copy.loadContinue(20).catch(function () {
       return [];

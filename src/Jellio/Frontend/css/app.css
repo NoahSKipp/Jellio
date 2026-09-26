@@ -2031,6 +2031,63 @@
   margin: 0 auto clamp(32px, 4vw, 64px);
 }
 
+.jellio-discover-cover {
+  position: relative;
+}
+
+/* screens/discoverManga.js: which of manga, manhwa, manhua a series is. */
+.jellio-manga-kind {
+  position: absolute;
+  top: 0.45em;
+  left: 0.45em;
+  padding: 0.2em 0.55em;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 0.68em;
+  font-weight: 700;
+}
+
+.jellio-manga-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.jellio-manga-sheet-panel {
+  width: min(44em, 100%);
+  max-height: min(80vh, 50em);
+  overflow-y: auto;
+  padding: 1.1em 0 0.6em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: calc(var(--jellio-card-radius) * 1.4);
+  background: var(--jellio-bg-elevated);
+  box-shadow: 0 1em 3em rgb(0 0 0 / 0.5);
+}
+
+.jellio-manga-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  padding: 0 var(--jellio-safe-gutter);
+}
+
+.jellio-manga-sheet-head .jellio-row-title {
+  margin: 0;
+}
+
+.jellio-manga-sheet-panel > .jellio-bookshelf-stats {
+  padding: 0 var(--jellio-safe-gutter) 0.8em;
+}
+
 /* screens/vocab.js: the vocabulary deck and flashcard review. */
 .jellio-vocab-actions {
   display: flex;
@@ -9438,6 +9495,20 @@
   gap: clamp(20px, 3vw, 40px);
   padding: 0 var(--jellio-safe-gutter);
   margin-bottom: clamp(24px, 3vw, 40px);
+}
+
+.jellio-profile-stat-group-title {
+  margin: 0 0 0.6em;
+  padding: 0 var(--jellio-safe-gutter);
+  color: var(--jellio-text-secondary);
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.jellio-profile-stat-group .jellio-profile-stats {
+  margin-bottom: clamp(16px, 2.4vw, 28px);
 }
 
 .jellio-profile-stat {

@@ -58,7 +58,7 @@ function requestButton(result, bookType, label, icon, alreadyHave) {
   return button;
 }
 
-function buildResult(result, bookType) {
+function buildResult(result, bookType, ebookLabel) {
   const card = el('div', 'jellio-book-request-result');
   const cover = el('div', 'jellio-book-request-cover');
   if (result.CoverUrl) {
@@ -83,7 +83,7 @@ function buildResult(result, bookType) {
   if (result.SeriesTitle) info.appendChild(el('div', 'jellio-book-request-byline', result.SeriesTitle));
   const actions = el('div', 'jellio-book-request-actions');
   if (bookType !== 'audiobook') {
-    actions.appendChild(requestButton(result, 'ebook', 'Request ebook', 'menu_book', result.HasEbook));
+    actions.appendChild(requestButton(result, 'ebook', ebookLabel || 'Request ebook', 'menu_book', result.HasEbook));
   }
   if (bookType !== 'ebook') {
     actions.appendChild(requestButton(result, 'audiobook', 'Request audiobook', 'headphones', result.HasAudiobook));
@@ -96,21 +96,28 @@ function buildResult(result, bookType) {
 // bookType 'ebook' or 'audiobook' scopes the search and the request
 // buttons to that one format (the Books and Audiobooks shelves); omitted,
 // both are offered.
-export function buildBookRequestPanel(bookType) {
+//
+// options (all optional): label and placeholder override the wording
+// (the Manga shelf requests volumes as ebooks); initialQuery opens the
+// panel and searches straight away (Discover's "Request volumes");
+// ebookLabel renames the request button (a manga volume is just
+// "Request").
+export function buildBookRequestPanel(bookType, options) {
+  const opts = options || {};
   const section = el('section', 'jellio-book-request');
   const toggle = el('button', 'jellio-book-request-toggle');
   toggle.type = 'button';
   toggle.appendChild(el('span', 'material-icons add'));
-  toggle.appendChild(el('span', null, bookType === 'audiobook' ? 'Request an audiobook' : 'Request a book'));
+  toggle.appendChild(el('span', null, opts.label || (bookType === 'audiobook' ? 'Request an audiobook' : 'Request a book')));
   section.appendChild(toggle);
 
   const body = el('div', 'jellio-book-request-body');
-  body.hidden = true;
+  body.hidden = !opts.initialQuery;
   const form = el('form', 'jellio-book-request-form');
   const input = document.createElement('input');
   input.type = 'search';
   input.className = 'jellio-book-request-input';
-  input.placeholder = 'Title, author or ISBN';
+  input.placeholder = opts.placeholder || 'Title, author or ISBN';
   input.setAttribute('aria-label', 'Search books to request');
   const submit = el('button', 'jellio-book-request-submit', 'Search');
   submit.type = 'submit';
@@ -141,9 +148,9 @@ export function buildBookRequestPanel(bookType) {
     searchBooksToRequest(query, bookType)
       .then(function (found) {
         if (token !== searchToken) return;
-        status.textContent = found.length ? '' : 'No books found for “' + query + '”.';
+        status.textContent = found.length ? '' : 'Nothing found for “' + query + '”.';
         found.forEach(function (result) {
-          if (result && result.WorkId) results.appendChild(buildResult(result, bookType));
+          if (result && result.WorkId) results.appendChild(buildResult(result, bookType, opts.ebookLabel));
         });
       })
       .catch(function (err) {
@@ -155,6 +162,14 @@ export function buildBookRequestPanel(bookType) {
         if (token === searchToken) submit.disabled = false;
       });
   });
+
+  if (opts.initialQuery) {
+    input.value = opts.initialQuery;
+    toggle.classList.add('jellio-book-request-toggle-open');
+    window.setTimeout(function () {
+      form.requestSubmit();
+    }, 0);
+  }
 
   return section;
 }
