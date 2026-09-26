@@ -167,4 +167,10 @@ public class PluginConfiguration : BasePluginConfiguration
     public string ChaptarrUrl { get; set; } = string.Empty;
 
     public string ChaptarrApiKey { get; set; } = string.Empty;
+
+    // DeepL API key for the reader's translate action
+    // (Services/Language/LanguageClient.cs). Free-tier keys end in ":fx".
+    // Stays server side; readers only ever see translations. Left blank,
+    // the reader offers dictionary definitions but no translation.
+    public string DeepLApiKey { get; set; } = string.Empty;
 }
