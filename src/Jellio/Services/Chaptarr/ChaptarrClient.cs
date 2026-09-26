@@ -125,6 +125,51 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         }
     }
 
+    // Chaptarr hands covers it hasn't cached locally back as its own relative
+    // /MediaCoverProxy/... path, which a browser on Jellyfin's origin can't
+    // resolve. Only those cover paths are fetched here, so this never acts
+    // as a general proxy into the server's network.
+    public static bool IsCoverPath(string? path) =>
+        !string.IsNullOrEmpty(path)
+        && path.StartsWith('/')
+        && !path.Contains("..", StringComparison.Ordinal)
+        && (path.Contains("/MediaCoverProxy/", StringComparison.OrdinalIgnoreCase) || path.Contains("/MediaCover/", StringComparison.OrdinalIgnoreCase));
+
+    public async Task<(byte[] Bytes, string ContentType)?> GetCoverAsync(string path, CancellationToken cancellationToken)
+    {
+        if (!IsCoverPath(path) || !TryGetConfig(out var baseUrl, out var apiKey) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+        {
+            return null;
+        }
+
+        // The path already carries Chaptarr's own URL base, so it replaces
+        // whatever path the configured URL has rather than appending to it.
+        var url = new Uri(baseUri, path).ToString();
+        try
+        {
+            var client = httpClientFactory.CreateClient(nameof(ChaptarrClient));
+            using var request = BuildRequest(HttpMethod.Get, url, apiKey);
+            using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (!response.IsSuccessStatusCode || !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            return (bytes, contentType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Jellio: Chaptarr cover fetch threw for {Path}", path);
+            return null;
+        }
+    }
+
     private static string? ReadMessage(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
