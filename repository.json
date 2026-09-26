@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.26.0] - 2026-09-26\n\n### 🚀 Features\n\n- Add a Manga shelf and a comic reader, and divide reading from video in the nav\n- Post reading and listening to the Feed and add reading achievements\n\n### 🐛 Bug Fixes\n\n- Only count monitored or downloaded books as already in Chaptarr\n- Space Discover's rows like Home's and label trending by its source\n- Keep Home's personal rows when watch state changes mid-load\n",
+        "checksum": "43754a5e058c54dee81c756e7a909ccc",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.26.0/jellio_1.26.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T15:47:23Z",
+        "version": "1.26.0"
+      },
+      {
         "changelog": "## [1.25.0] - 2026-09-26\n\n### 🚀 Features\n\n- Add a Discover screen for browsing books and audiobooks to request\n\n### 🐛 Bug Fixes\n\n- Show Continue Watching, Reading and Up Next as soon as they load\n- Rename discovery request fallback local clashing with the request title\n",
         "checksum": "d75da8fefa7116daeadd1854ed02a186",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.25.0/jellio_1.25.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-19T16:25:16Z",
         "version": "1.5.4"
-      },
-      {
-        "changelog": "## [1.5.3] - 2026-09-19\n\n### 🐛 Bug Fixes\n\n- Stop Watchlist/Grouplist checks from collapsing Detail's actions row\n",
-        "checksum": "e12e78a3e2f92af8dfdca1b248cd740c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.3/jellio_1.5.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-19T15:18:42Z",
-        "version": "1.5.3"
       }
     ]
   }
