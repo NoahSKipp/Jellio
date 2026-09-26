@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.21.1] - 2026-09-26\n\n### 🐛 Bug Fixes\n\n- Show real covers for book search results and book detail pages\n",
+        "checksum": "1b38f625a69e048d3d845a4c2f9a2c92",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.21.1/jellio_1.21.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T09:20:36Z",
+        "version": "1.21.1"
+      },
+      {
         "changelog": "## [1.21.0] - 2026-09-26\n\n### 🚀 Features\n\n- Request books straight from Chaptarr instead of Shelfarr\n",
         "checksum": "9ce48eaee0c89c856dbeed74fc203531",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.21.0/jellio_1.21.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-13T11:34:43Z",
         "version": "1.4.2"
-      },
-      {
-        "changelog": "## [1.4.1] - 2026-09-12\n\n### ⚡ Performance\n\n- Replace SortBy=Random with CommunityRating + client shuffle\n",
-        "checksum": "557ed644f76ac14d18a927b47036d066",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.1/jellio_1.4.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-12T22:15:02Z",
-        "version": "1.4.1"
       }
     ]
   }
