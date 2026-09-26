@@ -2796,10 +2796,26 @@
   flex: 1 1 auto;
   min-width: 0;
   padding: 0 0.5em;
-  font-weight: 600;
+}
+
+.jellio-reader-title-book,
+.jellio-reader-title-chapter {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.jellio-reader-title-book {
+  font-weight: 600;
+}
+
+.jellio-reader-title-chapter {
+  font-size: 0.78em;
+  opacity: 0.65;
+}
+
+.jellio-reader-title-chapter:empty {
+  display: none;
 }
 
 .jellio-reader-icon-button {
@@ -2847,9 +2863,92 @@
   height: 100% !important;
 }
 
+/* Page width for EPUBs: the stage narrows and the page-turn buttons
+   stay at the window edges. Two-page spreads get twice the room. */
+.jellio-screen-reader[data-width='comfortable'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+  max-width: 46em;
+  margin: 0 auto;
+}
+
+.jellio-screen-reader[data-width='narrow'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+  max-width: 36em;
+  margin: 0 auto;
+}
+
+.jellio-screen-reader[data-layout='spread'][data-width='comfortable'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+  max-width: 84em;
+}
+
+.jellio-screen-reader[data-layout='spread'][data-width='narrow'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+  max-width: 66em;
+}
+
+.jellio-reader-stage-pdf {
+  align-items: flex-start;
+  overflow: auto;
+  padding: 1em;
+}
+
+.jellio-reader-pdf-page {
+  position: relative;
+  flex: 0 0 auto;
+  margin: auto;
+  box-shadow: 0 0.25em 1.5em rgb(0 0 0 / 0.35);
+}
+
 .jellio-reader-pdf-canvas {
   display: block;
-  box-shadow: 0 0.25em 1.5em rgb(0 0 0 / 0.35);
+}
+
+.jellio-reader-pdf-page[data-tint='dark'] .jellio-reader-pdf-canvas {
+  filter: invert(0.9) hue-rotate(180deg);
+}
+
+.jellio-reader-pdf-page[data-tint='sepia'] .jellio-reader-pdf-canvas {
+  filter: sepia(0.45) brightness(0.96);
+}
+
+/* pdf.js's text layer (from its pdf_viewer.css, Apache-2.0): invisible
+   text laid exactly over the page image so it can be selected and
+   searched. */
+.jellio-reader-pdf-page .textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-align: initial;
+  opacity: 1;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+}
+
+.jellio-reader-pdf-page .textLayer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.jellio-reader-pdf-page .textLayer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+.jellio-reader-pdf-page .textLayer ::selection {
+  background: rgb(255 196 0 / 0.4);
+}
+
+.jellio-reader-pdf-page .textLayer br::selection {
+  background: transparent;
+}
+
+.jellio-reader-pdf-page .textLayer .jellio-reader-pdf-hit {
+  background: rgb(255 196 0 / 0.35);
+  border-radius: 2px;
 }
 
 .jellio-reader-turn {
@@ -2865,11 +2964,45 @@
 }
 
 .jellio-reader-footer {
+  display: flex;
+  align-items: center;
+  gap: 1em;
   flex: 0 0 auto;
-  padding: 0.4em 1em 0.8em;
-  text-align: center;
+  padding: 0.4em 1.25em 0.8em;
   font-size: 0.8em;
+}
+
+.jellio-reader-scrubber {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: currentColor;
   opacity: 0.7;
+  cursor: pointer;
+}
+
+.jellio-reader-scrubber:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.jellio-reader-progress {
+  flex: 0 0 auto;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-reader-topbar,
+.jellio-reader-footer,
+.jellio-reader-turn {
+  transition: opacity 0.25s ease;
+}
+
+/* Immersive mode (tap the middle of the page): just the book. */
+.jellio-reader-immersive .jellio-reader-topbar,
+.jellio-reader-immersive .jellio-reader-footer,
+.jellio-reader-immersive .jellio-reader-turn {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .jellio-reader-panel {
@@ -2922,11 +3055,115 @@
   font-size: 0.9em;
 }
 
+.jellio-reader-toc-current {
+  background: rgb(255 255 255 / 0.08);
+  font-weight: 600;
+}
+
+.jellio-reader-setting {
+  margin-bottom: 1em;
+}
+
+.jellio-reader-setting-label {
+  margin-bottom: 0.4em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .jellio-reader-setting-row {
   display: flex;
   align-items: center;
   gap: 0.5em;
-  margin-bottom: 0.75em;
+}
+
+.jellio-reader-setting-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+}
+
+.jellio-reader-option {
+  flex: 1 1 auto;
+  padding: 0.45em 0.7em;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  font-size: 0.82em;
+  cursor: pointer;
+}
+
+.jellio-reader-option:hover,
+.jellio-reader-option:focus-visible {
+  background: rgb(255 255 255 / 0.06);
+}
+
+.jellio-reader-option-active {
+  border-color: var(--jellio-text-color);
+  background: var(--jellio-text-color);
+  color: var(--jellio-bg-color);
+}
+
+.jellio-reader-option-active:hover,
+.jellio-reader-option-active:focus-visible {
+  background: var(--jellio-text-color);
+}
+
+.jellio-reader-search-form {
+  margin-bottom: 0.6em;
+}
+
+.jellio-reader-search-input {
+  width: 100%;
+  padding: 0.55em 0.9em;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.04);
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  font-size: 0.9em;
+  box-sizing: border-box;
+}
+
+.jellio-reader-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  margin-top: 0.5em;
+}
+
+.jellio-reader-search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  padding: 0.55em 0.7em;
+  border: 0;
+  border-radius: 0.5em;
+  background: transparent;
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-reader-search-result:hover,
+.jellio-reader-search-result:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-reader-search-where {
+  color: var(--jellio-text-secondary);
+  font-size: 0.72em;
+  font-weight: 600;
+}
+
+.jellio-reader-search-excerpt {
+  font-size: 0.85em;
+  line-height: 1.4;
 }
 
 .jellio-reader-chip {
