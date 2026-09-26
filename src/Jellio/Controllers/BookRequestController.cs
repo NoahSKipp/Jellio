@@ -90,9 +90,8 @@ public partial class BookRequestController(
             }
 
             var mediaType = ChaptarrClient.ReadString(book["mediaType"]);
-            var inLibrary = IsInLibrary(book);
-            var hasEbook = HasLocal(book["localEbookBooks"]) || (inLibrary && mediaType == "ebook");
-            var hasAudiobook = HasLocal(book["localAudiobookBooks"]) || (inLibrary && mediaType == "audiobook");
+            var hasEbook = ChaptarrClient.IsWanted(book, "ebook");
+            var hasAudiobook = ChaptarrClient.IsWanted(book, "audiobook");
 
             if (byWork.TryGetValue(workId, out var existing))
             {
@@ -216,17 +215,33 @@ public partial class BookRequestController(
             return Ok(new RequestBookResult("error", "Chaptarr could not find this book"));
         }
 
-        var alreadyLocal = bookType == "ebook" ? HasLocal(book["localEbookBooks"]) : HasLocal(book["localAudiobookBooks"]);
-        if (alreadyLocal || IsInLibrary(book))
+        if (ChaptarrClient.IsWanted(book, bookType))
         {
             return Ok(new RequestBookResult("exists", "Already in Chaptarr"));
+        }
+
+        var requester = userManager.GetUserById(userId)?.Username ?? userId.ToString("N");
+
+        // Listed in Chaptarr but unmonitored (another of a tracked author's
+        // books): monitor it and search, rather than adding it again.
+        var existingId = ChaptarrClient.ExistingInstanceId(book, bookType);
+        if (existingId > 0)
+        {
+            var monitored = await chaptarrClient.MonitorAndSearchAsync(existingId, cancellationToken).ConfigureAwait(false);
+            var existingTitle = ChaptarrClient.ReadString(book["title"]) ?? workId;
+            if (monitored)
+            {
+                logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, existingTitle, workId);
+                return Ok(new RequestBookResult("added", null));
+            }
+
+            return Ok(new RequestBookResult("error", "Chaptarr could not start monitoring this book"));
         }
 
         PrepareForAdd(book);
         var result = await chaptarrClient.AddBookAsync(book, bookType, cancellationToken).ConfigureAwait(false);
 
         var title = ChaptarrClient.ReadString(book["title"]) ?? workId;
-        var requester = userManager.GetUserById(userId)?.Username ?? userId.ToString("N");
         if (result.Success)
         {
             logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, title, workId);
@@ -265,12 +280,6 @@ public partial class BookRequestController(
             };
         }
     }
-
-    // A lookup result Chaptarr already tracks carries its own database id.
-    private static bool IsInLibrary(JsonObject book) =>
-        book["id"] is JsonValue value && value.TryGetValue<int>(out var id) && id > 0;
-
-    private static bool HasLocal(JsonNode? node) => node is JsonArray array && array.Count > 0;
 
     private static int? ReadYear(JsonNode? node)
     {

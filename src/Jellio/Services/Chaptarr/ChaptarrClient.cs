@@ -325,6 +325,99 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         }
     }
 
+    public static bool ReadBool(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<bool>(out var flag) && flag;
+
+    public static int ReadId(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<int>(out var id) && id > 0 ? id : 0;
+
+    // Adding one book adds its author, and Chaptarr then lists the author's
+    // whole catalogue as unmonitored entries. Only a monitored entry, or
+    // one with files, is actually wanted or owned; the rest are just
+    // metadata. Checks this record's own instance when it is the given
+    // format, and Chaptarr's list of local instances of that format.
+    public static bool IsWanted(JsonObject book, string mediaType)
+    {
+        var audiobook = mediaType == "audiobook";
+        var ownType = ReadString(book["mediaType"]);
+        if (ReadId(book["id"]) > 0 && (ownType is null || ownType == mediaType)
+            && (ReadBool(book["monitored"])
+                || ReadBool(book[audiobook ? "audiobookMonitored" : "ebookMonitored"])
+                || ReadBool(book["hasFiles"])
+                || (book["statistics"]?["bookFileCount"] is JsonValue count && count.TryGetValue<int>(out var files) && files > 0)))
+        {
+            return true;
+        }
+
+        return book[audiobook ? "localAudiobookBooks" : "localEbookBooks"] is JsonArray instances
+            && instances.OfType<JsonObject>().Any(instance => ReadBool(instance["monitored"]) || ReadBool(instance["hasFiles"]));
+    }
+
+    // The id of an existing (unmonitored) entry of this format, if any.
+    public static int ExistingInstanceId(JsonObject book, string mediaType)
+    {
+        var ownType = ReadString(book["mediaType"]);
+        var id = ReadId(book["id"]);
+        if (id > 0 && (ownType is null || ownType == mediaType))
+        {
+            return id;
+        }
+
+        return book[mediaType == "audiobook" ? "localAudiobookBooks" : "localEbookBooks"] is JsonArray instances
+            ? instances.OfType<JsonObject>().Select(instance => ReadId(instance["id"])).FirstOrDefault(found => found > 0)
+            : 0;
+    }
+
+    // PUT /api/v1/book/monitor, then POST /api/v1/command BookSearch: the
+    // same thing Chaptarr's own UI does when monitoring a listed book.
+    public async Task<bool> MonitorAndSearchAsync(int bookId, CancellationToken cancellationToken)
+    {
+        if (!TryGetConfig(out var baseUrl, out var apiKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            var client = httpClientFactory.CreateClient(nameof(ChaptarrClient));
+            using (var monitor = BuildRequest(HttpMethod.Put, baseUrl + "/api/v1/book/monitor", apiKey))
+            {
+                monitor.Content = new StringContent(
+                    new JsonObject { ["bookIds"] = new JsonArray(bookId), ["monitored"] = true }.ToJsonString(),
+                    Encoding.UTF8,
+                    "application/json");
+                using var response = await client.SendAsync(monitor, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("Jellio: Chaptarr monitor book {BookId} failed, {StatusCode}", bookId, response.StatusCode);
+                    return false;
+                }
+            }
+
+            using var search = BuildRequest(HttpMethod.Post, baseUrl + "/api/v1/command", apiKey);
+            search.Content = new StringContent(
+                new JsonObject { ["name"] = "BookSearch", ["bookIds"] = new JsonArray(bookId) }.ToJsonString(),
+                Encoding.UTF8,
+                "application/json");
+            using var searchResponse = await client.SendAsync(search, cancellationToken).ConfigureAwait(false);
+            if (!searchResponse.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Jellio: Chaptarr search for book {BookId} failed, {StatusCode}", bookId, searchResponse.StatusCode);
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Jellio: Chaptarr monitor book {BookId} threw", bookId);
+            return false;
+        }
+    }
+
     public static string? ReadString(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<string>(out var text) && !string.IsNullOrWhiteSpace(text) ? text : null;
 }
