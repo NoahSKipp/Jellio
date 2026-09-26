@@ -7,6 +7,9 @@ framework: "net9.0"
 owner: "NoahSKipp"
 artifacts:
   - "Jellio.dll"
+  - "SixLabors.ImageSharp.dll"
+  - "SharpCompress.dll"
+  - "ZstdSharp.dll"
 overview: "Replaces the Jellyfin web client's own rendering with a Nuvio lookalike."
 description: >
   Replaces the Jellyfin web client's own rendering with a Nuvio lookalike,

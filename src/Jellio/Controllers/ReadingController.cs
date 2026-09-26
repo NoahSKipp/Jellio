@@ -19,7 +19,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/reading")]
 [Authorize]
-public class ReadingController(ReadingProgressStore store, ILibraryManager libraryManager, IUserManager userManager) : ControllerBase
+public class ReadingController(ReadingProgressStore store, ILibraryManager libraryManager, IUserManager userManager, ComicArchiveService comicArchives) : ControllerBase
 {
     private static readonly Dictionary<string, string> BookContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -102,9 +102,18 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
             return NotFound();
         }
 
+        // CBR/CB7/CBT comics go out as a CBZ repacked on the server.
+        if (ComicArchiveService.NeedsConversion(item.Path))
+        {
+            var cbz = comicArchives.GetCbz(item.Id, item.Path);
+            return cbz is null
+                ? StatusCode(415, "This comic archive could not be opened")
+                : PhysicalFile(cbz, "application/vnd.comicbook+zip", enableRangeProcessing: true);
+        }
+
         if (!BookContentTypes.TryGetValue(Path.GetExtension(item.Path), out var contentType))
         {
-            return StatusCode(415, "Only EPUB, PDF and CBZ books can be opened in the reader");
+            return StatusCode(415, "Only EPUB, PDF, CBZ and CBR books can be opened in the reader");
         }
 
         return PhysicalFile(item.Path, contentType, enableRangeProcessing: true);
