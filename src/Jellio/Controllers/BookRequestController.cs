@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Security.Claims;
-using System.Security.Cryptography;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellio.Services.Shelfarr;
+using Jellio.Services.Chaptarr;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,39 +16,91 @@ using Microsoft.Extensions.Logging;
 namespace Jellio.Controllers;
 
 /// <summary>
-/// Proxies book search and requests through to a self-hosted Shelfarr
-/// instance (Services/Shelfarr/ShelfarrClient.cs, real routes confirmed
-/// directly against Shelfarr's own Rails source before writing this).
-/// A Jellyfin reader never signs into Shelfarr at all: EnsureShelfarrUserAsync
-/// below silently provisions one real Shelfarr User per Jellyfin user,
-/// the first time they ever request a book, off the same admin-scoped
-/// API token every call here already needs configured
-/// (PluginConfiguration.cs's own ShelfarrApiToken - only that token's
-/// own real Shelfarr login, the admin's, is a login anyone here ever
-/// actually uses).
+/// Book search and requests for the Books shelf, straight against Chaptarr
+/// (Services/Chaptarr/ChaptarrClient.cs). The browser only ever sends a
+/// work id and a format: the server looks that work up again itself and
+/// sends Chaptarr's own lookup result back, so a reader can't slip their
+/// own root folder, profile or monitoring mode into the add call.
 /// </summary>
 [ApiController]
 [Route("Jellio/books")]
 [Authorize]
-public class BookRequestController(ShelfarrClient shelfarrClient, ShelfarrUserMapStore userMapStore, IUserManager userManager, ILogger<BookRequestController> logger) : ControllerBase
+public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserManager userManager, ILogger<BookRequestController> logger) : ControllerBase
 {
-    public record RequestBookBody(string WorkId, string BookType, string? Title, string? Author, string? CoverUrl, string? ContentKind);
+    private static readonly string[] AuthorFieldsToReset =
+    [
+        "rootFolderPath",
+        "audiobookRootFolderPath",
+        "ebookRootFolderPath",
+        "qualityProfileId",
+        "audiobookQualityProfileId",
+        "ebookQualityProfileId",
+        "metadataProfileId",
+        "audiobookMetadataProfileId",
+        "ebookMetadataProfileId",
+    ];
+
+    public record BookSearchResult(string WorkId, string Title, string? Author, int? Year, string? CoverUrl, string? SeriesTitle, bool HasEbook, bool HasAudiobook);
+
+    public record RequestBookBody(string WorkId, string BookType);
+
+    public record RequestBookResult(string Status, string? Message);
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? contentKind, [FromQuery] int limit, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(q))
         {
             return BadRequest("q is required");
         }
 
-        var result = await shelfarrClient.SearchAsync(q, contentKind, limit <= 0 ? 10 : limit, cancellationToken).ConfigureAwait(false);
-        if (result is null)
+        var lookup = await chaptarrClient.LookupAsync(q.Trim(), null, cancellationToken).ConfigureAwait(false);
+        if (lookup is null)
         {
-            return StatusCode(502, "Shelfarr search failed or is not configured");
+            return StatusCode(502, "Chaptarr search failed or is not configured");
         }
 
-        return Ok(result);
+        // Chaptarr returns separate ebook/audiobook instances of the same
+        // work; one card per work, with both formats' library state merged.
+        var byWork = new Dictionary<string, BookSearchResult>(StringComparer.OrdinalIgnoreCase);
+        var order = new List<string>();
+        foreach (var book in lookup.OfType<JsonObject>())
+        {
+            var workId = ChaptarrClient.ReadString(book["foreignBookId"]);
+            var title = ChaptarrClient.ReadString(book["title"]);
+            if (workId is null || title is null)
+            {
+                continue;
+            }
+
+            var mediaType = ChaptarrClient.ReadString(book["mediaType"]);
+            var inLibrary = IsInLibrary(book);
+            var hasEbook = HasLocal(book["localEbookBooks"]) || (inLibrary && mediaType == "ebook");
+            var hasAudiobook = HasLocal(book["localAudiobookBooks"]) || (inLibrary && mediaType == "audiobook");
+
+            if (byWork.TryGetValue(workId, out var existing))
+            {
+                byWork[workId] = existing with
+                {
+                    HasEbook = existing.HasEbook || hasEbook,
+                    HasAudiobook = existing.HasAudiobook || hasAudiobook,
+                };
+                continue;
+            }
+
+            order.Add(workId);
+            byWork[workId] = new BookSearchResult(
+                workId,
+                title,
+                ChaptarrClient.ReadString(book["author"]?["authorName"]) ?? ChaptarrClient.ReadString(book["authorTitle"]),
+                ReadYear(book["releaseDate"]),
+                CoverUrl(book),
+                ChaptarrClient.ReadString(book["seriesTitle"]),
+                hasEbook,
+                hasAudiobook);
+        }
+
+        return Ok(order.Take(20).Select(workId => byWork[workId]));
     }
 
     [HttpPost("request")]
@@ -56,67 +112,108 @@ public class BookRequestController(ShelfarrClient shelfarrClient, ShelfarrUserMa
             return BadRequest("Invalid user session");
         }
 
-        if (string.IsNullOrWhiteSpace(body.WorkId) || string.IsNullOrWhiteSpace(body.BookType))
+        var bookType = body?.BookType?.Trim().ToLowerInvariant();
+        if (bookType is not ("ebook" or "audiobook"))
         {
-            return BadRequest("WorkId and BookType are required");
+            return BadRequest("BookType must be ebook or audiobook");
         }
 
-        var shelfarrUserId = await EnsureShelfarrUserAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (shelfarrUserId is null)
+        var workId = body!.WorkId?.Trim() ?? string.Empty;
+        if (!WorkIdPattern().IsMatch(workId))
         {
-            return StatusCode(502, "Could not provision a Shelfarr account for this user");
+            return BadRequest("WorkId must be a provider-prefixed id such as hc:12345");
         }
 
-        var response = await shelfarrClient.CreateRequestAsync(
-            shelfarrUserId.Value,
-            body.WorkId,
-            body.BookType,
-            body.Title,
-            body.Author,
-            body.CoverUrl,
-            body.ContentKind,
-            userId.ToString("N"),
-            cancellationToken).ConfigureAwait(false);
-
-        if (response is null)
+        var lookup = await chaptarrClient.LookupAsync(workId, bookType, cancellationToken).ConfigureAwait(false);
+        if (lookup is null)
         {
-            return StatusCode(502, "Shelfarr request failed or is not configured");
+            return StatusCode(502, "Chaptarr lookup failed or is not configured");
         }
 
-        return Ok(response);
+        var book = lookup.OfType<JsonObject>()
+            .FirstOrDefault(b => string.Equals(ChaptarrClient.ReadString(b["foreignBookId"]), workId, StringComparison.OrdinalIgnoreCase))
+            ?? lookup.OfType<JsonObject>().FirstOrDefault();
+        if (book is null)
+        {
+            return Ok(new RequestBookResult("error", "Chaptarr could not find this book"));
+        }
+
+        var alreadyLocal = bookType == "ebook" ? HasLocal(book["localEbookBooks"]) : HasLocal(book["localAudiobookBooks"]);
+        if (alreadyLocal || IsInLibrary(book))
+        {
+            return Ok(new RequestBookResult("exists", "Already in Chaptarr"));
+        }
+
+        PrepareForAdd(book);
+        var result = await chaptarrClient.AddBookAsync(book, bookType, cancellationToken).ConfigureAwait(false);
+
+        var title = ChaptarrClient.ReadString(book["title"]) ?? workId;
+        var requester = userManager.GetUserById(userId)?.Username ?? userId.ToString("N");
+        if (result.Success)
+        {
+            logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, title, workId);
+            return Ok(new RequestBookResult(result.Pending ? "pending" : "added", result.Message));
+        }
+
+        logger.LogWarning("Jellio: {User}'s {BookType} request for {Title} ({WorkId}) failed: {Message}", requester, bookType, title, workId, result.Message);
+        return Ok(new RequestBookResult("error", result.Message));
     }
 
-    // Provisions a real Shelfarr User exactly once per Jellyfin user
-    // (ShelfarrUserMapStore's own cache), off a deterministic username
-    // (jellio-{jellyfin user id, no dashes}) so a lost/rebuilt local
-    // mapping file never collides with a real pre-existing Shelfarr
-    // account by accident. The generated password is thrown away the
-    // instant this returns - nothing here, or anywhere else in this
-    // plugin, ever needs it again, every future call targets this same
-    // user by its own real numeric Shelfarr id instead.
-    private async Task<int?> EnsureShelfarrUserAsync(Guid jellyfinUserId, CancellationToken cancellationToken)
+    // Monitor this one book and search for it now. Author-level folders and
+    // profiles are cleared so Chaptarr fills them from its own root folder
+    // defaults (BookController.NormalizeReadarrSingleFields), and a new
+    // author is added watching only this book - never their whole catalogue.
+    private static void PrepareForAdd(JsonObject book)
     {
-        var existing = userMapStore.Get(jellyfinUserId);
-        if (existing is not null)
+        book["monitored"] = true;
+        book["addOptions"] = new JsonObject
         {
-            return existing;
+            ["addType"] = "manual",
+            ["searchForNewBook"] = true,
+        };
+
+        if (book["author"] is JsonObject author)
+        {
+            foreach (var field in AuthorFieldsToReset)
+            {
+                author.Remove(field);
+            }
+
+            author["monitored"] = true;
+            author["addOptions"] = new JsonObject
+            {
+                ["monitor"] = "specificBook",
+                ["searchForMissingBooks"] = false,
+            };
+        }
+    }
+
+    // A lookup result Chaptarr already tracks carries its own database id.
+    private static bool IsInLibrary(JsonObject book) =>
+        book["id"] is JsonValue value && value.TryGetValue<int>(out var id) && id > 0;
+
+    private static bool HasLocal(JsonNode? node) => node is JsonArray array && array.Count > 0;
+
+    private static int? ReadYear(JsonNode? node)
+    {
+        var text = ChaptarrClient.ReadString(node);
+        return text is not null && DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) ? date.Year : null;
+    }
+
+    private static string? CoverUrl(JsonObject book)
+    {
+        var remote = ChaptarrClient.ReadString(book["remoteCover"]);
+        if (remote is not null)
+        {
+            return remote;
         }
 
-        var jellyfinUser = userManager.GetUserById(jellyfinUserId);
-        var displayName = jellyfinUser?.Username ?? "Jellio reader";
-        var username = "jellio-" + jellyfinUserId.ToString("N");
-        var password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
-
-        var created = await shelfarrClient.CreateUserAsync(displayName, username, password, cancellationToken).ConfigureAwait(false);
-        if (created is null)
-        {
-            logger.LogWarning("Jellio: could not provision a Shelfarr user for Jellyfin user {JellyfinUserId}", jellyfinUserId);
-            return null;
-        }
-
-        userMapStore.Set(jellyfinUserId, created.Id);
-        logger.LogInformation("Jellio: provisioned Shelfarr user {ShelfarrUserId} for Jellyfin user {JellyfinUserId}", created.Id, jellyfinUserId);
-        return created.Id;
+        return book["images"] is JsonArray images
+            ? images.OfType<JsonObject>()
+                .Where(image => string.Equals(ChaptarrClient.ReadString(image["coverType"]), "cover", StringComparison.OrdinalIgnoreCase))
+                .Select(image => ChaptarrClient.ReadString(image["remoteUrl"]))
+                .FirstOrDefault(url => url is not null && url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            : null;
     }
 
     private Guid GetUserId()
@@ -131,4 +228,7 @@ public class BookRequestController(ShelfarrClient shelfarrClient, ShelfarrUserMa
 
         return Guid.Empty;
     }
+
+    [GeneratedRegex(@"^[A-Za-z]{2,6}:[^\s]{1,120}$")]
+    private static partial Regex WorkIdPattern();
 }

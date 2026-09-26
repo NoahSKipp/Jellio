@@ -197,13 +197,13 @@ export async function renderLibrary(root, params) {
   filterBar.appendChild(genreSelect);
   root.appendChild(filterBar);
 
-  // Only offered once an admin has actually wired up Shelfarr.
+  // Only offered once an admin has actually wired up Chaptarr.
   if (collectionType === 'books') {
     const requestMount = el('div', 'jellio-book-request-mount');
     root.appendChild(requestMount);
     getJellioConfig()
       .then(function (config) {
-        if (config && config.ShelfarrEnabled) requestMount.appendChild(buildBookRequestPanel());
+        if (config && config.BookRequestsEnabled) requestMount.appendChild(buildBookRequestPanel());
       })
       .catch(function () {});
   }

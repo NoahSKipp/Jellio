@@ -36,24 +36,26 @@
             <div class="fieldDescription">
               Separate self-hosted services Jellio talks to rather than reimplementing. Books and
               audiobooks themselves need no setup here - add a Jellyfin library of type Books and
-              Jellio reads and plays it natively. Shelfarr below adds book requests on top.
+              Jellio reads and plays it natively. Chaptarr below adds book requests on top.
             </div>
           </div>
 
           <div class="inputContainer">
-            <label class="inputLabel" for="txtShelfarrUrl">Shelfarr URL</label>
-            <input is="emby-input" type="url" id="txtShelfarrUrl" autocomplete="off"
-              placeholder="http://192.168.1.10:5056" />
+            <label class="inputLabel" for="txtChaptarrUrl">Chaptarr URL</label>
+            <input is="emby-input" type="url" id="txtChaptarrUrl" autocomplete="off"
+              placeholder="http://192.168.1.10:8789" />
+            <div class="fieldDescription">
+              Must be reachable from the Jellyfin server itself, not just from your browser.
+            </div>
           </div>
 
           <div class="inputContainer">
-            <label class="inputLabel" for="txtShelfarrApiToken">Shelfarr API Token</label>
-            <input is="emby-input" type="password" id="txtShelfarrApiToken" autocomplete="off" />
+            <label class="inputLabel" for="txtChaptarrApiKey">Chaptarr API Key</label>
+            <input is="emby-input" type="password" id="txtChaptarrApiKey" autocomplete="off" />
             <div class="fieldDescription">
-              An admin-scoped token generated from Shelfarr's own dashboard, with the search,
-              requests:write and users:write scopes granted. Lets readers request books without
-              ever needing their own Shelfarr login - one is provisioned for them silently on
-              their first request.
+              From Chaptarr's Settings &gt; General. Adds a "Request a book" search to the Books
+              shelf; requested books are added to Chaptarr using your root folder's default
+              profiles and searched for right away. Stays on the server, never sent to readers.
             </div>
           </div>
 
@@ -384,8 +386,8 @@
         Dashboard.showLoadingMsg();
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           document.querySelector('#chkEnableReskin').checked = withDefault(config.EnableReskin, true);
-          document.querySelector('#txtShelfarrUrl').value = withDefault(config.ShelfarrUrl, '');
-          document.querySelector('#txtShelfarrApiToken').value = withDefault(config.ShelfarrApiToken, '');
+          document.querySelector('#txtChaptarrUrl').value = withDefault(config.ChaptarrUrl, '');
+          document.querySelector('#txtChaptarrApiKey').value = withDefault(config.ChaptarrApiKey, '');
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -404,8 +406,8 @@
         Dashboard.showLoadingMsg();
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
-          config.ShelfarrUrl = document.querySelector('#txtShelfarrUrl').value.trim();
-          config.ShelfarrApiToken = document.querySelector('#txtShelfarrApiToken').value.trim();
+          config.ChaptarrUrl = document.querySelector('#txtChaptarrUrl').value.trim();
+          config.ChaptarrApiKey = document.querySelector('#txtChaptarrApiKey').value.trim();
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();

@@ -1,31 +1,43 @@
-// "Request a book" on the Books shelf: searches Shelfarr's catalogue
-// through Controllers/BookRequestController.cs and files an ebook or
-// audiobook request under the reader's own (silently provisioned)
-// Shelfarr account. Collapsed behind one button until opened, so it never
-// crowds the shelf for readers who are just browsing.
+// "Request a book" on the Books shelf: searches Chaptarr's metadata through
+// Controllers/BookRequestController.cs and adds the ebook or audiobook to
+// Chaptarr, which then searches for it. Collapsed behind one button until
+// opened, so it never crowds the shelf for readers who are just browsing.
 import { searchBooksToRequest, requestBook } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
 
-function requestButton(result, bookType, label, icon) {
+const STATUS_LABELS = { added: 'Requested', pending: 'Queued', exists: 'Already requested' };
+
+function markDone(button, text, label) {
+  text.textContent = label;
+  button.disabled = true;
+  button.classList.add('jellio-book-request-action-done');
+}
+
+function requestButton(result, bookType, label, icon, alreadyHave) {
   const button = el('button', 'jellio-book-request-action');
   button.type = 'button';
   button.appendChild(el('span', 'material-icons ' + icon));
   const text = el('span', null, label);
   button.appendChild(text);
+  if (alreadyHave) {
+    markDone(button, text, label + ' ✓');
+    button.title = 'Already in Chaptarr';
+    return button;
+  }
   button.addEventListener('click', function () {
     button.disabled = true;
     text.textContent = 'Requesting…';
     requestBook(result, bookType)
       .then(function (response) {
-        const errors = (response && response.errors) || [];
-        if (errors.length) {
-          text.textContent = errors[0];
-          button.disabled = false;
-          button.classList.add('jellio-book-request-action-error');
+        const status = response && response.Status;
+        if (STATUS_LABELS[status]) {
+          markDone(button, text, STATUS_LABELS[status]);
+          if (response.Message) button.title = response.Message;
           return;
         }
-        text.textContent = response && response.queued ? 'Queued' : 'Requested';
-        button.classList.add('jellio-book-request-action-done');
+        text.textContent = (response && response.Message) || 'Request failed';
+        button.disabled = false;
+        button.classList.add('jellio-book-request-action-error');
       })
       .catch(function (err) {
         console.warn('Jellio: book request failed', err);
@@ -40,9 +52,9 @@ function requestButton(result, bookType, label, icon) {
 function buildResult(result) {
   const card = el('div', 'jellio-book-request-result');
   const cover = el('div', 'jellio-book-request-cover');
-  if (result.cover_url) {
+  if (result.CoverUrl) {
     const img = document.createElement('img');
-    img.src = result.cover_url;
+    img.src = result.CoverUrl;
     img.alt = '';
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
@@ -53,21 +65,13 @@ function buildResult(result) {
   card.appendChild(cover);
 
   const info = el('div', 'jellio-book-request-info');
-  info.appendChild(el('div', 'jellio-book-request-title', result.title || 'Untitled'));
-  const byline = [result.author, result.year].filter(Boolean).join(' · ');
+  info.appendChild(el('div', 'jellio-book-request-title', result.Title || 'Untitled'));
+  const byline = [result.Author, result.Year].filter(Boolean).join(' · ');
   if (byline) info.appendChild(el('div', 'jellio-book-request-byline', byline));
-  if (result.series_name) {
-    info.appendChild(
-      el(
-        'div',
-        'jellio-book-request-byline',
-        result.series_name + (result.series_position ? ' #' + result.series_position : ''),
-      ),
-    );
-  }
+  if (result.SeriesTitle) info.appendChild(el('div', 'jellio-book-request-byline', result.SeriesTitle));
   const actions = el('div', 'jellio-book-request-actions');
-  actions.appendChild(requestButton(result, 'ebook', 'Ebook', 'menu_book'));
-  actions.appendChild(requestButton(result, 'audiobook', 'Audiobook', 'headphones'));
+  actions.appendChild(requestButton(result, 'ebook', 'Ebook', 'menu_book', result.HasEbook));
+  actions.appendChild(requestButton(result, 'audiobook', 'Audiobook', 'headphones', result.HasAudiobook));
   info.appendChild(actions);
   card.appendChild(info);
   return card;
@@ -120,7 +124,7 @@ export function buildBookRequestPanel() {
         if (token !== searchToken) return;
         status.textContent = found.length ? '' : 'No books found for “' + query + '”.';
         found.forEach(function (result) {
-          if (result && result.work_id) results.appendChild(buildResult(result));
+          if (result && result.WorkId) results.appendChild(buildResult(result));
         });
       })
       .catch(function (err) {

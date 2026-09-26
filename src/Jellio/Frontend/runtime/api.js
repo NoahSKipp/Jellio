@@ -525,29 +525,19 @@ export function buildAudioStreamUrl(itemId, transcode) {
   return getServerAddress() + '/Audio/' + itemId + '/stream?' + params.toString();
 }
 
-// Controllers/BookRequestController.cs, proxied through to Shelfarr.
-// Results keep Shelfarr's own snake_case field names (work_id, cover_url).
+// Controllers/BookRequestController.cs, backed by Chaptarr. One result per
+// work: { WorkId, Title, Author, Year, CoverUrl, SeriesTitle, HasEbook,
+// HasAudiobook }, the Has* flags meaning Chaptarr already has that format.
 export function searchBooksToRequest(query) {
-  const params = new URLSearchParams({ q: query, contentKind: 'book', limit: '20' });
-  return getJson('/Jellio/books/search?' + params.toString(), 30000).then(function (result) {
-    return (result && result.results) || [];
+  return getJson('/Jellio/books/search?q=' + encodeURIComponent(query), 30000).then(function (results) {
+    return results || [];
   });
 }
 
-// bookType is Shelfarr's own "ebook" or "audiobook".
+// bookType is "ebook" or "audiobook". Resolves to { Status, Message } with
+// Status one of added, pending, exists or error.
 export function requestBook(result, bookType) {
-  return postJson(
-    '/Jellio/books/request',
-    {
-      WorkId: result.work_id,
-      BookType: bookType,
-      Title: result.title,
-      Author: result.author,
-      CoverUrl: result.cover_url,
-      ContentKind: result.content_kind || 'book',
-    },
-    30000,
-  );
+  return postJson('/Jellio/books/request', { WorkId: result.WorkId, BookType: bookType }, 30000);
 }
 
 // The raw EPUB/PDF bytes for the in-browser reader. Fetched with auth
