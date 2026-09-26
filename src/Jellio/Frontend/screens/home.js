@@ -526,8 +526,9 @@ async function buildCheapSections() {
   function push(section) {
     section.dataset.jellioHomeOrder = String(order++);
     built.push(section);
-    // A build superseded by invalidateHomeSections() finishes quietly.
-    if (cheapBuilt === built) notifySections([section]);
+    // Delivered even if a newer build has since started: a home screen
+    // swaps rows by key, so the newer build's rows simply replace these.
+    notifySections([section]);
   }
 
   // Every request starts now, together, but each row goes on screen the
@@ -691,13 +692,11 @@ export function preloadHomeSectionsWithProgress(onSection) {
   const promise = preloadHomeSections();
   // Whatever is already built goes to the screen now; the rest arrives
   // through the listener as it is built.
+  // The listener stays until the screen unsubscribes, so rows from a
+  // rebuild started while it is showing (see renderHome's user data
+  // refresh) reach it too.
   cheapBuilt.concat(expensiveBuilt).forEach(onSection);
   sectionListeners.push(onSection);
-  promise.finally(function () {
-    sectionListeners = sectionListeners.filter(function (listener) {
-      return listener !== onSection;
-    });
-  });
   return {
     promise: promise,
     unsubscribe: function () {
@@ -831,6 +830,12 @@ export async function renderHome(root, params) {
   function placeSection(section) {
     if (!active) return;
     removeSkeleton();
+    // A rebuilt row replaces the one already showing under the same key.
+    const key = section.dataset.jellioRowKey;
+    if (key) {
+      const current = rows.querySelector('[data-jellio-row-key="' + CSS.escape(key) + '"]');
+      if (current && current !== section) current.remove();
+    }
     const order = Number(section.dataset.jellioHomeOrder || 0);
     const after = Array.from(rows.children).find(function (child) {
       return child !== section && Number(child.dataset.jellioHomeOrder || 0) > order;
@@ -838,12 +843,21 @@ export async function renderHome(root, params) {
     rows.insertBefore(section, after || null);
     applyHomeCustomization(rows, editMode);
   }
-  const subscription = preloadHomeSectionsWithProgress(placeSection);
-  subscription.promise.then(function (sections) {
+  // Once a build settles, the current rows are authoritative: re-place
+  // them in order, and drop personal rows a rebuild no longer produced
+  // (a Continue Watching row whose last show was just finished).
+  function settleRows() {
     if (!active) return;
     removeSkeleton();
-    sections.forEach(placeSection);
-  });
+    const current = cheapBuilt.concat(expensiveBuilt);
+    current.forEach(placeSection);
+    Array.from(rows.children).forEach(function (child) {
+      const order = Number(child.dataset.jellioHomeOrder);
+      if (order < EXPENSIVE_ORDER_BASE && current.indexOf(child) === -1) child.remove();
+    });
+  }
+  const subscription = preloadHomeSectionsWithProgress(placeSection);
+  subscription.promise.then(settleRows);
 
   // invalidateHomeSections() above already re-derives Continue Watching
   // fresh on the NEXT visit to this screen; this covers the one real
@@ -858,26 +872,18 @@ export async function renderHome(root, params) {
   // nothing to say yet about a row it never saw, real ordering surprises
   // not worth risking here, the next real visit already covers that
   // case through the cache bust above.
+  // Watch/read state changed somewhere (this or another device, or the
+  // playback that just ended): rebuild the personal rows. The rebuild's
+  // rows arrive through the same listener and replace the current ones
+  // by key; debounced because one playback stop can fire several events.
   let userDataRefreshTimer = null;
-  function refreshContinueWatchingRow() {
-    const existing = rows.querySelector('[data-jellio-row-key="continue-watching"]');
-    if (!existing) return;
-    getResumeItems(20)
-      .then(function (items) {
-        const row = buildRow('Continue Watching', items, { continueWatching: true });
-        if (!row) {
-          existing.remove();
-          return;
-        }
-        existing.replaceWith(wrapRowForCustomization(row, 'continue-watching'));
-        applyHomeCustomization(rows, editMode);
-      })
-      .catch(function () {});
-  }
   const unsubscribeUserData = onUserDataChange(function () {
-    invalidateHomeSections();
     window.clearTimeout(userDataRefreshTimer);
-    userDataRefreshTimer = window.setTimeout(refreshContinueWatchingRow, 500);
+    userDataRefreshTimer = window.setTimeout(function () {
+      if (!active) return;
+      invalidateHomeSections();
+      preloadHomeSections().then(settleRows);
+    }, 600);
   });
 
   return function cleanup() {
