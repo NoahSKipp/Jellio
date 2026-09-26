@@ -27,7 +27,7 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         [".pdf"] = "application/pdf",
     };
 
-    public record ProgressBody(string Locator, double Progress);
+    public record ProgressBody(string Locator, double Progress, int? TotalPages);
 
     [HttpGet("progress/{itemId}")]
     public IActionResult GetProgress([FromRoute] Guid itemId)
@@ -55,7 +55,8 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
             return BadRequest("Locator is required");
         }
 
-        return Ok(store.Set(userId, itemId, body.Locator, body.Progress));
+        var totalPages = body.TotalPages is > 0 and < 1_000_000 ? body.TotalPages : null;
+        return Ok(store.Set(userId, itemId, body.Locator, body.Progress, totalPages));
     }
 
     // Item ids only, most recently read first: the frontend already knows
@@ -74,6 +75,7 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         {
             ItemId = entry.ItemId.ToString("N"),
             entry.Record.Progress,
+            entry.Record.TotalPages,
             entry.Record.UpdatedAt,
         }));
     }

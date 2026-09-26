@@ -402,6 +402,12 @@ export function buildCard(item, options) {
     appendPlaceholder();
   }
 
+  // A book in progress says how much is left, the way Continue Watching
+  // cards show minutes left.
+  if (item.JellioPagesLeft) {
+    imageWrap.appendChild(el('div', 'jellio-card-landscape-remaining', item.JellioPagesLeft + 'p left'));
+  }
+
   // Top-left, .jellio-card-watched's own real check badge already owns
   // top-right. Movie/Series only in practice (isEpisode above already
   // covers the one real case, Up Next/Continue Watching, that would
