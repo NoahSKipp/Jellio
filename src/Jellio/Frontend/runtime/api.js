@@ -635,6 +635,98 @@ export async function fetchBookFile(itemId) {
   };
 }
 
+async function putJson(path, body, timeoutMs) {
+  const response = await requestJson(
+    getServerAddress() + path,
+    {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
+      body: JSON.stringify(body || {}),
+    },
+    path,
+    timeoutMs || DEFAULT_TIMEOUT_MS,
+  );
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// Controllers/AnnotationsController.cs: the reader's highlights, notes
+// and bookmarks for one book.
+export function getAnnotations(itemId) {
+  return getJson('/Jellio/reading/annotations/' + itemId).then(function (list) {
+    return list || [];
+  });
+}
+
+export function addAnnotation(itemId, annotation) {
+  return postJson('/Jellio/reading/annotations/' + itemId, annotation);
+}
+
+export function updateAnnotation(itemId, id, changes) {
+  return putJson('/Jellio/reading/annotations/' + itemId + '/' + encodeURIComponent(id), changes);
+}
+
+export function deleteAnnotation(itemId, id) {
+  return deleteJson('/Jellio/reading/annotations/' + itemId + '/' + encodeURIComponent(id));
+}
+
+// Controllers/LanguageController.cs. Both resolve rather than reject on
+// a lookup that found nothing, so the popup can say so in place.
+export function translateText(text, targetLang, sourceLang, context) {
+  return postJson(
+    '/Jellio/language/translate',
+    { Text: text, TargetLang: targetLang, SourceLang: sourceLang || null, Context: context || null },
+    20000,
+  );
+}
+
+export function defineWord(word, lang) {
+  const query = '?word=' + encodeURIComponent(word) + (lang && lang !== 'auto' ? '&lang=' + encodeURIComponent(lang) : '');
+  return cached('define:' + word + ':' + (lang || ''), function () {
+    return getJson('/Jellio/language/define' + query, 20000);
+  });
+}
+
+// Controllers/VocabularyController.cs: the reader's vocabulary deck.
+export function getVocabulary() {
+  return getJson('/Jellio/vocab').then(function (list) {
+    return list || [];
+  });
+}
+
+export function getDueVocabulary(limit) {
+  return getJson('/Jellio/vocab/due?limit=' + (limit || 50)).then(function (list) {
+    return list || [];
+  });
+}
+
+export function addVocabulary(entry) {
+  return postJson('/Jellio/vocab', entry);
+}
+
+export function updateVocabulary(id, changes) {
+  return putJson('/Jellio/vocab/' + encodeURIComponent(id), changes);
+}
+
+export function reviewVocabulary(id, grade) {
+  return postJson('/Jellio/vocab/' + encodeURIComponent(id) + '/review', { Grade: grade });
+}
+
+export function deleteVocabulary(id) {
+  return deleteJson('/Jellio/vocab/' + encodeURIComponent(id));
+}
+
+// A file download that needs the auth header, so it can't be a plain link.
+export async function downloadVocabularyExport(format) {
+  const response = await fetch(getServerAddress() + '/Jellio/vocab/export?format=' + encodeURIComponent(format), {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Export failed');
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  return { blob: await response.blob(), filename: match ? decodeURIComponent(match[1]) : 'jellio-vocabulary.' + (format === 'anki' ? 'txt' : 'csv') };
+}
+
 // Real endpoint, GET /Shows/NextUp (Jellyfin.Api's own TvShowsController,
 // route "Shows", confirmed against real source before writing this): the
 // next unwatched episode for every series the reader is partway through,

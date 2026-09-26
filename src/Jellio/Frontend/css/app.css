@@ -3202,9 +3202,327 @@
   font-variant-numeric: tabular-nums;
 }
 
+.jellio-reader-icon-button-on {
+  color: #ffd400;
+}
+
+.jellio-reader-pdf-highlights {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.jellio-reader-pdf-highlight {
+  position: absolute;
+  opacity: 0.32;
+  border-radius: 2px;
+}
+
+.jellio-reader-language {
+  display: grid;
+  gap: 0.5em;
+}
+
+.jellio-reader-labelled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75em;
+  font-size: 0.85em;
+}
+
+.jellio-reader-select {
+  max-width: 60%;
+  padding: 0.4em 0.7em;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.05);
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  font-size: 0.95em;
+}
+
+.jellio-reader-select option {
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+}
+
+/* components/readerStudy.js: the selection popup. */
+.jellio-study-popup {
+  position: fixed;
+  z-index: 20;
+  width: min(24em, calc(100vw - 16px));
+  max-height: min(28em, calc(100vh - 16px));
+  overflow-y: auto;
+  padding: 0.5em;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 0.9em;
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.98);
+  color: var(--jellio-text-color);
+  box-shadow: 0 0.75em 2.5em rgb(0 0 0 / 0.5);
+  font-family: var(--jellio-font-family);
+  font-size: 0.9rem;
+}
+
+.jellio-study-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15em;
+}
+
+.jellio-study-colors {
+  display: flex;
+  gap: 0.3em;
+  margin-right: auto;
+  padding: 0 0.3em;
+}
+
+.jellio-study-color {
+  width: 1.4em;
+  height: 1.4em;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--dot);
+  cursor: pointer;
+}
+
+.jellio-study-color-active {
+  border-color: var(--jellio-text-color);
+  box-shadow: 0 0 0 2px rgb(var(--jellio-bg-elevated-rgb));
+}
+
+.jellio-study-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2em;
+  height: 2.2em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.jellio-study-action .material-icons {
+  font-size: 1.25em;
+}
+
+.jellio-study-action:hover,
+.jellio-study-action:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-study-action-done {
+  color: #5fd35f;
+}
+
+.jellio-study-quote {
+  margin: 0.5em 0.4em 0;
+  padding-left: 0.7em;
+  border-left: 3px solid rgb(255 255 255 / 0.2);
+  color: var(--jellio-text-secondary);
+  font-size: 0.9em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jellio-study-existing-note {
+  margin: 0.5em 0.4em 0;
+  white-space: pre-wrap;
+}
+
+.jellio-study-results:empty {
+  display: none;
+}
+
+.jellio-study-results {
+  padding: 0.3em 0.4em 0.2em;
+}
+
+.jellio-study-block {
+  padding: 0.5em 0 0.2em;
+}
+
+.jellio-study-block + .jellio-study-block {
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.jellio-study-loading {
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+}
+
+.jellio-study-section-title {
+  margin-bottom: 0.3em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.jellio-study-pos {
+  margin-top: 0.3em;
+  font-size: 0.8em;
+  font-style: italic;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-study-defs {
+  margin: 0.2em 0 0.3em;
+  padding-left: 1.3em;
+  line-height: 1.4;
+}
+
+.jellio-study-translation {
+  margin: 0;
+  font-size: 1.05em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.jellio-study-muted {
+  margin: 0.2em 0;
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+}
+
+.jellio-study-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  padding-top: 0.4em;
+}
+
+.jellio-study-note textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55em 0.7em;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 0.6em;
+  background: rgb(255 255 255 / 0.04);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.95em;
+  resize: vertical;
+}
+
+.jellio-study-note-save,
+.jellio-study-export {
+  align-self: flex-end;
+  padding: 0.4em 0.9em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-text-color);
+  color: var(--jellio-bg-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.8em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* The Notes & highlights panel. */
+.jellio-study-notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.jellio-study-notes-header .jellio-reader-panel-title {
+  margin: 0;
+}
+
+.jellio-study-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.jellio-study-note-entry {
+  display: flex;
+  align-items: flex-start;
+  border-left: 3px solid var(--mark);
+  border-radius: 0 0.5em 0.5em 0;
+}
+
+.jellio-study-note-entry:hover {
+  background: rgb(255 255 255 / 0.05);
+}
+
+.jellio-study-note-jump {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25em;
+  padding: 0.5em 0.6em;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-study-note-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.72em;
+  font-weight: 600;
+}
+
+.jellio-study-note-meta .material-icons {
+  font-size: 1.2em;
+}
+
+.jellio-study-note-text {
+  font-size: 0.85em;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jellio-study-note-body {
+  font-size: 0.82em;
+  color: var(--jellio-text-secondary);
+  white-space: pre-wrap;
+}
+
+.jellio-study-note-remove {
+  flex: 0 0 auto;
+  margin: 0.3em;
+  padding: 0.2em;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+}
+
+.jellio-study-note-remove .material-icons {
+  font-size: 1.1em;
+}
+
 @media (max-width: 40em) {
   .jellio-reader-turn {
     width: 2em;
+  }
+
+  .jellio-reader-fullscreen-button {
+    display: none;
   }
 }
 

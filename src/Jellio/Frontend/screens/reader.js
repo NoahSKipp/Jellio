@@ -7,11 +7,26 @@
 // Both formats sit behind one small reader interface (next/prev/goTo/
 // seek/search/toc/applySettings/resize/destroy) so the chrome around them
 // (panels, scrubber, keyboard, tap zones, immersive mode) is shared.
-import { getItem, getReadingProgress, saveReadingProgress, fetchBookFile, setPlayed } from '../runtime/api.js';
+import {
+  getItem,
+  getReadingProgress,
+  saveReadingProgress,
+  fetchBookFile,
+  setPlayed,
+  getJellioConfig,
+} from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
+import {
+  createStudyLayer,
+  highlightHex,
+  sentenceAround,
+  LANGUAGES,
+  languageLabel,
+  defaultTargetLanguage,
+} from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
 
 const SETTINGS_KEY = 'jellio-reader-settings';
@@ -67,6 +82,7 @@ const DEFAULT_SETTINGS = {
   pdfFit: 'page',
   pdfZoom: 100,
   pdfTint: false,
+  targetLang: null,
 };
 
 function pick(options, value, fallback) {
@@ -86,9 +102,10 @@ function loadSettings() {
       pdfFit: pick(PDF_FITS, saved.pdfFit, DEFAULT_SETTINGS.pdfFit),
       pdfZoom: Math.min(300, Math.max(50, Number(saved.pdfZoom) || DEFAULT_SETTINGS.pdfZoom)),
       pdfTint: saved.pdfTint === true,
+      targetLang: LANGUAGES.indexOf(saved.targetLang) !== -1 ? saved.targetLang : defaultTargetLanguage(),
     };
   } catch (err) {
-    return Object.assign({}, DEFAULT_SETTINGS);
+    return Object.assign({}, DEFAULT_SETTINGS, { targetLang: defaultTargetLanguage() });
   }
 }
 
@@ -170,6 +187,9 @@ async function openEpub(stage, buffer, savedLocator, settings, handlers) {
   let lastCfi = savedLocator || null;
   let flatToc = [];
   let searchHighlight = null;
+  let selectCallback = null;
+  let highlightClickCallback = null;
+  let shownHighlights = [];
 
   book.loaded.navigation
     .then(function (navigation) {
@@ -229,6 +249,34 @@ async function openEpub(stage, buffer, savedLocator, settings, handlers) {
     });
     rendition.on('relocated', report);
     rendition.on('keyup', handlers.onKey);
+    rendition.on('selected', function (cfiRange, contents) {
+      const view = contents && contents.window;
+      const selection = view && view.getSelection();
+      if (!selectCallback || !selection || selection.isCollapsed || !selection.rangeCount) return;
+      const text = String(selection).trim();
+      if (!text) return;
+      const range = selection.getRangeAt(0);
+      const inner = range.getBoundingClientRect();
+      const frame = view.frameElement ? view.frameElement.getBoundingClientRect() : { left: 0, top: 0 };
+      const startElement = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+      const block = startElement && startElement.closest('p, li, blockquote, dd, dt, td, h1, h2, h3, h4, h5, h6, div');
+      selectCallback({
+        locator: cfiRange,
+        text: text,
+        sentence: sentenceAround(block ? block.textContent : text, text),
+        rect: {
+          left: frame.left + inner.left,
+          top: frame.top + inner.top,
+          right: frame.left + inner.right,
+          bottom: frame.top + inner.bottom,
+          width: inner.width,
+          height: inner.height,
+        },
+        clear: function () {
+          selection.removeAllRanges();
+        },
+      });
+    });
     rendition.on('click', function (event) {
       if (event.target && event.target.closest && event.target.closest('a')) return;
       const view = event.view;
@@ -319,6 +367,69 @@ async function openEpub(stage, buffer, savedLocator, settings, handlers) {
         });
       });
     },
+    onSelect: function (callback) {
+      selectCallback = callback;
+    },
+    onHighlightClick: function (callback) {
+      highlightClickCallback = callback;
+    },
+    setHighlights: function (list) {
+      shownHighlights.forEach(function (cfi) {
+        try {
+          rendition.annotations.remove(cfi, 'highlight');
+        } catch (err) {
+          // Already gone with its section.
+        }
+      });
+      shownHighlights = [];
+      list.forEach(function (annotation) {
+        try {
+          rendition.annotations.highlight(
+            annotation.Locator,
+            { id: annotation.Id },
+            function (event) {
+              const target = event && event.target;
+              const rect = target && target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+              if (highlightClickCallback) highlightClickCallback(annotation.Id, rect || { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 });
+            },
+            'jellio-reader-highlight',
+            { fill: highlightHex(annotation.Color), 'fill-opacity': '0.32', 'mix-blend-mode': 'normal' },
+          );
+          shownHighlights.push(annotation.Locator);
+        } catch (err) {
+          console.warn('Jellio: could not draw a highlight', err);
+        }
+      });
+    },
+    positionOf: function (locator, fallback) {
+      if (!locationsReady) return fallback || 0;
+      try {
+        const value = book.locations.percentageFromCfi(locator);
+        return typeof value === 'number' && !Number.isNaN(value) ? value : fallback || 0;
+      } catch (err) {
+        return fallback || 0;
+      }
+    },
+    goToLocator: function (locator) {
+      return rendition.display(locator);
+    },
+    currentLocator: function () {
+      return lastCfi;
+    },
+    isBookmarkHere: function (bookmarks) {
+      const location = rendition.currentLocation();
+      if (!location || !location.start || !location.end || !window.ePub.CFI) return null;
+      const cfi = new window.ePub.CFI();
+      return (
+        bookmarks.find(function (bookmark) {
+          try {
+            return cfi.compare(bookmark.Locator, location.start.cfi) >= 0 && cfi.compare(bookmark.Locator, location.end.cfi) <= 0;
+          } catch (err) {
+            return false;
+          }
+        }) || null
+      );
+    },
     applySettings: async function (next) {
       rendition.themes.select(next.theme);
       rendition.themes.fontSize(next.fontSize + '%');
@@ -362,7 +473,9 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
   const pageWrap = el('div', 'jellio-reader-pdf-page');
   const canvas = el('canvas', 'jellio-reader-pdf-canvas');
   const textLayer = el('div', 'textLayer jellio-reader-pdf-text');
+  const highlightLayer = el('div', 'jellio-reader-pdf-highlights');
   pageWrap.appendChild(canvas);
+  pageWrap.appendChild(highlightLayer);
   pageWrap.appendChild(textLayer);
   stage.appendChild(pageWrap);
 
@@ -374,6 +487,131 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
   let activeQuery = '';
   let current = Object.assign({}, settings);
   const pageTextCache = new Map();
+  let selectCallback = null;
+  let highlightClickCallback = null;
+  let allHighlights = [];
+  let highlightBoxes = [];
+
+  // PDF locators are "pdf:<page>:<start>:<end>", character offsets into
+  // the page's text layer (its text nodes in order), which pdf.js lays
+  // out the same way every time a page renders.
+  function parsePdfLocator(locator) {
+    const match = /^pdf:(\d+):(\d+):(\d+)$/.exec(locator || '');
+    if (match) return { page: Number(match[1]), start: Number(match[2]), end: Number(match[3]) };
+    const page = /^page:(\d+)$/.exec(locator || '');
+    return page ? { page: Number(page[1]) } : null;
+  }
+
+  function textOffset(node, offset) {
+    const range = document.createRange();
+    range.setStart(textLayer, 0);
+    range.setEnd(node, offset);
+    return range.toString().length;
+  }
+
+  function rangeFromOffsets(start, end) {
+    const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    let seen = 0;
+    let startSet = false;
+    let node = walker.nextNode();
+    while (node) {
+      const length = node.nodeValue.length;
+      if (!startSet && start <= seen + length) {
+        range.setStart(node, Math.max(0, start - seen));
+        startSet = true;
+      }
+      if (startSet && end <= seen + length) {
+        range.setEnd(node, Math.max(0, end - seen));
+        return range;
+      }
+      seen += length;
+      node = walker.nextNode();
+    }
+    return startSet ? range : null;
+  }
+
+  function paintHighlights() {
+    highlightLayer.textContent = '';
+    highlightBoxes = [];
+    const wrapRect = pageWrap.getBoundingClientRect();
+    allHighlights.forEach(function (annotation) {
+      const place = parsePdfLocator(annotation.Locator);
+      if (!place || place.page !== pageNumber || typeof place.start !== 'number') return;
+      const range = rangeFromOffsets(place.start, place.end);
+      if (!range) return;
+      Array.from(range.getClientRects()).forEach(function (rect) {
+        if (rect.width < 1 || rect.height < 1) return;
+        const box = el('div', 'jellio-reader-pdf-highlight');
+        box.style.left = rect.left - wrapRect.left + 'px';
+        box.style.top = rect.top - wrapRect.top + 'px';
+        box.style.width = rect.width + 'px';
+        box.style.height = rect.height + 'px';
+        box.style.background = highlightHex(annotation.Color);
+        highlightLayer.appendChild(box);
+        highlightBoxes.push({ id: annotation.Id, box: box });
+      });
+    });
+  }
+
+  // The text layer's text nodes run lines together ("…is" + "thought"),
+  // so sentences and excerpts use a copy with a space wherever a span or
+  // line ends without one. offset maps a raw text-node offset into it.
+  function spacedPageText(offset) {
+    const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+    let spaced = '';
+    let raw = 0;
+    let mapped = -1;
+    let node = walker.nextNode();
+    while (node) {
+      const value = node.nodeValue;
+      if (mapped === -1 && typeof offset === 'number' && offset <= raw + value.length) {
+        mapped = spaced.length + (offset - raw);
+      }
+      spaced += value;
+      raw += value.length;
+      if (value && !/\s$/.test(value)) spaced += ' ';
+      node = walker.nextNode();
+    }
+    return { text: spaced, index: mapped === -1 ? spaced.length : mapped };
+  }
+
+  function highlightAt(clientX, clientY) {
+    return highlightBoxes.find(function (entry) {
+      const rect = entry.box.getBoundingClientRect();
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    });
+  }
+
+  function checkSelection() {
+    const selection = window.getSelection();
+    if (!selectCallback || !selection || selection.isCollapsed || !selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    if (!textLayer.contains(range.commonAncestorContainer)) return;
+    const text = String(selection).replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    const start = textOffset(range.startContainer, range.startOffset);
+    const end = textOffset(range.endContainer, range.endOffset);
+    const rect = range.getBoundingClientRect();
+    selectCallback({
+      locator: 'pdf:' + pageNumber + ':' + start + ':' + end,
+      text: text,
+      sentence: (function () {
+        const page = spacedPageText(start);
+        return sentenceAround(page.text, text, page.text.slice(0, page.index).replace(/\s+/g, ' ').length);
+      })(),
+      rect: rect,
+      clear: function () {
+        selection.removeAllRanges();
+      },
+    });
+  }
+
+  ['mouseup', 'touchend', 'keyup'].forEach(function (type) {
+    textLayer.addEventListener(type, function () {
+      window.setTimeout(checkSelection, 0);
+    });
+  });
 
   function paintTint() {
     const tint = current.pdfTint ? current.theme : 'none';
@@ -439,6 +677,7 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
       });
       await textTask.promise;
       markHits();
+      paintHighlights();
     } catch (err) {
       if (!err || err.name !== 'AbortException') console.warn('Jellio: PDF text layer failed', err);
     }
@@ -484,6 +723,12 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
   // Taps on the page image turn pages like an EPUB's; the text layer sits
   // on top, so a tap that ends in a selection is left alone.
   stage.addEventListener('click', function (event) {
+    const hit = highlightAt(event.clientX, event.clientY);
+    const selection = window.getSelection();
+    if (hit && highlightClickCallback && !(selection && String(selection).trim())) {
+      highlightClickCallback(hit.id, hit.box.getBoundingClientRect());
+      return;
+    }
     handlers.onTap(event.clientX, stage.classList.contains('jellio-reader-stage-overflow'), event.detail, function () {
       const selection = window.getSelection();
       return !!(selection && String(selection).trim());
@@ -562,6 +807,39 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
         if (results.length >= SEARCH_RESULT_LIMIT) break;
       }
       return results;
+    },
+    onSelect: function (callback) {
+      selectCallback = callback;
+    },
+    onHighlightClick: function (callback) {
+      highlightClickCallback = callback;
+    },
+    setHighlights: function (list) {
+      allHighlights = list.slice();
+      paintHighlights();
+    },
+    positionOf: function (locator) {
+      const place = parsePdfLocator(locator);
+      const page = place ? place.page : pageNumber;
+      return pdf.numPages > 1 ? (page - 1) / (pdf.numPages - 1) : 1;
+    },
+    goToLocator: function (locator) {
+      const place = parsePdfLocator(locator);
+      return place ? show(place.page) : Promise.resolve();
+    },
+    currentLocator: function () {
+      return 'page:' + pageNumber;
+    },
+    currentExcerpt: function () {
+      return spacedPageText().text.replace(/\s+/g, ' ').trim().slice(0, 120) || null;
+    },
+    isBookmarkHere: function (bookmarks) {
+      return (
+        bookmarks.find(function (bookmark) {
+          const place = parsePdfLocator(bookmark.Locator);
+          return place && place.page === pageNumber;
+        }) || null
+      );
     },
     setSearchQuery: function (query) {
       activeQuery = query || '';
@@ -667,10 +945,14 @@ export async function renderReader(root, params) {
   topbar.appendChild(titleBlock);
   const tocButton = iconButton('toc', 'Contents');
   const searchButton = iconButton('search', 'Search in book');
+  const notesButton = iconButton('sticky_note_2', 'Notes & highlights');
+  const bookmarkButton = iconButton('bookmark_border', 'Bookmark this page');
   const settingsButton = iconButton('text_fields', 'Reading settings');
-  const fullscreenButton = iconButton('fullscreen', 'Full screen');
+  const fullscreenButton = iconButton('fullscreen', 'Full screen', 'jellio-reader-fullscreen-button');
   topbar.appendChild(tocButton);
   topbar.appendChild(searchButton);
+  topbar.appendChild(notesButton);
+  topbar.appendChild(bookmarkButton);
   topbar.appendChild(settingsButton);
   if (document.fullscreenEnabled) topbar.appendChild(fullscreenButton);
   root.appendChild(topbar);
@@ -701,9 +983,12 @@ export async function renderReader(root, params) {
   const tocPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   const searchPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   const settingsPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
+  const notesPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   root.appendChild(tocPanel);
   root.appendChild(searchPanel);
   root.appendChild(settingsPanel);
+  root.appendChild(notesPanel);
+  const allPanels = [tocPanel, searchPanel, settingsPanel, notesPanel];
 
   let latestLocator = saved && saved.Locator ? saved.Locator : '';
   let latestProgress = saved && saved.Progress ? saved.Progress : 0;
@@ -712,6 +997,15 @@ export async function renderReader(root, params) {
   let dirty = false;
   let scrubbing = false;
   let reader = null;
+  let study = null;
+
+  function paintBookmarkButton() {
+    const on = !!(study && study.isBookmarked());
+    bookmarkButton.querySelector('.material-icons').className = 'material-icons ' + (on ? 'bookmark' : 'bookmark_border');
+    bookmarkButton.setAttribute('aria-label', on ? 'Remove bookmark' : 'Bookmark this page');
+    bookmarkButton.title = on ? 'Remove bookmark' : 'Bookmark this page';
+    bookmarkButton.classList.toggle('jellio-reader-icon-button-on', on);
+  }
 
   function flushSave() {
     if (saveTimer) {
@@ -734,6 +1028,7 @@ export async function renderReader(root, params) {
     progressLabel.textContent = info.pageCount ? 'Page ' + info.pageNumber + ' of ' + info.pageCount + ' · ' + percent : percent;
     if (typeof info.chapter === 'string') chapterLabel.textContent = info.chapter;
     if (reader && !scrubbing) scrubber.value = String(reader.scrubValue(latestProgress));
+    if (study) paintBookmarkButton();
     if (!markedFinished && latestProgress >= FINISHED_THRESHOLD) {
       markedFinished = true;
       setPlayed(itemId, true).catch(function (err) {
@@ -773,6 +1068,7 @@ export async function renderReader(root, params) {
     tapTimer = window.setTimeout(function () {
       tapTimer = null;
       if (hasSelection()) return;
+      if (study && study.dismiss()) return;
       if (panelOpen()) {
         closePanels();
         return;
@@ -823,6 +1119,31 @@ export async function renderReader(root, params) {
   }
   scrubber.value = String(reader.scrubValue(latestProgress));
 
+  const config = await getJellioConfig().catch(function () {
+    return null;
+  });
+  study = createStudyLayer({
+    root: root,
+    reader: reader,
+    itemId: itemId,
+    itemName: item.Name || '',
+    translationEnabled: !!(config && config.TranslationEnabled),
+    getChapter: function () {
+      return chapterLabel.textContent;
+    },
+    getProgress: function () {
+      return latestProgress;
+    },
+    getTargetLang: function () {
+      return settings.targetLang;
+    },
+  });
+  study.onChange(function () {
+    paintBookmarkButton();
+    if (!notesPanel.classList.contains('jellio-reader-panel-hidden')) study.paintNotesPanel(notesPanel, closePanels);
+  });
+  study.load();
+
   prevButton.addEventListener('click', function () {
     reader.prev();
   });
@@ -843,11 +1164,11 @@ export async function renderReader(root, params) {
   });
 
   function panelOpen() {
-    return [tocPanel, searchPanel, settingsPanel].some((panel) => !panel.classList.contains('jellio-reader-panel-hidden'));
+    return allPanels.some((panel) => !panel.classList.contains('jellio-reader-panel-hidden'));
   }
 
   function closePanels() {
-    [tocPanel, searchPanel, settingsPanel].forEach(function (panel) {
+    allPanels.forEach(function (panel) {
       panel.classList.add('jellio-reader-panel-hidden');
     });
   }
@@ -1102,6 +1423,54 @@ export async function renderReader(root, params) {
         ),
       );
     }
+
+    // Per book: which language it's written in (dictionary lookups filter
+    // to it; "Detect" learns it from the first translation). Global: the
+    // language translations come out in.
+    const languageRow = el('div', 'jellio-reader-language');
+    const bookLanguage = languageSelect(
+      [{ value: 'auto', label: 'Detect' }].concat(LANGUAGES.map((code) => ({ value: code, label: languageLabel(code) }))),
+      study.getBookLanguage(),
+      function (value) {
+        study.setBookLanguage(value);
+      },
+    );
+    languageRow.appendChild(labelled('Book', bookLanguage));
+    if (config && config.TranslationEnabled) {
+      const target = languageSelect(
+        LANGUAGES.map((code) => ({ value: code, label: languageLabel(code) })),
+        settings.targetLang,
+        function (value) {
+          settings.targetLang = value;
+          storeSettings(settings);
+        },
+      );
+      languageRow.appendChild(labelled('Translate into', target));
+    }
+    settingsPanel.appendChild(settingGroup('Language', languageRow));
+  }
+
+  function languageSelect(options, value, onChange) {
+    const select = document.createElement('select');
+    select.className = 'jellio-reader-select';
+    options.forEach(function (option) {
+      const optionEl = document.createElement('option');
+      optionEl.value = option.value;
+      optionEl.textContent = option.label;
+      select.appendChild(optionEl);
+    });
+    select.value = value;
+    select.addEventListener('change', function () {
+      onChange(select.value);
+    });
+    return select;
+  }
+
+  function labelled(text, control) {
+    const label = el('label', 'jellio-reader-labelled');
+    label.appendChild(el('span', null, text));
+    label.appendChild(control);
+    return label;
   }
 
   tocButton.addEventListener('click', function () {
@@ -1113,9 +1482,18 @@ export async function renderReader(root, params) {
   settingsButton.addEventListener('click', function () {
     openPanel(settingsPanel, paintSettings);
   });
+  notesButton.addEventListener('click', function () {
+    openPanel(notesPanel, function () {
+      study.paintNotesPanel(notesPanel, closePanels);
+    });
+  });
+  bookmarkButton.addEventListener('click', function () {
+    study.toggleBookmark();
+  });
 
   return function cleanup() {
     flushSave();
+    if (study) study.destroy();
     searchToken++;
     document.removeEventListener('keydown', handleKey);
     document.removeEventListener('fullscreenchange', syncFullscreenIcon);
