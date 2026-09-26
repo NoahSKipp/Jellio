@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.22.0] - 2026-09-26\n\n### 🚀 Features\n\n- Fill in book covers and metadata from Chaptarr\n",
+        "checksum": "20aace6115d8c081b8776f196901da6b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.22.0/jellio_1.22.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T10:33:46Z",
+        "version": "1.22.0"
+      },
+      {
         "changelog": "## [1.21.1] - 2026-09-26\n\n### 🐛 Bug Fixes\n\n- Show real covers for book search results and book detail pages\n",
         "checksum": "1b38f625a69e048d3d845a4c2f9a2c92",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.21.1/jellio_1.21.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-13T20:08:44Z",
         "version": "1.5.0"
-      },
-      {
-        "changelog": "## [1.4.2] - 2026-09-13\n\n### 🐛 Bug Fixes\n\n- Give Season its own episode-resolving Play, not a raw stream picker\n",
-        "checksum": "fd3c55d83818ae590e0b03e5463bac4b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.4.2/jellio_1.4.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-13T11:34:43Z",
-        "version": "1.4.2"
       }
     ]
   }
