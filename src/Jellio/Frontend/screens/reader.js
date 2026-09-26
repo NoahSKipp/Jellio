@@ -14,6 +14,7 @@ import {
   fetchBookFile,
   setPlayed,
   getJellioConfig,
+  reportReadingSession,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
@@ -1317,6 +1318,37 @@ export async function renderReader(root, params) {
   let scrubbing = false;
   let reader = null;
   let totalPages = saved && saved.TotalPages ? saved.TotalPages : null;
+
+  // This sitting, for the Feed and reading achievements: the page it
+  // started on and the furthest page reached, sent when the reader
+  // leaves (or hides the tab), then carried on from there.
+  let sessionStartPage = null;
+  let sessionMaxPage = 0;
+  let currentPageNumber = null;
+  let finishedReported = false;
+
+  function flushSession() {
+    if (!reader || sessionStartPage === null) return;
+    const pagesRead = Math.max(0, sessionMaxPage - sessionStartPage);
+    const finished = latestProgress >= FINISHED_THRESHOLD && !finishedReported;
+    if (!pagesRead && !finished) return;
+    reportReadingSession({
+      ItemId: itemId,
+      Kind: reader.kind === 'comic' ? 'manga' : 'book',
+      PagesRead: pagesRead,
+      CurrentPage: currentPageNumber,
+      PageCount: totalPages,
+      ListenedSeconds: 0,
+      Finished: finished,
+    });
+    sessionStartPage = sessionMaxPage;
+    if (finished) finishedReported = true;
+  }
+
+  function onVisibility() {
+    if (document.visibilityState === 'hidden') flushSession();
+  }
+  document.addEventListener('visibilitychange', onVisibility);
   let study = null;
 
   function paintBookmarkButton() {
@@ -1350,6 +1382,12 @@ export async function renderReader(root, params) {
       ? 'Page ' + info.pageNumber + ' of ' + info.pageCount + ' · ' + percent
       : percent + (pagesLeft > 0 ? ' · ' + pagesLeft + (pagesLeft === 1 ? ' page left' : ' pages left') : '');
     if (typeof info.chapter === 'string') chapterLabel.textContent = info.chapter;
+    const pageNow = info.pageNumber || (totalPages ? Math.max(1, Math.round(latestProgress * totalPages)) : null);
+    if (pageNow) {
+      currentPageNumber = pageNow;
+      if (sessionStartPage === null) sessionStartPage = pageNow;
+      sessionMaxPage = Math.max(sessionMaxPage, pageNow);
+    }
     if (reader && !scrubbing) scrubber.value = String(reader.scrubValue(latestProgress));
     if (study) paintBookmarkButton();
     if (!markedFinished && latestProgress >= FINISHED_THRESHOLD) {
@@ -1882,6 +1920,8 @@ export async function renderReader(root, params) {
 
   return function cleanup() {
     flushSave();
+    flushSession();
+    document.removeEventListener('visibilitychange', onVisibility);
     if (study) study.destroy();
     searchToken++;
     document.removeEventListener('keydown', handleKey);

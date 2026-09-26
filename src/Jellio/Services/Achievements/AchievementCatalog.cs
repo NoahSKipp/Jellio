@@ -10,6 +10,24 @@ public static class AchievementCatalog
 {
     private const long TicksPerHour = 36_000_000_000L;
 
+    public static readonly IReadOnlyList<AchievementDefinition> ReadingBadges =
+    [
+        new("first-book", "First Chapter", "Finish your first book.", AchievementRarity.Common, s => s.BooksCompleted >= 1),
+        new("bookworm", "Bookworm", "Finish 10 books.", AchievementRarity.Rare, s => s.BooksCompleted >= 10),
+        new("bibliophile", "Bibliophile", "Finish 50 books.", AchievementRarity.Epic, s => s.BooksCompleted >= 50),
+        new("page-turner", "Page Turner", "Read 1,000 pages.", AchievementRarity.Common, s => s.PagesRead >= 1_000),
+        new("page-devourer", "Page Devourer", "Read 10,000 pages.", AchievementRarity.Rare, s => s.PagesRead >= 10_000),
+        new("library-of-alexandria", "Library of Alexandria", "Read 50,000 pages.", AchievementRarity.Legendary, s => s.PagesRead >= 50_000),
+        new("first-listen", "All Ears", "Finish your first audiobook.", AchievementRarity.Common, s => s.AudiobooksCompleted >= 1),
+        new("audiophile", "Audiophile", "Finish 10 audiobooks.", AchievementRarity.Rare, s => s.AudiobooksCompleted >= 10),
+        new("marathon-listener", "Marathon Listener", "Listen to 100 hours of audiobooks.", AchievementRarity.Epic, s => s.ListenedTicks >= 100 * TicksPerHour),
+        new("first-volume", "Volume One", "Finish your first manga volume.", AchievementRarity.Common, s => s.MangaVolumesCompleted >= 1),
+        new("manga-collector", "Tankobon Collector", "Finish 25 manga volumes.", AchievementRarity.Rare, s => s.MangaVolumesCompleted >= 25),
+        new("manga-master", "Manga Master", "Finish 100 manga volumes.", AchievementRarity.Epic, s => s.MangaVolumesCompleted >= 100),
+        new("reading-habit", "Reading Habit", "Read or listen 7 days in a row.", AchievementRarity.Rare, s => s.BestReadingStreak >= 7),
+        new("reading-ritual", "Reading Ritual", "Read or listen 30 days in a row.", AchievementRarity.Epic, s => s.BestReadingStreak >= 30),
+    ];
+
     public static readonly IReadOnlyList<AchievementDefinition> All =
     [
         new("first-watch", "First Watch", "Finish your first movie or episode.", AchievementRarity.Common, s => s.TotalCompleted >= 1),
@@ -44,5 +62,6 @@ public static class AchievementCatalog
         new("horror-fan", "Horror Fan", "Finish 10 horror titles.", AchievementRarity.Rare, s => s.GenreCompletions.GetValueOrDefault("Horror") >= 10),
         new("comedy-fan", "Comedy Fan", "Finish 10 comedy titles.", AchievementRarity.Rare, s => s.GenreCompletions.GetValueOrDefault("Comedy") >= 10),
         new("documentary-buff", "Documentary Buff", "Finish 10 documentaries.", AchievementRarity.Rare, s => s.GenreCompletions.GetValueOrDefault("Documentary") >= 10),
+        .. ReadingBadges,
     ];
 }

@@ -15,6 +15,7 @@ import {
   reportPlaybackProgress,
   reportPlaybackStopped,
   TICKS_PER_SECOND,
+  reportReadingSession,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -478,7 +479,41 @@ export async function renderListen(root, params) {
     audio.load();
   });
 
+  // Time actually listened this sitting (media time, so 1.5x speed
+  // counts the book's minutes), for the Feed and achievements. Jumps
+  // (seeks, track changes) are ignored rather than counted.
+  let listenedSeconds = 0;
+  let lastListenTime = null;
+  let finishedReported = false;
+  function flushListening() {
+    const finished = !finishedReported && timeline.durationSec > 0 && bookTime() >= timeline.durationSec * 0.98;
+    if (listenedSeconds < 60 && !finished) return;
+    reportReadingSession({
+      ItemId: itemId,
+      Kind: 'audiobook',
+      PagesRead: 0,
+      ListenedSeconds: Math.round(listenedSeconds),
+      Finished: finished,
+    });
+    listenedSeconds = 0;
+    if (finished) finishedReported = true;
+  }
+  function onVisibility() {
+    if (document.visibilityState === 'hidden') flushListening();
+  }
+  document.addEventListener('visibilitychange', onVisibility);
+  audio.addEventListener('seeking', function () {
+    lastListenTime = null;
+  });
+
   audio.addEventListener('timeupdate', function () {
+    if (!audio.paused && !audio.seeking) {
+      const now = audio.currentTime;
+      if (lastListenTime !== null && now > lastListenTime && now - lastListenTime < 5) listenedSeconds += now - lastListenTime;
+      lastListenTime = now;
+    } else {
+      lastListenTime = null;
+    }
     paintPosition();
     if (sleepEndOfChapter !== null && bookTime() >= timeline.chapters[sleepEndOfChapter].endSec - 0.3) {
       sleepEndOfChapter = null;
@@ -495,7 +530,9 @@ export async function renderListen(root, params) {
   });
 
   audio.addEventListener('ended', function () {
+    lastListenTime = null;
     stopReport(true);
+    if (trackIndex >= timeline.tracks.length - 1) flushListening();
     if (trackIndex < timeline.tracks.length - 1) {
       loadTrack(trackIndex + 1, 0, true);
     } else {
@@ -657,6 +694,8 @@ export async function renderListen(root, params) {
   loadTrack(resume.index, resume.offset, false);
 
   return function cleanup() {
+    flushListening();
+    document.removeEventListener('visibilitychange', onVisibility);
     tornDown = true;
     stopReport(false);
     window.clearInterval(progressTimer);

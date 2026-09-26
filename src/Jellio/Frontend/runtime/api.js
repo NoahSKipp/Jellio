@@ -705,6 +705,14 @@ async function putJson(path, body, timeoutMs) {
   return text ? JSON.parse(text) : null;
 }
 
+// Controllers/ReadingActivityController.cs: one reading or listening
+// session, for the Feed and reading achievements. Fire and forget.
+export function reportReadingSession(session) {
+  return postJson('/Jellio/reading/session', session).catch(function (err) {
+    console.warn('Jellio: could not report reading session', err);
+  });
+}
+
 // Controllers/AnnotationsController.cs: the reader's highlights, notes
 // and bookmarks for one book.
 export function getAnnotations(itemId) {

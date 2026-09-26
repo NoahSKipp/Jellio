@@ -24,7 +24,7 @@ import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
-import { formatRelativeTime } from '../runtime/format.js';
+import { formatRelativeTime, isReadingActivity, describeReading } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
@@ -36,6 +36,10 @@ const BIO_MAX_LENGTH = 240;
 // EpisodeCount > 1 instead of one row per episode, same real grouping
 // screens/feed.js's own describeActivity already applies.
 function describeActivity(entry) {
+  if (isReadingActivity(entry)) {
+    const reading = describeReading(entry);
+    return reading.lead + reading.title + (reading.detail ? ' · ' + reading.detail : '');
+  }
   if (entry.ItemType === 'Episode' && entry.EpisodeCount > 1) {
     const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
     const range =
@@ -385,12 +389,24 @@ export async function renderProfile(root, params) {
       ['Episodes', achievements.EpisodesCompleted],
       ['Total watched', achievements.TotalCompleted],
       ['Best binge', achievements.BestBingeStreak],
-    ].forEach(function (pair) {
-      const stat = el('div', 'jellio-profile-stat');
-      stat.appendChild(el('span', 'jellio-profile-stat-value', String(pair[1])));
-      stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
-      stats.appendChild(stat);
-    });
+    ]
+      // Reading stats only once there are some, so a watch-only profile
+      // isn't padded with zeroes.
+      .concat(
+        [
+          ['Books read', achievements.BooksCompleted],
+          ['Pages read', achievements.PagesRead],
+          ['Audiobooks', achievements.AudiobooksCompleted],
+          ['Hours listened', achievements.ListenedHours],
+          ['Manga volumes', achievements.MangaVolumesCompleted],
+        ].filter((pair) => pair[1] > 0),
+      )
+      .forEach(function (pair) {
+        const stat = el('div', 'jellio-profile-stat');
+        stat.appendChild(el('span', 'jellio-profile-stat-value', String(pair[1])));
+        stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
+        stats.appendChild(stat);
+      });
     body.appendChild(stats);
     const refresh = function () {
       renderProfile(root, params);

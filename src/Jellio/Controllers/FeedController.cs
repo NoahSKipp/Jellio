@@ -65,7 +65,12 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
         string? BadgeId,
         string? BadgeName,
         string? BadgeDescription,
-        string? BadgeRarity);
+        string? BadgeRarity,
+        int? PagesRead = null,
+        int? CurrentPage = null,
+        int? PageCount = null,
+        long? ListenedTicks = null,
+        bool Finished = false);
 
     [HttpGet]
     public IActionResult Get()
@@ -100,7 +105,12 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
                         null,
                         null,
                         null,
-                        null)));
+                        null,
+                        group.PagesRead,
+                        group.CurrentPage,
+                        group.PageCount,
+                        group.ListenedTicks,
+                        group.Finished)));
 
             foreach (var badge in AchievementCatalog.All)
             {

@@ -13,6 +13,39 @@ export function formatRuntime(ticks) {
   return hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
 }
 
+// Reading/listening activity lines for the Feed and profile (Controllers/
+// ReadingActivityController.cs): "Read 40 pages of", "Listened to 1h 5m
+// of", "Finished reading", plus "Page 120 of 330" where known.
+const READING_TYPES = { Book: 'book', Manga: 'manga', AudioBook: 'audiobook' };
+
+export function isReadingActivity(entry) {
+  return !!(entry && READING_TYPES[entry.ItemType]);
+}
+
+function formatListened(ticks) {
+  const minutes = Math.round((ticks || 0) / 600000000);
+  if (minutes < 60) return minutes + ' min';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours + 'h' + (rest ? ' ' + rest + 'm' : '');
+}
+
+export function describeReading(entry) {
+  const audio = entry.ItemType === 'AudioBook';
+  let lead;
+  if (entry.Finished) lead = audio ? 'Finished listening to ' : 'Finished reading ';
+  else if (audio) lead = entry.ListenedTicks ? 'Listened to ' + formatListened(entry.ListenedTicks) + ' of ' : 'Listened to ';
+  else if (entry.PagesRead) lead = 'Read ' + entry.PagesRead + (entry.PagesRead === 1 ? ' page of ' : ' pages of ');
+  else lead = 'Read ';
+  let detail = '';
+  if (!audio && entry.CurrentPage && entry.PageCount) {
+    detail = 'Page ' + entry.CurrentPage + ' of ' + entry.PageCount;
+  } else if (audio && entry.Finished && entry.ListenedTicks) {
+    detail = formatListened(entry.ListenedTicks) + ' listened';
+  }
+  return { lead: lead, title: entry.ItemName || '', detail: detail };
+}
+
 export function formatRelativeTime(isoString) {
   const then = new Date(isoString).getTime();
   if (Number.isNaN(then)) return '';
