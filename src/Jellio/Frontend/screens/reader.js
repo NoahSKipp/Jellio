@@ -1144,6 +1144,10 @@ export async function renderReader(root, params) {
   });
   study.load();
 
+  // Opened from a vocabulary card or elsewhere with a place to go to.
+  const jumpTo = params.get('loc');
+  if (jumpTo) reader.goToLocator(jumpTo);
+
   prevButton.addEventListener('click', function () {
     reader.prev();
   });
