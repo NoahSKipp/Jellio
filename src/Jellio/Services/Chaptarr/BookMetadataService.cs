@@ -167,6 +167,37 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
         return new Resolution(null, lookupFailed || index is null);
     }
 
+    /// <summary>
+    /// Which formats of a title Chaptarr already tracks, by title only (its
+    /// lean index carries no author), for flagging discovery results.
+    /// Keyed by normalized title; empty when Chaptarr is unreachable.
+    /// </summary>
+    public async Task<Dictionary<string, (bool Ebook, bool Audiobook)>> TrackedTitlesAsync()
+    {
+        var result = new Dictionary<string, (bool Ebook, bool Audiobook)>(StringComparer.Ordinal);
+        if (!ChaptarrClient.IsConfigured)
+        {
+            return result;
+        }
+
+        var index = await GetIndexAsync().ConfigureAwait(false);
+        foreach (var book in index?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+        {
+            var mediaType = ChaptarrClient.ReadString(book["mediaType"]);
+            foreach (var key in TitleKeys(ChaptarrClient.ReadString(book["title"])))
+            {
+                result.TryGetValue(key, out var formats);
+                result[key] = (
+                    formats.Ebook || mediaType is null or "ebook",
+                    formats.Audiobook || mediaType is null or "audiobook");
+            }
+        }
+
+        return result;
+    }
+
+    public static IEnumerable<string> TitleKeysFor(string? title) => TitleKeys(title);
+
     // Chaptarr's whole tracked-book index, fetched once and shared by every
     // item matched against it for a few minutes.
     private Task<JsonArray?> GetIndexAsync()

@@ -649,7 +649,26 @@ export function searchBooksToRequest(query, mediaType) {
 // bookType is "ebook" or "audiobook". Resolves to { Status, Message } with
 // Status one of added, pending, exists or error.
 export function requestBook(result, bookType) {
-  return postJson('/Jellio/books/request', { WorkId: result.WorkId, BookType: bookType }, 30000);
+  return postJson(
+    '/Jellio/books/request',
+    { WorkId: result.WorkId, BookType: bookType, Title: result.Title || null, Author: result.Author || null },
+    30000,
+  );
+}
+
+// Controllers/BookRequestController.cs's discover: books to browse and
+// request, from Open Library. source: 'trending', 'subject' (value like
+// 'fantasy') or 'author' (value is a name). Same fields as a search
+// result, so the same request buttons work on either.
+export function discoverBooks(source, value, page) {
+  const params = new URLSearchParams({ source: source, page: String(page || 0) });
+  if (value) params.set('value', value);
+  const path = '/Jellio/books/discover?' + params.toString();
+  return cached(path, function () {
+    return getJson(path, 30000);
+  }).then(function (results) {
+    return results || [];
+  });
 }
 
 // The raw EPUB/PDF bytes for the in-browser reader. Fetched with auth
