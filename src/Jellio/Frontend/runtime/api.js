@@ -670,6 +670,25 @@ export function requestBook(result, bookType) {
   );
 }
 
+// Controllers/MangaRequestController.cs: manga, manhwa and manhua
+// requests through Suwayomi. Search fans out across Suwayomi's sources,
+// so it can take a while.
+export function getMangaRequestStatus() {
+  return cached('manga-request-status', function () {
+    return getJson('/Jellio/manga/status', 20000);
+  }, SHORT_CACHE_TTL_MS);
+}
+
+export function searchMangaSources(query) {
+  return getJson('/Jellio/manga/search?q=' + encodeURIComponent(query), 45000).then(function (results) {
+    return results || [];
+  });
+}
+
+export function requestMangaSeries(mangaId, title) {
+  return postJson('/Jellio/manga/request', { MangaId: mangaId, Title: title || null }, 60000);
+}
+
 // Controllers/BookRequestController.cs's discover-manga: manga, manhwa
 // and manhua series from AniList. options: sort ('trending', 'popular',
 // 'top'), genre, country ('JP', 'KR', 'CN'), q (title search), page.

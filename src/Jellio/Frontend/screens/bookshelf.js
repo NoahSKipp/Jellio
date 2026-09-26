@@ -16,6 +16,7 @@ import {
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildBookRequestPanel } from '../components/bookRequest.js';
+import { openMangaRequestSheet } from '../components/mangaRequest.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
@@ -47,8 +48,8 @@ const KINDS = {
     loadContinue: getContinueReading,
     emptyIcon: 'collections_bookmark',
     seriesRows: 24,
-    // Volumes are requested from Chaptarr as ebooks; Discover browses
-    // AniList for manga, manhwa and manhua.
+    // Requested through components/mangaRequest.js (Suwayomi chapters or
+    // Chaptarr volumes); Discover browses AniList.
     requestType: 'ebook',
     requestLabel: 'Request manga',
     requestPlaceholder: 'Series and volume, e.g. Berserk Vol. 1',
@@ -182,6 +183,7 @@ export function renderBookshelf(root, params, parentId) {
   root.classList.add('jellio-screen-bookshelf');
 
   let cancelled = false;
+  let closeMangaSheet = null;
   let entries = [];
   let filterText = '';
   let selectedAuthor = '';
@@ -247,7 +249,24 @@ export function renderBookshelf(root, params, parentId) {
             (params.get('mangaLibrary') === '1' ? '&mangaLibrary=1' : ''),
         );
       });
-      if (config && config.BookRequestsEnabled) {
+      if (kind === 'manga' && config && (config.BookRequestsEnabled || config.MangaRequestsEnabled)) {
+        // Chapters from Suwayomi and/or volumes from Chaptarr, in one sheet.
+        const wrap = el('section', 'jellio-book-request');
+        const open = el('button', 'jellio-book-request-toggle');
+        open.type = 'button';
+        open.appendChild(el('span', 'material-icons add'));
+        open.appendChild(el('span', null, copy.requestLabel));
+        open.addEventListener('click', function () {
+          if (closeMangaSheet) closeMangaSheet();
+          closeMangaSheet = openMangaRequestSheet(root, {
+            suwayomi: !!config.MangaRequestsEnabled,
+            chaptarr: !!config.BookRequestsEnabled,
+          });
+        });
+        wrap.appendChild(open);
+        wrap.appendChild(discover);
+        requestMount.appendChild(wrap);
+      } else if (config && config.BookRequestsEnabled && kind !== 'manga') {
         const panel = buildBookRequestPanel(copy.requestType || kind, {
           label: copy.requestLabel,
           placeholder: copy.requestPlaceholder,
@@ -474,5 +493,6 @@ export function renderBookshelf(root, params, parentId) {
 
   return function () {
     cancelled = true;
+    if (closeMangaSheet) closeMangaSheet();
   };
 }
