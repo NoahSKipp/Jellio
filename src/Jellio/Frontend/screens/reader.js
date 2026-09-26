@@ -1231,7 +1231,7 @@ export async function renderReader(root, params) {
     renderRetry(
       root,
       err && err.status === 415
-        ? 'This book’s format can’t be opened in the reader yet. EPUB, PDF and CBZ are supported.'
+        ? 'This book’s format can’t be opened in the reader yet. EPUB, PDF, CBZ and CBR are supported.'
         : 'Could not open this book.',
       function () {
         renderReader(root, params);

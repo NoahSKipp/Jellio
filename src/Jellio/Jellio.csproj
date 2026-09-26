@@ -28,6 +28,10 @@
          version clash with whatever Jellyfin's own image pipeline
          loads internally. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11" />
+    <!-- MIT. Reads the RAR (4 and 5) and 7z archives CBR/CB7 comics come
+         in, so Services/Reading/ComicArchiveService.cs can repack them
+         as CBZ for the reader; browsers have no RAR support at all. -->
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\config.html" />

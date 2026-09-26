@@ -145,6 +145,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
 
         services.AddSingleton<ReadingProgressStore>();
         services.AddSingleton<AnnotationStore>();
+        services.AddSingleton<ComicArchiveService>();
         services.AddSingleton<VocabularyStore>();
         services.AddHttpClient(nameof(LanguageClient));
         services.AddSingleton<LanguageClient>();
