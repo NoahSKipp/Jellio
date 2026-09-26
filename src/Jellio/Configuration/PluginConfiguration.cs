@@ -171,4 +171,23 @@ public class PluginConfiguration : BasePluginConfiguration
     // own real short lived client cache picks it up on the reader's own
     // very next navigation).
     public string AudiobookshelfUrl { get; set; } = string.Empty;
+
+    // Shelfarr (shelfarr.org), a separate self-hosted service too, real
+    // API confirmed directly against its own source (Pedro-Revez-Silva/
+    // shelfarr, a Rails app) before writing Services/Shelfarr/ShelfarrClient.cs
+    // rather than guessed: Authorization: Bearer against /api/v1. An
+    // admin-scoped token here (needs search, requests:write and
+    // users:write - app/controllers/api/v1/*_controller.rb's own real
+    // require_scope! calls, confirmed directly) lets
+    // Services/Shelfarr/ShelfarrUserMapStore.cs silently provision one
+    // real Shelfarr User per Jellyfin user on their own first request
+    // (POST /api/v1/users) rather than asking every reader to sign up
+    // and log into a second real app on their own - nobody but the
+    // admin who generated this token ever needs a real Shelfarr login
+    // at all. Left blank, Controllers/BookRequestController.cs's own
+    // endpoints stay unreachable, same graceful-blank pattern every
+    // other optional integration in this config already follows.
+    public string ShelfarrUrl { get; set; } = string.Empty;
+
+    public string ShelfarrApiToken { get; set; } = string.Empty;
 }

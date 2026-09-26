@@ -48,6 +48,23 @@
             </div>
           </div>
 
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtShelfarrUrl">Shelfarr URL</label>
+            <input is="emby-input" type="url" id="txtShelfarrUrl" autocomplete="off"
+              placeholder="http://192.168.1.10:5056" />
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtShelfarrApiToken">Shelfarr API Token</label>
+            <input is="emby-input" type="password" id="txtShelfarrApiToken" autocomplete="off" />
+            <div class="fieldDescription">
+              An admin-scoped token generated from Shelfarr's own dashboard, with the search,
+              requests:write and users:write scopes granted. Lets readers request books without
+              ever needing their own Shelfarr login - one is provisioned for them silently on
+              their first request.
+            </div>
+          </div>
+
           <div class="verticalSection">
             <div class="sectionTitleContainer flex align-items-center">
               <h2 class="sectionTitle">Seasonal Themes</h2>
@@ -376,6 +393,8 @@
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           document.querySelector('#chkEnableReskin').checked = withDefault(config.EnableReskin, true);
           document.querySelector('#txtAudiobookshelfUrl').value = withDefault(config.AudiobookshelfUrl, '');
+          document.querySelector('#txtShelfarrUrl').value = withDefault(config.ShelfarrUrl, '');
+          document.querySelector('#txtShelfarrApiToken').value = withDefault(config.ShelfarrApiToken, '');
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -395,6 +414,8 @@
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
           config.AudiobookshelfUrl = document.querySelector('#txtAudiobookshelfUrl').value.trim();
+          config.ShelfarrUrl = document.querySelector('#txtShelfarrUrl').value.trim();
+          config.ShelfarrApiToken = document.querySelector('#txtShelfarrApiToken').value.trim();
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
