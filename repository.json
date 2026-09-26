@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.23.0] - 2026-09-26\n\n### 🚀 Features\n\n- Give books and audiobooks their own shelves with author and series rows\n- Upgrade the book reader with layouts, search and a PDF text layer\n- Add highlight, vocabulary, translation and dictionary endpoints for the reader\n- Highlight, annotate, look up and translate text in the reader\n- Add a vocabulary screen with flashcard review and Anki export\n\n### 🐛 Bug Fixes\n\n- Rename book search scope parameter clashing with a loop local\n",
+        "checksum": "10d585167c91b9ff8bbdbc7aec072f38",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.23.0/jellio_1.23.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-26T12:38:36Z",
+        "version": "1.23.0"
+      },
+      {
         "changelog": "## [1.22.0] - 2026-09-26\n\n### 🚀 Features\n\n- Fill in book covers and metadata from Chaptarr\n",
         "checksum": "20aace6115d8c081b8776f196901da6b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.22.0/jellio_1.22.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-14T06:27:20Z",
         "version": "1.5.1"
-      },
-      {
-        "changelog": "## [1.5.0] - 2026-09-13\n\n### 🚀 Features\n\n- Auto-select a saved subtitle language preference on playback start\n- Detect MULTi/Dual Audio releases with no other language signal\n\n### 🐛 Bug Fixes\n\n- Show the language filter row even with a single language\n",
-        "checksum": "6860d1a89507ac021b0634e9bb2a0534",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.5.0/jellio_1.5.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-13T20:08:44Z",
-        "version": "1.5.0"
       }
     ]
   }
