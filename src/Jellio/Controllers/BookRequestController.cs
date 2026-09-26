@@ -204,10 +204,10 @@ public partial class BookRequestController(
             ?? lookup.OfType<JsonObject>().FirstOrDefault();
         if (book is null && !string.IsNullOrWhiteSpace(body.Title))
         {
-            var title = body.Title.Trim();
-            var term = string.IsNullOrWhiteSpace(body.Author) ? title : title + " " + body.Author.Trim();
+            var wantedTitle = body.Title.Trim();
+            var term = string.IsNullOrWhiteSpace(body.Author) ? wantedTitle : wantedTitle + " " + body.Author.Trim();
             var byTitle = await chaptarrClient.LookupAsync(term, bookType, cancellationToken).ConfigureAwait(false);
-            var wanted = BookMetadataService.TitleKeysFor(title).ToHashSet(StringComparer.Ordinal);
+            var wanted = BookMetadataService.TitleKeysFor(wantedTitle).ToHashSet(StringComparer.Ordinal);
             book = byTitle?.OfType<JsonObject>()
                 .FirstOrDefault(b => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains));
         }
