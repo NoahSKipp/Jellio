@@ -460,6 +460,16 @@ async function renderWatchlist(root, activeList) {
 // promise's own catch() clearing itself after a real failure).
 let cheapSectionsPromise = null;
 let expensiveSectionsPromise = null;
+// Every section each build has produced so far, in the order produced,
+// so a home screen mounting mid-build (or after it) gets them straight
+// away instead of only once the slowest row has finished.
+let cheapBuilt = [];
+let expensiveBuilt = [];
+
+// Where each section sits on the page: personal rows first in their own
+// order, then recommendation/catalog/genre rows in theirs, whichever
+// order their requests happen to finish in.
+const EXPENSIVE_ORDER_BASE = 1000;
 
 // Reset on leaving playback (screens/player.js's own cleanup calls
 // this) rather than left to rot for the rest of the session: Up
@@ -469,6 +479,7 @@ let expensiveSectionsPromise = null;
 // leaves expensiveSectionsPromise alone, see its own header above.
 export function invalidateHomeSections() {
   cheapSectionsPromise = null;
+  cheapBuilt = [];
 }
 
 // Nuvio's own real incremental-channel pattern (search's per-addon fan
@@ -496,75 +507,97 @@ function notifySections(newSections) {
   });
 }
 
-async function buildCheapSections() {
-  const sections = [];
+function settle(promise) {
+  return promise.then(
+    function (value) {
+      return { status: 'fulfilled', value: value };
+    },
+    function (reason) {
+      return { status: 'rejected', reason: reason };
+    },
+  );
+}
 
-  function pushAll(newSections) {
-    newSections.forEach(function (section) {
-      sections.push(section);
-    });
-    if (newSections.length) notifySections(newSections);
+async function buildCheapSections() {
+  const built = [];
+  cheapBuilt = built;
+  let order = 0;
+
+  function push(section) {
+    section.dataset.jellioHomeOrder = String(order++);
+    built.push(section);
+    // A build superseded by invalidateHomeSections() finishes quietly.
+    if (cheapBuilt === built) notifySections([section]);
   }
 
-  const [nextUpResult, resumeResult, collectionsResult, comingSoonRow, readingResult, listeningResult] =
-    await Promise.allSettled([
-      getNextUp(20),
-      getResumeItems(20),
-      getCollections(),
-      buildComingSoonRow(),
-      getContinueReading(20),
-      getContinueListening(20),
-    ]);
+  // Every request starts now, together, but each row goes on screen the
+  // moment it and the rows above it are ready: Continue Watching never
+  // waits on Coming Soon's calendar lookup, the slowest of these.
+  const resume = settle(getResumeItems(20));
+  const reading = settle(getContinueReading(20));
+  const listening = settle(getContinueListening(20));
+  const nextUp = settle(getNextUp(20));
+  const collectionsRequest = settle(getCollections());
+  const comingSoon = settle(buildComingSoonRow());
 
   // Continue Watching, then Up Next, then the recommendation rows,
   // real feedback's own updated order: a title actually left mid
   // playback is the more immediate real pickup than one only queued up
   // next, ahead of anything the catalog itself has to say either way.
+  const resumeResult = await resume;
   if (resumeResult.status === 'fulfilled') {
     const row = buildRow('Continue Watching', resumeResult.value, { continueWatching: true });
-    if (row) pushAll([wrapRowForCustomization(row, 'continue-watching')]);
+    if (row) push(wrapRowForCustomization(row, 'continue-watching'));
   }
 
   // Both simply absent (buildRow returns null) on a server with no Books
   // library, or for a reader who has not opened a book yet.
+  const readingResult = await reading;
   if (readingResult.status === 'fulfilled') {
     const row = buildRow('Continue Reading', readingResult.value, { openReader: true });
-    if (row) pushAll([wrapRowForCustomization(row, 'continue-reading')]);
+    if (row) push(wrapRowForCustomization(row, 'continue-reading'));
   }
 
+  const listeningResult = await listening;
   if (listeningResult.status === 'fulfilled') {
     const row = buildRow('Continue Listening', listeningResult.value, { openReader: true });
-    if (row) pushAll([wrapRowForCustomization(row, 'continue-listening')]);
+    if (row) push(wrapRowForCustomization(row, 'continue-listening'));
   }
 
+  const nextUpResult = await nextUp;
   if (nextUpResult.status === 'fulfilled') {
     const row = buildRow('Up Next', nextUpResult.value, { upNext: true });
-    if (row) pushAll([wrapRowForCustomization(row, 'up-next')]);
+    if (row) push(wrapRowForCustomization(row, 'up-next'));
   }
 
-  if (comingSoonRow.status === 'fulfilled' && comingSoonRow.value) {
-    pushAll([wrapRowForCustomization(comingSoonRow.value, 'coming-soon')]);
+  const comingSoonResult = await comingSoon;
+  if (comingSoonResult.status === 'fulfilled' && comingSoonResult.value) {
+    push(wrapRowForCustomization(comingSoonResult.value, 'coming-soon'));
   }
 
+  const collectionsResult = await collectionsRequest;
   const collections = collectionsResult.status === 'fulfilled' ? collectionsResult.value : null;
   if (collections) {
     const hub = buildHubStrip(collections);
-    if (hub) pushAll([wrapRowForCustomization(hub, 'studio-hubs')]);
+    if (hub) push(wrapRowForCustomization(hub, 'studio-hubs'));
   }
 
-  return { sections: sections, collections: collections };
+  return { sections: built.slice(), collections: collections };
 }
 
 // Split out of what used to be one combined buildHomeSections(): the
 // expensive half (recommendation/catalog/genre rows), cached separately
 // via expensiveSectionsPromise above so a playback session ending only
 // ever forces buildCheapSections() above to run again, not this.
-async function buildExpensiveSections(collections) {
-  const sections = [];
+async function buildExpensiveSections() {
+  const built = [];
+  expensiveBuilt = built;
+  let order = EXPENSIVE_ORDER_BASE;
 
   function pushAll(newSections) {
     newSections.forEach(function (section) {
-      sections.push(section);
+      section.dataset.jellioHomeOrder = String(order++);
+      built.push(section);
     });
     if (newSections.length) notifySections(newSections);
   }
@@ -575,37 +608,36 @@ async function buildExpensiveSections(collections) {
   // a catalog row picked should not also turn up in a genre row. Only
   // that final dedupe actually needs this priority order though; none
   // of these three phases' own real network fetches depend on the
-  // other two at all, so all three fire together here instead of
-  // genre rows waiting on catalog rows waiting on recommendation rows
-  // to even start asking the network for anything.
+  // other two at all, so all three fire together here, and each phase
+  // goes on screen as soon as it and the phases above it are done.
   const seen = {};
 
-  const [recommendationRows, catalogData, genreData] = await Promise.all([
-    buildRecommendationRows(seen).catch(function (err) {
-      console.warn('Jellio: could not load recommendation rows', err);
+  const recommendationRows = buildRecommendationRows(seen).catch(function (err) {
+    console.warn('Jellio: could not load recommendation rows', err);
+    return [];
+  });
+  // Its own (cached) collections fetch rather than waiting on the
+  // personal rows above to finish first.
+  const catalogData = getCollections()
+    .then(fetchCatalogRows)
+    .catch(function (err) {
+      console.warn('Jellio: could not load catalog rows', err);
       return [];
-    }),
-    collections
-      ? fetchCatalogRows(collections).catch(function (err) {
-          console.warn('Jellio: could not load catalog rows', err);
-          return [];
-        })
-      : Promise.resolve([]),
-    fetchGenreRows(),
-  ]);
+    });
+  const genreData = fetchGenreRows();
 
   pushAll(
-    recommendationRows
+    (await recommendationRows)
       .map(function (spec) {
         const row = buildRow(spec.title, spec.items);
         return row ? wrapRowForCustomization(row, 'rec:' + spec.title) : null;
       })
       .filter(Boolean),
   );
-  pushAll(buildCatalogRows(catalogData, seen));
-  pushAll(buildGenreRows(genreData, seen));
+  pushAll(buildCatalogRows(await catalogData, seen));
+  pushAll(buildGenreRows(await genreData, seen));
 
-  return sections;
+  return built.slice();
 }
 
 // app.js's own preloadInitialData() calls this directly while the
@@ -623,6 +655,9 @@ async function buildExpensiveSections(collections) {
 // very next visit to home gets a real, fresh attempt instead of the
 // same dead promise served forever.
 export function preloadHomeSections() {
+  // Personal rows' requests start first so they are first in line for
+  // runtime/api.js's request slots; the slower rows start right after
+  // rather than waiting on them to finish.
   if (!cheapSectionsPromise) {
     cheapSectionsPromise = buildCheapSections().catch(function (err) {
       console.warn('Jellio: could not build home sections', err);
@@ -630,17 +665,15 @@ export function preloadHomeSections() {
       return { sections: [], collections: null };
     });
   }
-  return cheapSectionsPromise.then(function (cheap) {
-    if (!expensiveSectionsPromise) {
-      expensiveSectionsPromise = buildExpensiveSections(cheap.collections).catch(function (err) {
-        console.warn('Jellio: could not build home sections', err);
-        expensiveSectionsPromise = null;
-        return [];
-      });
-    }
-    return expensiveSectionsPromise.then(function (expensive) {
-      return cheap.sections.concat(expensive);
+  if (!expensiveSectionsPromise) {
+    expensiveSectionsPromise = buildExpensiveSections().catch(function (err) {
+      console.warn('Jellio: could not build home sections', err);
+      expensiveSectionsPromise = null;
+      return [];
     });
+  }
+  return Promise.all([cheapSectionsPromise, expensiveSectionsPromise]).then(function (results) {
+    return results[0].sections.concat(results[1]);
   });
 }
 
@@ -655,14 +688,24 @@ export function preloadHomeSections() {
 // final full array itself for those, the same way notifySections()
 // above already only reaches listeners actually attached when it fires.
 export function preloadHomeSectionsWithProgress(onSection) {
-  sectionListeners.push(onSection);
   const promise = preloadHomeSections();
+  // Whatever is already built goes to the screen now; the rest arrives
+  // through the listener as it is built.
+  cheapBuilt.concat(expensiveBuilt).forEach(onSection);
+  sectionListeners.push(onSection);
   promise.finally(function () {
     sectionListeners = sectionListeners.filter(function (listener) {
       return listener !== onSection;
     });
   });
-  return promise;
+  return {
+    promise: promise,
+    unsubscribe: function () {
+      sectionListeners = sectionListeners.filter(function (listener) {
+        return listener !== onSection;
+      });
+    },
+  };
 }
 
 // Real feedback: "Welcome back" regardless of what time it actually is
@@ -781,16 +824,25 @@ export async function renderHome(root, params) {
   // once the whole chain settles puts everything back in its real
   // order regardless of which ones streamed in live and which did not,
   // same one line doing both jobs.
-  preloadHomeSectionsWithProgress(function (section) {
+  // Rows are shared DOM nodes cached across visits: once this screen has
+  // been left, a late-arriving row must not be pulled back into its
+  // detached container and away from the home screen now showing.
+  let active = true;
+  function placeSection(section) {
+    if (!active) return;
     removeSkeleton();
-    rows.appendChild(section);
-    applyHomeCustomization(rows, editMode);
-  }).then(function (sections) {
-    removeSkeleton();
-    sections.forEach(function (section) {
-      rows.appendChild(section);
+    const order = Number(section.dataset.jellioHomeOrder || 0);
+    const after = Array.from(rows.children).find(function (child) {
+      return child !== section && Number(child.dataset.jellioHomeOrder || 0) > order;
     });
+    rows.insertBefore(section, after || null);
     applyHomeCustomization(rows, editMode);
+  }
+  const subscription = preloadHomeSectionsWithProgress(placeSection);
+  subscription.promise.then(function (sections) {
+    if (!active) return;
+    removeSkeleton();
+    sections.forEach(placeSection);
   });
 
   // invalidateHomeSections() above already re-derives Continue Watching
@@ -829,6 +881,8 @@ export async function renderHome(root, params) {
   });
 
   return function cleanup() {
+    active = false;
+    subscription.unsubscribe();
     window.clearTimeout(userDataRefreshTimer);
     unsubscribeUserData();
     hero.destroy();
