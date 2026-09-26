@@ -320,9 +320,22 @@ export async function renderSidebar(container) {
   // libraries) is new here.
   getPrimaryNavLinks()
     .then(function (links) {
-      links.slice(FIXED_NAV_LINKS.length).forEach(function (link) {
-        scroll.appendChild(buildLink(link));
-      });
+      // Video libraries, then a divider, then Books/Audiobooks/Manga.
+      let readingDividerAdded = false;
+      const libraryLinks = links.slice(FIXED_NAV_LINKS.length);
+      const hasVideo = libraryLinks.some((link) => link.group !== 'reading');
+      libraryLinks
+        .slice()
+        .sort((a, b) => (a.group === 'reading' ? 1 : 0) - (b.group === 'reading' ? 1 : 0))
+        .forEach(function (link) {
+          if (link.group === 'reading' && !readingDividerAdded && hasVideo) {
+            readingDividerAdded = true;
+            const readingDivider = document.createElement('div');
+            readingDivider.className = 'jellio-sidebar-divider';
+            scroll.appendChild(readingDivider);
+          }
+          scroll.appendChild(buildLink(link));
+        });
     })
     .catch(function (err) {
       console.warn('Jellio: sidebar library links failed', err);

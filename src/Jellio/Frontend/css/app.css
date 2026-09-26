@@ -3709,6 +3709,84 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Comic/manga pages (screens/reader.js's openComic). */
+.jellio-reader-stage-comic {
+  align-items: stretch;
+  overflow: auto;
+}
+
+.jellio-reader-comic {
+  width: 100%;
+}
+
+.jellio-reader-comic-paged {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+}
+
+.jellio-reader-comic-page {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.jellio-reader-comic-fit-height {
+  height: 100%;
+}
+
+.jellio-reader-comic-fit-height .jellio-reader-comic-page {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.jellio-reader-comic-fit-height.jellio-reader-comic-two .jellio-reader-comic-page {
+  max-width: 50%;
+}
+
+.jellio-reader-comic-fit-width {
+  align-items: flex-start;
+}
+
+.jellio-reader-comic-fit-width .jellio-reader-comic-page {
+  width: 100%;
+  height: auto;
+}
+
+.jellio-reader-comic-fit-width.jellio-reader-comic-two .jellio-reader-comic-page {
+  width: 50%;
+}
+
+.jellio-reader-comic-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: flex-start;
+}
+
+.jellio-reader-comic-vertical > .jellio-reader-comic-slot {
+  flex: 0 0 auto;
+}
+
+/* A placeholder page height until each image loads, so scrolling and
+   "current page" work before every page is in. */
+.jellio-reader-comic-slot {
+  width: min(100%, 56em);
+  min-height: 70vh;
+}
+
+.jellio-reader-comic-slot-loaded {
+  min-height: 0;
+}
+
+.jellio-reader-comic-slot .jellio-reader-comic-page {
+  width: 100%;
+  height: auto;
+}
+
 .jellio-reader-icon-button-on {
   color: #ffd400;
 }

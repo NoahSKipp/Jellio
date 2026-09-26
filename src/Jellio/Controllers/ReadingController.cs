@@ -25,6 +25,9 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
     {
         [".epub"] = "application/epub+zip",
         [".pdf"] = "application/pdf",
+        // Comic/manga volumes: a zip of page images, read by
+        // screens/reader.js's comic mode.
+        [".cbz"] = "application/vnd.comicbook+zip",
     };
 
     public record ProgressBody(string Locator, double Progress, int? TotalPages);
@@ -101,7 +104,7 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
 
         if (!BookContentTypes.TryGetValue(Path.GetExtension(item.Path), out var contentType))
         {
-            return StatusCode(415, "Only EPUB and PDF books can be opened in the reader");
+            return StatusCode(415, "Only EPUB, PDF and CBZ books can be opened in the reader");
         }
 
         return PhysicalFile(item.Path, contentType, enableRangeProcessing: true);

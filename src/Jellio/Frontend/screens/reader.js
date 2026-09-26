@@ -72,6 +72,21 @@ const PDF_FITS = [
   { value: 'width', label: 'Fit width' },
 ];
 
+const COMIC_LAYOUTS = [
+  { value: 'single', label: 'Single page' },
+  { value: 'spread', label: 'Two pages' },
+  { value: 'vertical', label: 'Vertical scroll' },
+];
+const COMIC_FITS = [
+  { value: 'height', label: 'Fit height' },
+  { value: 'width', label: 'Fit width' },
+];
+const COMIC_DIRECTIONS = [
+  { value: 'rtl', label: 'Right to left' },
+  { value: 'ltr', label: 'Left to right' },
+];
+const COMIC_IMAGE = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
+
 const DEFAULT_SETTINGS = {
   theme: 'dark',
   fontSize: 100,
@@ -83,6 +98,9 @@ const DEFAULT_SETTINGS = {
   pdfZoom: 100,
   pdfTint: false,
   targetLang: null,
+  comicLayout: 'single',
+  comicFit: 'height',
+  comicDirection: 'rtl',
 };
 
 function pick(options, value, fallback) {
@@ -103,6 +121,9 @@ function loadSettings() {
       pdfZoom: Math.min(300, Math.max(50, Number(saved.pdfZoom) || DEFAULT_SETTINGS.pdfZoom)),
       pdfTint: saved.pdfTint === true,
       targetLang: LANGUAGES.indexOf(saved.targetLang) !== -1 ? saved.targetLang : defaultTargetLanguage(),
+      comicLayout: pick(COMIC_LAYOUTS, saved.comicLayout, DEFAULT_SETTINGS.comicLayout),
+      comicFit: pick(COMIC_FITS, saved.comicFit, DEFAULT_SETTINGS.comicFit),
+      comicDirection: pick(COMIC_DIRECTIONS, saved.comicDirection, DEFAULT_SETTINGS.comicDirection),
     };
   } catch (err) {
     return Object.assign({}, DEFAULT_SETTINGS, { targetLang: defaultTargetLanguage() });
@@ -462,6 +483,299 @@ async function resolvePdfDest(pdf, dest) {
   const ref = explicit[0];
   const index = typeof ref === 'number' ? ref : await pdf.getPageIndex(ref);
   return index + 1;
+}
+
+function comicDirectionKey(itemId) {
+  return 'jellio-comic-dir:' + itemId;
+}
+
+// Comic/manga volumes (CBZ): a zip of page images, opened with the same
+// vendored JSZip epub.js uses. Pages are the images in natural filename
+// order; ComicInfo.xml's <Manga> tag decides right-to-left when the
+// reader hasn't chosen a direction for this volume themselves.
+async function openComic(stage, buffer, savedLocator, settings, handlers, itemId) {
+  await loadVendorScript('jszip.min.js');
+  if (!window.JSZip) throw new Error('JSZip did not load');
+  const zip = await window.JSZip.loadAsync(buffer);
+  const allNames = Object.keys(zip.files);
+  const names = allNames
+    .filter(function (name) {
+      const file = name.split('/').pop();
+      return !zip.files[name].dir && COMIC_IMAGE.test(name) && !/(^|\/)__MACOSX\//.test(name) && file.charAt(0) !== '.';
+    })
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  if (!names.length) throw new Error('No pages in this archive');
+  const count = names.length;
+
+  let infoDirection = null;
+  const infoName = allNames.find((name) => /(^|\/)comicinfo\.xml$/i.test(name));
+  if (infoName) {
+    try {
+      const xml = await zip.file(infoName).async('string');
+      const manga = /<Manga>\s*([^<]*)</i.exec(xml);
+      if (manga) infoDirection = /righttoleft/i.test(manga[1]) ? 'rtl' : /^\s*no\s*$/i.test(manga[1]) ? 'ltr' : null;
+    } catch (err) {
+      // ComicInfo is optional.
+    }
+  }
+
+  let savedDirection = null;
+  try {
+    savedDirection = localStorage.getItem(comicDirectionKey(itemId));
+  } catch (err) {
+    savedDirection = null;
+  }
+  let direction = savedDirection === 'rtl' || savedDirection === 'ltr' ? savedDirection : infoDirection || settings.comicDirection;
+  let current = Object.assign({}, settings);
+
+  const saved = /^page:(\d+)$/.exec(savedLocator || '');
+  let index = saved ? Math.min(count - 1, Math.max(0, Number(saved[1]) - 1)) : 0;
+  let renderToken = 0;
+  const urls = new Map();
+
+  function pageUrl(i) {
+    if (!urls.has(i)) {
+      urls.set(
+        i,
+        zip
+          .file(names[i])
+          .async('blob')
+          .then((blob) => URL.createObjectURL(blob)),
+      );
+    }
+    return urls.get(i);
+  }
+
+  stage.classList.add('jellio-reader-stage-comic');
+  const view = el('div', 'jellio-reader-comic');
+  stage.appendChild(view);
+  // Taps turn pages (mirrored for right-to-left) like the other formats.
+  stage.addEventListener('click', function (event) {
+    handlers.onTap(event.clientX, current.comicLayout === 'vertical', event.detail, function () {
+      return false;
+    });
+  });
+
+  // The cover stands alone; after it pages pair up as printed spreads.
+  function pagesAt(i) {
+    if (current.comicLayout !== 'spread' || i === 0) return [i];
+    const start = i % 2 === 1 ? i : i - 1;
+    return start + 1 < count ? [start, start + 1] : [start];
+  }
+
+  function report() {
+    handlers.onLocation('page:' + (index + 1), count > 1 ? index / (count - 1) : 1, {
+      pageNumber: index + 1,
+      pageCount: count,
+    });
+  }
+
+  let scrollHandler = null;
+  let observer = null;
+
+  function teardownVertical() {
+    if (scrollHandler) stage.removeEventListener('scroll', scrollHandler);
+    scrollHandler = null;
+    if (observer) observer.disconnect();
+    observer = null;
+  }
+
+  async function renderPaged() {
+    teardownVertical();
+    const token = ++renderToken;
+    const pages = pagesAt(index);
+    const sources = await Promise.all(pages.map(pageUrl));
+    if (token !== renderToken) return;
+    view.textContent = '';
+    view.className =
+      'jellio-reader-comic jellio-reader-comic-paged jellio-reader-comic-fit-' +
+      current.comicFit +
+      (pages.length > 1 ? ' jellio-reader-comic-two' : '');
+    view.dir = direction;
+    sources.forEach(function (src) {
+      const img = el('img', 'jellio-reader-comic-page');
+      img.src = src;
+      img.alt = '';
+      img.draggable = false;
+      view.appendChild(img);
+    });
+    stage.scrollTop = 0;
+    report();
+    for (let ahead = 1; ahead <= 3; ahead++) {
+      if (index + ahead < count) pageUrl(index + ahead);
+    }
+  }
+
+  // Webtoon-style: every page stacked, images loaded as they near the
+  // viewport, the page crossing the middle of the screen is "current".
+  function renderVertical() {
+    teardownVertical();
+    renderToken++;
+    view.textContent = '';
+    view.className = 'jellio-reader-comic jellio-reader-comic-vertical';
+    view.dir = 'ltr';
+    const slots = names.map(function (name, i) {
+      const slot = el('div', 'jellio-reader-comic-slot');
+      slot.dataset.page = String(i);
+      view.appendChild(slot);
+      return slot;
+    });
+    observer = new IntersectionObserver(
+      function (records) {
+        records.forEach(function (record) {
+          if (!record.isIntersecting) return;
+          const slot = record.target;
+          observer.unobserve(slot);
+          pageUrl(Number(slot.dataset.page)).then(function (src) {
+            const img = el('img', 'jellio-reader-comic-page');
+            img.src = src;
+            img.alt = '';
+            img.draggable = false;
+            slot.appendChild(img);
+            slot.classList.add('jellio-reader-comic-slot-loaded');
+          });
+        });
+      },
+      { root: stage, rootMargin: '150% 0px' },
+    );
+    slots.forEach((slot) => observer.observe(slot));
+    let ticking = false;
+    scrollHandler = function () {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        ticking = false;
+        const middle = stage.getBoundingClientRect().top + stage.clientHeight / 2;
+        const found = slots.findIndex(function (slot) {
+          const rect = slot.getBoundingClientRect();
+          return rect.top <= middle && rect.bottom >= middle;
+        });
+        if (found !== -1 && found !== index) {
+          index = found;
+          report();
+        }
+      });
+    };
+    stage.addEventListener('scroll', scrollHandler, { passive: true });
+    slots[index].scrollIntoView({ block: 'start' });
+    report();
+  }
+
+  function render() {
+    return current.comicLayout === 'vertical' ? renderVertical() : renderPaged();
+  }
+
+  function show(target) {
+    const clamped = Math.min(count - 1, Math.max(0, target));
+    if (current.comicLayout === 'vertical') {
+      index = clamped;
+      const slot = view.children[clamped];
+      if (slot) slot.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      report();
+      return Promise.resolve();
+    }
+    if (clamped === index) return Promise.resolve();
+    index = clamped;
+    return renderPaged();
+  }
+
+  handlers.onScrubReady(count, count);
+  await render();
+
+  return {
+    kind: 'comic',
+    isRtl: function () {
+      return direction === 'rtl' && current.comicLayout !== 'vertical';
+    },
+    next: function () {
+      if (current.comicLayout === 'vertical') {
+        stage.scrollBy({ top: stage.clientHeight * 0.85, behavior: 'smooth' });
+        return;
+      }
+      const pages = pagesAt(index);
+      show(pages[pages.length - 1] + 1);
+    },
+    prev: function () {
+      if (current.comicLayout === 'vertical') {
+        stage.scrollBy({ top: -stage.clientHeight * 0.85, behavior: 'smooth' });
+        return;
+      }
+      const target = pagesAt(index)[0] - 1;
+      if (target < 0) return;
+      show(pagesAt(target)[0]);
+    },
+    goTo: function (target) {
+      return show((Number(target) || 1) - 1);
+    },
+    seek: function (step) {
+      show(step - 1);
+    },
+    scrubValue: function () {
+      return index + 1;
+    },
+    toc: function () {
+      return Promise.resolve([]);
+    },
+    search: function () {
+      return Promise.resolve([]);
+    },
+    showSearchHit: function () {
+      return Promise.resolve();
+    },
+    getDirection: function () {
+      return direction;
+    },
+    setDirection: function (value) {
+      direction = value;
+      try {
+        localStorage.setItem(comicDirectionKey(itemId), value);
+      } catch (err) {
+        // Only this volume's preference; the default still applies.
+      }
+      render();
+    },
+    onSelect: function () {},
+    onHighlightClick: function () {},
+    setHighlights: function () {},
+    positionOf: function (locator) {
+      const match = /^page:(\d+)$/.exec(locator || '');
+      const page = match ? Number(match[1]) - 1 : index;
+      return count > 1 ? page / (count - 1) : 1;
+    },
+    goToLocator: function (locator) {
+      const match = /^page:(\d+)$/.exec(locator || '');
+      return match ? show(Number(match[1]) - 1) : Promise.resolve();
+    },
+    currentLocator: function () {
+      return 'page:' + (index + 1);
+    },
+    currentExcerpt: function () {
+      return null;
+    },
+    isBookmarkHere: function (bookmarks) {
+      const pages = current.comicLayout === 'vertical' ? [index] : pagesAt(index);
+      return (
+        bookmarks.find(function (bookmark) {
+          const match = /^page:(\d+)$/.exec(bookmark.Locator || '');
+          return match && pages.indexOf(Number(match[1]) - 1) !== -1;
+        }) || null
+      );
+    },
+    applySettings: function (next) {
+      const rerender = next.comicLayout !== current.comicLayout || next.comicFit !== current.comicFit;
+      current = Object.assign({}, next);
+      if (rerender) return render();
+      return undefined;
+    },
+    resize: function () {},
+    destroy: function () {
+      renderToken++;
+      teardownVertical();
+      urls.forEach(function (promise) {
+        promise.then((url) => URL.revokeObjectURL(url)).catch(function () {});
+      });
+    },
+  };
 }
 
 async function openPdf(stage, buffer, savedLocator, settings, handlers) {
@@ -916,7 +1230,7 @@ export async function renderReader(root, params) {
     renderRetry(
       root,
       err && err.status === 415
-        ? 'This book’s format can’t be opened in the reader yet. EPUB and PDF are supported.'
+        ? 'This book’s format can’t be opened in the reader yet. EPUB, PDF and CBZ are supported.'
         : 'Could not open this book.',
       function () {
         renderReader(root, params);
@@ -928,6 +1242,9 @@ export async function renderReader(root, params) {
   setTitle((item.Name || 'Reader') + ' - Jellio');
   const settings = loadSettings();
   const isPdf = /pdf/i.test(file.contentType);
+  const isComic = /comicbook|zip/i.test(file.contentType) && !/epub/i.test(file.contentType);
+  // PDFs and comics are paged: their scrubber and labels count pages.
+  const isPaged = isPdf || isComic;
 
   root.textContent = '';
   root.classList.add('jellio-reader-theme-' + settings.theme);
@@ -972,7 +1289,7 @@ export async function renderReader(root, params) {
   const scrubber = document.createElement('input');
   scrubber.type = 'range';
   scrubber.className = 'jellio-reader-scrubber';
-  scrubber.min = isPdf ? '1' : '0';
+  scrubber.min = isPaged ? '1' : '0';
   scrubber.max = '1';
   scrubber.value = '0';
   scrubber.disabled = true;
@@ -1085,8 +1402,14 @@ export async function renderReader(root, params) {
       }
       const rect = stage.getBoundingClientRect();
       const x = (clientX - rect.left) / (rect.width || 1);
-      if (!scrollingOnly && x < 0.3) reader.prev();
-      else if (!scrollingOnly && x > 0.7) reader.next();
+      const rtl = !!(reader.isRtl && reader.isRtl());
+      if (!scrollingOnly && x < 0.3) {
+        if (rtl) reader.next();
+        else reader.prev();
+      } else if (!scrollingOnly && x > 0.7) {
+        if (rtl) reader.prev();
+        else reader.next();
+      }
       else toggleImmersive();
     }, 250);
   }
@@ -1098,8 +1421,15 @@ export async function renderReader(root, params) {
       if (event.key === 'Escape') closePanels();
       return;
     }
+    // Right-to-left manga: the left arrow goes forward.
+    if (reader.isRtl && reader.isRtl() && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+      if (event.preventDefault) event.preventDefault();
+      if (event.key === 'ArrowLeft') reader.next();
+      else reader.prev();
+      return;
+    }
     if (event.key === 'ArrowRight' || event.key === 'PageDown' || (event.key === ' ' && !event.shiftKey)) {
-      if (event.key === ' ' && settings.layout === 'scroll' && !isPdf) return;
+      if (event.key === ' ' && settings.layout === 'scroll' && !isPaged) return;
       if (event.preventDefault) event.preventDefault();
       reader.next();
     } else if (event.key === 'ArrowLeft' || event.key === 'PageUp' || (event.key === ' ' && event.shiftKey)) {
@@ -1117,9 +1447,11 @@ export async function renderReader(root, params) {
   const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey };
 
   try {
-    reader = isPdf
-      ? await openPdf(stage, file.buffer, latestLocator, settings, handlers)
-      : await openEpub(stage, file.buffer, latestLocator, settings, handlers);
+    reader = isComic
+      ? await openComic(stage, file.buffer, latestLocator, settings, handlers, itemId)
+      : isPdf
+        ? await openPdf(stage, file.buffer, latestLocator, settings, handlers)
+        : await openEpub(stage, file.buffer, latestLocator, settings, handlers);
   } catch (err) {
     console.warn('Jellio: could not render book', err);
     renderRetry(root, 'Could not open this book.', function () {
@@ -1128,6 +1460,18 @@ export async function renderReader(root, params) {
     return;
   }
   scrubber.value = String(reader.scrubValue(latestProgress));
+  // Images have no contents or text to search; manga reads right to left,
+  // so its scrubber runs that way too.
+  if (reader.kind === 'comic') {
+    tocButton.hidden = true;
+    searchButton.hidden = true;
+    root.classList.add('jellio-reader-comic-mode');
+  }
+  function paintDirection() {
+    const rtl = !!(reader.isRtl && reader.isRtl());
+    scrubber.dir = rtl ? 'rtl' : 'ltr';
+  }
+  paintDirection();
 
   const config = await getJellioConfig().catch(function () {
     return null;
@@ -1168,7 +1512,7 @@ export async function renderReader(root, params) {
   scrubber.addEventListener('input', function () {
     scrubbing = true;
     const value = Number(scrubber.value);
-    progressLabel.textContent = isPdf
+    progressLabel.textContent = isPaged
       ? 'Page ' + value + ' of ' + scrubber.max
       : Math.round((value / Number(scrubber.max)) * 100) + '%';
   });
@@ -1214,8 +1558,14 @@ export async function renderReader(root, params) {
     const delta = event.changedTouches[0].clientX - touchStartX;
     touchStartX = null;
     if (stage.classList.contains('jellio-reader-stage-overflow')) return;
-    if (delta < -50) reader.next();
-    else if (delta > 50) reader.prev();
+    const rtl = !!(reader.isRtl && reader.isRtl());
+    if (delta < -50) {
+      if (rtl) reader.prev();
+      else reader.next();
+    } else if (delta > 50) {
+      if (rtl) reader.next();
+      else reader.prev();
+    }
   });
 
   let resizeTimer = null;
@@ -1354,6 +1704,7 @@ export async function renderReader(root, params) {
     storeSettings(settings);
     Promise.resolve(reader.applySettings(settings)).then(function () {
       reader.resize();
+      paintDirection();
     });
     paintSettings();
   }
@@ -1376,6 +1727,30 @@ export async function renderReader(root, params) {
       themeRow.appendChild(button);
     });
     settingsPanel.appendChild(settingGroup('Theme', themeRow));
+
+    if (reader.kind === 'comic') {
+      settingsPanel.appendChild(
+        settingGroup('Layout', optionChips(COMIC_LAYOUTS, settings.comicLayout, (value) => updateSettings({ comicLayout: value }))),
+      );
+      if (settings.comicLayout !== 'vertical') {
+        settingsPanel.appendChild(
+          settingGroup('Fit', optionChips(COMIC_FITS, settings.comicFit, (value) => updateSettings({ comicFit: value }))),
+        );
+        settingsPanel.appendChild(
+          settingGroup(
+            'Reading direction',
+            optionChips(COMIC_DIRECTIONS, reader.getDirection(), function (value) {
+              reader.setDirection(value);
+              settings.comicDirection = value;
+              storeSettings(settings);
+              paintDirection();
+              paintSettings();
+            }),
+          ),
+        );
+      }
+      return;
+    }
 
     if (reader.kind === 'epub') {
       const sizeRow = el('div', 'jellio-reader-setting-row');
