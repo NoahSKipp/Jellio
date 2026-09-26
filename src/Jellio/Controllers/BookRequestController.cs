@@ -25,7 +25,12 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/books")]
 [Authorize]
-public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserManager userManager, ILogger<BookRequestController> logger) : ControllerBase
+public partial class BookRequestController(
+    ChaptarrClient chaptarrClient,
+    OpenLibraryClient openLibraryClient,
+    BookMetadataService metadataService,
+    IUserManager userManager,
+    ILogger<BookRequestController> logger) : ControllerBase
 {
     private static readonly string[] AuthorFieldsToReset =
     [
@@ -42,7 +47,10 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
 
     public record BookSearchResult(string WorkId, string Title, string? Author, int? Year, string? CoverUrl, string? SeriesTitle, bool HasEbook, bool HasAudiobook);
 
-    public record RequestBookBody(string WorkId, string BookType);
+    // Title/Author are optional: a work found through discovery (an
+    // Open Library id) falls back to a title search when Chaptarr cannot
+    // resolve the id itself.
+    public record RequestBookBody(string WorkId, string BookType, string? Title = null, string? Author = null);
 
     public record RequestBookResult(string Status, string? Message);
 
@@ -111,6 +119,59 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
         return Ok(order.Take(20).Select(workId => byWork[workId]));
     }
 
+    public record DiscoverResult(string WorkId, string Title, string? Author, int? Year, string? CoverUrl, bool HasEbook, bool HasAudiobook);
+
+    /// <summary>
+    /// Browse books to request: source "trending", "subject" (value is an
+    /// Open Library subject such as "fantasy") or "author" (value is a
+    /// name). Each result says whether Chaptarr already tracks it.
+    /// </summary>
+    [HttpGet("discover")]
+    public async Task<IActionResult> Discover([FromQuery] string source, [FromQuery] string? value, [FromQuery] int page, CancellationToken cancellationToken)
+    {
+        page = Math.Clamp(page, 0, 20);
+        var trimmed = value?.Trim() ?? string.Empty;
+        IReadOnlyList<DiscoverBook>? books;
+        switch (source)
+        {
+            case "trending":
+                books = await openLibraryClient.TrendingAsync(page, cancellationToken).ConfigureAwait(false);
+                break;
+            case "subject":
+                if (!SubjectPattern().IsMatch(trimmed))
+                {
+                    return BadRequest("value must be a subject like fantasy or science_fiction");
+                }
+
+                books = await openLibraryClient.SubjectAsync(trimmed.ToLowerInvariant(), page, cancellationToken).ConfigureAwait(false);
+                break;
+            case "author":
+                if (trimmed.Length is 0 or > 120)
+                {
+                    return BadRequest("value must be an author name");
+                }
+
+                books = await openLibraryClient.AuthorAsync(trimmed, page, cancellationToken).ConfigureAwait(false);
+                break;
+            default:
+                return BadRequest("source must be trending, subject or author");
+        }
+
+        if (books is null)
+        {
+            return StatusCode(502, "Open Library could not be reached");
+        }
+
+        var tracked = await metadataService.TrackedTitlesAsync().ConfigureAwait(false);
+        return Ok(books.Select(book =>
+        {
+            var formats = BookMetadataService.TitleKeysFor(book.Title)
+                .Select(key => tracked.TryGetValue(key, out var found) ? found : (false, false))
+                .Aggregate((Ebook: false, Audiobook: false), (all, one) => (all.Ebook || one.Item1, all.Audiobook || one.Item2));
+            return new DiscoverResult(book.WorkId, book.Title, book.Author, book.Year, book.CoverUrl, formats.Ebook, formats.Audiobook);
+        }));
+    }
+
     [HttpPost("request")]
     public async Task<IActionResult> RequestBook([FromBody] RequestBookBody body, CancellationToken cancellationToken)
     {
@@ -141,6 +202,15 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
         var book = lookup.OfType<JsonObject>()
             .FirstOrDefault(b => string.Equals(ChaptarrClient.ReadString(b["foreignBookId"]), workId, StringComparison.OrdinalIgnoreCase))
             ?? lookup.OfType<JsonObject>().FirstOrDefault();
+        if (book is null && !string.IsNullOrWhiteSpace(body.Title))
+        {
+            var title = body.Title.Trim();
+            var term = string.IsNullOrWhiteSpace(body.Author) ? title : title + " " + body.Author.Trim();
+            var byTitle = await chaptarrClient.LookupAsync(term, bookType, cancellationToken).ConfigureAwait(false);
+            var wanted = BookMetadataService.TitleKeysFor(title).ToHashSet(StringComparer.Ordinal);
+            book = byTitle?.OfType<JsonObject>()
+                .FirstOrDefault(b => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains));
+        }
         if (book is null)
         {
             return Ok(new RequestBookResult("error", "Chaptarr could not find this book"));
@@ -251,4 +321,7 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
 
     [GeneratedRegex(@"^[A-Za-z]{2,6}:[^\s]{1,120}$")]
     private static partial Regex WorkIdPattern();
+
+    [GeneratedRegex(@"^[A-Za-z0-9_ ]{2,60}$")]
+    private static partial Regex SubjectPattern();
 }

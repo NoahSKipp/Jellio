@@ -28,6 +28,7 @@ import { renderCalendar } from './screens/calendar.js';
 import { renderReader } from './screens/reader.js';
 import { renderListen } from './screens/listen.js';
 import { renderVocab } from './screens/vocab.js';
+import { renderDiscover } from './screens/discover.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
 import { getPrimaryNavLinks } from './components/navShared.js';
@@ -90,6 +91,7 @@ const SCREENS = {
   read: renderReader,
   listen: renderListen,
   vocab: renderVocab,
+  discover: renderDiscover,
   movies: renderLibrary,
   tv: renderLibrary,
   music: renderLibrary,

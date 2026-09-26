@@ -213,7 +213,23 @@ export function renderBookshelf(root, params, parentId) {
   root.appendChild(requestMount);
   getJellioConfig()
     .then(function (config) {
-      if (!cancelled && config && config.BookRequestsEnabled) requestMount.appendChild(buildBookRequestPanel(kind));
+      if (cancelled) return;
+      const discover = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
+      discover.type = 'button';
+      discover.appendChild(el('span', 'material-icons explore'));
+      discover.appendChild(el('span', null, 'Discover'));
+      discover.addEventListener('click', function () {
+        navigateTo('#/discover?kind=' + kind + '&parent=' + encodeURIComponent(parentId));
+      });
+      if (config && config.BookRequestsEnabled) {
+        const panel = buildBookRequestPanel(kind);
+        panel.querySelector('.jellio-book-request-toggle').after(discover);
+        requestMount.appendChild(panel);
+      } else {
+        const wrap = el('section', 'jellio-book-request');
+        wrap.appendChild(discover);
+        requestMount.appendChild(wrap);
+      }
     })
     .catch(function () {});
 
