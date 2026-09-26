@@ -173,4 +173,16 @@ public class PluginConfiguration : BasePluginConfiguration
     // Stays server side; readers only ever see translations. Left blank,
     // the reader offers dictionary definitions but no translation.
     public string DeepLApiKey { get; set; } = string.Empty;
+
+    // Suwayomi-Server (self-hosted Tachiyomi/Mihon) for manga, manhwa and
+    // manhua requests: Services/Manga/SuwayomiClient.cs. Username and
+    // password only for its basic-auth or UI-login modes. Languages are
+    // the source languages searched, comma separated.
+    public string SuwayomiUrl { get; set; } = string.Empty;
+
+    public string SuwayomiUsername { get; set; } = string.Empty;
+
+    public string SuwayomiPassword { get; set; } = string.Empty;
+
+    public string SuwayomiLanguages { get; set; } = "en";
 }

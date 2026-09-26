@@ -69,6 +69,40 @@
             </div>
           </div>
 
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtSuwayomiUrl">Suwayomi URL</label>
+            <input is="emby-input" type="url" id="txtSuwayomiUrl" autocomplete="off"
+              placeholder="http://192.168.1.10:4567" />
+            <div class="fieldDescription">
+              Suwayomi-Server (self-hosted Tachiyomi/Mihon) for manga, manhwa and manhua requests: the
+              Manga shelf searches its sources, adds a series and downloads every chapter. Point its
+              downloads folder at the Jellyfin library the Manga shelf reads, and turn on "Download as
+              CBZ" and automatic new-chapter downloads in Suwayomi. Must be reachable from the Jellyfin
+              server.
+            </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtSuwayomiUsername">Suwayomi Username</label>
+            <input is="emby-input" type="text" id="txtSuwayomiUsername" autocomplete="off" />
+            <div class="fieldDescription">Only if Suwayomi uses basic auth or UI login. Leave blank for none.</div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtSuwayomiPassword">Suwayomi Password</label>
+            <input is="emby-input" type="password" id="txtSuwayomiPassword" autocomplete="off" />
+            <div class="fieldDescription">Stays on the server, never sent to readers.</div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtSuwayomiLanguages">Suwayomi Source Languages</label>
+            <input is="emby-input" type="text" id="txtSuwayomiLanguages" autocomplete="off" placeholder="en" />
+            <div class="fieldDescription">
+              Which source languages to search, comma separated (for example <code>en</code> or
+              <code>en,es</code>). Multi-language sources are always included.
+            </div>
+          </div>
+
           <div class="verticalSection">
             <div class="sectionTitleContainer flex align-items-center">
               <h2 class="sectionTitle">Seasonal Themes</h2>
@@ -399,6 +433,10 @@
           document.querySelector('#txtChaptarrUrl').value = withDefault(config.ChaptarrUrl, '');
           document.querySelector('#txtChaptarrApiKey').value = withDefault(config.ChaptarrApiKey, '');
           document.querySelector('#txtDeepLApiKey').value = withDefault(config.DeepLApiKey, '');
+          document.querySelector('#txtSuwayomiUrl').value = withDefault(config.SuwayomiUrl, '');
+          document.querySelector('#txtSuwayomiUsername').value = withDefault(config.SuwayomiUsername, '');
+          document.querySelector('#txtSuwayomiPassword').value = withDefault(config.SuwayomiPassword, '');
+          document.querySelector('#txtSuwayomiLanguages').value = withDefault(config.SuwayomiLanguages, 'en');
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -420,6 +458,10 @@
           config.ChaptarrUrl = document.querySelector('#txtChaptarrUrl').value.trim();
           config.ChaptarrApiKey = document.querySelector('#txtChaptarrApiKey').value.trim();
           config.DeepLApiKey = document.querySelector('#txtDeepLApiKey').value.trim();
+          config.SuwayomiUrl = document.querySelector('#txtSuwayomiUrl').value.trim();
+          config.SuwayomiUsername = document.querySelector('#txtSuwayomiUsername').value.trim();
+          config.SuwayomiPassword = document.querySelector('#txtSuwayomiPassword').value;
+          config.SuwayomiLanguages = document.querySelector('#txtSuwayomiLanguages').value.trim() || 'en';
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
