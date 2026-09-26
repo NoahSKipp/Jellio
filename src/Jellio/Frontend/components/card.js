@@ -1,7 +1,7 @@
 // Shared item card, used by every screen that renders a poster grid or row
 // (home's own rows, the library grid). One definition so a later visual
 // change (a hover state, a progress bar) only has one place to happen.
-import { getImageUrl, TICKS_PER_SECOND, prefetchStreams } from '../runtime/api.js';
+import { getImageUrl, getBookCoverUrl, TICKS_PER_SECOND, prefetchStreams } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   attachCardOptionsTrigger,
@@ -345,6 +345,18 @@ function buildLandscapeCard(item, options) {
   return card;
 }
 
+// Books rarely have a Jellyfin image of their own (Bookshelf's online
+// providers can't match most files): an audiobook track can borrow its
+// album's, anything else falls back to Chaptarr's cover for it, which
+// 404s into the placeholder when Chaptarr has none.
+function bookFallbackCoverUrl(item) {
+  if (item.Type !== 'Book' && item.Type !== 'AudioBook') return null;
+  if (item.AlbumId && item.AlbumPrimaryImageTag) {
+    return getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 });
+  }
+  return item.Id ? getBookCoverUrl(item.Id) : null;
+}
+
 export function buildCard(item, options) {
   if (options && (options.continueWatching || options.upNext)) {
     return buildLandscapeCard(item, options);
@@ -362,22 +374,32 @@ export function buildCard(item, options) {
   imageWrap.className = 'jellio-card-image-wrap';
 
   const imageTag = item.ImageTags && item.ImageTags.Primary;
-  if (imageTag) {
-    const img = document.createElement('img');
-    img.className = 'jellio-card-image';
-    // quality: 85 alongside the existing maxWidth: every card grid can
-    // hold a hundred-plus of these at once, and a poster shrunk to
-    // this real display size loses nothing visible at a JPEG quality
-    // a shade under the server's own real default, real bytes saved on
-    // every single one of them for it.
-    img.src = getImageUrl(item.Id, 'Primary', { tag: imageTag, maxWidth: 400, quality: 85 });
-    img.alt = item.Name || '';
-    img.loading = 'lazy';
-    imageWrap.appendChild(img);
-  } else {
+  const imageUrl = imageTag
+    ? // quality: 85 alongside the existing maxWidth: every card grid can
+      // hold a hundred-plus of these at once, and a poster shrunk to
+      // this real display size loses nothing visible at a JPEG quality
+      // a shade under the server's own real default, real bytes saved on
+      // every single one of them for it.
+      getImageUrl(item.Id, 'Primary', { tag: imageTag, maxWidth: 400, quality: 85 })
+    : bookFallbackCoverUrl(item);
+  function appendPlaceholder() {
     const placeholder = document.createElement('div');
     placeholder.className = 'jellio-card-image jellio-card-image-empty';
-    imageWrap.appendChild(placeholder);
+    imageWrap.insertBefore(placeholder, imageWrap.firstChild);
+  }
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'jellio-card-image';
+    img.src = imageUrl;
+    img.alt = item.Name || '';
+    img.loading = 'lazy';
+    img.addEventListener('error', function () {
+      img.remove();
+      appendPlaceholder();
+    });
+    imageWrap.appendChild(img);
+  } else {
+    appendPlaceholder();
   }
 
   // Top-left, .jellio-card-watched's own real check badge already owns

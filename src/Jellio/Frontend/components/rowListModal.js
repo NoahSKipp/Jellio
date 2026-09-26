@@ -7,7 +7,7 @@
 // close/Escape/click-outside behaviour) rather than a second dialog
 // language, with a plain vertical list inside: every item in the row,
 // at a glance, one click through to it.
-import { getImageUrl } from '../runtime/api.js';
+import { getImageUrl, getBookCoverUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -46,12 +46,17 @@ function buildListItem(item, select) {
   row.className = 'jellio-row-list-item';
 
   const tag = item.ImageTags && item.ImageTags.Primary;
-  if (tag) {
+  const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
+  if (tag || (isBook && item.Id)) {
     const img = document.createElement('img');
     img.className = 'jellio-row-list-item-image';
-    img.src = getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 160 });
+    // A book with no image of its own tries Chaptarr's cover for it.
+    img.src = tag ? getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 160 }) : getBookCoverUrl(item.Id);
     img.alt = '';
     img.loading = 'lazy';
+    img.addEventListener('error', function () {
+      img.replaceWith(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
+    });
     row.appendChild(img);
   } else {
     row.appendChild(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));

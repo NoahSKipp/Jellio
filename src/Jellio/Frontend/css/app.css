@@ -1911,6 +1911,12 @@
   font-size: 1.05em;
 }
 
+.jellio-detail-book-facts {
+  margin: 0 0 0.4em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.9em;
+}
+
 /* screens/detail.js's own real back-to-series link, an Episode item
    only: sits above the title as a plain eyebrow rather than another
    action button, styled to read as where the reader already is,

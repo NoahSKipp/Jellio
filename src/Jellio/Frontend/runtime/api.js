@@ -525,6 +525,38 @@ export function buildAudioStreamUrl(itemId, transcode) {
   return getServerAddress() + '/Audio/' + itemId + '/stream?' + params.toString();
 }
 
+// Controllers/BookMetadataController.cs: Chaptarr's cover and edition
+// data for a book already in the library, for when Jellyfin's own fields
+// are empty. The cover is an <img> source, so it authenticates via the
+// token in the query string; it 404s when Chaptarr has no match.
+export function getBookCoverUrl(itemId) {
+  return (
+    getServerAddress() +
+    '/Jellio/books/item/' +
+    encodeURIComponent(itemId) +
+    '/cover?ApiKey=' +
+    encodeURIComponent(getAccessToken() || '')
+  );
+}
+
+// Resolves to null (204) when Chaptarr has nothing for this book.
+export function getBookMetadata(itemId) {
+  const path = '/Jellio/books/item/' + encodeURIComponent(itemId) + '/metadata';
+  return cached('book-metadata:' + itemId, function () {
+    return requestJson(
+      getServerAddress() + path,
+      { headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()), cache: 'no-store' },
+      path,
+      30000,
+    ).then(function (response) {
+      return response.status === 204 ? null : response.json();
+    });
+  }).catch(function (err) {
+    console.warn('Jellio: book metadata lookup failed', err);
+    return null;
+  });
+}
+
 // Controllers/BookRequestController.cs, backed by Chaptarr. One result per
 // work: { WorkId, Title, Author, Year, CoverUrl, SeriesTitle, HasEbook,
 // HasAudiobook }, the Has* flags meaning Chaptarr already has that format.

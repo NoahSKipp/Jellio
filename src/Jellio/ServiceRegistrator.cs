@@ -138,6 +138,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
 
         services.AddHttpClient(nameof(ChaptarrClient));
         services.AddSingleton<ChaptarrClient>();
+        services.AddSingleton<BookMetadataService>();
 
         services.AddSingleton<ReadingProgressStore>();
     }

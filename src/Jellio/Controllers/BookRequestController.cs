@@ -200,51 +200,19 @@ public partial class BookRequestController(ChaptarrClient chaptarrClient, IUserM
         return text is not null && DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) ? date.Year : null;
     }
 
-    // Chaptarr's remoteCover (and each image's url) is usually its own
-    // relative /MediaCoverProxy/... path, not a real remote URL - only
-    // resolvable against Chaptarr itself. Prefer the original remoteUrl
-    // the metadata provider gave, from the book's images or any edition's,
-    // and only fall back to fetching Chaptarr's copy through GetCover below.
+    // Search results show the whole work, so any edition's cover will do.
     private static string? CoverUrl(JsonObject book)
     {
-        var candidates = CoverCandidates(book["images"]).ToList();
+        var imageLists = new List<JsonNode?> { book["images"] };
         if (book["editions"] is JsonArray editions)
         {
-            foreach (var edition in editions.OfType<JsonObject>())
-            {
-                candidates.AddRange(CoverCandidates(edition["images"]));
-            }
+            imageLists.AddRange(editions.OfType<JsonObject>().Select(edition => edition["images"]));
         }
 
-        candidates.Add(ChaptarrClient.ReadString(book["remoteCover"]));
-
-        var absolute = candidates.FirstOrDefault(url => url is not null && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
-        if (absolute is not null)
-        {
-            return absolute;
-        }
-
-        var relative = candidates.FirstOrDefault(ChaptarrClient.IsCoverPath);
-        return relative is null ? null : "/Jellio/books/cover?path=" + Uri.EscapeDataString(relative);
-    }
-
-    private static IEnumerable<string?> CoverCandidates(JsonNode? images)
-    {
-        if (images is not JsonArray array)
-        {
-            yield break;
-        }
-
-        foreach (var image in array.OfType<JsonObject>())
-        {
-            if (!string.Equals(ChaptarrClient.ReadString(image["coverType"]), "cover", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            yield return ChaptarrClient.ReadString(image["remoteUrl"]);
-            yield return ChaptarrClient.ReadString(image["url"]);
-        }
+        var cover = ChaptarrClient.PickCover(imageLists, book["remoteCover"]);
+        return cover is null || cover.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? cover
+            : "/Jellio/books/cover?path=" + Uri.EscapeDataString(cover);
     }
 
     [HttpGet("cover")]

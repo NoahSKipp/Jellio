@@ -6,7 +6,17 @@
 // plus a bare <video> element, see screens/player.js's own header for
 // why that needed no access to jellyfin-web's own playbackManager at
 // all, when there is not).
-import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp } from '../runtime/api.js';
+import {
+  getItemDetails,
+  getImageUrl,
+  getItem,
+  getSeasons,
+  getEpisodes,
+  setPlayed,
+  getSeriesNextUp,
+  getBookMetadata,
+  getBookCoverUrl,
+} from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -69,6 +79,44 @@ function bookAuthors(item) {
   if (people.length) return people.join(', ');
   if (item.AlbumArtist) return item.AlbumArtist;
   return (item.Artists || []).join(', ');
+}
+
+// Chaptarr's overviews come from Goodreads/Hardcover and often carry
+// markup; parsed inertly and shown as plain text.
+function plainText(html) {
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim();
+}
+
+// Waits a few seconds at most: a first-ever Chaptarr match can take a
+// while, and the page is still useful without it.
+function loadBookMetadata(id) {
+  return Promise.race([
+    getBookMetadata(id),
+    new Promise(function (resolve) {
+      window.setTimeout(resolve, 8000, null);
+    }),
+  ]);
+}
+
+// Jellyfin's own book fields win whenever they are filled in; Chaptarr's
+// only fill the gaps.
+function mergeBookMetadata(item, meta) {
+  if (!meta) return;
+  if (!item.Overview && meta.Overview) item.Overview = plainText(meta.Overview);
+  if ((!item.Genres || !item.Genres.length) && meta.Genres && meta.Genres.length) item.Genres = meta.Genres;
+  if (!item.ProductionYear && meta.Year) item.ProductionYear = meta.Year;
+}
+
+function bookFacts(meta) {
+  if (!meta) return '';
+  return [
+    meta.SeriesTitle,
+    meta.Publisher,
+    meta.PageCount ? meta.PageCount + ' pages' : '',
+    meta.Isbn ? 'ISBN ' + meta.Isbn : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function heroBackdropUrl(item, id) {
@@ -742,6 +790,11 @@ export async function renderDetail(root, params) {
     return;
   }
 
+  // Fetched while the loading state is still up, not after it clears.
+  const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
+  const bookMeta = isBook ? await loadBookMetadata(item.Id || itemId) : null;
+  mergeBookMetadata(item, bookMeta);
+
   root.textContent = '';
   // One AudioBook item per file: the book's own title lives on Album,
   // the item's own Name is just this one track's.
@@ -780,13 +833,16 @@ export async function renderDetail(root, params) {
 
   // Books and audiobooks never carry a backdrop, only a cover: show the
   // cover itself above the title, plus who wrote it.
-  if (item.Type === 'Book' || item.Type === 'AudioBook') {
-    const coverUrl = bookCoverUrl(item, canonicalId);
+  if (isBook) {
+    const coverUrl = bookCoverUrl(item, canonicalId) || (bookMeta && bookMeta.HasCover ? getBookCoverUrl(canonicalId) : null);
     if (coverUrl) {
       const cover = document.createElement('img');
       cover.className = 'jellio-detail-book-cover';
       cover.src = coverUrl;
       cover.alt = '';
+      cover.addEventListener('error', function () {
+        cover.remove();
+      });
       heroContent.appendChild(cover);
     }
   }
@@ -815,9 +871,11 @@ export async function renderDetail(root, params) {
       ? 'S' + item.ParentIndexNumber + ' E' + item.IndexNumber + ' · ' + (item.Name || '')
       : item.Name || '';
   heroContent.appendChild(el('h1', 'jellio-detail-title', titleText));
-  if (item.Type === 'Book' || item.Type === 'AudioBook') {
-    const authors = bookAuthors(item);
+  if (isBook) {
+    const authors = bookAuthors(item) || (bookMeta && bookMeta.Authors);
     if (authors) heroContent.appendChild(el('div', 'jellio-detail-book-author', 'by ' + authors));
+    const facts = bookFacts(bookMeta);
+    if (facts) heroContent.appendChild(el('div', 'jellio-detail-book-facts', facts));
   }
 
   const meta = el('div', 'jellio-detail-meta');
