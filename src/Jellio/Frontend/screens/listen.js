@@ -10,6 +10,7 @@ import {
   getAudiobookLibraryChapters,
   buildAudioStreamUrl,
   getImageUrl,
+  getBookCoverUrl,
   reportPlaybackStart,
   reportPlaybackProgress,
   reportPlaybackStopped,
@@ -162,7 +163,8 @@ function coverUrl(item) {
   if (item.AlbumId && item.AlbumPrimaryImageTag) {
     return getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 600 });
   }
-  return null;
+  // Chaptarr's cover for the book; 404s when it has none.
+  return getBookCoverUrl(item.Id);
 }
 
 export async function renderListen(root, params) {
@@ -219,6 +221,10 @@ export async function renderListen(root, params) {
     const img = document.createElement('img');
     img.src = cover;
     img.alt = '';
+    img.addEventListener('error', function () {
+      img.replaceWith(el('span', 'material-icons headphones'));
+      root.style.removeProperty('--listen-cover');
+    });
     art.appendChild(img);
   } else {
     art.appendChild(el('span', 'material-icons headphones'));
