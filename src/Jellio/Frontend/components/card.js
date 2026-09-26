@@ -417,13 +417,19 @@ export function buildCard(item, options) {
   // reachable from here, see that file's own header), so this runtime's
   // own detail screen has to live at a route native does not already
   // own, or the two would collide on the same hash.
+  // Continue Reading/Listening cards skip the detail page and reopen the
+  // book right where the reader left off.
+  const targetHash =
+    options && options.openReader
+      ? '#/' + (item.Type === 'AudioBook' ? 'listen' : 'read') + '?id=' + item.Id
+      : '#/item?id=' + item.Id;
   card.addEventListener('click', function () {
-    navigateTo('#/item?id=' + item.Id);
+    navigateTo(targetHash);
   });
   card.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      navigateTo('#/item?id=' + item.Id);
+      navigateTo(targetHash);
     }
   });
 

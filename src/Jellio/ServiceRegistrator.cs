@@ -4,6 +4,7 @@ using Jellio.Services.Achievements;
 using Jellio.Services.CommunitySkip;
 using Jellio.Services.Grouplist;
 using Jellio.Services.IntroCredits;
+using Jellio.Services.Reading;
 using Jellio.Services.Shelfarr;
 using Jellyfin.Data.Events.Users;
 using MediaBrowser.Controller;
@@ -138,5 +139,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddHttpClient(nameof(ShelfarrClient));
         services.AddSingleton<ShelfarrUserMapStore>();
         services.AddSingleton<ShelfarrClient>();
+
+        services.AddSingleton<ReadingProgressStore>();
     }
 }

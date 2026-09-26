@@ -395,10 +395,97 @@ export function getResumeItems(limit) {
     userId +
     '/Items/Resume?Limit=' +
     (limit || 20) +
+    // Video only: a half-listened audiobook resumes into its own
+    // Continue Listening row (getContinueListening below), not here.
+    '&MediaTypes=Video' +
     '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb';
   return getJson(query).then(function (result) {
     return applyRealDurationOverrides((result && result.Items) || []);
   });
+}
+
+// Jellyfin tracks audiobook resume natively, same Resume endpoint video
+// uses. One entry per book, not per half-played track file.
+export function getContinueListening(limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    Limit: String(limit || 20),
+    MediaTypes: 'Audio',
+    IncludeItemTypes: 'AudioBook',
+    Fields: 'PrimaryImageAspectRatio,RunTimeTicks',
+  });
+  return getJson('/Users/' + userId + '/Items/Resume?' + params.toString()).then(function (result) {
+    return collapseAudiobookTracks((result && result.Items) || []);
+  });
+}
+
+// Real items for a list of ids, in the order given (the /Items endpoint
+// itself returns them in its own sort order, not the caller's).
+export function getItemsByIds(ids) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  if (!ids || !ids.length) return Promise.resolve([]);
+  const params = new URLSearchParams({ Ids: ids.join(','), Fields: 'PrimaryImageAspectRatio' });
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+    const byId = new Map();
+    ((result && result.Items) || []).forEach(function (item) {
+      byId.set(String(item.Id).replace(/-/g, ''), item);
+    });
+    return ids
+      .map(function (id) {
+        return byId.get(String(id).replace(/-/g, ''));
+      })
+      .filter(Boolean);
+  });
+}
+
+// Controllers/ReadingController.cs: where in an EPUB/PDF this reader got to.
+export function getReadingProgress(itemId) {
+  return getJson('/Jellio/reading/progress/' + itemId);
+}
+
+export function saveReadingProgress(itemId, locator, progress) {
+  return postJson('/Jellio/reading/progress/' + itemId, { Locator: locator, Progress: progress });
+}
+
+// Books started but not finished, most recently read first, with their
+// reading progress folded into UserData so cards paint a progress bar.
+export function getContinueReading(limit) {
+  return getJson('/Jellio/reading/in-progress?limit=' + (limit || 20)).then(function (entries) {
+    const list = entries || [];
+    const progressById = new Map();
+    list.forEach(function (entry) {
+      progressById.set(entry.ItemId, entry.Progress);
+    });
+    return getItemsByIds(
+      list.map(function (entry) {
+        return entry.ItemId;
+      }),
+    ).then(function (items) {
+      return items.map(function (item) {
+        const progress = progressById.get(String(item.Id).replace(/-/g, '')) || 0;
+        return Object.assign({}, item, {
+          UserData: Object.assign({}, item.UserData, { PlayedPercentage: progress * 100 }),
+        });
+      });
+    });
+  });
+}
+
+// The raw EPUB/PDF bytes for the in-browser reader. Fetched with auth
+// headers and handed to epub.js/pdf.js as an ArrayBuffer, so neither
+// library ever needs to know how to authenticate against the server.
+export async function fetchBookFile(itemId) {
+  const response = await fetch(getServerAddress() + '/Jellio/reading/file/' + itemId, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const err = new Error('Could not load book file');
+    err.status = response.status;
+    throw err;
+  }
+  return response.arrayBuffer();
 }
 
 // Real endpoint, GET /Shows/NextUp (Jellyfin.Api's own TvShowsController,
