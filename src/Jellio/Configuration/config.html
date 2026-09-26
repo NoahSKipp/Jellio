@@ -59,6 +59,16 @@
             </div>
           </div>
 
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtDeepLApiKey">DeepL API Key</label>
+            <input is="emby-input" type="password" id="txtDeepLApiKey" autocomplete="off" />
+            <div class="fieldDescription">
+              Powers Translate in the book reader's selection popup. Free keys (ending in
+              <code>:fx</code>) from deepl.com/pro-api give 500,000 characters a month. Stays on the
+              server, never sent to readers. Dictionary definitions work without it.
+            </div>
+          </div>
+
           <div class="verticalSection">
             <div class="sectionTitleContainer flex align-items-center">
               <h2 class="sectionTitle">Seasonal Themes</h2>
@@ -388,6 +398,7 @@
           document.querySelector('#chkEnableReskin').checked = withDefault(config.EnableReskin, true);
           document.querySelector('#txtChaptarrUrl').value = withDefault(config.ChaptarrUrl, '');
           document.querySelector('#txtChaptarrApiKey').value = withDefault(config.ChaptarrApiKey, '');
+          document.querySelector('#txtDeepLApiKey').value = withDefault(config.DeepLApiKey, '');
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -408,6 +419,7 @@
           config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
           config.ChaptarrUrl = document.querySelector('#txtChaptarrUrl').value.trim();
           config.ChaptarrApiKey = document.querySelector('#txtChaptarrApiKey').value.trim();
+          config.DeepLApiKey = document.querySelector('#txtDeepLApiKey').value.trim();
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();

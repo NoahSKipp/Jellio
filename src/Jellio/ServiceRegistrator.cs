@@ -2,6 +2,7 @@ using System.Net.Http;
 using Jellio.Services;
 using Jellio.Services.Achievements;
 using Jellio.Services.Chaptarr;
+using Jellio.Services.Language;
 using Jellio.Services.CommunitySkip;
 using Jellio.Services.Grouplist;
 using Jellio.Services.IntroCredits;
@@ -141,5 +142,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<BookMetadataService>();
 
         services.AddSingleton<ReadingProgressStore>();
+        services.AddSingleton<AnnotationStore>();
+        services.AddSingleton<VocabularyStore>();
+        services.AddHttpClient(nameof(LanguageClient));
+        services.AddSingleton<LanguageClient>();
     }
 }
