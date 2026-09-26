@@ -6,7 +6,7 @@
 import { discoverManga, getBookshelfItems, getJellioConfig } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
-import { buildBookRequestPanel } from '../components/bookRequest.js';
+import { openMangaRequestSheet } from '../components/mangaRequest.js';
 import { el } from '../runtime/dom.js';
 
 const COUNTRIES = [
@@ -80,7 +80,7 @@ export async function renderMangaDiscover(root, params) {
   header.appendChild(back);
   const headingWrap = el('div', 'jellio-discover-heading');
   headingWrap.appendChild(el('h1', 'jellio-library-title', 'Discover manga'));
-  headingWrap.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga, manhwa and manhua. Request the volumes you want.'));
+  headingWrap.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga, manhwa and manhua. Request the series you want.'));
   header.appendChild(headingWrap);
   root.appendChild(header);
 
@@ -102,50 +102,17 @@ export async function renderMangaDiscover(root, params) {
 
   // --- request sheet ------------------------------------------------------
 
-  let sheet = null;
-  function closeSheet() {
-    if (!sheet) return;
-    sheet.remove();
-    sheet = null;
-    document.removeEventListener('keydown', onSheetKey);
-  }
-  function onSheetKey(event) {
-    if (event.key === 'Escape') closeSheet();
-  }
+  let closeSheet = null;
+  let config = null;
   function openRequestSheet(series) {
-    closeSheet();
-    sheet = el('div', 'jellio-manga-sheet');
-    sheet.addEventListener('click', function (event) {
-      if (event.target === sheet) closeSheet();
+    if (closeSheet) closeSheet();
+    closeSheet = openMangaRequestSheet(root, {
+      query: series.Title,
+      altQuery: series.AltTitle,
+      heading: series.Title,
+      suwayomi: !!(config && config.MangaRequestsEnabled),
+      chaptarr: !!(config && config.BookRequestsEnabled),
     });
-    const panel = el('div', 'jellio-manga-sheet-panel');
-    const head = el('div', 'jellio-manga-sheet-head');
-    head.appendChild(el('h2', 'jellio-row-title', series.Title));
-    const close = el('button', 'jellio-discover-back');
-    close.type = 'button';
-    close.setAttribute('aria-label', 'Close');
-    close.appendChild(el('span', 'material-icons close'));
-    close.addEventListener('click', closeSheet);
-    head.appendChild(close);
-    panel.appendChild(head);
-    panel.appendChild(
-      el(
-        'p',
-        'jellio-bookshelf-stats',
-        (series.Volumes ? series.Volumes + ' volumes. ' : '') + 'Pick the volumes to request from Chaptarr.',
-      ),
-    );
-    panel.appendChild(
-      buildBookRequestPanel('ebook', {
-        label: 'Search volumes',
-        placeholder: 'Series and volume',
-        initialQuery: series.Title,
-        ebookLabel: 'Request',
-      }),
-    );
-    sheet.appendChild(panel);
-    root.appendChild(sheet);
-    document.addEventListener('keydown', onSheetKey);
   }
 
   // --- cards --------------------------------------------------------------
@@ -327,8 +294,9 @@ export async function renderMangaDiscover(root, params) {
 
   await Promise.all([
     getJellioConfig()
-      .then(function (config) {
-        requestsEnabled = !!(config && config.BookRequestsEnabled);
+      .then(function (value) {
+        config = value;
+        requestsEnabled = !!(config && (config.BookRequestsEnabled || config.MangaRequestsEnabled));
       })
       .catch(function () {}),
     parentId
@@ -345,6 +313,6 @@ export async function renderMangaDiscover(root, params) {
 
   return function cleanup() {
     cancelled = true;
-    closeSheet();
+    if (closeSheet) closeSheet();
   };
 }

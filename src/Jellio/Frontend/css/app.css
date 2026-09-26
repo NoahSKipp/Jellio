@@ -2088,6 +2088,102 @@
   padding: 0 var(--jellio-safe-gutter) 0.8em;
 }
 
+/* components/mangaRequest.js: Suwayomi chapters / Chaptarr volumes. */
+.jellio-manga-tabs {
+  display: flex;
+  gap: 0.4em;
+  padding: 0.8em var(--jellio-safe-gutter) 0.2em;
+}
+
+.jellio-manga-tabs[hidden],
+.jellio-manga-pane[hidden] {
+  display: none;
+}
+
+.jellio-manga-tab {
+  padding: 0.45em 0.95em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-manga-tab:hover,
+.jellio-manga-tab:focus-visible {
+  color: var(--jellio-text-color);
+}
+
+.jellio-manga-tab-active {
+  border-color: var(--jellio-secondary-color);
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+}
+
+.jellio-manga-tab-active:hover,
+.jellio-manga-tab-active:focus-visible {
+  color: var(--jellio-on-secondary);
+}
+
+.jellio-manga-sheet-body {
+  padding-top: 0.6em;
+}
+
+.jellio-manga-sheet-body > .jellio-bookshelf-stats,
+.jellio-manga-pane > .jellio-manga-warnings,
+.jellio-manga-pane > .jellio-manga-search,
+.jellio-manga-pane > .jellio-book-request-status {
+  margin-left: var(--jellio-safe-gutter);
+  margin-right: var(--jellio-safe-gutter);
+}
+
+.jellio-manga-warnings:empty {
+  display: none;
+}
+
+.jellio-manga-warning {
+  margin: 0 0 0.5em;
+  padding: 0.55em 0.8em;
+  border-left: 3px solid var(--jellio-trending-color);
+  border-radius: 6px;
+  background: rgb(255 152 0 / 0.1);
+  color: var(--jellio-text-color);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.jellio-manga-source {
+  padding: 0.4em var(--jellio-safe-gutter) 0.6em;
+}
+
+.jellio-manga-source-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.3em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jellio-manga-source .jellio-book-request-result {
+  margin-bottom: 0.5em;
+  background: var(--jellio-card-bg);
+}
+
+.jellio-manga-source-lang {
+  padding: 0.1em 0.45em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 4px;
+  font-size: 0.85em;
+  letter-spacing: 0;
+}
+
 /* screens/vocab.js: the vocabulary deck and flashcard review. */
 .jellio-vocab-actions {
   display: flex;
