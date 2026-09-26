@@ -118,7 +118,8 @@ export async function renderDiscover(root, params) {
   const chips = el('div', 'jellio-discover-chips');
   root.appendChild(chips);
 
-  const body = el('div', 'jellio-discover-body');
+  // Same row spacing as Home and the shelves.
+  const body = el('div', 'jellio-discover-body jellio-rows');
   root.appendChild(body);
 
   // --- cards -------------------------------------------------------------
@@ -254,7 +255,7 @@ export async function renderDiscover(root, params) {
       chip.addEventListener('click', function () {
         activeChip = option[0];
         if (option[0] === 'for-you') showForYou();
-        else if (option[0] === 'trending') showGrid({ source: 'trending', title: 'Trending this week' });
+        else if (option[0] === 'trending') showGrid({ source: 'trending', title: 'Trending on Open Library' });
         else showGrid({ source: 'subject', value: option[0], title: option[1] });
       });
       chips.appendChild(chip);
@@ -296,9 +297,9 @@ export async function renderDiscover(root, params) {
       if (cancelled || activeChip !== 'for-you') return;
       body.appendChild(
         row(
-          'Trending this week',
+          'Trending on Open Library',
           () => discoverBooks('trending', null, 0),
-          () => showGrid({ source: 'trending', title: 'Trending this week' }),
+          () => showGrid({ source: 'trending', title: 'Trending on Open Library' }),
         ),
       );
       signals.authors.slice(0, MAX_AUTHOR_ROWS).forEach(function (author) {
