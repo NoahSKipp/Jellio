@@ -11,6 +11,7 @@ import {
   audiobookTitle,
 } from '../runtime/api.js';
 import { getDeviceId } from '../runtime/auth.js';
+import { vendorUrl } from '../runtime/vendorScript.js';
 import {
   queueDownload,
   findAnyDownload,
@@ -31,8 +32,10 @@ let vendorWarmed = false;
 function warmReaderScripts() {
   if (vendorWarmed) return;
   vendorWarmed = true;
+  // At the exact address the reader loads them from (versioned), which
+  // is what the service worker keys its copies by.
   ['jszip.min.js', 'epub.min.js', 'pdf.min.js', 'pdf.worker.min.js'].forEach(function (name) {
-    fetch('/Jellio/frontend/vendor/' + name).catch(() => {});
+    fetch(vendorUrl(name)).catch(() => {});
   });
 }
 
