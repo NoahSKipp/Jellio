@@ -17,6 +17,7 @@ import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '..
 import { isAdminSync } from '../runtime/adminStatus.js';
 import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from './toast.js';
+import { canDownload, promptDownload } from './downloads.js';
 import { el } from '../runtime/dom.js';
 
 const MENU_ID = 'jellioCardOptionsMenu';
@@ -308,6 +309,15 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         });
       }),
     );
+    // Keep it on this device (components/downloads.js): an episode or
+    // film asks for the quality, a season or series which episodes.
+    if (canDownload(item)) {
+      menu.appendChild(
+        buildOption(item.Type === 'Series' || item.Type === 'Season' ? 'Download episodes' : 'Download', 'download', function () {
+          promptDownload(item, anchorRect);
+        }),
+      );
+    }
     if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && item.Type === 'Movie') {
       // No Quick/Deep split here: ScanMovieAsync (Services/IntroCredits/
       // IntroCreditsBulkScanner.cs) never has a real fallback to reach

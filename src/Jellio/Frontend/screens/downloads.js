@@ -29,7 +29,10 @@ function openHash(record) {
 }
 
 function statusLine(record) {
-  if (record.Status === 'done') return formatBytes(record.TotalBytes);
+  if (record.Status === 'done') {
+    return formatBytes(record.TotalBytes) + (record.AudioLanguage ? ' · ' + record.AudioLanguage + ' audio' : '');
+  }
+  if (record.Status === 'downloading' && record.Error) return record.Error;
   if (record.Status === 'error') return 'Failed: ' + (record.Error || 'unknown error');
   if (record.Status === 'queued') return isOffline() ? 'Waiting for the server' : 'Waiting to download';
   const total = record.TotalBytes || record.EstimatedBytes;
@@ -109,6 +112,7 @@ export function renderDownloads(root) {
     text.appendChild(el('span', 'jellio-downloads-title', record.Title));
     if (record.Subtitle) text.appendChild(el('span', 'jellio-downloads-subtitle', record.Subtitle));
     text.appendChild(el('span', 'jellio-downloads-status', statusLine(record)));
+    if (record.LanguageNote) text.appendChild(el('span', 'jellio-downloads-subtitle', record.LanguageNote));
     if (record.Status === 'downloading') {
       const bar = el('div', 'jellio-downloads-bar');
       const fill = el('div', 'jellio-downloads-bar-fill');

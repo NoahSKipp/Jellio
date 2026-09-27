@@ -1640,6 +1640,54 @@ export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStre
   return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
 }
 
+// PlaybackInfo for a download (components/downloads.js): opens the
+// source the way playback does (Gelato's streams need that), with a
+// device profile describing a file every browser plays: MP4, H.264 and
+// AAC, at most maxHeight tall and maxBitrate. The answer's
+// TranscodingUrl is then a single progressive MP4, or the source
+// already fits and downloads as is. maxHeight 0: the original file.
+export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex, maxHeight, maxBitrate) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const body = {
+    UserId: userId,
+    StartTimeTicks: 0,
+    EnableDirectPlay: true,
+    EnableDirectStream: true,
+    EnableTranscoding: true,
+    AllowVideoStreamCopy: true,
+    AllowAudioStreamCopy: true,
+    AutoOpenLiveStream: true,
+    MaxStreamingBitrate: maxBitrate || 120000000,
+    DeviceProfile: {
+      Name: 'Jellio download',
+      MaxStreamingBitrate: maxBitrate || 120000000,
+      MaxStaticBitrate: maxBitrate || 120000000,
+      DirectPlayProfiles: maxHeight
+        ? [{ Container: 'mp4,m4v', Type: 'Video', VideoCodec: 'h264', AudioCodec: 'aac,mp3' }]
+        : [{ Type: 'Video' }],
+      TranscodingProfiles: [
+        {
+          Container: 'mp4',
+          Type: 'Video',
+          Protocol: 'http',
+          Context: 'Static',
+          VideoCodec: 'h264',
+          AudioCodec: 'aac',
+          MaxAudioChannels: '2',
+        },
+      ],
+      CodecProfiles: maxHeight
+        ? [{ Type: 'Video', Codec: 'h264', Conditions: [{ Condition: 'LessThanEqual', Property: 'Height', Value: String(maxHeight) }] }]
+        : [],
+      SubtitleProfiles: [{ Format: 'vtt', Method: 'External' }],
+    },
+  };
+  if (mediaSourceId) body.MediaSourceId = mediaSourceId;
+  if (audioStreamIndex != null) body.AudioStreamIndex = audioStreamIndex;
+  return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
+}
+
 // Real bottleneck traced through GetStaticMediaSources itself (Gelato's
 // own MediaSourceManagerDecorator.cs): the first time an item is ever
 // opened, it blocks on a live Stremio addon round trip before it can
