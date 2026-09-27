@@ -259,6 +259,17 @@ export function openMangaRequestSheet(root, options) {
 
   function buildVolumesPane() {
     const pane = el('div', 'jellio-manga-pane');
+    if (!opts.suwayomi) {
+      const hint = el('div', 'jellio-manga-warnings');
+      hint.appendChild(
+        el(
+          'p',
+          'jellio-manga-warning',
+          'Only published volumes are searched here, which most manhwa and manhua don’t have. For chapters, an admin can add a Suwayomi URL in Jellio’s plugin settings.',
+        ),
+      );
+      pane.appendChild(hint);
+    }
     pane.appendChild(
       buildBookRequestPanel('ebook', {
         label: 'Search volumes',
