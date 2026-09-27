@@ -1370,6 +1370,16 @@ export function getSeasons(seriesId) {
   });
 }
 
+// Every episode of a series, all seasons, in order, with watched state.
+export function getSeriesEpisodes(seriesId) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({ userId: userId, Fields: 'PrimaryImageAspectRatio' });
+  return getJson('/Shows/' + seriesId + '/Episodes?' + params.toString(), 30000).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
 export function getEpisodes(seriesId, seasonId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));

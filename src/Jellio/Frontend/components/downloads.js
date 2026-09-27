@@ -9,6 +9,8 @@ import {
   getReadingProgress,
   getAnnotations,
   audiobookTitle,
+  getEpisodes,
+  getSeriesEpisodes,
 } from '../runtime/api.js';
 import { getDeviceId } from '../runtime/auth.js';
 import { vendorUrl } from '../runtime/vendorScript.js';
@@ -327,5 +329,81 @@ export function buildDownloadButton(item, options) {
 
   paint();
   refresh();
+  return button;
+}
+
+// A series' or season's page: download several episodes at once, then
+// pick the quality. Episodes already downloaded are skipped.
+export function buildEpisodesDownloadButton(item, options) {
+  const opts = options || {};
+  if ((item.Type !== 'Series' && item.Type !== 'Season') || !('caches' in window) || !('indexedDB' in window)) return null;
+  const button = el('button', opts.className || 'jellio-detail-icon-action jellio-download-button');
+  button.type = 'button';
+  button.setAttribute('aria-label', 'Download episodes');
+  button.title = 'Download episodes';
+  button.appendChild(el('span', 'material-icons download'));
+
+  function episodes() {
+    return item.Type === 'Season' ? getEpisodes(item.SeriesId, item.Id) : getSeriesEpisodes(item.Id);
+  }
+  const unwatched = (list) => list.filter((episode) => !(episode.UserData && episode.UserData.Played));
+
+  async function queue(pick, quality) {
+    button.disabled = true;
+    try {
+      const chosen = pick(await episodes());
+      if (!chosen.length) {
+        showToast('No episodes to download.');
+        return;
+      }
+      let queued = 0;
+      for (const episode of chosen) {
+        const existing = await findAnyDownload(episode.Id);
+        if (existing && existing.Status !== 'error') continue;
+        try {
+          await downloadVideo(episode, quality);
+          queued += 1;
+        } catch (err) {
+          console.warn('Jellio: could not queue an episode', err);
+        }
+      }
+      showToast(queued ? 'Downloading ' + queued + (queued === 1 ? ' episode.' : ' episodes.') + ' Find them under Downloads.' : 'Those episodes are already downloaded.');
+    } catch (err) {
+      console.warn('Jellio: could not list episodes', err);
+      showToast('Could not load the episodes.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  const choices =
+    item.Type === 'Season'
+      ? [
+          { label: 'Unwatched episodes', pick: unwatched },
+          { label: 'Whole season', pick: (list) => list },
+        ]
+      : [
+          { label: 'Next 5 unwatched', pick: (list) => unwatched(list).slice(0, 5) },
+          { label: 'All unwatched', pick: unwatched },
+        ];
+
+  button.addEventListener('click', function (event) {
+    event.stopPropagation();
+    if (isOffline()) {
+      showToast('Downloads start once the server can be reached.');
+      return;
+    }
+    openMenu(
+      button,
+      choices.map((choice) => ({
+        label: 'Download · ' + choice.label,
+        onSelect: () =>
+          openMenu(
+            button,
+            VIDEO_QUALITIES.map((option) => ({ label: option.label, onSelect: () => queue(choice.pick, option.value) })),
+          ),
+      })),
+    );
+  });
   return button;
 }
