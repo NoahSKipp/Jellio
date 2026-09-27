@@ -221,6 +221,9 @@ export async function getPrimaryNavLinks() {
 
   // A manga library with no other Books library still gets its entry.
   pushMangaLink();
+  // What's kept on this device (screens/downloads.js), the one link that
+  // still works offline.
+  links.push({ icon: 'download_for_offline', label: 'Downloads', hash: '#/downloads', group: 'reading' });
   return links;
 }
 

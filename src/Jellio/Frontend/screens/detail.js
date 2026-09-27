@@ -6,6 +6,7 @@
 // plus a bare <video> element, see screens/player.js's own header for
 // why that needed no access to jellyfin-web's own playbackManager at
 // all, when there is not).
+import { buildDownloadButton } from '../components/downloads.js';
 import {
   getItemDetails,
   getImageUrl,
@@ -1045,6 +1046,11 @@ export async function renderDetail(root, params) {
       });
   });
   actions.appendChild(watchedButton);
+
+  // Keep it on this device for offline (components/downloads.js): books,
+  // manga, audiobooks, films and episodes.
+  const downloadButton = buildDownloadButton(item, { className: iconActionClass, compact: true });
+  if (downloadButton) actions.appendChild(downloadButton);
 
   // Real Jellyfin's own native like/dislike (UserData.Likes, POST/DELETE
   // /Users/{id}/Items/{id}/Rating), not a second real system this

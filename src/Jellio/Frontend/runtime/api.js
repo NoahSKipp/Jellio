@@ -4,6 +4,18 @@
 // jellyfin-web's own request/cache state, only on a real HTTP response.
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession } from './auth.js';
 import { languageName } from './languages.js';
+import {
+  isOffline,
+  isNetworkError,
+  reportNetworkFailure,
+  findDownload,
+  getDownload,
+  getOfflineBlob,
+  getLocalProgress,
+  setLocalProgress,
+  updateDownload,
+  queueSync,
+} from './offline.js';
 
 // Nuvio's own real AddonPlatform HTTP clients (OkHttp on Android, Ktor's
 // own HttpTimeout plugin on iOS, both confirmed against real source
@@ -128,6 +140,13 @@ function fetchWithTimeout(url, options, timeoutMs, externalSignal) {
 }
 
 async function requestJson(url, options, path, timeoutMs, externalSignal, priority) {
+  // Offline (runtime/offline.js): fail straight away rather than wait out
+  // a timeout for every request.
+  if (isOffline()) {
+    const offlineErr = new TypeError('Offline: ' + path);
+    offlineErr.isNetworkError = true;
+    throw offlineErr;
+  }
   const releaseRequestSlot = await acquireRequestSlot(priority);
   try {
     // A request cancelled while still queued for a slot (search.js's own
@@ -153,8 +172,12 @@ async function requestJson(url, options, path, timeoutMs, externalSignal, priori
         // same timedOut shape is not yet a real bug, only a latent one.
         const timeoutErr = new Error('Request timed out: ' + path);
         timeoutErr.timedOut = true;
+        if (!(externalSignal && externalSignal.aborted)) reportNetworkFailure();
         throw timeoutErr;
       }
+      // No answer at all: the server may have gone away.
+      if (err) err.isNetworkError = true;
+      reportNetworkFailure();
       throw err;
     }
     if (!response.ok) {
@@ -343,7 +366,24 @@ export function getItem(itemId) {
   if (!userId) return Promise.reject(new Error('Not signed in'));
   return cached('item:' + itemId, function () {
     return getJson('/Users/' + userId + '/Items/' + itemId);
+  }).catch(function (err) {
+    return downloadedItem(itemId, err);
   });
+}
+
+function isUnreachable(err) {
+  return isNetworkError(err) || !!(err && err.timedOut);
+}
+
+// A downloaded item's stored data, standing in for the server's when it
+// can't be reached; otherwise the original error.
+async function downloadedItem(itemId, err) {
+  if (!isUnreachable(err)) throw err;
+  const record = await findDownload(itemId);
+  if (!record) throw err;
+  const key = String(itemId).replace(/-/g, '').toLowerCase();
+  const track = (record.Tracks || []).find((entry) => String(entry.Id).replace(/-/g, '').toLowerCase() === key);
+  return track || record.Item;
 }
 
 // A library grid's own getItem call gets whatever fields Jellyfin returns
@@ -372,7 +412,9 @@ export function getItemDetails(itemId) {
   const path = '/Users/' + userId + '/Items/' + itemId + '?' + params.toString();
   return cached('details:' + itemId, function () {
     return getJson(path, ITEM_DETAILS_TIMEOUT_MS);
-  }, SHORT_CACHE_TTL_MS);
+  }, SHORT_CACHE_TTL_MS).catch(function (err) {
+    return downloadedItem(itemId, err);
+  });
 }
 
 export function getCurrentUser() {
@@ -466,8 +508,21 @@ export function getItemsByIds(ids) {
 }
 
 // Controllers/ReadingController.cs: where in an EPUB/PDF this reader got to.
-export function getReadingProgress(itemId) {
-  return getJson('/Jellio/reading/progress/' + itemId);
+// The copy kept on this device (runtime/offline.js) when the server
+// can't be reached, or when it's newer than the server's (read offline,
+// not sent yet).
+export async function getReadingProgress(itemId) {
+  const local = await getLocalProgress(itemId);
+  try {
+    const remote = await getJson('/Jellio/reading/progress/' + itemId);
+    if (local && local.Locator && (!remote || !remote.Locator || Date.parse(local.UpdatedAt) > Date.parse(remote.UpdatedAt || 0))) {
+      return local;
+    }
+    return remote;
+  } catch (err) {
+    if (!isUnreachable(err)) throw err;
+    return local || {};
+  }
 }
 
 // Every item this reader has progress on: { itemId (no dashes):
@@ -478,11 +533,39 @@ export function getAllReadingProgress() {
   });
 }
 
+// A downloaded video's position (and whether it's been watched), as the
+// item's user data: sent now, or once the server is back.
+export function saveUserItemPosition(itemId, positionTicks, played) {
+  const body = { PlaybackPositionTicks: Math.max(0, Math.round(positionTicks || 0)) };
+  if (played) {
+    body.Played = true;
+    body.PlaybackPositionTicks = 0;
+  }
+  return sendOrQueue('POST', '/UserItems/' + itemId + '/UserData', body).catch(function (err) {
+    console.warn('Jellio: could not save the position', err);
+  });
+}
+
+// Kept on this device too; when the server can't be reached, sent once
+// it can.
 export function saveReadingProgress(itemId, locator, progress, totalPages) {
-  return postJson('/Jellio/reading/progress/' + itemId, {
+  const body = {
     Locator: locator,
     Progress: progress,
     TotalPages: totalPages || null,
+  };
+  setLocalProgress(itemId, body);
+  return sendOrQueue('POST', '/Jellio/reading/progress/' + itemId, body);
+}
+
+// Sends now, or queues the request for when the server is back (the
+// queued case resolves to null).
+function sendOrQueue(method, path, body) {
+  if (isOffline()) return queueSync(method, path, body).then(() => null);
+  const request = method === 'PUT' ? putJson(path, body) : method === 'DELETE' ? deleteJson(path) : postJson(path, body);
+  return request.catch(function (err) {
+    if (isUnreachable(err)) return queueSync(method, path, body).then(() => null);
+    throw err;
   });
 }
 
@@ -528,9 +611,14 @@ export function getAudiobookTracks(item) {
     IncludeItemTypes: 'AudioBook',
     SortBy: 'ParentIndexNumber,IndexNumber,SortName',
     SortOrder: 'Ascending',
-    Fields: 'RunTimeTicks,Chapters',
+    Fields: 'RunTimeTicks,Chapters,Path',
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  return getJson('/Users/' + userId + '/Items?' + params.toString()).catch(async function (err) {
+    if (!isUnreachable(err)) throw err;
+    const record = await findDownload(item.Id);
+    if (!record || !record.Tracks) throw err;
+    return { Items: record.Tracks };
+  }).then(function (result) {
     const key = audiobookGroupKey(item);
     const tracks = ((result && result.Items) || []).filter(function (track) {
       return audiobookGroupKey(track) === key;
@@ -786,6 +874,14 @@ export function discoverBooks(source, value, page) {
 // headers and handed to epub.js/pdf.js as an ArrayBuffer, so neither
 // library ever needs to know how to authenticate against the server.
 export async function fetchBookFile(itemId) {
+  // A downloaded copy opens from this device, online or not.
+  const local = await getOfflineBlob(itemId, 'file');
+  if (local) return { contentType: local.type || '', buffer: await local.arrayBuffer() };
+  if (isOffline()) {
+    const offlineErr = new TypeError('Not downloaded');
+    offlineErr.isNetworkError = true;
+    throw offlineErr;
+  }
   const response = await fetch(getServerAddress() + '/Jellio/reading/file/' + itemId, {
     headers: getAuthHeaders(),
   });
@@ -818,29 +914,54 @@ async function putJson(path, body, timeoutMs) {
 // Controllers/ReadingActivityController.cs: one reading or listening
 // session, for the Feed and reading achievements. Fire and forget.
 export function reportReadingSession(session) {
-  return postJson('/Jellio/reading/session', session).catch(function (err) {
+  return sendOrQueue('POST', '/Jellio/reading/session', session).catch(function (err) {
     console.warn('Jellio: could not report reading session', err);
   });
 }
 
 // Controllers/AnnotationsController.cs: the reader's highlights, notes
 // and bookmarks for one book.
+// A downloaded book keeps a copy of its annotations for offline; changes
+// made offline are queued and reach the server once it's back.
 export function getAnnotations(itemId) {
-  return getJson('/Jellio/reading/annotations/' + itemId).then(function (list) {
-    return list || [];
-  });
+  return getJson('/Jellio/reading/annotations/' + itemId)
+    .then(function (list) {
+      updateDownload(itemId, { Annotations: list || [] }).catch(() => {});
+      return list || [];
+    })
+    .catch(async function (err) {
+      if (!isUnreachable(err)) throw err;
+      const record = await getDownload(itemId);
+      return (record && record.Annotations) || [];
+    });
+}
+
+async function changeOfflineAnnotations(itemId, change) {
+  const record = await getDownload(itemId);
+  if (record) await updateDownload(itemId, { Annotations: change(record.Annotations || []) });
 }
 
 export function addAnnotation(itemId, annotation) {
-  return postJson('/Jellio/reading/annotations/' + itemId, annotation);
+  return sendOrQueue('POST', '/Jellio/reading/annotations/' + itemId, annotation).then(function (created) {
+    if (created) return created;
+    const local = Object.assign({ Id: 'offline-' + Date.now(), CreatedAt: new Date().toISOString() }, annotation);
+    return changeOfflineAnnotations(itemId, (list) => list.concat([local])).then(() => local);
+  });
 }
 
 export function updateAnnotation(itemId, id, changes) {
-  return putJson('/Jellio/reading/annotations/' + itemId + '/' + encodeURIComponent(id), changes);
+  return sendOrQueue('PUT', '/Jellio/reading/annotations/' + itemId + '/' + encodeURIComponent(id), changes).then(function (updated) {
+    if (updated) return updated;
+    return changeOfflineAnnotations(itemId, (list) => list.map((entry) => (entry.Id === id ? Object.assign({}, entry, changes) : entry))).then(
+      () => Object.assign({ Id: id }, changes),
+    );
+  });
 }
 
 export function deleteAnnotation(itemId, id) {
-  return deleteJson('/Jellio/reading/annotations/' + itemId + '/' + encodeURIComponent(id));
+  return sendOrQueue('DELETE', '/Jellio/reading/annotations/' + itemId + '/' + encodeURIComponent(id)).then(function (result) {
+    return changeOfflineAnnotations(itemId, (list) => list.filter((entry) => entry.Id !== id)).then(() => result);
+  });
 }
 
 // Controllers/LanguageController.cs. Both resolve rather than reject on
@@ -874,7 +995,9 @@ export function getDueVocabulary(limit) {
 }
 
 export function addVocabulary(entry) {
-  return postJson('/Jellio/vocab', entry);
+  return sendOrQueue('POST', '/Jellio/vocab', entry).then(function (created) {
+    return created || Object.assign({ Id: 'offline-' + Date.now() }, entry);
+  });
 }
 
 export function updateVocabulary(id, changes) {
@@ -1944,6 +2067,7 @@ export function pickTrickplayInfo(item, mediaSourceId) {
 // row, a card's own progress bar, both already built) come from exactly
 // these reports, not from this runtime inventing its own tracking.
 export function reportPlaybackStart(itemId, mediaSourceId, positionTicks) {
+  if (isOffline()) return Promise.resolve();
   return postJson('/Sessions/Playing', {
     ItemId: itemId,
     MediaSourceId: mediaSourceId,
@@ -1956,6 +2080,7 @@ export function reportPlaybackStart(itemId, mediaSourceId, positionTicks) {
 }
 
 export function reportPlaybackProgress(itemId, mediaSourceId, positionTicks, isPaused) {
+  if (isOffline()) return Promise.resolve();
   return postJson('/Sessions/Playing/Progress', {
     ItemId: itemId,
     MediaSourceId: mediaSourceId,
@@ -1969,6 +2094,11 @@ export function reportPlaybackProgress(itemId, mediaSourceId, positionTicks, isP
 }
 
 export function reportPlaybackStopped(itemId, mediaSourceId, positionTicks) {
+  // Offline (a downloaded video or audiobook): the position is sent as
+  // the item's user data once the server is back.
+  if (isOffline()) {
+    return queueSync('POST', '/UserItems/' + itemId + '/UserData', { PlaybackPositionTicks: positionTicks || 0 }).catch(() => {});
+  }
   return postJson('/Sessions/Playing/Stopped', {
     ItemId: itemId,
     MediaSourceId: mediaSourceId,
