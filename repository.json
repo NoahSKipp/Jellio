@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.29.0] - 2026-09-27\n\n### 🚀 Features\n\n- Add a setting to include NSFW-flagged Suwayomi sources in manga searches\n\n### 🐛 Bug Fixes\n\n- Find Chaptarr books to request in either format, and point manga requests at Suwayomi when it isn't set up\n- Tell apart a Suwayomi with no sources from one whose sources were all skipped\n",
+        "checksum": "cac355af6d4837803de1d90198eb3d98",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.29.0/jellio_1.29.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T01:07:02Z",
+        "version": "1.29.0"
+      },
+      {
         "changelog": "## [1.28.1] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Explain empty Suwayomi manga searches and pick up newly installed sources\n- Send the format's quality profile when a book request adds a new author to Chaptarr\n",
         "checksum": "976fcc8bd10541e46734e6bdd299ad8f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.28.1/jellio_1.28.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-20T19:15:15Z",
         "version": "1.8.0"
-      },
-      {
-        "changelog": "## [1.7.1] - 2026-09-20\n\n### 🐛 Bug Fixes\n\n- Make Up Next timing configurable and lower its default trigger\n",
-        "checksum": "2914040f9e118e75d04d3209d841388f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.7.1/jellio_1.7.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-20T18:26:14Z",
-        "version": "1.7.1"
       }
     ]
   }
