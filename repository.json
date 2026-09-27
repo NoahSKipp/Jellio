@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.28.1] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Explain empty Suwayomi manga searches and pick up newly installed sources\n- Send the format's quality profile when a book request adds a new author to Chaptarr\n",
+        "checksum": "976fcc8bd10541e46734e6bdd299ad8f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.28.1/jellio_1.28.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T00:39:44Z",
+        "version": "1.28.1"
+      },
+      {
         "changelog": "## [1.28.0] - 2026-09-26\n\n### 🚀 Features\n\n- Add Suwayomi as a manga, manhwa and manhua request backend\n- Request manga, manhwa and manhua chapters through Suwayomi from the Manga shelf and Discover\n\n### 🐛 Bug Fixes\n\n- Load Manga Discover covers through the server so blocked AniList images still show\n",
         "checksum": "0e27ec361ffd1b181853f83e9503774d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.28.0/jellio_1.28.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-20T18:26:14Z",
         "version": "1.7.1"
-      },
-      {
-        "changelog": "## [1.7.0] - 2026-09-20\n\n### 🚀 Features\n\n- Add a volume control to the player\n\n### 🐛 Bug Fixes\n\n- Re-check scroll arrows on resize, not just once at mount\n",
-        "checksum": "02ab996ba9cb83cc4ed5f2e67b8e45fa",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.7.0/jellio_1.7.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-20T18:22:12Z",
-        "version": "1.7.0"
       }
     ]
   }
