@@ -691,7 +691,8 @@ export function getMangaRequestStatus() {
   }, SHORT_CACHE_TTL_MS);
 }
 
-// Resolves to { Searched, Failed, Languages, InstalledLanguages, Sources }.
+// Resolves to { Searched, Failed, Languages, InstalledLanguages,
+// TotalSources, NsfwSources, Sources }.
 export function searchMangaSources(query) {
   return getJson('/Jellio/manga/search?q=' + encodeURIComponent(query), 45000).then(function (response) {
     const result = response || {};
@@ -700,6 +701,8 @@ export function searchMangaSources(query) {
       Failed: result.Failed || 0,
       Languages: result.Languages || [],
       InstalledLanguages: result.InstalledLanguages || [],
+      TotalSources: result.TotalSources || 0,
+      NsfwSources: result.NsfwSources || 0,
       Sources: result.Sources || [],
     };
   });

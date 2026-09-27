@@ -23,8 +23,11 @@ function thumbnailSrc(path) {
 function emptyReason(query, response) {
   const wanted = response.Languages.filter((lang) => lang !== 'all').join(', ') || 'en';
   if (!response.Searched) {
-    if (!response.InstalledLanguages.length) {
-      return 'Suwayomi has no sources installed. Add an extension repository and install source extensions in Suwayomi, then search again.';
+    if (!response.TotalSources) {
+      return 'The Suwayomi at the URL in Jellio’s plugin settings reports no sources. If you installed extensions, check that URL points at that same Suwayomi instance.';
+    }
+    if (response.NsfwSources >= response.TotalSources) {
+      return 'All ' + response.TotalSources + ' of Suwayomi’s sources are marked NSFW, which Jellio skips.';
     }
     return (
       'None of your Suwayomi sources are in ' + wanted + ' (installed: ' + response.InstalledLanguages.join(', ') +

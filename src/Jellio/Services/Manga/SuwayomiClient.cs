@@ -19,7 +19,9 @@ public record SuwayomiSource(long Id, string Name, string Lang);
 // Matching: installed sources in the configured languages.
 // InstalledLanguages: every language any installed source covers, so the
 // UI can say when sources exist but none match.
-public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages);
+// Total and Nsfw: raw counts from Suwayomi, so an empty result can say
+// whether Suwayomi reported nothing at all or everything was skipped.
+public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages, int Total, int Nsfw);
 
 public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary);
 
@@ -96,18 +98,36 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             return null;
         }
 
-        var installed = nodes.OfType<JsonObject>()
-            .Where(node => !ChaptarrClient.ReadBool(node["isNsfw"]))
-            .Select(node => new SuwayomiSource(
-                ReadLong(node["id"]),
-                ChaptarrClient.ReadString(node["displayName"]) ?? ChaptarrClient.ReadString(node["name"]) ?? "Source",
-                ChaptarrClient.ReadString(node["lang"]) ?? string.Empty))
-            // Source 0 is Suwayomi's own local-files source.
-            .Where(source => source.Id != 0)
+        var all = nodes.OfType<JsonObject>()
+            .Select(node => (
+                Source: new SuwayomiSource(
+                    ReadLong(node["id"]),
+                    ChaptarrClient.ReadString(node["displayName"]) ?? ChaptarrClient.ReadString(node["name"]) ?? "Source",
+                    ChaptarrClient.ReadString(node["lang"]) ?? string.Empty),
+                Nsfw: ChaptarrClient.ReadBool(node["isNsfw"]),
+                RawId: node["id"]?.ToJsonString()))
             .ToList();
+
+        // Source 0 is Suwayomi's own local-files source.
+        var remote = all.Where(entry => entry.RawId is not ("\"0\"" or "0")).ToList();
+        var unreadable = remote.Where(entry => entry.Source.Id == 0).ToList();
+        if (unreadable.Count > 0)
+        {
+            logger.LogWarning("Jellio: {Count} Suwayomi sources had an unreadable id, e.g. {Id}", unreadable.Count, unreadable[0].RawId);
+        }
+
+        var installed = remote.Where(entry => !entry.Nsfw && entry.Source.Id != 0).Select(entry => entry.Source).ToList();
         var sources = new SuwayomiSourceList(
             installed.Where(source => languages.Contains(source.Lang)).ToList(),
-            installed.Select(source => source.Lang).Where(lang => lang.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal).ToList());
+            installed.Select(source => source.Lang).Where(lang => lang.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal).ToList(),
+            remote.Count,
+            remote.Count(entry => entry.Nsfw));
+        logger.LogInformation(
+            "Jellio: Suwayomi reports {Total} sources ({Nsfw} NSFW, skipped); {Matching} match the languages {Languages}",
+            sources.Total,
+            sources.Nsfw,
+            sources.Matching.Count,
+            languageKey);
 
         // Only cache a usable list: extensions installed after an empty
         // result should show up on the next search, not ten minutes later.
