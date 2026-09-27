@@ -470,6 +470,14 @@ export function getReadingProgress(itemId) {
   return getJson('/Jellio/reading/progress/' + itemId);
 }
 
+// Every item this reader has progress on: { itemId (no dashes):
+// { Locator, Progress, TotalPages, UpdatedAt } }.
+export function getAllReadingProgress() {
+  return getJson('/Jellio/reading/progress', 20000).then(function (all) {
+    return all || {};
+  });
+}
+
 export function saveReadingProgress(itemId, locator, progress, totalPages) {
   return postJson('/Jellio/reading/progress/' + itemId, {
     Locator: locator,
@@ -1142,7 +1150,26 @@ export function audiobookGroupKey(item) {
   return (item.ParentId || '') + '|' + (item.Album || '');
 }
 
+// A book's title: its Album tag, else (for a book split into several
+// files with no tags, whose tracks are named "Chapter 1", "Chapter 2"...)
+// the folder the files sit in.
+export function audiobookTitle(item, trackCount) {
+  if (item.Album) return item.Album;
+  if (trackCount > 1) {
+    const parts = String(item.Path || '').split(/[\\/]/).filter(Boolean);
+    if (parts.length >= 2) return parts[parts.length - 2];
+  }
+  return item.Name;
+}
+
 export function collapseAudiobookTracks(items) {
+  const counts = new Map();
+  (items || []).forEach(function (item) {
+    if (item && item.Type === 'AudioBook') {
+      const key = audiobookGroupKey(item);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  });
   const seen = new Set();
   const out = [];
   (items || []).forEach(function (item) {
@@ -1153,7 +1180,8 @@ export function collapseAudiobookTracks(items) {
     const key = audiobookGroupKey(item);
     if (seen.has(key)) return;
     seen.add(key);
-    out.push(item.Album ? Object.assign({}, item, { Name: item.Album }) : item);
+    const title = audiobookTitle(item, counts.get(key));
+    out.push(title !== item.Name ? Object.assign({}, item, { Name: title, SortName: title }) : item);
   });
   return out;
 }
@@ -1172,7 +1200,7 @@ export function getLibraryItems(parentId, collectionType, options) {
     IncludeItemTypes: itemTypesForKind(collectionType),
     SortBy: opts.sortBy || 'SortName',
     SortOrder: opts.sortOrder || 'Ascending',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear,CommunityRating',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,CommunityRating,Path',
     Limit: String(opts.limit || 100),
     StartIndex: String(opts.startIndex || 0),
   });

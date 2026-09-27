@@ -68,6 +68,18 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
+    // Everything this reader has progress on, keyed by item id (no dashes).
+    public Dictionary<string, ReadingProgressRecord> GetAll(Guid userId)
+    {
+        lock (_lock)
+        {
+            var all = LoadLocked();
+            return all.TryGetValue(Key(userId), out var items)
+                ? new Dictionary<string, ReadingProgressRecord>(items)
+                : new Dictionary<string, ReadingProgressRecord>();
+        }
+    }
+
     // Started but not finished, most recently read first.
     public List<(Guid ItemId, ReadingProgressRecord Record)> GetInProgress(Guid userId, int limit)
     {

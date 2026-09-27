@@ -7,6 +7,7 @@
 import {
   getItemDetails,
   getAudiobookTracks,
+  audiobookTitle,
   getAudiobookLibraryChapters,
   buildAudioStreamUrl,
   getImageUrl,
@@ -197,7 +198,7 @@ export async function renderListen(root, params) {
     return;
   }
 
-  const bookTitle = item.Album || item.Name || 'Audiobook';
+  const bookTitle = audiobookTitle(item, timeline.tracks.length) || 'Audiobook';
   const author = item.AlbumArtist || (item.Artists && item.Artists[0]) || '';
   const cover = coverUrl(item);
   const bookKey = String(item.ParentId || item.Id) + '|' + (item.Album || '');
