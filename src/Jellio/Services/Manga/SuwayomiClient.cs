@@ -23,7 +23,9 @@ public record SuwayomiSource(long Id, string Name, string Lang);
 // the NSFW flag. An empty result can then say which of the two it was.
 public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages, int Total, int Nsfw);
 
-public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary);
+public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary, string? Url = null);
+
+public record SuwayomiChapter(int Id, string Url, string Name, string? Scanlator, float ChapterNumber, bool IsDownloaded);
 
 public record SuwayomiSettings(bool DownloadAsCbz, bool AutoDownloadNewChapters, string? DownloadsPath);
 
@@ -139,7 +141,7 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
     public async Task<IReadOnlyList<SuwayomiManga>?> SearchAsync(long sourceId, string query, CancellationToken cancellationToken)
     {
         const string Mutation = @"mutation ($input: FetchSourceMangaInput!) {
-  fetchSourceManga(input: $input) { mangas { id title author status inLibrary } }
+  fetchSourceManga(input: $input) { mangas { id title author status inLibrary url } }
 }";
         var variables = new JsonObject
         {
@@ -160,7 +162,8 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
                 ChaptarrClient.ReadString(manga["title"]) ?? "Untitled",
                 ChaptarrClient.ReadString(manga["author"]),
                 ChaptarrClient.ReadString(manga["status"]),
-                ChaptarrClient.ReadBool(manga["inLibrary"])))
+                ChaptarrClient.ReadBool(manga["inLibrary"]),
+                ChaptarrClient.ReadString(manga["url"])))
             .ToList();
     }
 
@@ -169,6 +172,25 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
     // isn't downloaded yet.
     public async Task<SuwayomiRequestResult> AddAndDownloadAsync(int mangaId, CancellationToken cancellationToken)
     {
+        if (!await AddToLibraryAsync(mangaId, cancellationToken).ConfigureAwait(false))
+        {
+            return new SuwayomiRequestResult(false, false, 0, 0, "Suwayomi could not add this series");
+        }
+
+        var chapters = await FetchChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false) ?? [];
+        var pending = chapters.Where(chapter => !chapter.IsDownloaded).Select(chapter => chapter.Id).ToList();
+        if (pending.Count == 0)
+        {
+            return new SuwayomiRequestResult(true, true, 0, chapters.Count, chapters.Count == 0 ? "No chapters found on this source yet" : null);
+        }
+
+        return await EnqueueDownloadsAsync(pending, cancellationToken).ConfigureAwait(false)
+            ? new SuwayomiRequestResult(true, false, pending.Count, chapters.Count, null)
+            : new SuwayomiRequestResult(false, false, 0, chapters.Count, "Suwayomi could not queue the downloads");
+    }
+
+    public async Task<bool> AddToLibraryAsync(int mangaId, CancellationToken cancellationToken)
+    {
         const string AddMutation = @"mutation ($input: UpdateMangaInput!) {
   updateManga(input: $input) { manga { id inLibrary } }
 }";
@@ -176,38 +198,85 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             AddMutation,
             new JsonObject { ["input"] = new JsonObject { ["id"] = mangaId, ["patch"] = new JsonObject { ["inLibrary"] = true } } },
             cancellationToken).ConfigureAwait(false);
-        if (added is null)
-        {
-            return new SuwayomiRequestResult(false, false, 0, 0, "Suwayomi could not add this series");
-        }
+        return added is not null;
+    }
 
+    // Refreshes the chapter list from the source and returns it.
+    public async Task<IReadOnlyList<SuwayomiChapter>?> FetchChaptersAsync(int mangaId, CancellationToken cancellationToken)
+    {
         const string ChaptersMutation = @"mutation ($input: FetchChaptersInput!) {
-  fetchChapters(input: $input) { chapters { id isDownloaded } }
+  fetchChapters(input: $input) { chapters { id url name scanlator chapterNumber isDownloaded } }
 }";
         var fetched = await QueryAsync(
             ChaptersMutation,
             new JsonObject { ["input"] = new JsonObject { ["mangaId"] = mangaId } },
             cancellationToken).ConfigureAwait(false);
-        var chapters = (fetched?["fetchChapters"]?["chapters"] as JsonArray)?.OfType<JsonObject>().ToList() ?? [];
-        var pending = chapters
-            .Where(chapter => !ChaptarrClient.ReadBool(chapter["isDownloaded"]))
-            .Select(chapter => (int)ReadLong(chapter["id"]))
-            .Where(id => id > 0)
+        return (fetched?["fetchChapters"]?["chapters"] as JsonArray)?
+            .OfType<JsonObject>()
+            .Select(chapter => new SuwayomiChapter(
+                (int)ReadLong(chapter["id"]),
+                ChaptarrClient.ReadString(chapter["url"]) ?? string.Empty,
+                ChaptarrClient.ReadString(chapter["name"]) ?? string.Empty,
+                ChaptarrClient.ReadString(chapter["scanlator"]),
+                chapter["chapterNumber"] is JsonValue number && number.TryGetValue<double>(out var value) ? (float)value : -1f,
+                ChaptarrClient.ReadBool(chapter["isDownloaded"])))
+            .Where(chapter => chapter.Id > 0)
             .ToList();
-        if (pending.Count == 0)
+    }
+
+    public async Task<bool> EnqueueDownloadsAsync(IReadOnlyCollection<int> chapterIds, CancellationToken cancellationToken)
+    {
+        if (chapterIds.Count == 0)
         {
-            return new SuwayomiRequestResult(true, true, 0, chapters.Count, chapters.Count == 0 ? "No chapters found on this source yet" : null);
+            return true;
         }
 
         const string DownloadMutation = @"mutation ($input: EnqueueChapterDownloadsInput!) {
   enqueueChapterDownloads(input: $input) { clientMutationId }
 }";
         var ids = new JsonArray();
-        pending.ForEach(id => ids.Add(id));
-        var queued = await QueryAsync(DownloadMutation, new JsonObject { ["input"] = new JsonObject { ["ids"] = ids } }, cancellationToken).ConfigureAwait(false);
-        return queued is null
-            ? new SuwayomiRequestResult(false, false, 0, chapters.Count, "Suwayomi could not queue the downloads")
-            : new SuwayomiRequestResult(true, false, pending.Count, chapters.Count, null);
+        foreach (var id in chapterIds)
+        {
+            ids.Add(id);
+        }
+
+        return await QueryAsync(DownloadMutation, new JsonObject { ["input"] = new JsonObject { ["ids"] = ids } }, cancellationToken).ConfigureAwait(false) is not null;
+    }
+
+    // A series by its source and the source's own URL for it (what a
+    // Mihon backup records): Suwayomi's stored copy if it has one, else a
+    // title search on that source, matched by URL.
+    public async Task<SuwayomiManga?> FindMangaAsync(long sourceId, string url, string title, CancellationToken cancellationToken)
+    {
+        const string Query = @"query ($condition: MangaConditionInput) {
+  mangas(condition: $condition) { nodes { id title inLibrary url } }
+}";
+        var stored = await QueryAsync(
+            Query,
+            new JsonObject
+            {
+                ["condition"] = new JsonObject
+                {
+                    ["sourceId"] = sourceId.ToString(CultureInfo.InvariantCulture),
+                    ["url"] = url,
+                },
+            },
+            cancellationToken).ConfigureAwait(false);
+        var node = (stored?["mangas"]?["nodes"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault();
+        if (node is not null && ReadLong(node["id"]) > 0)
+        {
+            return new SuwayomiManga(
+                (int)ReadLong(node["id"]),
+                ChaptarrClient.ReadString(node["title"]) ?? title,
+                null,
+                null,
+                ChaptarrClient.ReadBool(node["inLibrary"]),
+                ChaptarrClient.ReadString(node["url"]));
+        }
+
+        var found = await SearchAsync(sourceId, title, cancellationToken).ConfigureAwait(false);
+        return found?.FirstOrDefault(manga => string.Equals(manga.Url?.Trim(), url.Trim(), StringComparison.Ordinal))
+            ?? found?.FirstOrDefault(manga => string.Equals(manga.Title.Trim(), title.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<(byte[] Bytes, string ContentType)?> GetThumbnailAsync(int mangaId, CancellationToken cancellationToken)

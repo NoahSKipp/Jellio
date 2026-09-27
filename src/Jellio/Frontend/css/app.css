@@ -9960,3 +9960,61 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* screens/settings.js: Import from Mihon. */
+.jellio-settings-import:empty {
+  display: none;
+}
+
+.jellio-settings-import {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding: 0.4em 1em 0.9em;
+}
+
+.jellio-settings-import p {
+  margin: 0;
+}
+
+.jellio-settings-import-headline {
+  font-weight: 600;
+}
+
+.jellio-settings-import-failed {
+  color: #ff8a80;
+}
+
+.jellio-settings-import-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  max-height: 22em;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.jellio-settings-import-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+  padding: 0.45em 0.7em;
+  border-left: 3px solid var(--jellio-border-color);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.03);
+}
+
+.jellio-settings-import-imported {
+  border-left-color: #66bb6a;
+}
+
+.jellio-settings-import-not-found,
+.jellio-settings-import-error {
+  border-left-color: var(--jellio-trending-color);
+}
+
+.jellio-settings-import-title {
+  font-weight: 600;
+}
