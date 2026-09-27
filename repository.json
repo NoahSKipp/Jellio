@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.33.0] - 2026-09-27\n\n### 🚀 Features\n\n- Download books, manga, audiobooks and videos for offline use\n",
+        "checksum": "4fc9ebfef21e8db8a7964022eed0c02c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.0/jellio_1.33.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T19:22:16Z",
+        "version": "1.33.0"
+      },
+      {
         "changelog": "## [1.32.0] - 2026-09-27\n\n### 🚀 Features\n\n- Give Settings a Reading section with translation and dictionary defaults\n",
         "checksum": "de0adbbcfdc6a1aee228927b8db3312f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.32.0/jellio_1.32.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-21T18:29:15Z",
         "version": "1.10.2"
-      },
-      {
-        "changelog": "## [1.10.1] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Use console.warn for the native Media Segments diagnostic\n",
-        "checksum": "a2df6bb6874d67d78a56d71278c2bd02",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.1/jellio_1.10.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-21T15:27:18Z",
-        "version": "1.10.1"
       }
     ]
   }
