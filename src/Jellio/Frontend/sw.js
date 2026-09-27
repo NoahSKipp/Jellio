@@ -99,7 +99,15 @@ function networkFirst(event, cacheKey) {
         function () {
           clearTimeout(timer);
           if (settled) return;
-          cache.match(cacheKey).then(function (cached) {
+          cache
+            .match(cacheKey)
+            .then(function (cached) {
+              // A script or style cached under another version's
+              // ?v= still beats nothing (e.g. offline right after an
+              // update).
+              return cached || (request.mode === 'navigate' ? null : cache.match(request, { ignoreSearch: true }));
+            })
+            .then(function (cached) {
             settled = true;
             if (cached) resolve(cached);
             else if (request.mode === 'navigate') {
