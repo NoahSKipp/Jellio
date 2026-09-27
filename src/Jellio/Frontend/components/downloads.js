@@ -53,7 +53,10 @@ function idKey(id) {
 }
 
 export const VIDEO_QUALITIES = [
-  { value: '1080', label: '1080p', height: 1080, bitrate: 8000000 },
+  // A generous cap: an H.264 file up to 1080p is then only repackaged,
+  // at network speed, instead of re-encoded to shrink it. Only files that
+  // need it (HEVC, 4K) are converted.
+  { value: '1080', label: '1080p · fastest', height: 1080, bitrate: 40000000 },
   { value: '720', label: '720p', height: 720, bitrate: 4000000 },
   { value: '480', label: '480p · smallest', height: 480, bitrate: 1500000 },
   { value: 'original', label: 'Original file', height: 0, bitrate: 0 },
@@ -235,7 +238,11 @@ export async function downloadVideo(item, quality) {
     Quality: option.value,
     AudioLanguage: audioStream && audioStream.Language ? languageName(audioStream.Language) : language && languageFound ? languageName(language) : '',
     LanguageNote: language && !languageFound ? 'No ' + languageName(language) + ' audio found; downloaded the default.' : '',
-    EstimatedBytes: option.bitrate && details.RunTimeTicks ? Math.round(((option.bitrate + 192000) / 8) * (details.RunTimeTicks / 1e7)) : 0,
+    // At most the cap, and no more than the source itself when known.
+    EstimatedBytes:
+      option.bitrate && details.RunTimeTicks
+        ? Math.round(((Math.min(option.bitrate, source.Bitrate || option.bitrate) + 192000) / 8) * (details.RunTimeTicks / 1e7))
+        : 0,
     Subtitles: subtitles.map(function (stream) {
       return {
         Name: 'sub-' + stream.Index,
