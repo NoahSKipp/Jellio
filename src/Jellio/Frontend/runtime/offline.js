@@ -177,14 +177,24 @@ export async function listDownloads() {
   if (!('indexedDB' in window)) return [];
   const userId = idKey(getCurrentUserId());
   const all = await withStore('downloads', 'readonly', (store) => requestResult(store.getAll()));
-  return (all || []).filter((record) => record.UserId === userId).sort((a, b) => b.AddedAt - a.AddedAt);
+  return (all || [])
+    .filter((record) => record.UserId === userId)
+    .map(live)
+    .sort((a, b) => b.AddedAt - a.AddedAt);
+}
+
+// The download running now counts its bytes in memory (stored only when
+// it starts and ends), so readers get that live copy in place of the
+// stored one.
+function live(record) {
+  return activeDownload && activeDownload.record && activeDownload.id === record.Id ? activeDownload.record : record;
 }
 
 export async function getDownload(id) {
   if (!id || !('indexedDB' in window)) return null;
   try {
     const record = await withStore('downloads', 'readonly', (store) => requestResult(store.get(idKey(id))));
-    return record && record.UserId === idKey(getCurrentUserId()) ? record : null;
+    return record && record.UserId === idKey(getCurrentUserId()) ? live(record) : null;
   } catch (err) {
     return null;
   }
@@ -357,6 +367,8 @@ async function downloadFile(record, file, cache, controller) {
 async function streamFile(record, file, cache, attempt, watch) {
   const response = await fetch(getServerAddress() + file.Url, { headers: getAuthHeaders(), signal: attempt.signal });
   watch();
+  // Answered: an earlier attempt's "retrying" gives way to progress.
+  if (response.ok) record.Error = null;
   if (!response.ok) {
     const err = new Error('The server answered ' + response.status + ' for ' + (file.Label || file.Name));
     err.httpStatus = response.status;
@@ -383,7 +395,7 @@ async function streamFile(record, file, cache, attempt, watch) {
 
 async function download(record) {
   const controller = new AbortController();
-  activeDownload = { id: record.Id, controller: controller };
+  activeDownload = { id: record.Id, controller: controller, record: record };
   record.Status = 'downloading';
   record.DoneBytes = 0;
   await putRecord(record);
