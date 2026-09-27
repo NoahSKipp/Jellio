@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.33.5] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Show live download progress, and keep cached scripts from standing in for newer ones\n",
+        "checksum": "5701d5af55eccd162b2136f9a83b1c05",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.5/jellio_1.33.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T23:40:13Z",
+        "version": "1.33.5"
+      },
+      {
         "changelog": "## [1.33.4] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Let video downloads get a conversion from Jellyfin, and stop waiting on a stalled one\n",
         "checksum": "237f4269bc6932b9cdbcc79357017466",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.4/jellio_1.33.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-22T06:23:50Z",
         "version": "1.13.0"
-      },
-      {
-        "changelog": "## [1.12.0] - 2026-09-21\n\n### 🚀 Features\n\n- Add TheIntroDB as the primary Skip Intro/Credits source\n",
-        "checksum": "c7e439bca6ab48c35ed03eeba22e38be",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.12.0/jellio_1.12.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-21T20:57:16Z",
-        "version": "1.12.0"
       }
     ]
   }
