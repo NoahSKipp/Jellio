@@ -34,6 +34,9 @@ import {
   getProfileSettings,
   setProfilePrivacy,
   setGrouplistEnabled,
+  getJellioConfig,
+  startMangaImport,
+  getMangaImportStatus,
 } from '../runtime/api.js';
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
@@ -570,6 +573,107 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
   return wrap;
 }
 
+// Import from Mihon: a reader's backup file brings their manga library
+// over through Suwayomi (Services/Manga/MangaImportService.cs). Only
+// offered when the server has Suwayomi set up.
+const IMPORT_OUTCOMES = { imported: 'Imported', 'not-found': 'Not found', error: 'Failed' };
+
+function buildMihonImportCard() {
+  const { card, body } = buildCard(
+    'collections_bookmark',
+    'Import from Mihon',
+    'Brings your Mihon library over: each series is downloaded from where you left off, and your reading progress follows as chapters arrive.',
+  );
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.tachibk,.proto.gz,.gz';
+  input.hidden = true;
+  body.appendChild(input);
+  body.appendChild(
+    buildActionRow(
+      'upload_file',
+      'Choose a backup file',
+      'In Mihon: Settings, Data and storage, Create backup. Then pick the .tachibk file here.',
+      function () {
+        input.click();
+      },
+    ),
+  );
+
+  const status = el('div', 'jellio-settings-import');
+  body.appendChild(status);
+  let timer = null;
+
+  function render(response) {
+    status.textContent = '';
+    const job = response && response.Job;
+    const pending = (response && response.PendingChapters) || 0;
+    if (!job) {
+      if (pending) status.appendChild(el('p', 'jellio-settings-row-description', pending + ' chapters of progress are waiting for their downloads.'));
+      return;
+    }
+    const running = job.Status === 'running';
+    const imported = job.Series.filter((series) => series.Outcome === 'imported').length;
+    const headline = running
+      ? 'Importing ' + Math.min(job.Processed + 1, job.Total) + ' of ' + job.Total + '…'
+      : job.Status === 'failed'
+        ? 'The import stopped early.'
+        : 'Imported ' + imported + ' of ' + job.Total + ' series.';
+    status.appendChild(el('p', 'jellio-settings-import-headline', headline));
+    if (pending) {
+      status.appendChild(
+        el('p', 'jellio-settings-row-description', pending + ' chapters of progress will be applied as their downloads reach the library.'),
+      );
+    }
+    const list = el('ul', 'jellio-settings-import-list');
+    job.Series.forEach(function (series) {
+      const item = el('li', 'jellio-settings-import-item jellio-settings-import-' + series.Outcome);
+      item.appendChild(el('span', 'jellio-settings-import-title', series.Title));
+      const detail = [IMPORT_OUTCOMES[series.Outcome] || series.Outcome];
+      if (series.QueuedChapters) detail.push(series.QueuedChapters + ' to download');
+      if (series.Message) detail.push(series.Message);
+      item.appendChild(el('span', 'jellio-settings-row-description', detail.join(' · ')));
+      list.appendChild(item);
+    });
+    if (job.Series.length) status.appendChild(list);
+    if (running) poll();
+  }
+
+  function poll() {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(function () {
+      if (!card.isConnected) return;
+      getMangaImportStatus().then(render).catch(function () {
+        poll();
+      });
+    }, 2000);
+  }
+
+  input.addEventListener('change', function () {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    status.textContent = '';
+    status.appendChild(el('p', 'jellio-settings-import-headline', 'Reading ' + file.name + '…'));
+    startMangaImport(file)
+      .then(render)
+      .catch(function (err) {
+        status.textContent = '';
+        status.appendChild(el('p', 'jellio-settings-import-failed', (err && err.message) || 'Import failed'));
+      });
+  });
+
+  getMangaImportStatus().then(render).catch(function () {});
+  return card;
+}
+
+function buildReadingCategory() {
+  const wrap = el('div', 'jellio-settings-category');
+  wrap.appendChild(buildMihonImportCard());
+  return wrap;
+}
+
 function buildPlaybackCategory(user) {
   const wrap = el('div', 'jellio-settings-category');
   wrap.appendChild(buildPlaybackCard());
@@ -628,7 +732,7 @@ export async function renderSettings(root) {
   // round trip and neither one depends on the signed in user's own
   // data at all, so all three fire together here instead of those two
   // cards each waiting on the user fetch to even start.
-  const [userResult, sleepTimerCard, quickConnectCard, privacyCard, grouplistCard] = await Promise.all([
+  const [userResult, sleepTimerCard, quickConnectCard, privacyCard, grouplistCard, config] = await Promise.all([
     getCurrentUser().catch(function (err) {
       console.warn('Jellio: could not load current user', err);
       return null;
@@ -637,6 +741,9 @@ export async function renderSettings(root) {
     buildQuickConnectCard(),
     buildPrivacyCard(),
     buildGrouplistCard(),
+    getJellioConfig().catch(function () {
+      return null;
+    }),
   ]);
   const user = userResult;
 
@@ -650,6 +757,9 @@ export async function renderSettings(root) {
     },
     { id: 'about', label: 'About', build: buildAboutCategory },
   ];
+  if (config && config.MangaRequestsEnabled) {
+    categories.splice(2, 0, { id: 'reading', label: 'Reading', build: buildReadingCategory });
+  }
 
   const layout = el('div', 'jellio-settings-layout');
   const nav = el('nav', 'jellio-settings-nav');

@@ -23,8 +23,9 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/manga")]
 [Authorize]
-public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManager userManager, ILogger<MangaRequestController> logger) : ControllerBase
+public partial class MangaRequestController(SuwayomiClient suwayomi, MangaImportService importService, IUserManager userManager, ILogger<MangaRequestController> logger) : ControllerBase
 {
+    private const int MaxBackupBytes = 64 * 1024 * 1024;
     private const int MaxSources = 16;
     private const int ResultsPerSource = 6;
     private static readonly TimeSpan SearchBudget = TimeSpan.FromSeconds(25);
@@ -191,6 +192,85 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
         });
     }
 
+    public record ImportStatus(MangaImportJob? Job, int PendingChapters);
+
+    /// <summary>
+    /// Imports the caller's Mihon library from a backup file (.tachibk,
+    /// sent as the raw request body): series in their library are added
+    /// to Suwayomi and downloaded from where they left off, and their
+    /// progress is applied as the chapters reach Jellyfin.
+    /// </summary>
+    [HttpPost("import")]
+    [RequestSizeLimit(MaxBackupBytes)]
+    public async Task<IActionResult> Import(CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        if (!SuwayomiClient.IsConfigured)
+        {
+            return BadRequest("Suwayomi isn't set up on this server");
+        }
+
+        using var buffer = new System.IO.MemoryStream();
+        await Request.Body.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        if (buffer.Length == 0 || buffer.Length > MaxBackupBytes)
+        {
+            return BadRequest("Send a Mihon backup file (.tachibk)");
+        }
+
+        IReadOnlyList<MihonManga> backup;
+        try
+        {
+            backup = MihonBackupReader.Read(buffer.ToArray());
+        }
+        catch (Exception ex) when (ex is System.IO.InvalidDataException or OverflowException)
+        {
+            logger.LogInformation(ex, "Jellio: rejected a Mihon backup");
+            return BadRequest("That file isn't a Mihon backup. Create one in Mihon under Settings, Data and storage, Create backup.");
+        }
+
+        var library = backup.Where(manga => manga.Favorite).ToList();
+        if (library.Count == 0)
+        {
+            return BadRequest("This backup has no series in its library");
+        }
+
+        var job = importService.Start(userId, library);
+        if (job is null)
+        {
+            return Conflict("An import is already running");
+        }
+
+        var requester = userManager.GetUserById(userId)?.Username ?? userId.ToString("N");
+        logger.LogInformation("Jellio: {User} started a Mihon import of {Count} series", requester, library.Count);
+        return Ok(new ImportStatus(job, importService.PendingCount(userId)));
+    }
+
+    [HttpGet("import")]
+    public IActionResult ImportProgress()
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        var job = importService.GetJob(userId);
+        if (job is null)
+        {
+            return Ok(new ImportStatus(null, importService.PendingCount(userId)));
+        }
+
+        lock (job)
+        {
+            return Ok(new ImportStatus(job, importService.PendingCount(userId)));
+        }
+    }
+
     [HttpGet("thumbnail/{mangaId:int}")]
     public async Task<IActionResult> Thumbnail(int mangaId, CancellationToken cancellationToken)
     {
@@ -203,6 +283,12 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
         Response.Headers.CacheControl = "private, max-age=86400";
         return File(image.Value.Bytes, image.Value.ContentType);
     }
+
+    private Guid GetUserId() =>
+        HttpContext.User.Identity is ClaimsIdentity identity
+        && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            ? userId
+            : Guid.Empty;
 
     private static string Normalize(string text) =>
         NonWord().Replace(text.ToLowerInvariant(), " ").Trim();

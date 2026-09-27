@@ -708,6 +708,24 @@ export function searchMangaSources(query) {
   });
 }
 
+// Controllers/MangaRequestController.cs's import: a Mihon backup file,
+// sent as is. Resolves to { Job, PendingChapters }; rejects with the
+// server's own message (not a backup, nothing in its library, ...).
+export async function startMangaImport(file) {
+  const response = await fetch(getServerAddress() + '/Jellio/manga/import', {
+    method: 'POST',
+    headers: Object.assign({ 'Content-Type': 'application/octet-stream', Accept: 'application/json' }, getAuthHeaders()),
+    body: file,
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(text && text.length < 300 ? text.replace(/^"|"$/g, '') : 'Import failed');
+  return text ? JSON.parse(text) : null;
+}
+
+export function getMangaImportStatus() {
+  return getJson('/Jellio/manga/import', 15000);
+}
+
 export function requestMangaSeries(mangaId, title) {
   return postJson('/Jellio/manga/request', { MangaId: mangaId, Title: title || null }, 60000);
 }
