@@ -41,6 +41,8 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
         int Failed,
         IReadOnlyList<string> Languages,
         IReadOnlyList<string> InstalledLanguages,
+        int TotalSources,
+        int NsfwSources,
         IReadOnlyList<SourceResult> Sources);
 
     public record RequestBody(int MangaId, string? Title);
@@ -147,6 +149,8 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
             failed,
             SuwayomiClient.Languages().Order(StringComparer.Ordinal).ToList(),
             sources.InstalledLanguages,
+            sources.Total,
+            sources.Nsfw,
             answered
                 .Where(source => source.Results.Count > 0)
                 .OrderByDescending(source => source.Results[0].Match)
