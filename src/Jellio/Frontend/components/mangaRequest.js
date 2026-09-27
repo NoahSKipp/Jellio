@@ -27,7 +27,10 @@ function emptyReason(query, response) {
       return 'The Suwayomi at the URL in Jellio’s plugin settings reports no sources. If you installed extensions, check that URL points at that same Suwayomi instance.';
     }
     if (response.NsfwSources >= response.TotalSources) {
-      return 'All ' + response.TotalSources + ' of Suwayomi’s sources are marked NSFW, which Jellio skips.';
+      return (
+        'All ' + response.TotalSources + ' of Suwayomi’s sources are flagged NSFW (common for general manga sites), so they were skipped. ' +
+        'An admin can turn on “Include NSFW Suwayomi sources” in Jellio’s plugin settings.'
+      );
     }
     return (
       'None of your Suwayomi sources are in ' + wanted + ' (installed: ' + response.InstalledLanguages.join(', ') +

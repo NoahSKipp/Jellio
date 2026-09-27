@@ -185,4 +185,8 @@ public class PluginConfiguration : BasePluginConfiguration
     public string SuwayomiPassword { get; set; } = string.Empty;
 
     public string SuwayomiLanguages { get; set; } = "en";
+
+    // Search sources Suwayomi flags NSFW. Most general manga aggregators
+    // carry the flag for the whole source, so with it off they're skipped.
+    public bool SuwayomiIncludeNsfw { get; set; }
 }

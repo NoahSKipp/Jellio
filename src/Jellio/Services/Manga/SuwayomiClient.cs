@@ -19,8 +19,8 @@ public record SuwayomiSource(long Id, string Name, string Lang);
 // Matching: installed sources in the configured languages.
 // InstalledLanguages: every language any installed source covers, so the
 // UI can say when sources exist but none match.
-// Total and Nsfw: raw counts from Suwayomi, so an empty result can say
-// whether Suwayomi reported nothing at all or everything was skipped.
+// Total: every source Suwayomi reports; Nsfw: how many were skipped for
+// the NSFW flag. An empty result can then say which of the two it was.
 public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages, int Total, int Nsfw);
 
 public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary);
@@ -86,7 +86,8 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
     public async Task<SuwayomiSourceList?> GetSourcesAsync(CancellationToken cancellationToken)
     {
         var languages = Languages();
-        var languageKey = string.Join(',', languages.Order(StringComparer.Ordinal));
+        var includeNsfw = JellioPlugin.Instance?.Configuration.SuwayomiIncludeNsfw ?? false;
+        var languageKey = string.Join(',', languages.Order(StringComparer.Ordinal)) + (includeNsfw ? "+nsfw" : string.Empty);
         if (_sources is { } cached && cached.Languages == languageKey && DateTime.UtcNow - cached.At < SourcesTtl)
         {
             return cached.Sources;
@@ -116,14 +117,14 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             logger.LogWarning("Jellio: {Count} Suwayomi sources had an unreadable id, e.g. {Id}", unreadable.Count, unreadable[0].RawId);
         }
 
-        var installed = remote.Where(entry => !entry.Nsfw && entry.Source.Id != 0).Select(entry => entry.Source).ToList();
+        var installed = remote.Where(entry => (includeNsfw || !entry.Nsfw) && entry.Source.Id != 0).Select(entry => entry.Source).ToList();
         var sources = new SuwayomiSourceList(
             installed.Where(source => languages.Contains(source.Lang)).ToList(),
             installed.Select(source => source.Lang).Where(lang => lang.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal).ToList(),
             remote.Count,
-            remote.Count(entry => entry.Nsfw));
+            includeNsfw ? 0 : remote.Count(entry => entry.Nsfw));
         logger.LogInformation(
-            "Jellio: Suwayomi reports {Total} sources ({Nsfw} NSFW, skipped); {Matching} match the languages {Languages}",
+            "Jellio: Suwayomi reports {Total} sources ({Nsfw} NSFW); {Matching} searchable for {Languages}",
             sources.Total,
             sources.Nsfw,
             sources.Matching.Count,

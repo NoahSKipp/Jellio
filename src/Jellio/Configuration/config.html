@@ -103,6 +103,17 @@
             </div>
           </div>
 
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="chkSuwayomiIncludeNsfw" />
+              <span>Include NSFW Suwayomi sources</span>
+            </label>
+            <div class="fieldDescription checkboxFieldDescription">
+              Suwayomi flags whole sources as NSFW, including most general manga sites that host some adult
+              titles. Leave off to skip them in manga searches.
+            </div>
+          </div>
+
           <div class="verticalSection">
             <div class="sectionTitleContainer flex align-items-center">
               <h2 class="sectionTitle">Seasonal Themes</h2>
@@ -437,6 +448,7 @@
           document.querySelector('#txtSuwayomiUsername').value = withDefault(config.SuwayomiUsername, '');
           document.querySelector('#txtSuwayomiPassword').value = withDefault(config.SuwayomiPassword, '');
           document.querySelector('#txtSuwayomiLanguages').value = withDefault(config.SuwayomiLanguages, 'en');
+          document.querySelector('#chkSuwayomiIncludeNsfw').checked = withDefault(config.SuwayomiIncludeNsfw, false);
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -462,6 +474,7 @@
           config.SuwayomiUsername = document.querySelector('#txtSuwayomiUsername').value.trim();
           config.SuwayomiPassword = document.querySelector('#txtSuwayomiPassword').value;
           config.SuwayomiLanguages = document.querySelector('#txtSuwayomiLanguages').value.trim() || 'en';
+          config.SuwayomiIncludeNsfw = document.querySelector('#chkSuwayomiIncludeNsfw').checked;
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();
