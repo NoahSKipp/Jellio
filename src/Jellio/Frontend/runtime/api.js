@@ -642,6 +642,18 @@ export function getMangaCoverUrl(url) {
   );
 }
 
+// The real cover of the manga series a chapter file belongs to
+// (MangaRequestController.SeriesCover); 404s when none is found.
+export function getMangaSeriesCoverUrl(itemId) {
+  return (
+    getServerAddress() +
+    '/Jellio/manga/series-cover/' +
+    encodeURIComponent(itemId) +
+    '?ApiKey=' +
+    encodeURIComponent(getAccessToken() || '')
+  );
+}
+
 export function getBookCoverUrl(itemId) {
   return (
     getServerAddress() +

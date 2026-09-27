@@ -243,6 +243,34 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         return await QueryAsync(DownloadMutation, new JsonObject { ["input"] = new JsonObject { ["ids"] = ids } }, cancellationToken).ConfigureAwait(false) is not null;
     }
 
+    // Every series in Suwayomi's library, { id, title }, for matching
+    // downloaded series folders back to Suwayomi (covers). Cached briefly.
+    private (DateTime At, IReadOnlyList<(int Id, string Title)> Library)? _library;
+
+    public async Task<IReadOnlyList<(int Id, string Title)>?> GetLibraryAsync(CancellationToken cancellationToken)
+    {
+        if (_library is { } cached && DateTime.UtcNow - cached.At < SourcesTtl)
+        {
+            return cached.Library;
+        }
+
+        var data = await QueryAsync(
+            "query { mangas(condition: { inLibrary: true }) { nodes { id title } } }",
+            null,
+            cancellationToken).ConfigureAwait(false);
+        if (data?["mangas"]?["nodes"] is not JsonArray nodes)
+        {
+            return null;
+        }
+
+        var library = nodes.OfType<JsonObject>()
+            .Select(node => ((int)ReadLong(node["id"]), ChaptarrClient.ReadString(node["title"]) ?? string.Empty))
+            .Where(entry => entry.Item1 > 0 && entry.Item2.Length > 0)
+            .ToList();
+        _library = (DateTime.UtcNow, library);
+        return library;
+    }
+
     // A series by its source and the source's own URL for it (what a
     // Mihon backup records): Suwayomi's stored copy if it has one, else a
     // title search on that source, matched by URL.

@@ -23,7 +23,13 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/manga")]
 [Authorize]
-public partial class MangaRequestController(SuwayomiClient suwayomi, MangaImportService importService, IUserManager userManager, ILogger<MangaRequestController> logger) : ControllerBase
+public partial class MangaRequestController(
+    SuwayomiClient suwayomi,
+    MangaImportService importService,
+    MangaCoverService coverService,
+    ILibraryManager libraryManager,
+    IUserManager userManager,
+    ILogger<MangaRequestController> logger) : ControllerBase
 {
     private const int MaxBackupBytes = 64 * 1024 * 1024;
     private const int MaxSources = 16;
@@ -269,6 +275,27 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, MangaImport
         {
             return Ok(new ImportStatus(job, importService.PendingCount(userId)));
         }
+    }
+
+    // The real cover of the series a chapter file belongs to (its folder),
+    // for the Manga shelf's series cards (MangaCoverService).
+    [HttpGet("series-cover/{itemId:guid}")]
+    public async Task<IActionResult> SeriesCover(Guid itemId, CancellationToken cancellationToken)
+    {
+        var folder = libraryManager.GetItemById(itemId)?.Path is { Length: > 0 } path ? System.IO.Path.GetDirectoryName(path) : null;
+        if (string.IsNullOrEmpty(folder))
+        {
+            return NotFound();
+        }
+
+        var image = await coverService.GetCoverAsync(folder, cancellationToken).ConfigureAwait(false);
+        if (image is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return File(image.Value.Bytes, image.Value.ContentType);
     }
 
     [HttpGet("thumbnail/{mangaId:int}")]

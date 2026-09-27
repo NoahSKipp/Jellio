@@ -1,3 +1,5 @@
+import { getMangaSeriesCoverUrl } from '../runtime/api.js';
+
 // Manga arrives as one file per chapter or volume (Suwayomi saves each
 // chapter as its own CBZ), so the Manga shelf groups files into series:
 // Jellyfin's SeriesName when it has one, otherwise the folder the files
@@ -96,4 +98,16 @@ export function resumePoint(chapters, progress) {
     lastRead: lastRead,
     finished: resume === -1 && readCount > 0,
   };
+}
+
+// Shows the series' real cover (a cover image in its folder, Suwayomi's,
+// or AniList's) on an <img>, falling back to the chapter image it had.
+export function useSeriesCover(img, chapter, onMissing) {
+  const fallback = img.getAttribute('src');
+  img.addEventListener('error', function onError() {
+    img.removeEventListener('error', onError);
+    if (fallback) img.src = fallback;
+    else if (onMissing) onMissing();
+  });
+  img.src = getMangaSeriesCoverUrl(chapter.Id);
 }

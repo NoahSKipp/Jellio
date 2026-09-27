@@ -3,7 +3,7 @@
 // picks up where they left off, and every chapter in reading order with
 // its read state.
 import { getBookshelfItems, getAllReadingProgress, getImageUrl } from '../runtime/api.js';
-import { groupMangaSeries, chapterState, resumePoint } from '../components/mangaSeries.js';
+import { groupMangaSeries, chapterState, resumePoint, useSeriesCover } from '../components/mangaSeries.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -61,14 +61,15 @@ export function renderMangaSeries(root, params, parentId) {
     const hero = el('section', 'jellio-manga-series-hero');
     const cover = el('div', 'jellio-manga-series-cover');
     const coverItem = chapters.find((item) => item.ImageTags && item.ImageTags.Primary) || chapters[0];
+    const img = document.createElement('img');
+    img.alt = '';
     if (coverItem.ImageTags && coverItem.ImageTags.Primary) {
-      const img = document.createElement('img');
-      img.src = getImageUrl(coverItem.Id, 'Primary', { tag: coverItem.ImageTags.Primary, maxWidth: 400 });
-      img.alt = '';
-      cover.appendChild(img);
-    } else {
-      cover.appendChild(el('span', 'material-icons collections_bookmark'));
+      img.setAttribute('src', getImageUrl(coverItem.Id, 'Primary', { tag: coverItem.ImageTags.Primary, maxWidth: 400 }));
     }
+    cover.appendChild(img);
+    useSeriesCover(img, chapters[0], function () {
+      img.replaceWith(el('span', 'material-icons collections_bookmark'));
+    });
     hero.appendChild(cover);
 
     const info = el('div', 'jellio-manga-series-info');

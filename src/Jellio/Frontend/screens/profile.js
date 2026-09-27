@@ -38,7 +38,7 @@ const BIO_MAX_LENGTH = 240;
 function describeActivity(entry) {
   if (isReadingActivity(entry)) {
     const reading = describeReading(entry);
-    return reading.lead + reading.title + (reading.detail ? ' · ' + reading.detail : '');
+    return reading.lead + reading.title + (reading.series ? ' of ' + reading.series : '') + (reading.detail ? ' · ' + reading.detail : '');
   }
   if (entry.ItemType === 'Episode' && entry.EpisodeCount > 1) {
     const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
