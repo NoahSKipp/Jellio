@@ -312,6 +312,34 @@ async function runQueue() {
   }
 }
 
+const MAX_ATTEMPTS = 4;
+
+// One file of a download, streamed into Cache Storage with progress.
+async function downloadFile(record, file, cache, controller) {
+  const response = await fetch(getServerAddress() + file.Url, { headers: getAuthHeaders(), signal: controller.signal });
+  if (!response.ok) {
+    const err = new Error('The server answered ' + response.status + ' for ' + (file.Label || file.Name));
+    err.httpStatus = response.status;
+    throw err;
+  }
+  const length = Number(response.headers.get('Content-Length')) || 0;
+  if (length) record.TotalBytes += length;
+  let lastNotify = 0;
+  const counter = new TransformStream({
+    transform(chunk, streamController) {
+      record.DoneBytes += chunk.byteLength;
+      const now = Date.now();
+      if (now - lastNotify > 400) {
+        lastNotify = now;
+        notify(record);
+      }
+      streamController.enqueue(chunk);
+    },
+  });
+  const headers = new Headers({ 'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream' });
+  await cache.put(fileUrl(record.Id, file.Name), new Response(response.body.pipeThrough(counter), { headers: headers }));
+}
+
 async function download(record) {
   const controller = new AbortController();
   activeDownload = { id: record.Id, controller: controller };
@@ -319,37 +347,35 @@ async function download(record) {
   record.DoneBytes = 0;
   await putRecord(record);
   const cache = await caches.open(FILES_CACHE);
-  let lastNotify = 0;
   try {
     for (const file of record.Files) {
-      let response;
-      try {
-        response = await fetch(getServerAddress() + file.Url, { headers: getAuthHeaders(), signal: controller.signal });
-      } catch (err) {
-        if (file.Optional) continue;
-        throw err;
-      }
-      if (!response.ok) {
-        if (file.Optional) continue;
-        throw new Error('The server answered ' + response.status + ' for ' + (file.Label || file.Name));
-      }
-      const length = Number(response.headers.get('Content-Length')) || 0;
-      if (length) record.TotalBytes += length;
-      const counter = new TransformStream({
-        transform(chunk, streamController) {
-          record.DoneBytes += chunk.byteLength;
-          const now = Date.now();
-          if (now - lastNotify > 400) {
-            lastNotify = now;
-            notify(record);
+      // A stream cut off part way (a proxy timeout, the server ending a
+      // slow conversion, the phone pausing the app) is retried from the
+      // start of that file a few times before the download fails.
+      const startBytes = record.DoneBytes;
+      const startTotal = record.TotalBytes;
+      for (let attempt = 1; ; attempt += 1) {
+        record.DoneBytes = startBytes;
+        record.TotalBytes = startTotal;
+        try {
+          await downloadFile(record, file, cache, controller);
+          break;
+        } catch (err) {
+          if (controller.signal.aborted) throw err;
+          if (err && err.httpStatus) {
+            if (file.Optional) break;
+            throw err;
           }
-          streamController.enqueue(chunk);
-        },
-      });
-      const headers = new Headers({ 'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream' });
-      await cache.put(fileUrl(record.Id, file.Name), new Response(response.body.pipeThrough(counter), { headers: headers }));
-      file.Bytes = record.DoneBytes;
+          if (file.Optional && attempt >= 2) break;
+          if (attempt >= MAX_ATTEMPTS || offline) throw err;
+          record.Error = 'Connection dropped, retrying (' + attempt + ' of ' + (MAX_ATTEMPTS - 1) + ')';
+          notify(record);
+          await new Promise((resolve) => window.setTimeout(resolve, 3000 * attempt));
+        }
+      }
+      file.Bytes = record.DoneBytes - startBytes;
     }
+    record.Error = null;
     // The cover under other ids too (an audiobook's tracks), for the
     // service worker to find by whichever id a screen asks with.
     const cover = await cache.match(fileUrl(record.Id, 'cover'));
@@ -365,14 +391,13 @@ async function download(record) {
   } catch (err) {
     const removed = !(await getDownload(record.Id));
     if (removed) return;
-    record.Status = offline || isNetworkError(err) ? 'queued' : 'error';
+    // Lost the connection: wait for it to come back. The server still
+    // answering after every retry means the download itself fails.
+    const serverUp = isNetworkError(err) && !offline ? await checkServer() : !offline;
+    record.Status = serverUp ? 'error' : 'queued';
     record.Error = err && err.message ? err.message : 'Download failed';
     await putRecord(record);
-    if (record.Status === 'queued') {
-      // Lost the connection: wait for it to come back.
-      checkServer();
-      throw err;
-    }
+    if (record.Status === 'queued') throw err;
   } finally {
     activeDownload = null;
   }
