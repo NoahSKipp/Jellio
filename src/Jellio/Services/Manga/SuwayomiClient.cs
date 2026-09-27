@@ -16,6 +16,11 @@ namespace Jellio.Services.Manga;
 
 public record SuwayomiSource(long Id, string Name, string Lang);
 
+// Matching: installed sources in the configured languages.
+// InstalledLanguages: every language any installed source covers, so the
+// UI can say when sources exist but none match.
+public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages);
+
 public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary);
 
 public record SuwayomiSettings(bool DownloadAsCbz, bool AutoDownloadNewChapters, string? DownloadsPath);
@@ -38,7 +43,7 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
 
     private readonly SemaphoreSlim _loginLock = new(1, 1);
     private string? _bearerToken;
-    private (DateTime At, IReadOnlyList<SuwayomiSource> Sources)? _sources;
+    private (DateTime At, string Languages, SuwayomiSourceList Sources)? _sources;
 
     public static bool IsConfigured => !string.IsNullOrWhiteSpace(JellioPlugin.Instance?.Configuration.SuwayomiUrl);
 
@@ -53,7 +58,7 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
 
     // The source languages to search, e.g. "en" or "en,es"; "all" (the
     // multi-language sources) is always included.
-    private static HashSet<string> Languages()
+    public static HashSet<string> Languages()
     {
         var raw = JellioPlugin.Instance?.Configuration.SuwayomiLanguages;
         var langs = (string.IsNullOrWhiteSpace(raw) ? "en" : raw)
@@ -76,9 +81,11 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
                 ChaptarrClient.ReadString(settings["downloadsPath"]));
     }
 
-    public async Task<IReadOnlyList<SuwayomiSource>?> GetSourcesAsync(CancellationToken cancellationToken)
+    public async Task<SuwayomiSourceList?> GetSourcesAsync(CancellationToken cancellationToken)
     {
-        if (_sources is { } cached && DateTime.UtcNow - cached.At < SourcesTtl)
+        var languages = Languages();
+        var languageKey = string.Join(',', languages.Order(StringComparer.Ordinal));
+        if (_sources is { } cached && cached.Languages == languageKey && DateTime.UtcNow - cached.At < SourcesTtl)
         {
             return cached.Sources;
         }
@@ -89,17 +96,22 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             return null;
         }
 
-        var languages = Languages();
-        var sources = nodes.OfType<JsonObject>()
+        var installed = nodes.OfType<JsonObject>()
             .Where(node => !ChaptarrClient.ReadBool(node["isNsfw"]))
             .Select(node => new SuwayomiSource(
                 ReadLong(node["id"]),
                 ChaptarrClient.ReadString(node["displayName"]) ?? ChaptarrClient.ReadString(node["name"]) ?? "Source",
                 ChaptarrClient.ReadString(node["lang"]) ?? string.Empty))
             // Source 0 is Suwayomi's own local-files source.
-            .Where(source => source.Id != 0 && languages.Contains(source.Lang))
+            .Where(source => source.Id != 0)
             .ToList();
-        _sources = (DateTime.UtcNow, sources);
+        var sources = new SuwayomiSourceList(
+            installed.Where(source => languages.Contains(source.Lang)).ToList(),
+            installed.Select(source => source.Lang).Where(lang => lang.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal).ToList());
+
+        // Only cache a usable list: extensions installed after an empty
+        // result should show up on the next search, not ten minutes later.
+        _sources = sources.Matching.Count > 0 ? (DateTime.UtcNow, languageKey, sources) : null;
         return sources;
     }
 
