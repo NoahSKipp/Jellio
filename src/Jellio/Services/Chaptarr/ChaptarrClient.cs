@@ -90,6 +90,47 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
     public async Task<JsonArray?> GetBooksAsync(CancellationToken cancellationToken) =>
         await GetJsonAsync("/api/v1/book", cancellationToken).ConfigureAwait(false) as JsonArray;
 
+    // GET /api/v1/rootfolder: each root folder carries per-format defaults
+    // (audiobook/ebook quality and metadata profiles).
+    public async Task<JsonArray?> GetRootFoldersAsync(CancellationToken cancellationToken) =>
+        await GetJsonAsync("/api/v1/rootfolder", cancellationToken).ConfigureAwait(false) as JsonArray;
+
+    // The root folder a new author of this format goes to, with its default
+    // profiles: Chaptarr's effective default for the format first, then any
+    // root folder with a quality profile set for it. Null when none has one.
+    public static (string Path, int QualityProfileId, int? MetadataProfileId)? PickRootFolder(JsonArray rootFolders, string mediaType)
+    {
+        var candidates = rootFolders.OfType<JsonObject>()
+            .Select(folder =>
+            {
+                var settings = folder[mediaType] as JsonObject;
+                var quality = ReadId(settings?["qualityProfileId"]);
+                if (quality <= 0)
+                {
+                    quality = ReadId(folder[mediaType + "QualityProfileId"]);
+                }
+
+                var metadata = ReadId(settings?["metadataProfileId"]);
+                if (metadata <= 0)
+                {
+                    metadata = ReadId(folder[mediaType + "MetadataProfileId"]);
+                }
+
+                var isDefault = ReadBool(folder[mediaType == "audiobook" ? "isEffectiveDefaultAudiobook" : "isEffectiveDefaultEbook"]);
+                return (Path: ReadString(folder["path"]), Quality: quality, Metadata: metadata, IsDefault: isDefault);
+            })
+            .Where(folder => folder.Path is not null && folder.Quality > 0)
+            .OrderByDescending(folder => folder.IsDefault)
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var pick = candidates[0];
+        return (pick.Path!, pick.Quality, pick.Metadata > 0 ? pick.Metadata : null);
+    }
+
     // GET /api/v1/book/{id}: one tracked book in full, author included.
     public async Task<JsonObject?> GetBookAsync(int bookId, CancellationToken cancellationToken) =>
         await GetJsonAsync("/api/v1/book/" + bookId.ToString(System.Globalization.CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(false) as JsonObject;
