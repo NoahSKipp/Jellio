@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.33.4] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Let video downloads get a conversion from Jellyfin, and stop waiting on a stalled one\n",
+        "checksum": "237f4269bc6932b9cdbcc79357017466",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.4/jellio_1.33.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T23:07:38Z",
+        "version": "1.33.4"
+      },
+      {
         "changelog": "## [1.33.3] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Download videos through playback negotiation, in the user's audio language, with retries\n",
         "checksum": "f6213de45066c624cd83fa5690f13530",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.3/jellio_1.33.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-21T20:57:16Z",
         "version": "1.12.0"
-      },
-      {
-        "changelog": "## [1.11.0] - 2026-09-21\n\n### 🚀 Features\n\n- Add NuvioTV-style community Skip Intro/Credits as the primary tier\n\n### 🐛 Bug Fixes\n\n- Analyze forward-looking batches inside a real request, not a background sweep\n",
-        "checksum": "942bfac5bb152fa5ae3e279af7101829",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.11.0/jellio_1.11.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-21T20:50:18Z",
-        "version": "1.11.0"
       }
     ]
   }
