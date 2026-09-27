@@ -19,6 +19,25 @@ function thumbnailSrc(path) {
   return getServerAddress() + path + '?ApiKey=' + encodeURIComponent(getAccessToken() || '');
 }
 
+// Why a search came back empty, in the words the fix needs.
+function emptyReason(query, response) {
+  const wanted = response.Languages.filter((lang) => lang !== 'all').join(', ') || 'en';
+  if (!response.Searched) {
+    if (!response.InstalledLanguages.length) {
+      return 'Suwayomi has no sources installed. Add an extension repository and install source extensions in Suwayomi, then search again.';
+    }
+    return (
+      'None of your Suwayomi sources are in ' + wanted + ' (installed: ' + response.InstalledLanguages.join(', ') +
+      '). Change the source languages in Jellio’s plugin settings, or install sources in ' + wanted + '.'
+    );
+  }
+  if (response.Failed >= response.Searched) {
+    return 'All ' + response.Searched + ' Suwayomi sources failed or timed out. Check that they work in Suwayomi itself (some need Cloudflare solving).';
+  }
+  const failed = response.Failed ? ' (' + response.Failed + ' of ' + response.Searched + ' sources failed)' : '';
+  return 'No source has “' + query + '”' + failed + '. Try another title, or add more Suwayomi extensions.';
+}
+
 function statusLabel(status) {
   return { ONGOING: 'Ongoing', COMPLETED: 'Completed', PUBLISHING_FINISHED: 'Finished', ON_HIATUS: 'On hiatus', CANCELLED: 'Cancelled' }[status] || '';
 }
@@ -142,23 +161,24 @@ export function openMangaRequestSheet(root, options) {
       status.textContent = 'Searching your Suwayomi sources…';
       submit.disabled = true;
       searchMangaSources(query)
-        .then(function (sources) {
+        .then(function (response) {
           if (mine !== token) return;
-          if (!sources.length && fallback) {
+          const sources = response.Sources;
+          if (!sources.length && fallback && response.Searched > response.Failed) {
             input.value = fallback;
             search(fallback, null);
             return;
           }
           status.textContent = sources.length
             ? 'Found on ' + sources.length + (sources.length === 1 ? ' source.' : ' sources.') + ' Pick the best match.'
-            : 'No source has “' + query + '”. Try another title, or add more Suwayomi extensions.';
+            : emptyReason(query, response);
           sources.forEach(function (source) {
             results.appendChild(buildSource(source));
           });
         })
         .catch(function () {
           if (mine !== token) return;
-          status.textContent = 'Suwayomi search failed. Try again in a moment.';
+          status.textContent = 'Couldn’t reach Suwayomi. Check its URL and login in Jellio’s plugin settings, and that it’s running.';
         })
         .finally(function () {
           if (mine === token) submit.disabled = false;

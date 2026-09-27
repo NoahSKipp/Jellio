@@ -33,6 +33,16 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
 
     public record MangaResult(int MangaId, string Title, string? Author, string? Status, bool InLibrary, string ThumbnailUrl, double Match);
 
+    // Searched/Failed: how many sources were asked and how many errored or
+    // ran out of time; Languages and InstalledLanguages explain an empty
+    // result (no sources at all, or none in the configured languages).
+    public record SearchResponse(
+        int Searched,
+        int Failed,
+        IReadOnlyList<string> Languages,
+        IReadOnlyList<string> InstalledLanguages,
+        IReadOnlyList<SourceResult> Sources);
+
     public record RequestBody(int MangaId, string? Title);
 
     [HttpGet("status")]
@@ -74,15 +84,21 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
         }
 
         var wanted = Normalize(query);
+        var toSearch = sources.Matching.Take(MaxSources).ToList();
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         budget.CancelAfter(SearchBudget);
         using var throttle = new SemaphoreSlim(4);
-        var searches = sources.Take(MaxSources).Select(async source =>
+        var searches = toSearch.Select(async Task<SourceResult?> (SuwayomiSource source) =>
         {
             await throttle.WaitAsync(budget.Token).ConfigureAwait(false);
             try
             {
-                var found = await suwayomi.SearchAsync(source.Id, query, budget.Token).ConfigureAwait(false) ?? [];
+                var found = await suwayomi.SearchAsync(source.Id, query, budget.Token).ConfigureAwait(false);
+                if (found is null)
+                {
+                    return null;
+                }
+
                 var results = found
                     .Select(manga => new MangaResult(
                         manga.Id,
@@ -116,11 +132,26 @@ public partial class MangaRequestController(SuwayomiClient suwayomi, IUserManage
             logger.LogDebug(ex, "Jellio: a Suwayomi source search failed");
         }
 
-        return Ok(searches
-            .Where(search => search.IsCompletedSuccessfully && search.Result.Results.Count > 0)
-            .Select(search => search.Result)
-            .OrderByDescending(source => source.Results[0].Match)
-            .ThenBy(source => source.SourceName, StringComparer.OrdinalIgnoreCase));
+        var answered = searches
+            .Where(search => search.IsCompletedSuccessfully && search.Result is not null)
+            .Select(search => search.Result!)
+            .ToList();
+        var failed = toSearch.Count - answered.Count;
+        if (failed > 0)
+        {
+            logger.LogInformation("Jellio: {Failed} of {Searched} Suwayomi sources failed or timed out searching {Query}", failed, toSearch.Count, query);
+        }
+
+        return Ok(new SearchResponse(
+            toSearch.Count,
+            failed,
+            SuwayomiClient.Languages().Order(StringComparer.Ordinal).ToList(),
+            sources.InstalledLanguages,
+            answered
+                .Where(source => source.Results.Count > 0)
+                .OrderByDescending(source => source.Results[0].Match)
+                .ThenBy(source => source.SourceName, StringComparer.OrdinalIgnoreCase)
+                .ToList()));
     }
 
     [HttpPost("request")]
