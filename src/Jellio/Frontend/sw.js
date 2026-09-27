@@ -11,7 +11,7 @@
 const SHELL_CACHE = 'jellio-shell-v1';
 const FILES_CACHE = 'jellio-offline-files';
 const FILE_PREFIX = '/__jellio_offline__/';
-const NETWORK_TIMEOUT_MS = 6000;
+const NETWORK_TIMEOUT_MS = 10000;
 
 try {
   importScripts(new URL('serviceworker.js', self.registration.scope).href);
@@ -80,14 +80,21 @@ function networkFirst(event, cacheKey) {
     });
     return new Promise(function (resolve, reject) {
       let settled = false;
-      const timer = setTimeout(function () {
-        cache.match(cacheKey).then(function (cached) {
-          if (cached && !settled) {
-            settled = true;
-            resolve(cached);
-          }
-        });
-      }, NETWORK_TIMEOUT_MS);
+      // Only the page itself falls back on a slow answer (so a server that
+      // hangs rather than refusing still opens the app). Scripts and
+      // styles wait for the network while it answers at all: a cached copy
+      // there could be an older release, mixing old code into new.
+      const timer =
+        request.mode === 'navigate'
+          ? setTimeout(function () {
+              cache.match(cacheKey).then(function (cached) {
+                if (cached && !settled) {
+                  settled = true;
+                  resolve(cached);
+                }
+              });
+            }, NETWORK_TIMEOUT_MS)
+          : null;
       network.then(
         function (response) {
           clearTimeout(timer);
