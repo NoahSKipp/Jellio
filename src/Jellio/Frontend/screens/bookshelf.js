@@ -11,8 +11,11 @@ import {
   getContinueReading,
   getContinueListening,
   getJellioConfig,
+  getAllReadingProgress,
   audiobookGroupKey,
 } from '../runtime/api.js';
+import { groupMangaSeries, resumePoint } from '../components/mangaSeries.js';
+import { renderMangaSeries } from './mangaSeries.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildBookRequestPanel } from '../components/bookRequest.js';
@@ -42,8 +45,8 @@ const KINDS = {
   // Series lead: volumes are read in order, one series at a time.
   manga: {
     title: 'Manga',
-    one: 'volume',
-    many: 'volumes',
+    one: 'series',
+    many: 'series',
     continueTitle: 'Continue reading',
     loadContinue: getContinueReading,
     emptyIcon: 'collections_bookmark',
@@ -142,6 +145,7 @@ function compareBy(sort) {
 // Cards carry the author under the title; books are told apart by who
 // wrote them far more often than by year.
 function bookCard(entry, cardOptions) {
+  if (entry.seriesGroup) return seriesCard(entry);
   const card = buildCard(entry.item, cardOptions);
   if (entry.author) card.appendChild(el('div', 'jellio-card-subtitle', entry.author));
   return card;
@@ -157,9 +161,38 @@ function bookRow(title, entries, cardOptions) {
   const cards = row.querySelectorAll('.jellio-row-track > .jellio-card');
   cards.forEach(function (card, index) {
     const entry = entries[index];
+    if (entry && entry.seriesGroup) {
+      card.replaceWith(seriesCard(entry));
+      return;
+    }
     if (entry && entry.author) card.appendChild(el('div', 'jellio-card-subtitle', entry.author));
   });
   return row;
+}
+
+// A manga series: the first chapter's card, relabelled, opening the
+// series (screens/mangaSeries.js) instead of one chapter. Cloned to drop
+// the chapter card's own click handling.
+function seriesCard(entry) {
+  const card = buildCard(entry.item).cloneNode(true);
+  card.classList.add('jellio-card-manga-series');
+  const group = entry.seriesGroup;
+  const facts = [group.chapters.length + ' chapters'];
+  if (entry.readCount) facts.push(entry.readCount === group.chapters.length ? 'all read' : entry.readCount + ' read');
+  card.appendChild(el('div', 'jellio-card-subtitle', facts.join(' · ')));
+  function open() {
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    params.set('series', group.key);
+    navigateTo('#/books?' + params.toString());
+  }
+  card.addEventListener('click', open);
+  card.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      open();
+    }
+  });
+  return card;
 }
 
 function groupBy(entries, keyOf, labelOf) {
@@ -175,9 +208,39 @@ function groupBy(entries, keyOf, labelOf) {
   );
 }
 
+// The Manga shelf shows series, not chapter files: one entry per series
+// (cover from its first chapter), files that belong to no series on
+// their own. Continue reading is worked out per series from reading
+// progress, so finishing a chapter moves the series on to the next one.
+function mangaEntries(items, info, progress) {
+  const grouped = groupMangaSeries(items);
+  const continueEntries = [];
+  const entries = grouped.series.map(function (group) {
+    const coverItem = group.chapters.find((item) => item.ImageTags && item.ImageTags.Primary) || group.chapters[0];
+    const base = describe(coverItem, info);
+    const resume = resumePoint(group.chapters, progress);
+    if (resume.lastRead && resume.chapter) {
+      const entry = describe(resume.chapter, info);
+      continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead }));
+    }
+    return Object.assign(base, {
+      item: Object.assign({}, coverItem, { Name: group.title, SortName: group.title, UserData: null }),
+      series: '',
+      seriesGroup: group,
+      readCount: resume.readCount,
+      added: Math.max.apply(null, group.chapters.map((item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0))),
+      search: (group.title + ' ' + base.author).toLowerCase(),
+    });
+  });
+  grouped.singles.forEach((item) => entries.push(describe(item, info)));
+  continueEntries.sort((a, b) => b.lastRead - a.lastRead);
+  return { entries: entries, continueEntries: continueEntries.slice(0, ROW_LIMIT) };
+}
+
 export function renderBookshelf(root, params, parentId) {
   const requestedKind = params.get('bookKind');
   const kind = requestedKind === 'audiobook' || requestedKind === 'manga' ? requestedKind : 'ebook';
+  if (kind === 'manga' && params.get('series')) return renderMangaSeries(root, params, parentId);
   const copy = KINDS[kind];
   setTitle(copy.title + ' - Jellio');
   root.classList.add('jellio-screen-bookshelf');
@@ -379,7 +442,7 @@ export function renderBookshelf(root, params, parentId) {
     // album), since the track in progress needn't be the shelf's card.
     const byId = new Map(entries.map((entry) => [idKey(entry.item.Id), entry]));
     const byBook = new Map(entries.map((entry) => [audiobookGroupKey(entry.item), entry]));
-    const continueEntries = continueItems
+    const continueEntries = kind === 'manga' ? continueItems : continueItems
       .map(function (item) {
         const entry = byId.get(idKey(item.Id)) || (item.Type === 'AudioBook' ? byBook.get(audiobookGroupKey(item)) : null);
         return entry ? Object.assign({}, entry, { item: item }) : null;
@@ -455,12 +518,19 @@ export function renderBookshelf(root, params, parentId) {
     copy.loadContinue(20).catch(function () {
       return [];
     }),
+    kind === 'manga' ? getAllReadingProgress().catch(() => ({})) : Promise.resolve(null),
   ])
     .then(function (results) {
       if (cancelled) return;
       const items = results[0];
       const info = results[1] || {};
-      entries = items.map((item) => describe(item, info));
+      if (kind === 'manga') {
+        const manga = mangaEntries(items, info, results[3] || {});
+        entries = manga.entries;
+        results[2] = manga.continueEntries;
+      } else {
+        entries = items.map((item) => describe(item, info));
+      }
 
       if (!entries.length) {
         stats.textContent = '';

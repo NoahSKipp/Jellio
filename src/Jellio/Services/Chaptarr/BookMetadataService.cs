@@ -347,12 +347,36 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
             : null;
     }
 
+    // An untagged book split into files ("Chapter 1", "Chapter 2"...) is
+    // named by its folder instead.
+    private static string AudiobookTitle(BaseItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Album))
+        {
+            return item.Album;
+        }
+
+        try
+        {
+            if (item.GetParent() is Folder folder && folder.Children.Count(child => child is AudioBook) > 1)
+            {
+                return folder.Name;
+            }
+        }
+        catch (Exception)
+        {
+            // Fall back to the file's own name.
+        }
+
+        return item.Name;
+    }
+
     // An audiobook's title lives on Album (one item per file); a book with
     // no embedded metadata is named after its file, which often reads
     // "Author - Title (2019) [Publisher]".
     private List<Query> BuildQueries(BaseItem item)
     {
-        var rawTitle = item is AudioBook && !string.IsNullOrWhiteSpace(item.Album) ? item.Album : item.Name;
+        var rawTitle = item is AudioBook ? AudiobookTitle(item) : item.Name;
         var title = CleanTitle(rawTitle);
         if (title.Length == 0)
         {

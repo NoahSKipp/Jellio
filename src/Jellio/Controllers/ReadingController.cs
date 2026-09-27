@@ -62,6 +62,21 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         return Ok(store.Set(userId, itemId, body.Locator, body.Progress, totalPages));
     }
 
+    // Every item this reader has progress on, { itemId (no dashes):
+    // record }: the Manga shelf works out read chapters and where to
+    // resume each series from it.
+    [HttpGet("progress")]
+    public IActionResult GetAllProgress()
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        return Ok(store.GetAll(userId));
+    }
+
     // Item ids only, most recently read first: the frontend already knows
     // how to fetch and render real items from ids, so this stays a thin list.
     [HttpGet("in-progress")]

@@ -16,6 +16,8 @@ import {
   getSeriesNextUp,
   getBookMetadata,
   getBookCoverUrl,
+  getAudiobookTracks,
+  audiobookTitle,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
@@ -798,7 +800,11 @@ export async function renderDetail(root, params) {
   root.textContent = '';
   // One AudioBook item per file: the book's own title lives on Album,
   // the item's own Name is just this one track's.
-  if (item.Type === 'AudioBook' && item.Album) item.Name = item.Album;
+  if (item.Type === 'AudioBook') {
+    // Untagged books split into files are named by their folder.
+    const tracks = item.Album ? null : await getAudiobookTracks(item).catch(() => null);
+    item.Name = audiobookTitle(item, tracks ? tracks.length : 1);
+  }
   setTitle((item.Type === 'Episode' && item.SeriesName ? item.SeriesName : item.Name) + ' - Jellio');
 
   // A title reached straight from a search result carries a synthetic
