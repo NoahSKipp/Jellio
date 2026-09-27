@@ -313,10 +313,50 @@ async function runQueue() {
 }
 
 const MAX_ATTEMPTS = 4;
+const STALL_MS = 60000;
+const STALL_VIDEO_MS = 120000;
 
 // One file of a download, streamed into Cache Storage with progress.
 async function downloadFile(record, file, cache, controller) {
-  const response = await fetch(getServerAddress() + file.Url, { headers: getAuthHeaders(), signal: controller.signal });
+  // A stream that sends nothing for too long (a conversion that stalled
+  // or died server side while the connection stays open) is given up on
+  // and retried, instead of waiting forever.
+  const attempt = new AbortController();
+  const stopAttempt = () => attempt.abort();
+  controller.signal.addEventListener('abort', stopAttempt);
+  let stalled = false;
+  let stallTimer = null;
+  const stallMs = file.Name === 'video' ? STALL_VIDEO_MS : STALL_MS;
+  function watch() {
+    window.clearTimeout(stallTimer);
+    stallTimer = window.setTimeout(function () {
+      stalled = true;
+      attempt.abort();
+    }, stallMs);
+  }
+  watch();
+  try {
+    return await streamFile(record, file, cache, attempt, watch);
+  } catch (err) {
+    if (stalled && !controller.signal.aborted) {
+      const stallErr = new Error(
+        file.Name === 'video'
+          ? 'Jellyfin sent no video for ' + Math.round(stallMs / 60000) + ' minutes. Its conversion may be failing: try Original file, or check the server’s transcode log.'
+          : 'The server stopped sending ' + (file.Label || file.Name) + '.',
+      );
+      stallErr.stalled = true;
+      throw stallErr;
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(stallTimer);
+    controller.signal.removeEventListener('abort', stopAttempt);
+  }
+}
+
+async function streamFile(record, file, cache, attempt, watch) {
+  const response = await fetch(getServerAddress() + file.Url, { headers: getAuthHeaders(), signal: attempt.signal });
+  watch();
   if (!response.ok) {
     const err = new Error('The server answered ' + response.status + ' for ' + (file.Label || file.Name));
     err.httpStatus = response.status;
@@ -327,6 +367,7 @@ async function downloadFile(record, file, cache, controller) {
   let lastNotify = 0;
   const counter = new TransformStream({
     transform(chunk, streamController) {
+      watch();
       record.DoneBytes += chunk.byteLength;
       const now = Date.now();
       if (now - lastNotify > 400) {
@@ -367,8 +408,10 @@ async function download(record) {
             throw err;
           }
           if (file.Optional && attempt >= 2) break;
+          // A conversion that stalled twice isn't going to start.
+          if (err && err.stalled && attempt >= 2) throw err;
           if (attempt >= MAX_ATTEMPTS || offline) throw err;
-          record.Error = 'Connection dropped, retrying (' + attempt + ' of ' + (MAX_ATTEMPTS - 1) + ')';
+          record.Error = (err && err.stalled ? 'No data from the server, retrying (' : 'Connection dropped, retrying (') + attempt + ' of ' + (MAX_ATTEMPTS - 1) + ')';
           notify(record);
           await new Promise((resolve) => window.setTimeout(resolve, 3000 * attempt));
         }

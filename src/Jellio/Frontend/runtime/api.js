@@ -1671,7 +1671,11 @@ export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex,
           Container: 'mp4',
           Type: 'Video',
           Protocol: 'http',
-          Context: 'Static',
+          // PlaybackInfo negotiates in the Streaming context and ignores
+          // profiles for any other (Jellyfin's MediaInfoHelper and
+          // StreamBuilder), so a Static one never produced a
+          // TranscodingUrl.
+          Context: 'Streaming',
           VideoCodec: 'h264',
           AudioCodec: 'aac',
           MaxAudioChannels: '2',

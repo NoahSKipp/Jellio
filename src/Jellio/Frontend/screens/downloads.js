@@ -33,6 +33,9 @@ function statusLine(record) {
     return formatBytes(record.TotalBytes) + (record.AudioLanguage ? ' · ' + record.AudioLanguage + ' audio' : '');
   }
   if (record.Status === 'downloading' && record.Error) return record.Error;
+  if (record.Status === 'downloading' && !record.DoneBytes && record.Kind === 'video') {
+    return 'Waiting for Jellyfin to start the video…';
+  }
   if (record.Status === 'error') return 'Failed: ' + (record.Error || 'unknown error');
   if (record.Status === 'queued') return isOffline() ? 'Waiting for the server' : 'Waiting to download';
   const total = record.TotalBytes || record.EstimatedBytes;
