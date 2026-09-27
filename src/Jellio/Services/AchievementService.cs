@@ -335,7 +335,14 @@ public class AchievementService(
 
             // Several sessions on the same book the same day are one feed
             // entry, not one per sitting.
+            // A manga chapter's series: Jellyfin's when it has one, else
+            // the folder its files sit in (Suwayomi's layout).
             var seriesName = (item as IHasSeries)?.SeriesName;
+            if (string.IsNullOrWhiteSpace(seriesName) && itemType == "Manga" && !string.IsNullOrEmpty(item.Path))
+            {
+                seriesName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(item.Path));
+            }
+
             var latest = stats.RecentActivity.Count > 0 ? stats.RecentActivity[0] : null;
             if (latest is not null
                 && latest.ItemType == itemType

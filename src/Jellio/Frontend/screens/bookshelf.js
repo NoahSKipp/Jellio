@@ -14,7 +14,7 @@ import {
   getAllReadingProgress,
   audiobookGroupKey,
 } from '../runtime/api.js';
-import { groupMangaSeries, resumePoint } from '../components/mangaSeries.js';
+import { groupMangaSeries, resumePoint, useSeriesCover } from '../components/mangaSeries.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
@@ -177,6 +177,25 @@ function seriesCard(entry) {
   const card = buildCard(entry.item).cloneNode(true);
   card.classList.add('jellio-card-manga-series');
   const group = entry.seriesGroup;
+  let img = card.querySelector('img.jellio-card-image');
+  if (!img) {
+    const placeholder = card.querySelector('.jellio-card-image-empty');
+    if (placeholder) {
+      img = document.createElement('img');
+      img.className = 'jellio-card-image';
+      img.alt = group.title;
+      img.loading = 'lazy';
+      placeholder.hidden = true;
+      placeholder.after(img);
+    }
+  }
+  if (img) {
+    useSeriesCover(img, group.chapters[0], function () {
+      img.remove();
+      const placeholder = card.querySelector('.jellio-card-image-empty');
+      if (placeholder) placeholder.hidden = false;
+    });
+  }
   const facts = [group.chapters.length + ' chapters'];
   if (entry.readCount) facts.push(entry.readCount === group.chapters.length ? 'all read' : entry.readCount + ' read');
   card.appendChild(el('div', 'jellio-card-subtitle', facts.join(' · ')));

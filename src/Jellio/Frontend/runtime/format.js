@@ -43,7 +43,9 @@ export function describeReading(entry) {
   } else if (audio && entry.Finished && entry.ListenedTicks) {
     detail = formatListened(entry.ListenedTicks) + ' listened';
   }
-  return { lead: lead, title: entry.ItemName || '', detail: detail };
+  // A manga chapter names its series too: "Chapter 5" of "Berserk".
+  const series = entry.SeriesName && entry.SeriesName !== entry.ItemName ? entry.SeriesName : '';
+  return { lead: lead, title: entry.ItemName || '', series: series, detail: detail };
 }
 
 export function formatRelativeTime(isoString) {

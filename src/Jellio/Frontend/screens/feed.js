@@ -11,6 +11,7 @@ import {
   getUserImageUrl,
   getImageUrl,
   getBookCoverUrl,
+  getMangaSeriesCoverUrl,
   getCurrentUser,
   deleteActivityEntry,
   hideFeedBadge,
@@ -35,6 +36,10 @@ function appendWatchDescription(container, entry) {
     const reading = describeReading(entry);
     container.appendChild(document.createTextNode(reading.lead));
     container.appendChild(el('span', 'jellio-feed-title', reading.title));
+    if (reading.series) {
+      container.appendChild(document.createTextNode(' of '));
+      container.appendChild(el('span', 'jellio-feed-title', reading.series));
+    }
     if (reading.detail) container.appendChild(el('div', 'jellio-feed-badge-desc', reading.detail));
     return;
   }
@@ -92,10 +97,17 @@ function buildFeedRow(entry) {
     const poster = document.createElement('img');
     poster.className = 'jellio-feed-poster';
     poster.alt = '';
-    poster.src = getImageUrl(entry.SeriesId || entry.ItemId, 'Primary', { maxWidth: 200, quality: 85 });
+    const chapterImage = getImageUrl(entry.SeriesId || entry.ItemId, 'Primary', { maxWidth: 200, quality: 85 });
+    let triedChapterImage = entry.ItemType !== 'Manga';
+    poster.src = triedChapterImage ? chapterImage : getMangaSeriesCoverUrl(entry.ItemId);
     // Books rarely have Jellyfin art; fall back to their Chaptarr cover.
     let triedBookCover = false;
     poster.addEventListener('error', function () {
+      if (!triedChapterImage) {
+        triedChapterImage = true;
+        poster.src = chapterImage;
+        return;
+      }
       if (isReadingActivity(entry) && !triedBookCover) {
         triedBookCover = true;
         poster.src = getBookCoverUrl(entry.ItemId);
