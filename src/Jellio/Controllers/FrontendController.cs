@@ -67,6 +67,14 @@ public class FrontendController : ControllerBase
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = "Jellio.Frontend." + path.Replace('/', '.');
 
+        // Jellio's service worker lives here but looks after the web
+        // client's own pages (IndexHtmlPatchService registers it for
+        // them), which a browser only allows when the script says so.
+        if (path.Equals("sw.js", StringComparison.OrdinalIgnoreCase))
+        {
+            Response.Headers["Service-Worker-Allowed"] = "/";
+        }
+
         // Fonts alone are the real exception: genuinely the same bytes
         // every release. The service logos used to sit here too on the
         // same "same bytes every release" premise, disproven live: one

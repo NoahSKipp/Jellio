@@ -29,6 +29,8 @@ import { renderReader } from './screens/reader.js';
 import { renderListen } from './screens/listen.js';
 import { renderVocab } from './screens/vocab.js';
 import { renderDiscover } from './screens/discover.js';
+import { renderDownloads } from './screens/downloads.js';
+import { checkServer, isOffline } from './runtime/offline.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
 import { getPrimaryNavLinks } from './components/navShared.js';
@@ -92,6 +94,7 @@ const SCREENS = {
   listen: renderListen,
   vocab: renderVocab,
   discover: renderDiscover,
+  downloads: renderDownloads,
   movies: renderLibrary,
   tv: renderLibrary,
   music: renderLibrary,
@@ -104,6 +107,37 @@ const SCREENS = {
 // The player owns the whole viewport, no persistent sidebar competing
 // with video controls for space or attention.
 const FULLSCREEN_ROUTES = new Set(['play', 'read', 'listen']);
+
+// What still works without the server (runtime/offline.js): downloads,
+// and the reader and players opening them. Any other route shows
+// Downloads while offline.
+const OFFLINE_ROUTES = new Set(['downloads', 'read', 'listen', 'play']);
+
+// Jellio's service worker (sw.js): keeps the app itself on this device
+// so it opens without the server. IndexHtmlPatchService also swaps it in
+// for jellyfin-web's; registering here covers a page where that never ran.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker
+    .register('/Jellio/frontend/sw.js', { scope: new URL('./', window.location.href).pathname })
+    .catch(function (err) {
+      console.warn('Jellio: offline support unavailable', err);
+    });
+}
+
+// Whether the server answers, settled before the first render so an
+// offline start goes straight to Downloads instead of failing screens.
+const connectivityReady = checkServer();
+
+document.addEventListener('jellio:connectivity', function (event) {
+  const offline = event.detail && event.detail.offline;
+  showToast(offline ? 'Offline. Your downloads still work.' : 'Back online.');
+  // The reader and players keep going either way; other screens
+  // re-render for the new state.
+  const path = parseRoute().path;
+  if (path === 'read' || path === 'listen' || path === 'play') return;
+  lastRenderedRouteKey = null;
+  sync();
+});
 
 // The inner shell used to be built only at the moment #jellioRoot itself
 // was first created, on the assumption a node already in the document
@@ -676,7 +710,10 @@ async function runSync() {
       return;
     }
 
-    if (!preloaded) {
+    await connectivityReady;
+    const offline = isOffline();
+
+    if (!preloaded && !offline) {
       preloaded = true;
       await preloadInitialData();
       // Real regression, found live: awaited right here, this sat
@@ -704,7 +741,10 @@ async function runSync() {
       scheduleNavRecheck();
     }
 
-    const route = parseRoute();
+    let route = parseRoute();
+    if (offline && !OFFLINE_ROUTES.has(route.path)) {
+      route = { path: 'downloads', params: new URLSearchParams() };
+    }
     const screen = SCREENS[route.path];
 
     if (!screen) {

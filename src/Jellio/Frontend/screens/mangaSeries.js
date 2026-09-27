@@ -4,6 +4,9 @@
 // its read state.
 import { getBookshelfItems, getAllReadingProgress, getImageUrl } from '../runtime/api.js';
 import { groupMangaSeries, chapterState, resumePoint, useSeriesCover } from '../components/mangaSeries.js';
+import { buildDownloadButton, downloadBook } from '../components/downloads.js';
+import { findAnyDownload } from '../runtime/offline.js';
+import { showToast } from '../components/toast.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -103,6 +106,32 @@ export function renderMangaSeries(root, params, parentId) {
     });
     actions.appendChild(primary);
 
+    // Everything not read yet, for reading offline (components/downloads.js).
+    const unread = chapters.filter((chapter) => !chapterState(chapter, progress).read);
+    if (unread.length) {
+      const save = el('button', 'jellio-manga-series-order');
+      save.type = 'button';
+      save.appendChild(el('span', 'material-icons download'));
+      save.appendChild(el('span', null, 'Download unread (' + unread.length + ')'));
+      save.addEventListener('click', async function () {
+        save.disabled = true;
+        let queued = 0;
+        for (const chapter of unread) {
+          const existing = await findAnyDownload(chapter.Id);
+          if (existing && existing.Status !== 'error') continue;
+          try {
+            await downloadBook(chapter, 'manga');
+            queued += 1;
+          } catch (err) {
+            console.warn('Jellio: could not queue a chapter', err);
+          }
+        }
+        showToast(queued ? 'Downloading ' + queued + (queued === 1 ? ' chapter.' : ' chapters.') : 'Unread chapters are already downloaded.');
+        save.disabled = false;
+      });
+      actions.appendChild(save);
+    }
+
     const order = el('button', 'jellio-manga-series-order');
     order.type = 'button';
     actions.appendChild(order);
@@ -139,6 +168,8 @@ export function renderMangaSeries(root, params, parentId) {
           openChapter(item);
         });
         row.appendChild(button);
+        const download = buildDownloadButton(item, { bookKind: 'manga', compact: true, className: 'jellio-manga-chapter-download' });
+        if (download) row.appendChild(download);
         list.appendChild(row);
       });
     }

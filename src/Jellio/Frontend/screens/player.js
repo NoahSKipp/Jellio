@@ -13,6 +13,8 @@
 // before writing this, see runtime/api.js's own getIntroSkipperSegments)
 // rather than jellyfin-web's own player chrome hooks, unreachable here
 // for the same reason as everything else in this file.
+import { isOffline } from '../runtime/offline.js';
+import { renderOfflinePlayer } from './offlinePlayer.js';
 import {
   getItemDetails,
   getPlaybackInfo,
@@ -371,6 +373,10 @@ export async function renderPlayer(root, params) {
     renderPlaybackError(root, null, 'Nothing to play.');
     return undefined;
   }
+
+  // Downloaded videos (screens/offlinePlayer.js): when the server can't
+  // be reached, or when opened from Downloads.
+  if (params.get('local') === '1' || isOffline()) return renderOfflinePlayer(root, params);
 
   // Real, explicit signal (components/groupWatchInvites.js's own toast,
   // components/groupWatch.js's and this screen's own chat watch cards,

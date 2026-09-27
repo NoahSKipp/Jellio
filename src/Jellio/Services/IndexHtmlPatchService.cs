@@ -253,6 +253,22 @@ public class IndexHtmlPatchService(
     // full user object can still finish after app.js's own first sync().
     private const string EarlySessionCaptureScript =
         @"(function () {
+  // Jellio's service worker (Frontend/sw.js, offline support) takes the
+  // place of jellyfin-web's: one worker per page scope, and Jellio's loads
+  // jellyfin-web's own inside it. Swapped here, before jellyfin-web's
+  // bundle asks for its own.
+  if (navigator.serviceWorker && navigator.serviceWorker.register) {
+    var originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+    navigator.serviceWorker.register = function (url, options) {
+      if (String(url).indexOf('serviceworker.js') !== -1) {
+        var scope = (options && options.scope) || new URL('./', window.location.href).pathname;
+        return originalRegister('/Jellio/frontend/sw.js', { scope: scope });
+      }
+      return originalRegister(url, options);
+    };
+  }
+})();
+(function () {
   var STORAGE_PREFIX = 'jellio_auth::';
   var SESSION_KEY = STORAGE_PREFIX + 'session';
   var SERVER_ADDRESS_KEY = STORAGE_PREFIX + 'serverAddress';

@@ -18,6 +18,7 @@ import {
   TICKS_PER_SECOND,
   reportReadingSession,
 } from '../runtime/api.js';
+import { findDownload, getOfflineObjectUrl, getLocalProgress, setLocalProgress } from '../runtime/offline.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
@@ -184,11 +185,23 @@ export async function renderListen(root, params) {
     const [tracks, pluginTimeline] = await Promise.all([getAudiobookTracks(item), getAudiobookLibraryChapters(itemId)]);
     timeline = buildTimeline(tracks, pluginTimeline);
   } catch (err) {
+    // Offline and not downloaded ends up here too.
     console.warn('Jellio: could not open audiobook', err);
     renderRetry(root, 'Could not open this audiobook.', function () {
       renderListen(root, params);
     });
     return;
+  }
+
+  // A downloaded audiobook plays from this device (runtime/offline.js),
+  // online or not: trackId -> object URL.
+  const localTracks = {};
+  const download = await findDownload(itemId).catch(() => null);
+  if (download) {
+    for (const entry of timeline.tracks) {
+      const url = await getOfflineObjectUrl(download.Id, 'track-' + String(entry.item.Id).replace(/-/g, '').toLowerCase());
+      if (url) localTracks[entry.item.Id] = url;
+    }
   }
 
   if (!timeline.tracks.length) {
@@ -348,7 +361,16 @@ export async function renderListen(root, params) {
     const entry = currentTrack();
     const ticks = finishedTrack && entry ? Math.floor(entry.durationSec * TICKS_PER_SECOND) : positionTicks();
     reportPlaybackStopped(reportedTrackId, reportedTrackId, ticks);
+    saveLocalPosition();
     reportedTrackId = null;
+  }
+
+  // A downloaded book remembers its place on this device too, so it
+  // resumes right even before the server hears about it.
+  function saveLocalPosition() {
+    if (!download) return;
+    const entry = currentTrack();
+    if (entry) setLocalProgress(download.Id, { TrackId: entry.item.Id, Offset: Math.max(0, bookTime() - entry.startSec) });
   }
 
   function loadTrack(index, offset, autoplay) {
@@ -359,7 +381,7 @@ export async function renderListen(root, params) {
     pendingOffset = offset || 0;
     pendingPlay = autoplay;
     usingFallback = false;
-    audio.src = buildAudioStreamUrl(entry.item.Id, false);
+    audio.src = localTracks[entry.item.Id] || buildAudioStreamUrl(entry.item.Id, false);
     audio.load();
   }
 
@@ -544,6 +566,7 @@ export async function renderListen(root, params) {
   progressTimer = window.setInterval(function () {
     if (reportedTrackId && !audio.paused) {
       reportPlaybackProgress(reportedTrackId, reportedTrackId, positionTicks(), false);
+      saveLocalPosition();
     }
   }, PROGRESS_REPORT_MS);
 
@@ -692,9 +715,20 @@ export async function renderListen(root, params) {
   paintPlayState();
 
   const resume = resumePoint(timeline);
+  const localPosition = download ? await getLocalProgress(download.Id) : null;
+  const localIndex = localPosition ? timeline.tracks.findIndex((entry) => entry.item.Id === localPosition.TrackId) : -1;
+  const serverLatest = Math.max.apply(
+    null,
+    timeline.tracks.map((entry) => Date.parse((entry.item.UserData && entry.item.UserData.LastPlayedDate) || '') || 0),
+  );
+  if (localIndex !== -1 && Date.parse(localPosition.UpdatedAt) > serverLatest) {
+    resume.index = localIndex;
+    resume.offset = localPosition.Offset || 0;
+  }
   loadTrack(resume.index, resume.offset, false);
 
   return function cleanup() {
+    Object.keys(localTracks).forEach((id) => URL.revokeObjectURL(localTracks[id]));
     flushListening();
     document.removeEventListener('visibilitychange', onVisibility);
     tornDown = true;
