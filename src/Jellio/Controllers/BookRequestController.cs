@@ -274,14 +274,23 @@ public partial class BookRequestController(
         {
             var wantedTitle = body.Title.Trim();
             var term = string.IsNullOrWhiteSpace(body.Author) ? wantedTitle : wantedTitle + " " + body.Author.Trim();
-            var byTitle = await chaptarrClient.LookupAsync(term, bookType, cancellationToken).ConfigureAwait(false);
             var wanted = BookMetadataService.TitleKeysFor(wantedTitle).ToHashSet(StringComparer.Ordinal);
+            var byTitle = await chaptarrClient.LookupAsync(term, bookType, cancellationToken).ConfigureAwait(false);
             book = byTitle?.OfType<JsonObject>()
                 .FirstOrDefault(b => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains));
+
+            // Audiobook metadata often spells the author differently (or
+            // lists narrators), so try the title alone too.
+            if (book is null && term != wantedTitle)
+            {
+                byTitle = await chaptarrClient.LookupAsync(wantedTitle, bookType, cancellationToken).ConfigureAwait(false);
+                book = byTitle?.OfType<JsonObject>()
+                    .FirstOrDefault(b => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains));
+            }
         }
         if (book is null)
         {
-            return Ok(new RequestBookResult("error", "Chaptarr could not find this book"));
+            return Ok(new RequestBookResult("error", bookType == "audiobook" ? "Chaptarr found no audiobook edition of this book" : "Chaptarr found no ebook edition of this book"));
         }
 
         if (ChaptarrClient.IsWanted(book, bookType))
@@ -308,6 +317,30 @@ public partial class BookRequestController(
         }
 
         PrepareForAdd(book);
+
+        // A new author needs this format's quality profile in the add call
+        // itself: Chaptarr validates that before it would fill one in from
+        // the root folder. Take them from the format's default root folder.
+        if (book["author"] is JsonObject newAuthor && ChaptarrClient.ReadId(newAuthor["id"]) <= 0)
+        {
+            var rootFolders = await chaptarrClient.GetRootFoldersAsync(cancellationToken).ConfigureAwait(false);
+            var folder = rootFolders is null ? null : ChaptarrClient.PickRootFolder(rootFolders, bookType);
+            if (folder is null)
+            {
+                return Ok(new RequestBookResult(
+                    "error",
+                    "Chaptarr has no root folder with an " + bookType + " quality profile. Set one under Settings, Media Management, Root Folders in Chaptarr."));
+            }
+
+            newAuthor[bookType + "QualityProfileId"] = folder.Value.QualityProfileId;
+            if (folder.Value.MetadataProfileId is { } metadataProfileId)
+            {
+                newAuthor[bookType + "MetadataProfileId"] = metadataProfileId;
+            }
+
+            newAuthor[bookType + "RootFolderPath"] = folder.Value.Path;
+        }
+
         var result = await chaptarrClient.AddBookAsync(book, bookType, cancellationToken).ConfigureAwait(false);
 
         var title = ChaptarrClient.ReadString(book["title"]) ?? workId;
