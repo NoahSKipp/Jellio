@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.33.2] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Say why the reader couldn't open a book\n- Show the download menu, and download whole seasons from series pages\n",
+        "checksum": "3a34036c9b1353084aa4079cf701c572",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.2/jellio_1.33.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T21:40:35Z",
+        "version": "1.33.2"
+      },
+      {
         "changelog": "## [1.33.1] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Open downloaded manga and books offline\n",
         "checksum": "46ea256caba87cb3f00c5931fc9f43d1",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.1/jellio_1.33.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-21T20:20:15Z",
         "version": "1.10.4"
-      },
-      {
-        "changelog": "## [1.10.3] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Log server-side analysis at Information, force manual re-attempts\n",
-        "checksum": "29d807ff9891fc3b1c48b1bfd64d9892",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.3/jellio_1.10.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-21T19:47:16Z",
-        "version": "1.10.3"
       }
     ]
   }
