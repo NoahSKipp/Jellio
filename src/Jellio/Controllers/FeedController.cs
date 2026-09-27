@@ -114,7 +114,9 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
 
             foreach (var badge in AchievementCatalog.All)
             {
-                if (!stats.UnlockedBadgeIds.Contains(badge.Id) || !stats.UnlockedAt.TryGetValue(badge.Id, out var unlockedAt))
+                if (!stats.UnlockedBadgeIds.Contains(badge.Id)
+                    || stats.HiddenFeedBadgeIds.Contains(badge.Id)
+                    || !stats.UnlockedAt.TryGetValue(badge.Id, out var unlockedAt))
                 {
                     continue;
                 }

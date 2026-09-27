@@ -11,25 +11,37 @@ namespace Jellio.Services.Achievements;
 // the rest of a feed out under a single sitting.
 public static class ActivityGrouping
 {
+    // The last index of the group starting at start: a binge runs on
+    // while the next entry is the same series and season on the same UTC
+    // day. Removing an entry removes this whole span, so what's removed is
+    // exactly the row that was shown.
+    public static int SpanEnd(List<ActivityEntry> activity, int start)
+    {
+        var first = activity[start];
+        var end = start;
+        if (first.ItemType == "Episode" && first.SeriesName is not null)
+        {
+            while (
+                end + 1 < activity.Count
+                && activity[end + 1].ItemType == "Episode"
+                && activity[end + 1].SeriesName == first.SeriesName
+                && activity[end + 1].SeasonNumber == first.SeasonNumber
+                && activity[end + 1].CompletedAtUtc.Date == first.CompletedAtUtc.Date)
+            {
+                end++;
+            }
+        }
+
+        return end;
+    }
+
     public static IEnumerable<GroupedActivityEntry> Group(List<ActivityEntry> activity)
     {
         var i = 0;
         while (i < activity.Count)
         {
             var first = activity[i];
-            var end = i;
-            if (first.ItemType == "Episode" && first.SeriesName is not null)
-            {
-                while (
-                    end + 1 < activity.Count
-                    && activity[end + 1].ItemType == "Episode"
-                    && activity[end + 1].SeriesName == first.SeriesName
-                    && activity[end + 1].SeasonNumber == first.SeasonNumber
-                    && activity[end + 1].CompletedAtUtc.Date == first.CompletedAtUtc.Date)
-                {
-                    end++;
-                }
-            }
+            var end = SpanEnd(activity, i);
 
             var episodeNumbers = activity
                 .Skip(i)

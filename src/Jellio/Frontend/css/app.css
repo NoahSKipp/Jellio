@@ -10175,3 +10175,42 @@
     align-items: flex-start;
   }
 }
+
+/* screens/feed.js: remove button on the reader's own entries (and on
+   every entry for an admin). */
+.jellio-feed-item {
+  position: relative;
+}
+
+.jellio-feed-item > .jellio-feed-row {
+  padding-right: 3em;
+}
+
+.jellio-feed-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--jellio-text-tertiary);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.jellio-feed-remove .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-feed-remove:hover,
+.jellio-feed-remove:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--jellio-text-color);
+  opacity: 1;
+}

@@ -71,6 +71,10 @@ public class UserAchievementStats
     // full reset endpoint below it ever touch this set.
     public HashSet<string> SuppressedBadgeIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // Badge unlocks removed from the Feed by their owner or an admin. The
+    // badge itself stays unlocked; only the Feed entry goes.
+    public HashSet<string> HiddenFeedBadgeIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     // The profile page's own real feed, newest first, capped in
     // AchievementService rather than here: real GET /Users/{id}/Items
     // (getRecentlyCompleted's own real endpoint) only answers for the
