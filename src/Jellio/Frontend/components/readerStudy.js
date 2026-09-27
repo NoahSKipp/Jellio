@@ -52,12 +52,59 @@ function bookLangKey(itemId) {
   return 'jellio-reader-lang:' + itemId;
 }
 
+// A book's own language when the reader set one (or translation learned
+// it), else the default from Settings, Reading: "auto" lets DeepL detect
+// it from the text.
 export function readBookLanguage(itemId) {
   try {
     const saved = localStorage.getItem(bookLangKey(itemId));
-    return saved && (saved === 'auto' || LANGUAGES.indexOf(saved) !== -1) ? saved : 'auto';
+    return saved && (saved === 'auto' || LANGUAGES.indexOf(saved) !== -1) ? saved : readDefaultBookLanguage();
   } catch (err) {
     return 'auto';
+  }
+}
+
+const DEFAULT_BOOK_LANG_KEY = 'jellio-reader-default-lang';
+
+export function readDefaultBookLanguage() {
+  try {
+    const saved = localStorage.getItem(DEFAULT_BOOK_LANG_KEY);
+    return saved && LANGUAGES.indexOf(saved) !== -1 ? saved : 'auto';
+  } catch (err) {
+    return 'auto';
+  }
+}
+
+export function writeDefaultBookLanguage(lang) {
+  try {
+    if (lang && lang !== 'auto') localStorage.setItem(DEFAULT_BOOK_LANG_KEY, lang);
+    else localStorage.removeItem(DEFAULT_BOOK_LANG_KEY);
+  } catch (err) {
+    // Only a convenience.
+  }
+}
+
+// The language translations go into: the reader's own setting
+// (screens/reader.js keeps it in its settings under this key), so
+// Settings, Reading and the reader's panel change the same thing.
+const READER_SETTINGS_KEY = 'jellio-reader-settings';
+
+export function readTargetLanguage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(READER_SETTINGS_KEY) || 'null') || {};
+    return LANGUAGES.indexOf(saved.targetLang) !== -1 ? saved.targetLang : defaultTargetLanguage();
+  } catch (err) {
+    return defaultTargetLanguage();
+  }
+}
+
+export function writeTargetLanguage(lang) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(READER_SETTINGS_KEY) || 'null') || {};
+    saved.targetLang = lang;
+    localStorage.setItem(READER_SETTINGS_KEY, JSON.stringify(saved));
+  } catch (err) {
+    // Only a convenience.
   }
 }
 

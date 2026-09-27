@@ -46,6 +46,14 @@ import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components
 import { UPNEXT_TRIGGER_OPTIONS, getUpNextTriggerSeconds, setUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
+import {
+  LANGUAGES,
+  languageLabel,
+  readTargetLanguage,
+  writeTargetLanguage,
+  readDefaultBookLanguage,
+  writeDefaultBookLanguage,
+} from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
 
 // One grouped list card: an icon'd header (skipped entirely when
@@ -668,9 +676,58 @@ function buildMihonImportCard() {
   return card;
 }
 
-function buildReadingCategory() {
+// Translation and dictionary defaults for the reader's study tools
+// (components/readerStudy.js). Kept on this device, like the rest of the
+// reader's settings; each book can still override its own language.
+function buildTranslationCard(translationEnabled) {
+  const { card, body } = buildCard(
+    'translate',
+    'Translation and dictionary',
+    'Select a word or passage while reading to look it up or translate it.',
+  );
+  const languages = LANGUAGES.map((code) => ({ value: code, label: languageLabel(code) })).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+
+  if (translationEnabled) {
+    body.appendChild(
+      buildSelectRow(null, 'Translate into', 'The language translations and vocabulary cards are written in.', languages, readTargetLanguage(), function (value, select, status) {
+        writeTargetLanguage(value);
+        status.textContent = 'Saved.';
+      }),
+    );
+  } else {
+    body.appendChild(
+      buildRow(null, 'Translation is off', 'An admin can turn it on by adding a DeepL API key in Jellio’s plugin settings. Dictionary lookups work without it.', null),
+    );
+  }
+
+  body.appendChild(
+    buildSelectRow(
+      null,
+      'Books are written in',
+      'Detect automatically works out each book’s language from its text the first time you translate. Pick one if you mostly read in one language; the reader can still change it per book.',
+      [{ value: 'auto', label: 'Detect automatically' }].concat(languages),
+      readDefaultBookLanguage(),
+      function (value, select, status) {
+        writeDefaultBookLanguage(value);
+        status.textContent = 'Saved. Applies to books you haven’t set a language for.';
+      },
+    ),
+  );
+
+  body.appendChild(
+    buildActionRow('style', 'Vocabulary deck', 'Review the words you saved while reading, or export them to Anki.', function () {
+      navigateTo('#/vocab');
+    }),
+  );
+  return card;
+}
+
+function buildReadingCategory(config) {
   const wrap = el('div', 'jellio-settings-category');
-  wrap.appendChild(buildMihonImportCard());
+  wrap.appendChild(buildTranslationCard(!!(config && config.TranslationEnabled)));
+  if (config && config.MangaRequestsEnabled) wrap.appendChild(buildMihonImportCard());
   return wrap;
 }
 
@@ -716,6 +773,7 @@ function buildAboutCategory() {
 const CATEGORY_ICONS = {
   account: 'person',
   playback: 'play_circle',
+  reading: 'menu_book',
   sessions: 'devices',
   about: 'info',
 };
@@ -757,9 +815,13 @@ export async function renderSettings(root) {
     },
     { id: 'about', label: 'About', build: buildAboutCategory },
   ];
-  if (config && config.MangaRequestsEnabled) {
-    categories.splice(2, 0, { id: 'reading', label: 'Reading', build: buildReadingCategory });
-  }
+  categories.splice(2, 0, {
+    id: 'reading',
+    label: 'Reading',
+    build: function () {
+      return buildReadingCategory(config);
+    },
+  });
 
   const layout = el('div', 'jellio-settings-layout');
   const nav = el('nav', 'jellio-settings-nav');
