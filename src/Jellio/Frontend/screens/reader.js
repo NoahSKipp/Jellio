@@ -1207,6 +1207,13 @@ function settingGroup(label, control) {
   return group;
 }
 
+// The reason, shown with the failure: offline problems are otherwise
+// impossible to tell apart from the outside.
+function failureDetail(err) {
+  const reason = err && (err.message || err.name);
+  return reason ? ' (' + String(reason).slice(0, 160) + ')' : '';
+}
+
 export async function renderReader(root, params) {
   const itemId = params.get('id');
   root.textContent = '';
@@ -1232,7 +1239,7 @@ export async function renderReader(root, params) {
       root,
       err && err.status === 415
         ? 'This book’s format can’t be opened in the reader yet. EPUB, PDF, CBZ and CBR are supported.'
-        : 'Could not open this book.',
+        : 'Could not open this book.' + failureDetail(err),
       function () {
         renderReader(root, params);
       },
@@ -1492,7 +1499,7 @@ export async function renderReader(root, params) {
         : await openEpub(stage, file.buffer, latestLocator, settings, handlers);
   } catch (err) {
     console.warn('Jellio: could not render book', err);
-    renderRetry(root, 'Could not open this book.', function () {
+    renderRetry(root, 'Could not open this book.' + failureDetail(err), function () {
       renderReader(root, params);
     });
     return;
