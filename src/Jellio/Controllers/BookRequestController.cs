@@ -71,7 +71,15 @@ public partial class BookRequestController(
             return BadRequest("mediaType must be ebook or audiobook");
         }
 
+        // A scoped search that finds nothing is retried across formats:
+        // Chaptarr only keeps remote results already tagged with the
+        // format, and the request sets the format itself.
         var lookup = await chaptarrClient.LookupAsync(q.Trim(), string.IsNullOrEmpty(scopedType) ? null : scopedType, cancellationToken).ConfigureAwait(false);
+        if (lookup is { Count: 0 } && !string.IsNullOrEmpty(scopedType))
+        {
+            lookup = await chaptarrClient.LookupAsync(q.Trim(), null, cancellationToken).ConfigureAwait(false);
+        }
+
         if (lookup is null)
         {
             return StatusCode(502, "Chaptarr search failed or is not configured");
@@ -261,33 +269,38 @@ public partial class BookRequestController(
             return BadRequest("WorkId must be a provider-prefixed id such as hc:12345");
         }
 
-        var lookup = await chaptarrClient.LookupAsync(workId, bookType, cancellationToken).ConfigureAwait(false);
+        // Chaptarr's lookup drops every remote result whose format isn't the
+        // requested one, and a work looked up by id often comes back as the
+        // other format only. The add call sets the format itself
+        // (?mediaType=), so any record of the work will do: this format's
+        // first, then any.
+        var lookup = await LookupEitherFormatAsync(workId, bookType, cancellationToken).ConfigureAwait(false);
         if (lookup is null)
         {
             return StatusCode(502, "Chaptarr lookup failed or is not configured");
         }
 
-        var book = lookup.OfType<JsonObject>()
-            .FirstOrDefault(b => string.Equals(ChaptarrClient.ReadString(b["foreignBookId"]), workId, StringComparison.OrdinalIgnoreCase))
-            ?? lookup.OfType<JsonObject>().FirstOrDefault();
+        var book = PickRecord(lookup.Where(b => string.Equals(ChaptarrClient.ReadString(b["foreignBookId"]), workId, StringComparison.OrdinalIgnoreCase)), bookType)
+            ?? PickRecord(lookup, bookType);
         if (book is null && !string.IsNullOrWhiteSpace(body.Title))
         {
             var wantedTitle = body.Title.Trim();
-            var term = string.IsNullOrWhiteSpace(body.Author) ? wantedTitle : wantedTitle + " " + body.Author.Trim();
             var wanted = BookMetadataService.TitleKeysFor(wantedTitle).ToHashSet(StringComparer.Ordinal);
-            var byTitle = await chaptarrClient.LookupAsync(term, bookType, cancellationToken).ConfigureAwait(false);
-            book = byTitle?.OfType<JsonObject>()
-                .FirstOrDefault(b => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains));
+            bool Matches(JsonObject b) => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains);
 
-            // Audiobook metadata often spells the author differently (or
-            // lists narrators), so try the title alone too.
+            var term = string.IsNullOrWhiteSpace(body.Author) ? wantedTitle : wantedTitle + " " + body.Author.Trim();
+            var byTitle = await LookupEitherFormatAsync(term, bookType, cancellationToken).ConfigureAwait(false);
+            book = PickRecord(byTitle?.Where(Matches) ?? [], bookType);
+
+            // Metadata often credits the author differently (or lists
+            // narrators), so try the title alone too.
             if (book is null && term != wantedTitle)
             {
-                byTitle = await chaptarrClient.LookupAsync(wantedTitle, bookType, cancellationToken).ConfigureAwait(false);
-                book = byTitle?.OfType<JsonObject>()
-                    .FirstOrDefault(b => BookMetadataService.TitleKeysFor(ChaptarrClient.ReadString(b["title"])).Any(wanted.Contains));
+                byTitle = await LookupEitherFormatAsync(wantedTitle, bookType, cancellationToken).ConfigureAwait(false);
+                book = PickRecord(byTitle?.Where(Matches) ?? [], bookType);
             }
         }
+
         if (book is null)
         {
             return Ok(new RequestBookResult("error", bookType == "audiobook" ? "Chaptarr found no audiobook edition of this book" : "Chaptarr found no ebook edition of this book"));
@@ -352,6 +365,46 @@ public partial class BookRequestController(
 
         logger.LogWarning("Jellio: {User}'s {BookType} request for {Title} ({WorkId}) failed: {Message}", requester, bookType, title, workId, result.Message);
         return Ok(new RequestBookResult("error", result.Message));
+    }
+
+    // This format's results first; when there are none, every format.
+    private async Task<List<JsonObject>?> LookupEitherFormatAsync(string term, string bookType, CancellationToken cancellationToken)
+    {
+        var scoped = await chaptarrClient.LookupAsync(term, bookType, cancellationToken).ConfigureAwait(false);
+        if (scoped is { Count: > 0 })
+        {
+            return scoped.OfType<JsonObject>().ToList();
+        }
+
+        var any = await chaptarrClient.LookupAsync(term, null, cancellationToken).ConfigureAwait(false);
+        return any?.OfType<JsonObject>().ToList() ?? (scoped is null ? null : []);
+    }
+
+    // A record of this format if there is one. A record of the other format
+    // that Chaptarr already stores is copied without its id, so the add
+    // creates this format's instance instead of pointing at the other one.
+    private static JsonObject? PickRecord(IEnumerable<JsonObject> records, string bookType)
+    {
+        var list = records.ToList();
+        var sameFormat = list.FirstOrDefault(b => string.Equals(ChaptarrClient.ReadString(b["mediaType"]), bookType, StringComparison.OrdinalIgnoreCase));
+        if (sameFormat is not null)
+        {
+            return sameFormat;
+        }
+
+        var other = list.FirstOrDefault();
+        if (other is null)
+        {
+            return null;
+        }
+
+        var copy = (JsonObject)other.DeepClone();
+        if (ChaptarrClient.ReadId(copy["id"]) > 0)
+        {
+            copy.Remove("id");
+        }
+
+        return copy;
     }
 
     // Monitor this one book and search for it now. Author-level folders and
