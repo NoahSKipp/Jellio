@@ -2989,6 +2989,12 @@ export function deleteActivityEntry(userId, itemId, completedAtUtc) {
   );
 }
 
+// Takes a badge unlock off the Feed; the badge itself stays unlocked.
+// The owner or an admin.
+export function hideFeedBadge(userId, badgeId) {
+  return deleteJson('/Jellio/achievements/' + userId + '/feed-badges/' + encodeURIComponent(badgeId));
+}
+
 // Relocks one badge for another user (UserAchievementStats.
 // SuppressedBadgeIds's own header covers why this stays locked
 // afterward instead of silently reappearing on their next completed

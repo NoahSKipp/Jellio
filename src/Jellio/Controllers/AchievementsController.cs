@@ -124,35 +124,35 @@ public class AchievementsController(AchievementStore store, AchievementService a
     // calls already lean on it) never needed one before this, and two
     // real Guid/DateTime values round trip through a query string just
     // as well without touching that shared helper's own signature.
+    // Removes one activity row (a whole collapsed binge, see
+    // ActivityGrouping.SpanEnd) from a profile and the Feed. A reader can
+    // remove their own; an admin anyone's. completedAtUtc is the exact
+    // value the row came with (CompletedAtUtc, or the Feed's
+    // OccurredAtUtc), matched by equality. Counters and badges stay.
     [HttpDelete("{userId:guid}/activity")]
-    [Authorize(Policy = "RequiresElevation")]
     public IActionResult DeleteActivity(Guid userId, [FromQuery] Guid itemId, [FromQuery] DateTime completedAtUtc)
     {
+        if (!CanManage(userId))
+        {
+            return Forbid();
+        }
+
+        // Model binding turns a "...Z" timestamp into local time; compare
+        // in UTC, to the millisecond.
+        var wanted = completedAtUtc.Kind == DateTimeKind.Local ? completedAtUtc.ToUniversalTime() : completedAtUtc;
         var found = false;
         var stats = store.Update(userId, s =>
         {
             var start = s.RecentActivity.FindIndex(entry =>
-                entry.ItemId == itemId && entry.CompletedAtUtc == completedAtUtc);
+                entry.ItemId == itemId
+                && Math.Abs((entry.CompletedAtUtc - wanted).Ticks) < TimeSpan.TicksPerMillisecond);
             if (start < 0)
             {
                 return;
             }
 
             found = true;
-            var first = s.RecentActivity[start];
-            var end = start;
-            if (first.ItemType == "Episode" && first.SeriesName is not null)
-            {
-                while (
-                    end + 1 < s.RecentActivity.Count
-                    && s.RecentActivity[end + 1].ItemType == "Episode"
-                    && s.RecentActivity[end + 1].SeriesName == first.SeriesName
-                    && s.RecentActivity[end + 1].CompletedAtUtc.Date == first.CompletedAtUtc.Date)
-                {
-                    end++;
-                }
-            }
-
+            var end = ActivityGrouping.SpanEnd(s.RecentActivity, start);
             s.RecentActivity.RemoveRange(start, end - start + 1);
         });
 
@@ -163,6 +163,28 @@ public class AchievementsController(AchievementStore store, AchievementService a
 
         return Ok(Build(userId, stats));
     }
+
+    // Takes a badge unlock off the Feed without relocking the badge.
+    [HttpDelete("{userId:guid}/feed-badges/{badgeId}")]
+    public IActionResult HideFeedBadge(Guid userId, string badgeId)
+    {
+        if (!CanManage(userId))
+        {
+            return Forbid();
+        }
+
+        if (AchievementCatalog.All.All(badge => badge.Id != badgeId))
+        {
+            return NotFound("Unknown badge id");
+        }
+
+        store.Update(userId, s => s.HiddenFeedBadgeIds.Add(badgeId));
+        return NoContent();
+    }
+
+    // The reader themselves, or a Jellyfin administrator.
+    private bool CanManage(Guid userId) =>
+        userId == GetUserId() || User.IsInRole("Administrator");
 
     // Real feedback: an admin correcting a mistaken credit (a shared
     // account, a real accidental mark-as-played) needs this badge to
@@ -229,6 +251,7 @@ public class AchievementsController(AchievementStore store, AchievementService a
             s.UnlockedBadgeIds = fresh.UnlockedBadgeIds;
             s.UnlockedAt = fresh.UnlockedAt;
             s.SuppressedBadgeIds = fresh.SuppressedBadgeIds;
+            s.HiddenFeedBadgeIds = fresh.HiddenFeedBadgeIds;
             s.RecentActivity = fresh.RecentActivity;
             s.BooksCompleted = fresh.BooksCompleted;
             s.AudiobooksCompleted = fresh.AudiobooksCompleted;

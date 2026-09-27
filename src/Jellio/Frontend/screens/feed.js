@@ -6,7 +6,16 @@
 // per user version of the same real watch data). A private user's own
 // entries, watch or badge, are already gone by the time this file sees
 // them, server side, nothing to filter here.
-import { getActivityFeed, getUserImageUrl, getImageUrl, getBookCoverUrl } from '../runtime/api.js';
+import {
+  getActivityFeed,
+  getUserImageUrl,
+  getImageUrl,
+  getBookCoverUrl,
+  getCurrentUser,
+  deleteActivityEntry,
+  hideFeedBadge,
+} from '../runtime/api.js';
+import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
@@ -153,9 +162,53 @@ export async function renderFeed(root) {
     return;
   }
 
+  // A reader can remove their own entries; an admin anyone's.
+  const viewer = await getCurrentUser().catch(() => null);
+  const isAdmin = !!(viewer && viewer.Policy && viewer.Policy.IsAdministrator);
+  const me = String(getCurrentUserId() || '').replace(/-/g, '');
+
   const list = el('div', 'jellio-feed-list');
   entries.forEach(function (entry) {
-    list.appendChild(buildFeedRow(entry));
+    const row = buildFeedRow(entry);
+    const own = String(entry.UserId).replace(/-/g, '') === me;
+    if (!own && !isAdmin) {
+      list.appendChild(row);
+      return;
+    }
+    const item = el('div', 'jellio-feed-item');
+    item.appendChild(row);
+    item.appendChild(buildRemoveButton(entry, own, item));
+    list.appendChild(item);
   });
   root.appendChild(list);
+}
+
+function buildRemoveButton(entry, own, item) {
+  const button = el('button', 'jellio-feed-remove');
+  button.type = 'button';
+  const label = entry.Kind === 'Badge' ? 'Remove this badge from the feed' : 'Remove this activity';
+  button.setAttribute('aria-label', label);
+  button.title = own ? label : label + ' (admin)';
+  button.appendChild(el('span', 'material-icons close'));
+  button.addEventListener('click', function () {
+    const question =
+      entry.Kind === 'Badge'
+        ? 'Remove this badge from the feed? The badge stays unlocked.'
+        : 'Remove this activity from the feed and ' + (own ? 'your' : entry.UserName + '’s') + ' profile?';
+    if (!window.confirm(question)) return;
+    button.disabled = true;
+    const removal =
+      entry.Kind === 'Badge'
+        ? hideFeedBadge(entry.UserId, entry.BadgeId)
+        : deleteActivityEntry(entry.UserId, entry.ItemId, entry.OccurredAtUtc);
+    removal
+      .then(function () {
+        item.remove();
+      })
+      .catch(function (err) {
+        console.warn('Jellio: could not remove the feed entry', err);
+        button.disabled = false;
+      });
+  });
+  return button;
 }

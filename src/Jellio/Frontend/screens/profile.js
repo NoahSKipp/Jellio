@@ -235,7 +235,7 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
       lockButton.type = 'button';
       lockButton.addEventListener('click', function (event) {
         event.stopPropagation();
-        if (!window.confirm('Lock "' + badge.Name + '" again for this user?')) return;
+        if (!window.confirm('Lock "' + badge.Name + '" again?')) return;
         lockButton.disabled = true;
         lockBadgeForUser(userId, badge.Id)
           .then(onChanged)
@@ -252,7 +252,7 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
   return section;
 }
 
-function buildActivitySection(entries, isAdmin, userId, onChanged) {
+function buildActivitySection(entries, canRemove, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
   section.appendChild(el('h2', 'jellio-row-title', 'Recent activity'));
   if (!entries.length) {
@@ -264,11 +264,11 @@ function buildActivitySection(entries, isAdmin, userId, onChanged) {
     const item = el('li', 'jellio-profile-activity-item');
     item.appendChild(el('span', 'jellio-profile-activity-text', describeActivity(entry)));
     item.appendChild(el('span', 'jellio-profile-activity-time', formatRelativeTime(entry.CompletedAtUtc)));
-    if (isAdmin) {
-      const deleteButton = el('button', 'jellio-profile-admin-delete', 'Delete');
+    if (canRemove) {
+      const deleteButton = el('button', 'jellio-profile-admin-delete', 'Remove');
       deleteButton.type = 'button';
       deleteButton.addEventListener('click', function () {
-        if (!window.confirm('Delete this activity entry? This cannot be undone.')) return;
+        if (!window.confirm('Remove this entry from the profile and the feed? Stats and badges stay as they are.')) return;
         deleteButton.disabled = true;
         deleteActivityEntry(userId, entry.ItemId, entry.CompletedAtUtc)
           .then(onChanged)
@@ -318,7 +318,7 @@ export async function renderProfile(root, params) {
   const currentUserId = getCurrentUserId();
   const userId = params.get('id') || currentUserId;
   if (!userId) return;
-  const isOwner = userId === currentUserId;
+  const isOwner = String(userId).replace(/-/g, '').toLowerCase() === String(currentUserId || '').replace(/-/g, '').toLowerCase();
 
   renderLoading(root);
 
@@ -331,7 +331,7 @@ export async function renderProfile(root, params) {
       getUserById(userId),
       getProfileForUser(userId),
       getAchievementsForUser(userId),
-      isOwner ? Promise.resolve(null) : getCurrentUser().catch(function () { return null; }),
+      getCurrentUser().catch(function () { return null; }),
     ]);
   } catch (err) {
     console.warn('Jellio: could not load profile', err);
@@ -348,7 +348,10 @@ export async function renderProfile(root, params) {
   // profile: viewer.Policy.IsAdministrator is the one real gate
   // screens/settings.js's own "Open admin dashboard" row already uses,
   // matched here rather than inventing a second one.
-  const isAdmin = !isOwner && !!(viewer && viewer.Policy && viewer.Policy.IsAdministrator);
+  // Admin tools show on every profile, the admin's own included; a
+  // reader can always remove their own activity entries.
+  const isAdmin = !!(viewer && viewer.Policy && viewer.Policy.IsAdministrator);
+  const canRemoveActivity = isOwner || isAdmin;
 
   root.appendChild(
     buildBanner(userId, isOwner, function () {
@@ -423,7 +426,7 @@ export async function renderProfile(root, params) {
       renderProfile(root, params);
     };
     body.appendChild(buildBadgesSection(achievements.Badges, isAdmin, userId, refresh));
-    body.appendChild(buildActivitySection(achievements.RecentActivity, isAdmin, userId, refresh));
+    body.appendChild(buildActivitySection(achievements.RecentActivity, canRemoveActivity, userId, refresh));
     if (isAdmin) {
       body.appendChild(buildAdminDangerZone(userId, refresh));
     }
