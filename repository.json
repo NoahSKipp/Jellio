@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.33.3] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Download videos through playback negotiation, in the user's audio language, with retries\n",
+        "checksum": "f6213de45066c624cd83fa5690f13530",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.3/jellio_1.33.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-27T22:05:51Z",
+        "version": "1.33.3"
+      },
+      {
         "changelog": "## [1.33.2] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Say why the reader couldn't open a book\n- Show the download menu, and download whole seasons from series pages\n",
         "checksum": "3a34036c9b1353084aa4079cf701c572",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.2/jellio_1.33.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-21T20:50:18Z",
         "version": "1.11.0"
-      },
-      {
-        "changelog": "## [1.10.4] - 2026-09-21\n\n### 🐛 Bug Fixes\n\n- Give Gelato a synthetic HttpContext during background analysis\n",
-        "checksum": "aff743802755d36c7947a63d8b7bfb4e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.10.4/jellio_1.10.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-21T20:20:15Z",
-        "version": "1.10.4"
       }
     ]
   }
