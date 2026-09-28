@@ -12,6 +12,8 @@ import { openAccountSwitcher } from './accountSwitcher.js';
 import { openGroupWatch } from './groupWatch.js';
 import { getCurrentUser } from '../runtime/api.js';
 
+const DOWNLOADS_LINK = { icon: 'download_for_offline', label: 'Downloads', hash: '#/downloads' };
+
 // Tagged with its own hash so updateActiveLinks() can find it again
 // without rebuilding it: real feedback was that the whole rail
 // visibly flickered on every navigation, traced to renderSidebar
@@ -301,6 +303,10 @@ export async function renderSidebar(container) {
   rail.appendChild(divider);
 
   rail.appendChild(scroll);
+  // Downloads sits with the tools at the bottom rather than among the
+  // libraries, and needs nothing from the server (it's what's left
+  // offline), so it paints straight away.
+  rail.appendChild(buildLink(DOWNLOADS_LINK));
   rail.appendChild(buildGroupWatchButton());
   rail.appendChild(buildNowPlayingButton());
   rail.appendChild(buildNotificationsButton());
@@ -322,7 +328,7 @@ export async function renderSidebar(container) {
     .then(function (links) {
       // Video libraries, then a divider, then Books/Audiobooks/Manga.
       let readingDividerAdded = false;
-      const libraryLinks = links.slice(FIXED_NAV_LINKS.length);
+      const libraryLinks = links.slice(FIXED_NAV_LINKS.length).filter((link) => link.hash !== DOWNLOADS_LINK.hash);
       const hasVideo = libraryLinks.some((link) => link.group !== 'reading');
       libraryLinks
         .slice()
