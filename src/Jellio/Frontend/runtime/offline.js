@@ -326,8 +326,129 @@ const MAX_ATTEMPTS = 4;
 const STALL_MS = 60000;
 const STALL_VIDEO_MS = 120000;
 
+// A large file the server can send in ranges comes in as several parts
+// at once (many stream sources limit each connection, not the total),
+// each retried on its own, then joined into one file. Anything else, or
+// a server that won't send ranges, streams in one piece.
+const PARTS = 4;
+const MIN_PARALLEL_BYTES = 32 * 1024 * 1024;
+
+function linkedController(parent) {
+  const child = new AbortController();
+  const stop = () => child.abort();
+  parent.signal.addEventListener('abort', stop);
+  return { controller: child, release: () => parent.signal.removeEventListener('abort', stop) };
+}
+
+// { total, type } when the server answers a range request, else null.
+async function probeRanges(file, controller) {
+  const link = linkedController(controller);
+  const timer = window.setTimeout(() => link.controller.abort(), STALL_MS);
+  try {
+    const response = await fetch(getServerAddress() + file.Url, {
+      headers: Object.assign({ Range: 'bytes=0-0' }, getAuthHeaders()),
+      signal: link.controller.signal,
+    });
+    const range = response.headers.get('Content-Range') || '';
+    const total = Number((/\/(\d+)\s*$/.exec(range) || [])[1]) || 0;
+    try {
+      if (response.body) await response.body.cancel();
+    } catch (err) {
+      // Nothing to cancel.
+    }
+    return response.status === 206 && total ? { total: total, type: response.headers.get('Content-Type') || 'application/octet-stream' } : null;
+  } catch (err) {
+    if (controller.signal.aborted) throw err;
+    return null;
+  } finally {
+    window.clearTimeout(timer);
+    link.release();
+  }
+}
+
+async function downloadParallel(record, file, cache, controller) {
+  const probe = await probeRanges(file, controller);
+  if (!probe || probe.total < MIN_PARALLEL_BYTES) return false;
+  const baseBytes = record.DoneBytes;
+  record.TotalBytes += probe.total;
+  const size = Math.ceil(probe.total / PARTS);
+  const partBytes = new Array(PARTS).fill(0);
+  let lastNotify = 0;
+  function progress() {
+    record.DoneBytes = baseBytes + partBytes.reduce((sum, bytes) => sum + bytes, 0);
+    const now = Date.now();
+    if (now - lastNotify > 400) {
+      lastNotify = now;
+      notify(record);
+    }
+  }
+
+  async function part(index) {
+    const start = index * size;
+    const end = Math.min(probe.total, start + size) - 1;
+    const key = fileUrl(record.Id, file.Name + '.part' + index);
+    for (let attempt = 1; ; attempt += 1) {
+      partBytes[index] = 0;
+      const link = linkedController(controller);
+      let stallTimer = null;
+      const watch = () => {
+        window.clearTimeout(stallTimer);
+        stallTimer = window.setTimeout(() => link.controller.abort(), STALL_MS);
+      };
+      watch();
+      try {
+        const response = await fetch(getServerAddress() + file.Url, {
+          headers: Object.assign({ Range: 'bytes=' + start + '-' + end }, getAuthHeaders()),
+          signal: link.controller.signal,
+        });
+        if (response.status !== 206) throw new Error('The server stopped sending parts (' + response.status + ')');
+        const counter = new TransformStream({
+          transform(chunk, streamController) {
+            watch();
+            partBytes[index] += chunk.byteLength;
+            progress();
+            streamController.enqueue(chunk);
+          },
+        });
+        await cache.put(key, new Response(response.body.pipeThrough(counter)));
+        if (partBytes[index] !== end - start + 1) throw new Error('A part of ' + (file.Label || file.Name) + ' came in short');
+        return;
+      } catch (err) {
+        if (controller.signal.aborted) throw err;
+        if (attempt >= MAX_ATTEMPTS || offline) throw err;
+        record.Error = 'Part ' + (index + 1) + ' dropped, retrying';
+        notify(record);
+        await new Promise((resolve) => window.setTimeout(resolve, 2000 * attempt));
+        record.Error = null;
+      } finally {
+        window.clearTimeout(stallTimer);
+        link.release();
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: PARTS }, (_, index) => part(index)));
+  progress();
+
+  // Joined as one file; the browser keeps large blobs on disk, so this
+  // doesn't hold the whole file in memory.
+  const blobs = [];
+  for (let index = 0; index < PARTS; index += 1) {
+    const stored = await cache.match(fileUrl(record.Id, file.Name + '.part' + index));
+    if (!stored) throw new Error('A part of ' + (file.Label || file.Name) + ' went missing');
+    blobs.push(await stored.blob());
+  }
+  const joined = new Blob(blobs, { type: probe.type });
+  await cache.put(fileUrl(record.Id, file.Name), new Response(joined, { headers: { 'Content-Type': probe.type } }));
+  for (let index = 0; index < PARTS; index += 1) {
+    await cache.delete(fileUrl(record.Id, file.Name + '.part' + index));
+  }
+  return true;
+}
+
 // One file of a download, streamed into Cache Storage with progress.
 async function downloadFile(record, file, cache, controller) {
+  if (file.Parallel && (await downloadParallel(record, file, cache, controller))) return;
   // A stream that sends nothing for too long (a conversion that stalled
   // or died server side while the connection stays open) is given up on
   // and retried, instead of waiting forever.
