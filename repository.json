@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.35.1] - 2026-09-28\n\n### 🐛 Bug Fixes\n\n- Treat Mihon backup series as in the library unless marked otherwise\n",
+        "checksum": "149f02fb6a2abadd9433be4b78b2f357",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.35.1/jellio_1.35.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-28T23:37:08Z",
+        "version": "1.35.1"
+      },
+      {
         "changelog": "## [1.35.0] - 2026-09-28\n\n### 🚀 Features\n\n- Move Downloads to the sidebar's bottom section, above Group Watch\n",
         "checksum": "d470dfc8d6841e24d499e24df61c54b1",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.35.0/jellio_1.35.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-22T16:57:24Z",
         "version": "1.14.1"
-      },
-      {
-        "changelog": "## [1.14.0] - 2026-09-22\n\n### 🚀 Features\n\n- Add SkipMe.db and IntroDB as two more Skip Intro/Credits community sources\n\n### 📚 Documentation\n\n- Correct a wrong claim about SkipDB's real data dump size\n",
-        "checksum": "f139f030818e975e5af4749743cb7d80",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.14.0/jellio_1.14.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-22T08:33:15Z",
-        "version": "1.14.0"
       }
     ]
   }
