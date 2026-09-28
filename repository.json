@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.34.0] - 2026-09-28\n\n### 🚀 Features\n\n- Download episodes and seasons from a show's episode list, and fold Download into More\n\n### ⚡ Performance\n\n- Repackage compatible 1080p videos for download instead of re-encoding them\n- Download original video files in parallel parts when the server allows it\n",
+        "checksum": "5edd724d63625f974bf4f9d6d0967b50",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.34.0/jellio_1.34.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-28T10:55:34Z",
+        "version": "1.34.0"
+      },
+      {
         "changelog": "## [1.33.5] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Show live download progress, and keep cached scripts from standing in for newer ones\n",
         "checksum": "5701d5af55eccd162b2136f9a83b1c05",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.5/jellio_1.33.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-22T06:45:18Z",
         "version": "1.13.1"
-      },
-      {
-        "changelog": "## [1.13.0] - 2026-09-22\n\n### 🚀 Features\n\n- Stop expensive Skip Intro/Credits analysis on playback, add admin-triggered scan\n- Add a server side toggle for the Skip Intro/Credits admin menu\n- Split the Skip Intro/Credits scan into Quick and Deep, add Episode/Season scope\n",
-        "checksum": "ccebd06f9c7c69f6138e341407053bd8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.13.0/jellio_1.13.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-22T06:23:50Z",
-        "version": "1.13.0"
       }
     ]
   }
