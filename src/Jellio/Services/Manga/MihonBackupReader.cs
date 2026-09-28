@@ -16,7 +16,8 @@ public record MihonManga(long SourceId, string SourceName, string Url, string Ti
 /// Only the fields an import needs are decoded; everything else is
 /// skipped by wire type. Field numbers are Mihon's own @ProtoNumber
 /// values (data/backup/models: Backup, BackupManga, BackupChapter,
-/// BackupSource).
+/// BackupSource). Mihon leaves out fields that hold their default, so
+/// missing fields take Mihon's defaults (favorite is true).
 /// </summary>
 public static class MihonBackupReader
 {
@@ -62,7 +63,7 @@ public static class MihonBackupReader
     {
         long source = 0;
         string? url = null, title = null;
-        var favorite = false;
+        var favorite = true;
         var chapters = new List<MihonChapter>();
         foreach (var (field, value) in Fields(message))
         {
@@ -100,7 +101,7 @@ public static class MihonBackupReader
         string? url = null, name = null, scanlator = null;
         var read = false;
         long lastPageRead = 0;
-        var chapterNumber = -1f;
+        var chapterNumber = 0f;
         foreach (var (field, value) in Fields(message))
         {
             switch (field)
