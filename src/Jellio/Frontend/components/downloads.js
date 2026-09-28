@@ -208,7 +208,9 @@ export async function downloadVideo(item, quality) {
   const subtitles = (source.MediaStreams || []).filter(
     (stream) => stream.Type === 'Subtitle' && (stream.IsTextSubtitleStream || stream.IsExternal) && stream.Codec !== 'pgssub',
   );
-  const files = [{ Name: 'video', Url: videoUrl, Label: details.Name }];
+  // The file itself (not a conversion) can be fetched in parts at once,
+  // when the server supports it (runtime/offline.js).
+  const files = [{ Name: 'video', Url: videoUrl, Label: details.Name, Parallel: videoUrl === staticUrl }];
   subtitles.forEach(function (stream) {
     files.push({
       Name: 'sub-' + stream.Index,
