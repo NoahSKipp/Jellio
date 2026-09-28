@@ -6,7 +6,7 @@
 // plus a bare <video> element, see screens/player.js's own header for
 // why that needed no access to jellyfin-web's own playbackManager at
 // all, when there is not).
-import { buildDownloadButton, buildEpisodesDownloadButton } from '../components/downloads.js';
+import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
 import {
   getItemDetails,
   getImageUrl,
@@ -336,6 +336,23 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         });
     }),
   );
+
+  // Keep it on this device (components/downloads.js): this episode, or
+  // its season (unwatched or whole), each asking for the quality.
+  if (canDownload(episode)) {
+    menu.appendChild(
+      buildEpisodeMenuOption('Download episode', 'download', function () {
+        promptDownload(episode, anchorRect);
+      }),
+    );
+    if (episode.SeasonId && episode.SeriesId) {
+      menu.appendChild(
+        buildEpisodeMenuOption('Download season', 'download_for_offline', function () {
+          promptDownload({ Id: episode.SeasonId, Type: 'Season', SeriesId: episode.SeriesId }, anchorRect);
+        }),
+      );
+    }
+  }
 
   // Admin only, and only once the server side toggle itself is on
   // (Configuration/config.html's own "Show Find Skip Intro/Credits..."
@@ -1049,12 +1066,12 @@ export async function renderDetail(root, params) {
 
   // Keep it on this device for offline (components/downloads.js): books,
   // manga, audiobooks, films and episodes.
-  // Always visible, not folded behind More: the one action offline use
-  // depends on. A series or season downloads several episodes at once.
+  // Behind More with the other actions. A series or season downloads
+  // several episodes at once.
   const downloadButton =
-    buildDownloadButton(item, { className: 'jellio-detail-icon-action', compact: true }) ||
-    buildEpisodesDownloadButton(item, { className: 'jellio-detail-icon-action' });
-  if (downloadButton) actions.insertBefore(downloadButton, watchlistButton);
+    buildDownloadButton(item, { className: iconActionClass, compact: true }) ||
+    buildEpisodesDownloadButton(item, { className: iconActionClass });
+  if (downloadButton) actions.appendChild(downloadButton);
 
   // Real Jellyfin's own native like/dislike (UserData.Likes, POST/DELETE
   // /Users/{id}/Items/{id}/Rating), not a second real system this
