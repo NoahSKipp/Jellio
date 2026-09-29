@@ -531,7 +531,9 @@ public class MangaImportService(
             {
                 1 => ("single", "ltr"),
                 2 => ("single", "rtl"),
-                3 or 4 or 5 => ("vertical", prefs.ComicDirection),
+                3 => ("paged-vertical", prefs.ComicDirection),
+                4 => ("vertical", prefs.ComicDirection),
+                5 => ("vertical-gaps", prefs.ComicDirection),
                 _ => (prefs.ComicLayout, prefs.ComicDirection),
             };
             data.Series[key] = prefs;

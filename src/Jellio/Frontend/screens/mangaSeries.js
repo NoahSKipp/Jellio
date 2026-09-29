@@ -253,9 +253,11 @@ export function renderMangaSeries(root, params, parentId) {
     // Mihon's per-series reading mode; the reader starts in it.
     const modes = [
       { label: 'Default', layout: '', direction: '' },
-      { label: 'Right to left', layout: 'single', direction: 'rtl' },
-      { label: 'Left to right', layout: 'single', direction: 'ltr' },
-      { label: 'Vertical', layout: 'vertical', direction: '' },
+      { label: 'Paged (right to left)', layout: 'single', direction: 'rtl' },
+      { label: 'Paged (left to right)', layout: 'single', direction: 'ltr' },
+      { label: 'Paged (vertical)', layout: 'paged-vertical', direction: '' },
+      { label: 'Long strip', layout: 'vertical', direction: '' },
+      { label: 'Long strip with gaps', layout: 'vertical-gaps', direction: '' },
     ];
     const modeRow = el('div', 'jellio-manga-series-mode');
     modeRow.appendChild(el('span', 'jellio-manga-series-mode-label', 'Reading mode'));

@@ -39,8 +39,8 @@ public class SeriesPrefs
     // "all", "unread" or "bookmarked".
     public string? ChapterFilter { get; set; }
 
-    // Reader overrides for this series: single, spread or vertical, and
-    // rtl or ltr.
+    // Reader overrides for this series: single, spread, paged-vertical,
+    // vertical (long strip) or vertical-gaps, and rtl or ltr.
     public string? ComicLayout { get; set; }
 
     public string? ComicDirection { get; set; }

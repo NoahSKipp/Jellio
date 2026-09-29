@@ -202,7 +202,7 @@ public class ShelfController(ShelfStore store) : ControllerBase
         }
 
         if ((body.ChapterFilter is not null && body.ChapterFilter is not ("all" or "unread" or "bookmarked"))
-            || (body.ComicLayout is not null && body.ComicLayout is not ("" or "single" or "spread" or "vertical"))
+            || (body.ComicLayout is not null && body.ComicLayout is not ("" or "single" or "spread" or "paged-vertical" or "vertical" or "vertical-gaps"))
             || (body.ComicDirection is not null && body.ComicDirection is not ("" or "rtl" or "ltr")))
         {
             return BadRequest("Invalid setting");
