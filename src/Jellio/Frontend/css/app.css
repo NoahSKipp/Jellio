@@ -3525,21 +3525,21 @@
 
 /* Page width for EPUBs: the stage narrows and the page-turn buttons
    stay at the window edges. Two-page spreads get twice the room. */
-.jellio-screen-reader[data-width='comfortable'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+.jellio-screen-reader[data-width='comfortable'] .jellio-reader-stage:not(.jellio-reader-stage-pdf):not(.jellio-reader-stage-comic) {
   max-width: 46em;
   margin: 0 auto;
 }
 
-.jellio-screen-reader[data-width='narrow'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+.jellio-screen-reader[data-width='narrow'] .jellio-reader-stage:not(.jellio-reader-stage-pdf):not(.jellio-reader-stage-comic) {
   max-width: 36em;
   margin: 0 auto;
 }
 
-.jellio-screen-reader[data-layout='spread'][data-width='comfortable'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+.jellio-screen-reader[data-layout='spread'][data-width='comfortable'] .jellio-reader-stage:not(.jellio-reader-stage-pdf):not(.jellio-reader-stage-comic) {
   max-width: 84em;
 }
 
-.jellio-screen-reader[data-layout='spread'][data-width='narrow'] .jellio-reader-stage:not(.jellio-reader-stage-pdf) {
+.jellio-screen-reader[data-layout='spread'][data-width='narrow'] .jellio-reader-stage:not(.jellio-reader-stage-pdf):not(.jellio-reader-stage-comic) {
   max-width: 66em;
 }
 
@@ -10834,4 +10834,148 @@
 
 .jellio-manga-series-order[hidden] {
   display: none;
+}
+
+/* Comics, Mihon style (screens/reader.js openComic): the menus sit over
+   the page and slide away while reading. */
+.jellio-reader-comic-mode .jellio-reader-topbar,
+.jellio-reader-comic-mode .jellio-reader-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  background: color-mix(in srgb, var(--reader-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.jellio-reader-comic-mode .jellio-reader-topbar {
+  top: 0;
+  padding-top: calc(0.5em + env(safe-area-inset-top));
+}
+
+.jellio-reader-comic-mode .jellio-reader-footer {
+  bottom: 0;
+  padding-bottom: calc(0.8em + env(safe-area-inset-bottom));
+}
+
+.jellio-reader-comic-mode.jellio-reader-immersive .jellio-reader-topbar {
+  transform: translateY(-100%);
+}
+
+.jellio-reader-comic-mode.jellio-reader-immersive .jellio-reader-footer {
+  transform: translateY(100%);
+}
+
+.jellio-reader-comic-mode .jellio-reader-turn {
+  display: none;
+}
+
+.jellio-reader-page-pill {
+  display: none;
+}
+
+.jellio-reader-comic-mode.jellio-reader-immersive .jellio-reader-page-pill:not(:empty) {
+  position: absolute;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 4;
+  display: block;
+  padding: 0.15em 0.65em;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 0.75em;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.jellio-reader-stage-comic {
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.jellio-reader-stage-comic-strip {
+  touch-action: pan-x pan-y;
+}
+
+.jellio-reader-stage-comic-vpaged,
+.jellio-reader-comic-zoomed:not(.jellio-reader-stage-comic-strip) {
+  touch-action: none;
+}
+
+.jellio-reader-comic-zoomed:not(.jellio-reader-stage-comic-strip) {
+  cursor: grab;
+}
+
+.jellio-reader-comic-paged {
+  transform-origin: 0 0;
+}
+
+.jellio-reader-comic.jellio-reader-comic-vertical {
+  width: calc(100% * var(--strip-zoom, 1));
+  flex: 0 0 auto;
+}
+
+.jellio-reader-comic-vertical > .jellio-reader-comic-slot {
+  width: min(100%, calc(56em * var(--strip-zoom, 1)));
+}
+
+.jellio-reader-comic-gaps {
+  gap: 14px;
+  padding: 14px 0;
+}
+
+.jellio-reader-comic-turn-x-next,
+.jellio-reader-comic-turn-x-rtl-prev {
+  animation: jellio-comic-from-right 0.18s ease-out;
+}
+
+.jellio-reader-comic-turn-x-prev,
+.jellio-reader-comic-turn-x-rtl-next {
+  animation: jellio-comic-from-left 0.18s ease-out;
+}
+
+.jellio-reader-comic-turn-y-next {
+  animation: jellio-comic-from-below 0.18s ease-out;
+}
+
+.jellio-reader-comic-turn-y-prev {
+  animation: jellio-comic-from-above 0.18s ease-out;
+}
+
+@keyframes jellio-comic-from-right {
+  from {
+    opacity: 0.5;
+    transform: translateX(6%);
+  }
+}
+
+@keyframes jellio-comic-from-left {
+  from {
+    opacity: 0.5;
+    transform: translateX(-6%);
+  }
+}
+
+@keyframes jellio-comic-from-below {
+  from {
+    opacity: 0.5;
+    transform: translateY(6%);
+  }
+}
+
+@keyframes jellio-comic-from-above {
+  from {
+    opacity: 0.5;
+    transform: translateY(-6%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jellio-reader-comic-paged {
+    animation: none !important;
+  }
 }
