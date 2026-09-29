@@ -78,15 +78,29 @@ export function formatBytes(bytes) {
 // where the reader got to.
 export async function downloadBook(item, kind) {
   warmReaderScripts();
-  const details = await getItemDetails(item.Id).catch(() => item);
+  // A chapter read straight from its source has no library item: the
+  // server packs its pages into a CBZ as it downloads.
+  const stream = item.Stream;
+  const details = stream ? item : await getItemDetails(item.Id).catch(() => item);
   const snapshot = Object.assign({}, item, details, { Path: item.Path || details.Path });
   const isManga = kind === 'manga';
   const seriesTitle = isManga ? mangaSeriesTitle(snapshot) : '';
-  const files = [
-    { Name: 'file', Url: '/Jellio/reading/file/' + item.Id, Label: snapshot.Name },
-    { Name: 'cover', Url: '/Items/' + item.Id + '/Images/Primary?maxWidth=600', Optional: true },
-  ];
-  if (isManga) files.push({ Name: 'seriescover', Url: '/Jellio/manga/series-cover/' + item.Id, Optional: true });
+  const files = stream
+    ? [
+        { Name: 'file', Url: '/Jellio/manga/stream/chapter/' + stream.ChapterId + '/cbz', Label: snapshot.Name },
+        { Name: 'cover', Url: '/Jellio/manga/thumbnail/' + stream.MangaId, Optional: true },
+      ]
+    : [
+        { Name: 'file', Url: '/Jellio/reading/file/' + item.Id, Label: snapshot.Name },
+        { Name: 'cover', Url: '/Items/' + item.Id + '/Images/Primary?maxWidth=600', Optional: true },
+      ];
+  if (isManga) {
+    files.push({
+      Name: 'seriescover',
+      Url: stream ? '/Jellio/manga/thumbnail/' + stream.MangaId : '/Jellio/manga/series-cover/' + item.Id,
+      Optional: true,
+    });
+  }
   const record = await queueDownload({
     Id: item.Id,
     Kind: isManga ? 'manga' : 'book',
