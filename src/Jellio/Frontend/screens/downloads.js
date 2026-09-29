@@ -176,7 +176,23 @@ export function renderDownloads(root) {
       else expanded.add(key);
       paint();
     });
-    wrap.appendChild(toggle);
+    const head = el('div', 'jellio-downloads-group-bar');
+    head.appendChild(toggle);
+    // The whole series or show at once.
+    const removeAll = el('button', 'jellio-downloads-action');
+    removeAll.type = 'button';
+    removeAll.setAttribute('aria-label', 'Remove all of ' + title);
+    removeAll.title = 'Remove all';
+    removeAll.appendChild(el('span', 'material-icons delete_sweep'));
+    removeAll.addEventListener('click', async function () {
+      if (!window.confirm('Remove all ' + records.length + ' ' + unit + ' of “' + title + '” from this device?')) return;
+      removeAll.disabled = true;
+      for (const record of records) {
+        await removeDownload(record.Id).catch((err) => console.warn('Jellio: could not remove a download', err));
+      }
+    });
+    head.appendChild(removeAll);
+    wrap.appendChild(head);
     if (expanded.has(key)) {
       const list = el('div', 'jellio-downloads-group-list');
       records
