@@ -55,12 +55,25 @@ public class MangaStreamService(SuwayomiClient suwayomi)
             }
 
             var library = await suwayomi.GetLibraryWithChaptersAsync(cancellationToken).ConfigureAwait(false);
-            if (library is null)
+            List<StreamSeries> series;
+            if (library is not null)
             {
-                return _library?.Series;
+                series = library.Select(manga => ToSeries(manga.Id, manga.Title, manga.Author, manga.Status, manga.Chapters)).ToList();
+            }
+            else
+            {
+                // A Suwayomi that won't answer the full query (older
+                // schema, or too much at once): the series alone, their
+                // chapters loaded when opened.
+                var titles = await suwayomi.GetLibraryAsync(cancellationToken).ConfigureAwait(false);
+                if (titles is null)
+                {
+                    return _library?.Series;
+                }
+
+                series = titles.Select(entry => ToSeries(entry.Id, entry.Title, null, null, [])).ToList();
             }
 
-            var series = library.Select(manga => ToSeries(manga.Id, manga.Title, manga.Author, manga.Status, manga.Chapters)).ToList();
             Store(series);
             return series;
         }
