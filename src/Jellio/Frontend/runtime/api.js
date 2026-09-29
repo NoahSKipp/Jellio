@@ -890,8 +890,14 @@ export function getMangaImportStatus() {
   return getJson('/Jellio/manga/import', 15000);
 }
 
-export function requestMangaSeries(mangaId, title) {
-  return postJson('/Jellio/manga/request', { MangaId: mangaId, Title: title || null }, 60000);
+// Adds a series to Suwayomi so it can be read (streamed from its source).
+// addToLibrary false leaves the reader's shelf alone until they read it.
+export function requestMangaSeries(mangaId, title, addToLibrary) {
+  return postJson(
+    '/Jellio/manga/request',
+    { MangaId: mangaId, Title: title || null, AddToLibrary: addToLibrary !== false },
+    60000,
+  );
 }
 
 // Controllers/BookRequestController.cs's discover-manga: manga, manhwa

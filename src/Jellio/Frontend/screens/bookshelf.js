@@ -66,7 +66,7 @@ const KINDS = {
     // Requested through components/mangaRequest.js (Suwayomi chapters or
     // Chaptarr volumes); Discover browses AniList.
     requestType: 'ebook',
-    requestLabel: 'Request manga',
+    requestLabel: 'Find manga',
     requestPlaceholder: 'Series and volume, e.g. Berserk Vol. 1',
     requestButton: 'Request',
   },
@@ -547,6 +547,11 @@ export function renderBookshelf(root, params, parentId) {
           closeMangaSheet = openMangaRequestSheet(root, {
             suwayomi: !!config.MangaRequestsEnabled,
             chaptarr: !!config.BookRequestsEnabled,
+            openSeries: function (key) {
+              const next = new URLSearchParams(params);
+              next.set('series', key);
+              navigateTo('#/books?' + next.toString());
+            },
           });
         });
         wrap.appendChild(open);
