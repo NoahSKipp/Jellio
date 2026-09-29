@@ -43,6 +43,10 @@ export function describeReading(entry) {
   } else if (audio && entry.Finished && entry.ListenedTicks) {
     detail = formatListened(entry.ListenedTicks) + ' listened';
   }
+  // Time spent in the reader, once it's at least a minute.
+  if (!audio && entry.ListenedTicks >= 600000000) {
+    detail = (detail ? detail + ' · ' : '') + formatListened(entry.ListenedTicks) + ' reading';
+  }
   // A manga chapter names its series too: "Chapter 5" of "Berserk".
   const series = entry.SeriesName && entry.SeriesName !== entry.ItemName ? entry.SeriesName : '';
   return { lead: lead, title: entry.ItemName || '', series: series, detail: detail };

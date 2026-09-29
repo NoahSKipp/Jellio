@@ -322,7 +322,16 @@ public class AchievementService(
                 stats.MangaPagesRead += session.PagesRead;
             }
 
-            stats.ListenedTicks += session.ListenedTicks;
+            // ListenedTicks carries the session's time: listening for an
+            // audiobook, reading otherwise.
+            if (itemType == "AudioBook")
+            {
+                stats.ListenedTicks += session.ListenedTicks;
+            }
+            else
+            {
+                stats.ReadingTicks += session.ListenedTicks;
+            }
 
             var newlyFinished = session.Finished && stats.CompletedReadingIds.Add(completionKey);
             if (newlyFinished)

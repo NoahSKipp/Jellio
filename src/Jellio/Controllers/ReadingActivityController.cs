@@ -24,7 +24,8 @@ public class ReadingActivityController(AchievementService achievementService, Ma
     private const int MaxPagesPerSession = 2000;
     private const int MaxListenSecondsPerSession = 24 * 60 * 60;
 
-    public record SessionBody(Guid ItemId, string Kind, int PagesRead, int? CurrentPage, int? PageCount, int ListenedSeconds, bool Finished, int? MangaId = null);
+    // ReadSeconds: active time in the reader (books and manga).
+    public record SessionBody(Guid ItemId, string Kind, int PagesRead, int? CurrentPage, int? PageCount, int ListenedSeconds, bool Finished, int? MangaId = null, int ReadSeconds = 0);
 
     [HttpPost]
     public async Task<IActionResult> Report([FromBody] SessionBody body)
@@ -53,7 +54,7 @@ public class ReadingActivityController(AchievementService achievementService, Ma
                     Math.Clamp(body.PagesRead, 0, Math.Min(MaxPagesPerSession, streamPageCount ?? MaxPagesPerSession)),
                     body.CurrentPage is > 0 ? Math.Min(body.CurrentPage.Value, streamPageCount ?? body.CurrentPage.Value) : null,
                     streamPageCount,
-                    0,
+                    TimeSpan.FromSeconds(Math.Clamp(body.ReadSeconds, 0, MaxListenSecondsPerSession)).Ticks,
                     body.Finished)).ConfigureAwait(false);
             return NoContent();
         }
@@ -78,7 +79,7 @@ public class ReadingActivityController(AchievementService achievementService, Ma
         var pageCount = body.PageCount is > 0 and < 100_000 ? body.PageCount : null;
         var pagesRead = Math.Clamp(body.PagesRead, 0, Math.Min(MaxPagesPerSession, pageCount ?? MaxPagesPerSession));
         var currentPage = body.CurrentPage is > 0 ? Math.Min(body.CurrentPage.Value, pageCount ?? body.CurrentPage.Value) : (int?)null;
-        var listenedTicks = TimeSpan.FromSeconds(Math.Clamp(body.ListenedSeconds, 0, MaxListenSecondsPerSession)).Ticks;
+        var listenedTicks = TimeSpan.FromSeconds(Math.Clamp(kind == "audiobook" ? body.ListenedSeconds : body.ReadSeconds, 0, MaxListenSecondsPerSession)).Ticks;
 
         await achievementService.CreditReadingSessionAsync(
             userId,
