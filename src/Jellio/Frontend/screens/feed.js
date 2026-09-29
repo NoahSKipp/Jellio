@@ -20,8 +20,7 @@ import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
-import { getMangaShelfHash } from '../components/navShared.js';
-import { mangaSeriesKey } from '../components/mangaSeries.js';
+import { openActivity } from '../components/activityLink.js';
 import { formatRelativeTime, isReadingActivity, describeReading } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
 
@@ -84,21 +83,7 @@ function appendBadgeDescription(container, entry) {
 // series (not the chapter), else the item itself. Badges, and anything
 // without an item, open the person's profile.
 async function openEntry(entry) {
-  const profile = '#/profile?id=' + entry.UserId;
-  if (entry.Kind === 'Badge' || !entry.ItemId) {
-    navigateTo(profile);
-    return;
-  }
-  if (entry.ItemType === 'Manga' && entry.SeriesName) {
-    const shelf = await getMangaShelfHash();
-    navigateTo(shelf ? shelf + '&series=' + encodeURIComponent(mangaSeriesKey(entry.SeriesName)) : profile);
-    return;
-  }
-  if (entry.ItemType === 'Episode' && entry.SeriesId) {
-    navigateTo('#/item?id=' + entry.SeriesId);
-    return;
-  }
-  navigateTo('#/item?id=' + entry.ItemId);
+  if (!(await openActivity(entry))) navigateTo('#/profile?id=' + entry.UserId);
 }
 
 function buildFeedRow(entry) {
