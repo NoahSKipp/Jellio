@@ -1,7 +1,7 @@
 // Shared item card, used by every screen that renders a poster grid or row
 // (home's own rows, the library grid). One definition so a later visual
 // change (a hover state, a progress bar) only has one place to happen.
-import { getImageUrl, getBookCoverUrl, TICKS_PER_SECOND, prefetchStreams } from '../runtime/api.js';
+import { getImageUrl, getBookCoverUrl, getStreamCoverUrl, TICKS_PER_SECOND, prefetchStreams } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   attachCardOptionsTrigger,
@@ -351,6 +351,8 @@ function buildLandscapeCard(item, options) {
 // 404s into the placeholder when Chaptarr has none.
 function bookFallbackCoverUrl(item) {
   if (item.Type !== 'Book' && item.Type !== 'AudioBook') return null;
+  // A manga chapter read straight from its source: its series' cover.
+  if (item.Stream && item.Stream.MangaId) return getStreamCoverUrl(item.Stream.MangaId);
   if (item.AlbumId && item.AlbumPrimaryImageTag) {
     return getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 });
   }

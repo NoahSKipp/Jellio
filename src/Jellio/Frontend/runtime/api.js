@@ -742,6 +742,56 @@ export function getMangaSeriesCoverUrl(itemId) {
   );
 }
 
+// Manga read straight from Suwayomi's sources
+// (Controllers/MangaStreamController.cs): the series in its library with
+// this reader's progress, a series' chapters, and page images.
+export function getStreamLibrary() {
+  return cached('manga-stream-library', function () {
+    return getJson('/Jellio/manga/stream/library', 60000);
+  }, SHORT_CACHE_TTL_MS).catch(function (err) {
+    console.warn('Jellio: could not load streamed manga', err);
+    return [];
+  });
+}
+
+export function invalidateStreamLibrary() {
+  invalidateCache('manga-stream-library');
+}
+
+export function getStreamSeries(mangaId) {
+  return getJson('/Jellio/manga/stream/series/' + mangaId, 60000);
+}
+
+export function getStreamChapter(id) {
+  return getJson('/Jellio/manga/stream/chapter/' + encodeURIComponent(id), 30000);
+}
+
+export function getStreamPageCount(chapterId) {
+  return getJson('/Jellio/manga/stream/chapter/' + chapterId + '/pages', 60000).then((answer) => (answer && answer.Count) || 0);
+}
+
+export function getStreamPageUrl(chapterId, index) {
+  return (
+    getServerAddress() +
+    '/Jellio/manga/stream/chapter/' +
+    chapterId +
+    '/page/' +
+    index +
+    '?ApiKey=' +
+    encodeURIComponent(getAccessToken() || '')
+  );
+}
+
+export function getStreamCoverUrl(mangaId) {
+  return getServerAddress() + '/Jellio/manga/thumbnail/' + mangaId + '?ApiKey=' + encodeURIComponent(getAccessToken() || '');
+}
+
+// Downloads a streamed series (or some chapters) into the library.
+export function saveStreamSeries(mangaId, chapterIds) {
+  invalidateStreamLibrary();
+  return postJson('/Jellio/manga/stream/series/' + mangaId + '/save', { ChapterIds: chapterIds || null });
+}
+
 export function getBookCoverUrl(itemId) {
   return (
     getServerAddress() +
