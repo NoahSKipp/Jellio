@@ -426,8 +426,9 @@ export async function renderProfile(root, params) {
   if (achievements.IsPrivate) {
     body.appendChild(buildLockedPanel());
   } else {
-    // Watching and reading side by side, reading always shown (zeroes
-    // included) so it reads as part of the profile, not an add-on.
+    // Watching, then books, manga and audiobooks each on their own,
+    // always shown (zeroes included) so they read as part of the
+    // profile, not an add-on.
     [
       [
         'Watching',
@@ -439,14 +440,25 @@ export async function renderProfile(root, params) {
         ],
       ],
       [
-        'Reading',
+        'Books',
         [
-          ['Books', achievements.BooksCompleted],
-          ['Pages read', achievements.PagesRead],
-          // Manga, manhwa and manhua volumes alike.
-          ['Manga · manhwa · manhua', achievements.MangaVolumesCompleted],
-          ['Audiobooks', achievements.AudiobooksCompleted],
+          ['Finished', achievements.BooksCompleted],
+          ['Pages read', achievements.BookPagesRead],
           ['Time reading', formatMinutes(achievements.ReadingMinutes)],
+        ],
+      ],
+      [
+        'Manga · manhwa · manhua',
+        [
+          ['Finished', achievements.MangaVolumesCompleted],
+          ['Pages read', achievements.MangaPagesRead],
+          ['Time reading', formatMinutes(achievements.MangaReadingMinutes)],
+        ],
+      ],
+      [
+        'Audiobooks',
+        [
+          ['Finished', achievements.AudiobooksCompleted],
           ['Time listening', formatMinutes(achievements.ListenedMinutes)],
         ],
       ],

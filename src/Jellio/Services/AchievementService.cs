@@ -328,6 +328,10 @@ public class AchievementService(
             {
                 stats.ListenedTicks += session.ListenedTicks;
             }
+            else if (itemType == "Manga")
+            {
+                stats.MangaReadingTicks += session.ListenedTicks;
+            }
             else
             {
                 stats.ReadingTicks += session.ListenedTicks;

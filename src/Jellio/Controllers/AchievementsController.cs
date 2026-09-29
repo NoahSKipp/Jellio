@@ -260,6 +260,7 @@ public class AchievementsController(AchievementStore store, AchievementService a
             s.MangaPagesRead = fresh.MangaPagesRead;
             s.ListenedTicks = fresh.ListenedTicks;
             s.ReadingTicks = fresh.ReadingTicks;
+            s.MangaReadingTicks = fresh.MangaReadingTicks;
             s.CompletedReadingIds = fresh.CompletedReadingIds;
             s.LastReadingDate = fresh.LastReadingDate;
             s.CurrentReadingStreak = fresh.CurrentReadingStreak;
@@ -296,6 +297,9 @@ public class AchievementsController(AchievementStore store, AchievementService a
             ListenedHours = (int)(stats.ListenedTicks / TimeSpan.TicksPerHour),
             ListenedMinutes = (int)(stats.ListenedTicks / TimeSpan.TicksPerMinute),
             ReadingMinutes = (int)(stats.ReadingTicks / TimeSpan.TicksPerMinute),
+            MangaReadingMinutes = (int)(stats.MangaReadingTicks / TimeSpan.TicksPerMinute),
+            BookPagesRead = Math.Max(0, stats.PagesRead - stats.MangaPagesRead),
+            stats.MangaPagesRead,
             Badges = badges,
             RecentActivity = ActivityGrouping.Group(stats.RecentActivity),
         };
