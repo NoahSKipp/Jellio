@@ -9710,6 +9710,18 @@
   color: var(--jellio-text-color);
 }
 
+.jellio-profile-activity-link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.jellio-profile-activity-link:hover,
+.jellio-profile-activity-link:focus-visible {
+  color: var(--jellio-trending-color);
+  text-decoration: underline;
+}
+
 .jellio-profile-activity-time {
   flex: 0 0 auto;
   color: var(--jellio-text-tertiary);

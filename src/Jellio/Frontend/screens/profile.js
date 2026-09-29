@@ -28,28 +28,68 @@ import { formatRelativeTime, isReadingActivity, describeReading } from '../runti
 import { el } from '../runtime/dom.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
+import { openActivity, canOpenActivity } from '../components/activityLink.js';
 
 const BIO_MAX_LENGTH = 240;
+
+// "3h 20m", "45m", "0m".
+function formatMinutes(minutes) {
+  const total = Math.max(0, Math.floor(Number(minutes) || 0));
+  const hours = Math.floor(total / 60);
+  if (!hours) return total + 'm';
+  return hours.toLocaleString() + 'h' + (total % 60 ? ' ' + (total % 60) + 'm' : '');
+}
 
 // AchievementsController.cs's own real ActivityGrouping.Group: a binge
 // (same series, same UTC day) comes back as one entry with
 // EpisodeCount > 1 instead of one row per episode, same real grouping
 // screens/feed.js's own describeActivity already applies.
+// The entry as text with its show, manga series or title as a link to it
+// (components/activityLink.js).
 function describeActivity(entry) {
+  const container = el('span', 'jellio-profile-activity-text');
+  function link(text) {
+    if (!canOpenActivity(entry)) return el('span', null, text);
+    const anchor = el('a', 'jellio-profile-activity-link', text);
+    anchor.href = '#';
+    anchor.addEventListener('click', function (event) {
+      event.preventDefault();
+      openActivity(entry);
+    });
+    return anchor;
+  }
+  function text(value) {
+    container.appendChild(document.createTextNode(value));
+  }
   if (isReadingActivity(entry)) {
     const reading = describeReading(entry);
-    return reading.lead + reading.title + (reading.series ? ' of ' + reading.series : '') + (reading.detail ? ' · ' + reading.detail : '');
+    text(reading.lead);
+    if (reading.series) {
+      text(reading.title + ' of ');
+      container.appendChild(link(reading.series));
+    } else {
+      container.appendChild(link(reading.title));
+    }
+    if (reading.detail) text(' · ' + reading.detail);
+    return container;
   }
-  if (entry.ItemType === 'Episode' && entry.EpisodeCount > 1) {
-    const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
-    const range =
-      entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
-        ? 'Episodes ' + entry.FirstEpisodeNumber + '-' + entry.LastEpisodeNumber
-        : entry.EpisodeCount + ' episodes';
-    return 'Finished ' + entry.SeriesName + ' — ' + season + range;
+  text('Finished ');
+  if (entry.ItemType === 'Episode' && entry.SeriesName) {
+    container.appendChild(link(entry.SeriesName));
+    if (entry.EpisodeCount > 1) {
+      const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
+      const range =
+        entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
+          ? 'Episodes ' + entry.FirstEpisodeNumber + '-' + entry.LastEpisodeNumber
+          : entry.EpisodeCount + ' episodes';
+      text(' — ' + season + range);
+    } else {
+      text(' — ' + entry.ItemName);
+    }
+    return container;
   }
-  const noun = entry.ItemType === 'Episode' && entry.SeriesName ? entry.SeriesName + ' — ' + entry.ItemName : entry.ItemName;
-  return 'Finished ' + noun;
+  container.appendChild(link(entry.ItemName));
+  return container;
 }
 
 function buildBanner(userId, isOwner, onChanged) {
@@ -262,7 +302,7 @@ function buildActivitySection(entries, canRemove, userId, onChanged) {
   const list = el('ul', 'jellio-profile-activity');
   entries.forEach(function (entry) {
     const item = el('li', 'jellio-profile-activity-item');
-    item.appendChild(el('span', 'jellio-profile-activity-text', describeActivity(entry)));
+    item.appendChild(describeActivity(entry));
     item.appendChild(el('span', 'jellio-profile-activity-time', formatRelativeTime(entry.CompletedAtUtc)));
     if (canRemove) {
       const deleteButton = el('button', 'jellio-profile-admin-delete', 'Remove');
@@ -406,7 +446,8 @@ export async function renderProfile(root, params) {
           // Manga, manhwa and manhua volumes alike.
           ['Manga · manhwa · manhua', achievements.MangaVolumesCompleted],
           ['Audiobooks', achievements.AudiobooksCompleted],
-          ['Hours listened', achievements.ListenedHours],
+          ['Time reading', formatMinutes(achievements.ReadingMinutes)],
+          ['Time listening', formatMinutes(achievements.ListenedMinutes)],
         ],
       ],
     ].forEach(function (group) {
@@ -415,7 +456,8 @@ export async function renderProfile(root, params) {
       const stats = el('div', 'jellio-profile-stats');
       group[1].forEach(function (pair) {
         const stat = el('div', 'jellio-profile-stat');
-        stat.appendChild(el('span', 'jellio-profile-stat-value', Number(pair[1] || 0).toLocaleString()));
+        const value = typeof pair[1] === 'string' ? pair[1] : Number(pair[1] || 0).toLocaleString();
+        stat.appendChild(el('span', 'jellio-profile-stat-value', value));
         stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
         stats.appendChild(stat);
       });
