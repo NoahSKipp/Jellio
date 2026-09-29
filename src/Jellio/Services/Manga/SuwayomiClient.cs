@@ -368,7 +368,7 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
 
     public async Task<IReadOnlyList<(int Id, string Title)>?> GetLibraryAsync(CancellationToken cancellationToken)
     {
-        if (_library is { } cached && DateTime.UtcNow - cached.At < SourcesTtl)
+        if (_library is { } cached && DateTime.UtcNow - cached.At < TimeSpan.FromMinutes(1))
         {
             return cached.Library;
         }

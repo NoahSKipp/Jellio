@@ -819,7 +819,7 @@ export function renderBookshelf(root, params, parentId) {
       }
 
       if (!entries.length) {
-        stats.textContent = '';
+        stats.textContent = kind === 'manga' && results[5] && results[5].failed ? 'Suwayomi isn’t answering right now.' : '';
         renderEmpty();
         return;
       }
@@ -835,6 +835,9 @@ export function renderBookshelf(root, params, parentId) {
         (entries.length === 1 ? copy.one : copy.many) +
         (authorGroups.length ? ' · ' + authorGroups.length + (authorGroups.length === 1 ? ' author' : ' authors') : '');
 
+      if (kind === 'manga' && results[5] && results[5].failed) {
+        stats.textContent += ' · Suwayomi isn’t answering, so series read from their sources are missing';
+      }
       renderRows(results[2] || [], authorGroups);
       renderAuthors(authorGroups);
       renderTabs();

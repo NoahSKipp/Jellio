@@ -750,7 +750,9 @@ export function getStreamLibrary() {
     return getJson('/Jellio/manga/stream/library', 60000);
   }, SHORT_CACHE_TTL_MS).catch(function (err) {
     console.warn('Jellio: could not load streamed manga', err);
-    return [];
+    const none = [];
+    none.failed = true;
+    return none;
   });
 }
 
