@@ -272,7 +272,7 @@ public class MangaImportService(
             : [];
         if (!await suwayomi.EnqueueDownloadsAsync(toDownload, cancellationToken).ConfigureAwait(false))
         {
-            return new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't queue the downloads");
+            return (new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't queue the downloads"), originalFailed);
         }
 
         streamService.Invalidate();
