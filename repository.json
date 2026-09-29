@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.39.0] - 2026-09-29\n\n### 🚀 Features\n\n- Read manga from Discover instead of requesting it\n- Open the show, manga series or item from a Feed entry\n- Show reading books and manga, and listening, in Now Playing\n- Track time spent in the reader\n- Link titles in profile activity and show reading time\n- Split manga reading time from books on profiles\n\n### 🐛 Bug Fixes\n\n- Keep profile activity times aligned on the right\n",
+        "checksum": "855e3b3956a09c876050a81fcc4f570e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.39.0/jellio_1.39.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-29T19:56:19Z",
+        "version": "1.39.0"
+      },
+      {
         "changelog": "## [1.38.0] - 2026-09-29\n\n### 🚀 Features\n\n- Import a series from another installed source when Mihon's source fails\n- Make the Manga shelf each reader's own library\n- Reading mode and crop borders in the manga reader's bottom bar\n\n### 🐛 Bug Fixes\n\n- Save a Mihon import's reading progress once per series instead of once per chapter\n- Return the import result and source state together when queueing fails\n\n### ⚡ Performance\n\n- Load streamed manga per series for each reader's own library\n",
         "checksum": "0ef0fd8b9a484705123c6cd6002df8ea",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.38.0/jellio_1.38.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-25T22:13:37Z",
         "version": "1.18.0"
-      },
-      {
-        "changelog": "## [1.17.0] - 2026-09-25\n\n### 🚀 Features\n\n- Add a Dismiss button to the Skip Intro/Credits card\n\n### ⚡ Performance\n\n- Allow codec-compatible MKV sources to genuinely Direct Play\n",
-        "checksum": "00068b3718359f56c743147c81c49fde",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.17.0/jellio_1.17.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-25T09:55:48Z",
-        "version": "1.17.0"
       }
     ]
   }
