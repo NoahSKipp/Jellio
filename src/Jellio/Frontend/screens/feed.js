@@ -20,6 +20,8 @@ import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { navigateTo } from '../runtime/router.js';
+import { getMangaShelfHash } from '../components/navShared.js';
+import { mangaSeriesKey } from '../components/mangaSeries.js';
 import { formatRelativeTime, isReadingActivity, describeReading } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
 
@@ -78,12 +80,33 @@ function appendBadgeDescription(container, entry) {
   }
 }
 
+// What an entry opens: the show (not the season or episode), the manga
+// series (not the chapter), else the item itself. Badges, and anything
+// without an item, open the person's profile.
+async function openEntry(entry) {
+  const profile = '#/profile?id=' + entry.UserId;
+  if (entry.Kind === 'Badge' || !entry.ItemId) {
+    navigateTo(profile);
+    return;
+  }
+  if (entry.ItemType === 'Manga' && entry.SeriesName) {
+    const shelf = await getMangaShelfHash();
+    navigateTo(shelf ? shelf + '&series=' + encodeURIComponent(mangaSeriesKey(entry.SeriesName)) : profile);
+    return;
+  }
+  if (entry.ItemType === 'Episode' && entry.SeriesId) {
+    navigateTo('#/item?id=' + entry.SeriesId);
+    return;
+  }
+  navigateTo('#/item?id=' + entry.ItemId);
+}
+
 function buildFeedRow(entry) {
   const row = document.createElement('button');
   row.type = 'button';
   row.className = 'jellio-feed-row';
   row.addEventListener('click', function () {
-    navigateTo('#/profile?id=' + entry.UserId);
+    openEntry(entry);
   });
 
   if (entry.Kind === 'Badge') {
@@ -128,8 +151,17 @@ function buildFeedRow(entry) {
   avatar.addEventListener('error', function () {
     avatar.replaceWith(el('span', 'material-icons person jellio-feed-avatar-empty'));
   });
-  meta.appendChild(avatar);
-  meta.appendChild(el('span', 'jellio-feed-user', entry.UserName));
+  // The person (avatar and name) still opens their profile.
+  const person = el('span', 'jellio-feed-person');
+  person.setAttribute('role', 'link');
+  person.title = entry.UserName + '’s profile';
+  person.appendChild(avatar);
+  person.appendChild(el('span', 'jellio-feed-user', entry.UserName));
+  person.addEventListener('click', function (event) {
+    event.stopPropagation();
+    navigateTo('#/profile?id=' + entry.UserId);
+  });
+  meta.appendChild(person);
   meta.appendChild(el('span', 'jellio-feed-time', formatRelativeTime(entry.OccurredAtUtc)));
   body.appendChild(meta);
 

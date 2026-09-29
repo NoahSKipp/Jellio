@@ -103,6 +103,15 @@ export function isActive(hash) {
   return hashHasKind === currentHasKind;
 }
 
+// The Manga shelf's address (the same library getPrimaryNavLinks links
+// to), for opening a series from elsewhere; null without one.
+export async function getMangaShelfHash() {
+  const views = await getUserViews().catch(() => []);
+  const mangaView = views.find((view) => view.CollectionType === 'books' && MANGA_LIBRARY.test(view.Name || ''));
+  const source = mangaView || views.find((view) => view.CollectionType === 'books');
+  return source ? libraryHash(source) + '&bookKind=manga' + (mangaView ? '&mangaLibrary=1' : '') : null;
+}
+
 // The primary link set both surfaces share: Home/Search/Watchlist/Feed,
 // the reader's own real libraries (Movies/Shows/Anime called out first,
 // same real constraint components/sidebar.js's own header already
