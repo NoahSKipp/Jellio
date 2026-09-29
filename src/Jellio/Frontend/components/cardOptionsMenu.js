@@ -189,7 +189,16 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
   menu.setAttribute('role', 'menu');
   positionMenu(menu, anchorRect);
 
-  if (opts.continueWatching) {
+  // Screen-specific actions first (e.g. a shelf's Categories), and only
+  // those for cards that aren't one playable item.
+  const extraOptions = typeof opts.extraOptions === 'function' ? opts.extraOptions(item) : opts.extraOptions;
+  (extraOptions || []).forEach(function (option) {
+    menu.appendChild(buildOption(option.label, option.icon, option.onClick));
+  });
+
+  if (opts.onlyExtra) {
+    // Nothing item-specific applies.
+  } else if (opts.continueWatching) {
     menu.appendChild(
       buildOption('Go to details', 'info', function () {
         navigateTo('#/item?id=' + item.Id);
