@@ -1,4 +1,4 @@
-import { getMangaSeriesCoverUrl } from '../runtime/api.js';
+import { getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
 
 // Manga arrives as one file per chapter or volume (Suwayomi saves each
 // chapter as its own CBZ), so the Manga shelf groups files into series:
@@ -67,7 +67,10 @@ function idKey(id) {
 const FINISHED = 0.98;
 
 export function chapterState(item, progress) {
-  const record = progress[idKey(item.Id)];
+  // A chapter saved to the server may have been read while streamed.
+  const own = progress[idKey(item.Id)];
+  const streamed = item.StreamId ? progress[idKey(item.StreamId)] : null;
+  const record = own && streamed ? (own.Progress >= streamed.Progress ? own : streamed) : own || streamed;
   if (!record || !record.Progress) return { read: false, started: false, record: null };
   return { read: record.Progress >= FINISHED, started: record.Progress < FINISHED, record: record };
 }
@@ -102,12 +105,66 @@ export function resumePoint(chapters, progress) {
 
 // Shows the series' real cover (a cover image in its folder, Suwayomi's,
 // or AniList's) on an <img>, falling back to the chapter image it had.
-export function useSeriesCover(img, chapter, onMissing) {
+export function useSeriesCover(img, chapter, onMissing, streamMangaId) {
   const fallback = img.getAttribute('src');
   img.addEventListener('error', function onError() {
     img.removeEventListener('error', onError);
     if (fallback) img.src = fallback;
     else if (onMissing) onMissing();
   });
-  img.src = getMangaSeriesCoverUrl(chapter.Id);
+  img.src = chapter && !chapter.Stream ? getMangaSeriesCoverUrl(chapter.Id) : getStreamCoverUrl(streamMangaId || chapter.Stream.MangaId);
+}
+
+// A chapter read straight from its source (MangaStreamController), shaped
+// like a library item so the shelf, reader and downloads treat it alike.
+export function streamChapterItem(chapter, seriesTitle) {
+  return {
+    Id: chapter.Id,
+    Name: chapter.Name,
+    SortName: chapter.Name,
+    Type: 'Book',
+    SeriesName: seriesTitle,
+    DateCreated: chapter.UploadDate ? new Date(chapter.UploadDate).toISOString() : null,
+    ImageTags: {},
+    UserData: {},
+    Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId, PageCount: chapter.PageCount },
+  };
+}
+
+function chapterNameKey(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+// A series' chapters from both places: the library's files (saved to the
+// server) win, carrying the streamed chapter's id for its progress;
+// everything else streams.
+export function mergeStreamChapters(libraryChapters, streamSeries) {
+  if (!streamSeries) return libraryChapters.slice().sort(compareChapters);
+  const byName = new Map();
+  libraryChapters.forEach((item) => byName.set(chapterNameKey(item.Name), item));
+  const used = new Set();
+  const merged = streamSeries.Chapters.map(function (chapter) {
+    const key = chapterNameKey(chapter.Name);
+    let saved = byName.get(key);
+    if (!saved) {
+      for (const [name, item] of byName) {
+        if (!used.has(item) && (name.endsWith(' ' + key) || key.endsWith(' ' + name))) {
+          saved = item;
+          break;
+        }
+      }
+    }
+    if (saved && !used.has(saved)) {
+      used.add(saved);
+      return Object.assign({}, saved, { StreamId: chapter.Id });
+    }
+    return streamChapterItem(chapter, streamSeries.Title);
+  });
+  libraryChapters.forEach((item) => {
+    if (!used.has(item)) merged.push(item);
+  });
+  return merged.sort(compareChapters);
 }

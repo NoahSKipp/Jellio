@@ -1,9 +1,25 @@
 // One manga series from the Manga shelf (screens/bookshelf.js, reached
 // with &series=<key>): its cover, how far the reader is, a button that
 // picks up where they left off, and every chapter in reading order with
-// its read state.
-import { getBookshelfItems, getAllReadingProgress, getImageUrl } from '../runtime/api.js';
-import { groupMangaSeries, chapterState, resumePoint, useSeriesCover } from '../components/mangaSeries.js';
+// its read state. Chapters stream from the source (MangaStreamController)
+// unless they've been saved to the server.
+import {
+  getBookshelfItems,
+  getAllReadingProgress,
+  getImageUrl,
+  getStreamLibrary,
+  getStreamSeries,
+  saveStreamSeries,
+} from '../runtime/api.js';
+import {
+  groupMangaSeries,
+  chapterState,
+  resumePoint,
+  useSeriesCover,
+  mergeStreamChapters,
+  mangaSeriesTitle,
+  mangaSeriesKey,
+} from '../components/mangaSeries.js';
 import { buildDownloadButton, downloadBook } from '../components/downloads.js';
 import { findAnyDownload, removeDownload } from '../runtime/offline.js';
 import { loadShelf, onShelfChange, saveSeriesPrefs, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
@@ -45,17 +61,36 @@ export function renderMangaSeries(root, params, parentId) {
     getBookshelfItems(parentId, 'manga', params.get('mangaLibrary') === '1'),
     getAllReadingProgress().catch(() => ({})),
     loadShelf('manga'),
+    getStreamLibrary(),
   ])
-    .then(function (results) {
+    .then(async function (results) {
       if (cancelled) return;
-      const group = groupMangaSeries(results[0]).series.find((series) => series.key === key);
+      const library = groupMangaSeries(results[0]);
+      const saved = library.series.find((series) => series.key === key) || null;
+      const loose = saved ? [] : library.singles.filter((item) => mangaSeriesKey(mangaSeriesTitle(item)) === key);
       const progress = results[1];
       shelf = results[2];
+      const summary = (results[3] || []).find((series) => series.Key === key) || null;
+      const streamed = summary ? await getStreamSeries(summary.MangaId).catch(() => null) : null;
+      if (cancelled) return;
       body.textContent = '';
-      if (!group) {
-        body.appendChild(el('p', 'jellio-service-empty', 'This series isn’t on the shelf any more.'));
+      const savedChapters = saved ? saved.chapters : loose;
+      if (!savedChapters.length && !(streamed && streamed.Chapters.length)) {
+        body.appendChild(
+          el(
+            'p',
+            'jellio-service-empty',
+            summary ? 'Couldn’t load this series’ chapters from its source. Try again in a moment.' : 'This series isn’t on the shelf any more.',
+          ),
+        );
         return;
       }
+      const group = {
+        key: key,
+        title: saved ? saved.title : streamed ? streamed.Title : mangaSeriesTitle(loose[0]),
+        chapters: mergeStreamChapters(savedChapters, streamed),
+        stream: summary,
+      };
       setTitle(group.title + ' - Jellio');
       render(group, progress);
     })
@@ -65,6 +100,10 @@ export function renderMangaSeries(root, params, parentId) {
       body.textContent = '';
       body.appendChild(el('p', 'jellio-service-empty', 'Could not load this series. Try again in a moment.'));
     });
+
+  function bookmarked(item) {
+    return isBookmarked(shelf, item.Id) || (!!item.StreamId && isBookmarked(shelf, item.StreamId));
+  }
 
   function render(group, progress) {
     const chapters = group.chapters;
@@ -82,9 +121,14 @@ export function renderMangaSeries(root, params, parentId) {
       img.setAttribute('src', getImageUrl(coverItem.Id, 'Primary', { tag: coverItem.ImageTags.Primary, maxWidth: 400 }));
     }
     cover.appendChild(img);
-    useSeriesCover(img, chapters[0], function () {
-      img.replaceWith(el('span', 'material-icons collections_bookmark'));
-    });
+    useSeriesCover(
+      img,
+      chapters[0],
+      function () {
+        img.replaceWith(el('span', 'material-icons collections_bookmark'));
+      },
+      group.stream && group.stream.MangaId,
+    );
     hero.appendChild(cover);
 
     const info = el('div', 'jellio-manga-series-info');
@@ -142,6 +186,29 @@ export function renderMangaSeries(root, params, parentId) {
         save.disabled = false;
       });
       actions.appendChild(save);
+    }
+
+    // Streamed chapters into the library, to keep on the server.
+    const unsaved = chapters.filter((chapter) => chapter.Stream);
+    if (group.stream && unsaved.length) {
+      const keep = el('button', 'jellio-manga-series-order');
+      keep.type = 'button';
+      keep.appendChild(el('span', 'material-icons cloud_download'));
+      keep.appendChild(el('span', null, 'Save to server (' + unsaved.length + ')'));
+      keep.title = 'Download these chapters into the library, so they don’t depend on the source';
+      keep.addEventListener('click', async function () {
+        if (!window.confirm('Download ' + unsaved.length + ' chapters of “' + group.title + '” to the server?')) return;
+        keep.disabled = true;
+        try {
+          const result = await saveStreamSeries(group.stream.MangaId);
+          showToast('Saving ' + ((result && result.Queued) || 0) + ' chapters to the server. They move to the library as they finish.');
+        } catch (err) {
+          console.warn('Jellio: could not save the series', err);
+          showToast('Could not save this series to the server. Try again in a moment.');
+          keep.disabled = false;
+        }
+      });
+      actions.appendChild(keep);
     }
 
     // Every downloaded chapter of this series off the device at once.
@@ -291,7 +358,7 @@ export function renderMangaSeries(root, params, parentId) {
       });
       const ordered = (descending ? chapters.slice().reverse() : chapters).filter(function (item) {
         if (filter === 'unread') return !chapterState(item, progress).read;
-        if (filter === 'bookmarked') return isBookmarked(shelf, item.Id);
+        if (filter === 'bookmarked') return bookmarked(item);
         return true;
       });
       if (!ordered.length) {
@@ -317,18 +384,19 @@ export function renderMangaSeries(root, params, parentId) {
           openChapter(item);
         });
         row.appendChild(button);
-        const marked = isBookmarked(shelf, item.Id);
+        const marked = bookmarked(item);
         const bookmark = el('button', 'jellio-manga-chapter-bookmark' + (marked ? ' jellio-manga-chapter-bookmarked' : ''));
         bookmark.type = 'button';
         bookmark.setAttribute('aria-label', marked ? 'Remove bookmark' : 'Bookmark chapter');
         bookmark.title = marked ? 'Remove bookmark' : 'Bookmark chapter';
         bookmark.appendChild(el('span', 'material-icons ' + (marked ? 'bookmark' : 'bookmark_border')));
         bookmark.addEventListener('click', function () {
-          const key = String(item.Id).replace(/-/g, '').toLowerCase();
-          if (marked) shelf.Bookmarks = shelf.Bookmarks.filter((id) => id !== key);
-          else shelf.Bookmarks = shelf.Bookmarks.concat([key]);
+          const ids = [item.Id].concat(item.StreamId ? [item.StreamId] : []).map((id) => String(id).replace(/-/g, '').toLowerCase());
+          if (marked) shelf.Bookmarks = shelf.Bookmarks.filter((id) => ids.indexOf(id) === -1);
+          else shelf.Bookmarks = shelf.Bookmarks.concat([ids[0]]);
           renderList();
-          setBookmark(item.Id, !marked).catch(function (err) {
+          const saves = marked ? ids.map((id) => setBookmark(id, false)) : [setBookmark(ids[0], true)];
+          Promise.all(saves).catch(function (err) {
             console.warn('Jellio: could not save the bookmark', err);
           });
         });

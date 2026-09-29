@@ -13,8 +13,16 @@ import {
   getJellioConfig,
   getAllReadingProgress,
   audiobookGroupKey,
+  getStreamLibrary,
 } from '../runtime/api.js';
-import { groupMangaSeries, resumePoint, useSeriesCover, mangaSeriesTitle, mangaSeriesKey } from '../components/mangaSeries.js';
+import {
+  groupMangaSeries,
+  resumePoint,
+  useSeriesCover,
+  mangaSeriesTitle,
+  mangaSeriesKey,
+  streamChapterItem,
+} from '../components/mangaSeries.js';
 import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
 import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey } from '../runtime/shelf.js';
@@ -249,14 +257,20 @@ function seriesCard(entry, cardOptions) {
     }
   }
   if (img) {
-    useSeriesCover(img, group.chapters[0], function () {
-      img.remove();
-      const placeholder = card.querySelector('.jellio-card-image-empty');
-      if (placeholder) placeholder.hidden = false;
-    });
+    useSeriesCover(
+      img,
+      group.chapters[0],
+      function () {
+        img.remove();
+        const placeholder = card.querySelector('.jellio-card-image-empty');
+        if (placeholder) placeholder.hidden = false;
+      },
+      group.stream && group.stream.MangaId,
+    );
   }
-  const facts = [group.chapters.length + ' chapters'];
-  if (entry.readCount) facts.push(entry.readCount === group.chapters.length ? 'all read' : entry.readCount + ' read');
+  const total = entry.chapters || group.chapters.length;
+  const facts = [total + (total === 1 ? ' chapter' : ' chapters')];
+  if (entry.readCount) facts.push(entry.readCount >= total ? 'all read' : entry.readCount + ' read');
   card.appendChild(el('div', 'jellio-card-subtitle', facts.join(' · ')));
   function open() {
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
@@ -296,32 +310,92 @@ function groupBy(entries, keyOf, labelOf) {
 // (cover from its first chapter), files that belong to no series on
 // their own. Continue reading is worked out per series from reading
 // progress, so finishing a chapter moves the series on to the next one.
-function mangaEntries(items, info, progress, shelf) {
+function mangaEntries(items, info, progress, shelf, stream) {
   const grouped = groupMangaSeries(items);
+  const streamByKey = new Map((stream || []).map((series) => [series.Key, series]));
+  // A lone chapter file of a streamed series belongs with it.
+  grouped.singles = grouped.singles.filter(function (item) {
+    const title = mangaSeriesTitle(item);
+    const key = title ? mangaSeriesKey(title) : '';
+    if (!key || !streamByKey.has(key)) return true;
+    grouped.series.push({ key: key, title: title, chapters: [item] });
+    return false;
+  });
   const continueEntries = [];
+  function streamContinue(series, lastRead) {
+    if (!series.Resume) return;
+    const item = streamChapterItem(
+      { Id: series.Resume.Id, ChapterId: series.Resume.ChapterId, MangaId: series.MangaId, Name: series.Resume.Name },
+      series.Title,
+    );
+    continueEntries.push({ item: item, key: seriesShelfKey(series.Key), author: series.Title, lastRead: lastRead });
+  }
   const entries = grouped.series.map(function (group) {
     const coverItem = group.chapters.find((item) => item.ImageTags && item.ImageTags.Primary) || group.chapters[0];
     const base = describe(coverItem, info, progress);
     const resume = resumePoint(group.chapters, progress);
-    if (resume.lastRead && resume.chapter) {
+    const streamed = streamByKey.get(group.key);
+    streamByKey.delete(group.key);
+    group.stream = streamed || null;
+    const streamLastRead = streamed && streamed.LastReadAt ? Date.parse(streamed.LastReadAt) || 0 : 0;
+    if (streamed && streamLastRead > resume.lastRead) {
+      streamContinue(streamed, streamLastRead);
+    } else if (resume.lastRead && resume.chapter) {
       const entry = describe(resume.chapter, info, progress);
       continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead }));
     }
     const key = seriesShelfKey(group.key);
     const prefs = (shelf.Series || {})[key] || {};
-    const latest = Math.max.apply(null, group.chapters.map((item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0)));
+    const latest = Math.max(
+      streamed ? streamed.LatestUpload || 0 : 0,
+      Math.max.apply(null, group.chapters.map((item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0))),
+    );
+    const chapters = Math.max(group.chapters.length, streamed ? streamed.ChapterCount : 0);
+    const readCount = Math.max(resume.readCount, streamed ? streamed.ReadCount : 0);
     return Object.assign(base, {
       item: Object.assign({}, coverItem, { Name: group.title, SortName: group.title, UserData: null }),
       key: key,
       series: '',
       seriesGroup: group,
-      readCount: resume.readCount,
+      readCount: readCount,
       added: prefs.AddedAt || latest,
       latest: latest,
-      lastRead: resume.lastRead,
-      chapters: group.chapters.length,
-      unread: group.chapters.length - resume.readCount,
+      lastRead: Math.max(resume.lastRead, streamLastRead),
+      chapters: chapters,
+      unread: chapters - readCount,
       search: (group.title + ' ' + base.author).toLowerCase(),
+    });
+  });
+  // Series only in Suwayomi's library: read straight from the source.
+  streamByKey.forEach(function (series) {
+    const key = seriesShelfKey(series.Key);
+    const prefs = (shelf.Series || {})[key] || {};
+    const lastRead = series.LastReadAt ? Date.parse(series.LastReadAt) || 0 : 0;
+    if (lastRead) streamContinue(series, lastRead);
+    const author = series.Author || '';
+    entries.push({
+      item: {
+        Id: series.FirstChapterId || 'stream' + series.MangaId,
+        Name: series.Title,
+        SortName: series.Title,
+        Type: 'Book',
+        ImageTags: {},
+        UserData: null,
+        Stream: { MangaId: series.MangaId },
+      },
+      key: key,
+      author: author,
+      authorKey: author ? authorKey(author) : '',
+      year: null,
+      series: '',
+      seriesGroup: { key: series.Key, title: series.Title, chapters: [], stream: series },
+      readCount: series.ReadCount,
+      added: prefs.AddedAt || series.LatestUpload || 0,
+      latest: series.LatestUpload || 0,
+      lastRead: lastRead,
+      chapters: series.ChapterCount,
+      unread: series.ChapterCount - series.ReadCount,
+      search: (series.Title + ' ' + author).toLowerCase(),
     });
   });
   grouped.singles.forEach((item) => entries.push(describe(item, info, progress)));
@@ -727,6 +801,7 @@ export function renderBookshelf(root, params, parentId) {
     }),
     kind === 'audiobook' ? Promise.resolve({}) : getAllReadingProgress().catch(() => ({})),
     loadShelf(kind),
+    kind === 'manga' ? getStreamLibrary() : Promise.resolve([]),
   ])
     .then(function (results) {
       if (cancelled) return;
@@ -734,9 +809,9 @@ export function renderBookshelf(root, params, parentId) {
       const info = results[1] || {};
       shelf = results[4];
       if (activeCategory && !currentCategory()) activeCategory = '';
-      loadedItems = { items: items, info: info, progress: results[3] || {} };
+      loadedItems = { items: items, info: info, progress: results[3] || {}, stream: results[5] || [] };
       if (kind === 'manga') {
-        const manga = mangaEntries(items, info, results[3] || {}, shelf);
+        const manga = mangaEntries(items, info, results[3] || {}, shelf, results[5]);
         entries = manga.entries;
         results[2] = manga.continueEntries;
       } else {
@@ -785,7 +860,7 @@ export function renderBookshelf(root, params, parentId) {
         writeCategory(kind, '');
       }
       if (kind === 'manga') {
-        entries = mangaEntries(loadedItems.items, loadedItems.info, loadedItems.progress, shelf).entries;
+        entries = mangaEntries(loadedItems.items, loadedItems.info, loadedItems.progress, shelf, loadedItems.stream).entries;
       }
       renderTabs();
       paintSortControls();
