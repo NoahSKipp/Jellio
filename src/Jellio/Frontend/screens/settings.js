@@ -590,7 +590,7 @@ function buildMihonImportCard() {
   const { card, body } = buildCard(
     'collections_bookmark',
     'Import from Mihon',
-    'Brings your Mihon library over: each series is downloaded from where you left off, and your reading progress follows as chapters arrive.',
+    'Brings your Mihon library over: every series with its categories, reading progress, history, bookmarks, notes and reading mode, read straight from the same sources.',
   );
 
   const input = document.createElement('input');

@@ -2,11 +2,13 @@
 // ways to get a series, whichever the server has set up:
 // - Chapters, from Suwayomi (Controllers/MangaRequestController.cs): its
 //   sources are searched in parallel, results grouped by source, and a
-//   pick adds the series and downloads every chapter. Covers manhwa and
+//   pick adds the series to the shelf, read straight from the source
+//   (downloaded too if the admin keeps requests on the server). Covers manhwa and
 //   manhua, which rarely exist as published volumes.
 // - Volumes, from Chaptarr: the book request panel, searching for the
 //   series' published volumes.
 import {
+  invalidateStreamLibrary,
   getMangaRequestStatus,
   searchMangaSources,
   requestMangaSeries,
@@ -133,12 +135,7 @@ export function openMangaRequestSheet(root, options) {
         }
         if (!status.DownloadAsCbz) {
           warnings.appendChild(
-            el('p', 'jellio-manga-warning', 'Suwayomi saves chapters as image folders. Turn on “Download as CBZ” in its settings so Jellyfin can read them.'),
-          );
-        }
-        if (!status.AutoDownloadNewChapters) {
-          warnings.appendChild(
-            el('p', 'jellio-manga-warning', 'New chapters won’t download on their own. Turn on automatic downloads of new chapters in Suwayomi to follow ongoing series.'),
+            el('p', 'jellio-manga-warning', 'Suwayomi saves chapters as image folders. Turn on “Download as CBZ” in its settings so series saved to the server can be read.'),
           );
         }
       })
@@ -231,16 +228,19 @@ export function openMangaRequestSheet(root, options) {
     const actions = el('div', 'jellio-book-request-actions');
     const button = el('button', 'jellio-book-request-action');
     button.type = 'button';
-    button.appendChild(el('span', 'material-icons download'));
-    const text = el('span', null, manga.InLibrary ? 'In Suwayomi · get missing' : 'Add & download');
+    button.appendChild(el('span', 'material-icons ' + (manga.InLibrary ? 'check' : 'add')));
+    const text = el('span', null, manga.InLibrary ? 'On the shelf · refresh' : 'Add to shelf');
     button.appendChild(text);
     button.addEventListener('click', function () {
       button.disabled = true;
       text.textContent = 'Adding…';
       requestMangaSeries(manga.MangaId, manga.Title)
         .then(function (response) {
+          invalidateStreamLibrary();
           if (response && response.Status === 'added') {
-            text.textContent = 'Downloading ' + response.QueuedChapters + (response.QueuedChapters === 1 ? ' chapter' : ' chapters');
+            text.textContent = response.QueuedChapters
+              ? 'Downloading ' + response.QueuedChapters + (response.QueuedChapters === 1 ? ' chapter' : ' chapters')
+              : 'Added · ' + response.TotalChapters + (response.TotalChapters === 1 ? ' chapter' : ' chapters') + ' to read';
           } else if (response && response.Status === 'exists') {
             text.textContent = response.Message || 'All ' + response.TotalChapters + ' chapters already downloaded';
           } else {
