@@ -79,6 +79,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // its own shared singleton). Same no-state-of-its-own shape.
         services.AddSingleton<NextUpHiddenStore>();
         services.AddSingleton<Jellio.Services.Reading.ShelfStore>();
+        services.AddSingleton<Jellio.Services.Reading.NowReadingService>();
         services.AddSingleton<NotificationStore>();
         services.AddSingleton<RealDurationStore>();
 

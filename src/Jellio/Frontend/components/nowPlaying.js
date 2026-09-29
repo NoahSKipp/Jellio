@@ -10,7 +10,15 @@
 // between two independently loaded classic scripts, not needed here
 // since sidebar.js can just import and call this module's own exports
 // directly.
-import { getNowPlayingSessions, getImageUrl } from '../runtime/api.js';
+import {
+  getNowPlayingSessions,
+  getImageUrl,
+  getBookCoverUrl,
+  getMangaSeriesCoverUrl,
+  getStreamCoverUrl,
+} from '../runtime/api.js';
+import { getMangaShelfHash } from './navShared.js';
+import { mangaSeriesKey } from './mangaSeries.js';
 import { isAuthenticated } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
@@ -28,6 +36,11 @@ let started = false;
 let lastCount = 0;
 let hoverCloseTimer = null;
 
+function pageText(item) {
+  if (!item.Page) return '';
+  return 'Page ' + item.Page + (item.PageCount ? ' of ' + item.PageCount : '');
+}
+
 function subtitle(item) {
   if (item.Type === 'Episode') {
     const parts = [];
@@ -36,12 +49,37 @@ function subtitle(item) {
     }
     return parts.join(' • ');
   }
+  // A manga chapter under its series; a book by page.
+  if (item.Type === 'Manga') return [item.SeriesName ? item.Name : '', pageText(item)].filter(Boolean).join(' • ');
+  if (item.Type === 'Book') return pageText(item);
+  if (item.Type === 'AudioBook') return item.Album && item.Name !== item.Album ? item.Name : '';
   return item.ProductionYear ? String(item.ProductionYear) : '';
 }
 
 function displayTitle(item) {
   if (item.Type === 'Episode' && item.SeriesName) return item.SeriesName;
+  if (item.Type === 'Manga' && item.SeriesName) return item.SeriesName;
+  if (item.Type === 'AudioBook' && item.Album) return item.Album;
   return item.Name || '';
+}
+
+function statusWord(session) {
+  if (session.Activity === 'reading') return 'Reading';
+  if (session.IsPaused) return 'Paused';
+  return session.Activity === 'listening' ? 'Listening' : 'Playing';
+}
+
+// Covers: a manga's series cover, a book's (Chaptarr) cover, an
+// audiobook's album art, else the item's own image.
+function posterUrls(item, imageId) {
+  if (item.Type === 'Manga') {
+    return [item.MangaId ? getStreamCoverUrl(item.MangaId) : getMangaSeriesCoverUrl(item.Id)];
+  }
+  if (item.Type === 'Book') return [getImageUrl(item.Id, 'Primary', { maxWidth: 200 }), getBookCoverUrl(item.Id)];
+  if (item.Type === 'AudioBook' && item.AlbumId) {
+    return [getImageUrl(item.AlbumId, 'Primary', { maxWidth: 200 }), getImageUrl(item.Id, 'Primary', { maxWidth: 200 })];
+  }
+  return [getImageUrl(imageId, 'Primary', { maxWidth: 200 })];
 }
 
 // Real feedback: a reader could see who was watching what, real names
@@ -62,7 +100,14 @@ function buildRow(session) {
 
   function open() {
     hideNowPlayingPanel();
-    navigateTo('#/item?id=' + imageId);
+    // A manga opens its series on the Manga shelf.
+    if (item.Type === 'Manga' && item.SeriesName) {
+      getMangaShelfHash().then(function (shelf) {
+        if (shelf) navigateTo(shelf + '&series=' + encodeURIComponent(mangaSeriesKey(item.SeriesName)));
+      });
+      return;
+    }
+    navigateTo('#/item?id=' + (item.Type === 'AudioBook' && item.AlbumId ? item.AlbumId : imageId));
   }
   row.addEventListener('click', open);
   row.addEventListener('keydown', function (event) {
@@ -73,7 +118,9 @@ function buildRow(session) {
   });
 
   const poster = el('div', 'jellio-now-playing-row-poster');
-  poster.style.backgroundImage = 'url(' + getImageUrl(imageId, 'Primary', { maxWidth: 200 }) + ')';
+  poster.style.backgroundImage = posterUrls(item, imageId)
+    .map((url) => 'url("' + url + '")')
+    .join(', ');
   row.appendChild(poster);
 
   const text = el('div', null);
@@ -81,7 +128,7 @@ function buildRow(session) {
   const metaBits = [session.UserName];
   const sub = subtitle(item);
   if (sub) metaBits.push(sub);
-  metaBits.push(session.IsPaused ? 'Paused' : 'Playing');
+  metaBits.push(statusWord(session));
   text.appendChild(el('p', 'jellio-now-playing-row-meta', metaBits.filter(Boolean).join(' • ')));
   row.appendChild(text);
 
