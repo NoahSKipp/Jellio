@@ -32,7 +32,7 @@ import {
   defaultTargetLanguage,
 } from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
-import { loadShelf, saveSeriesPrefs, seriesShelfKey } from '../runtime/shelf.js';
+import { loadShelf, saveSeriesPrefs, seriesShelfKey, ensureInLibrary } from '../runtime/shelf.js';
 import { mangaSeriesTitle, mangaSeriesKey } from '../components/mangaSeries.js';
 
 const SETTINGS_KEY = 'jellio-reader-settings';
@@ -1587,8 +1587,8 @@ function failureDetail(err) {
 
 // A chapter read straight from its source (MangaStreamController): the
 // same [item, progress, file] the library path gives, pages by URL.
-async function openStreamChapter(itemId) {
-  const chapter = await getStreamChapter(itemId).catch(() => null);
+async function openStreamChapter(itemId, mangaHint) {
+  const chapter = await getStreamChapter(itemId, mangaHint).catch(() => null);
   if (!chapter) return null;
   const [count, saved] = await Promise.all([
     getStreamPageCount(chapter.ChapterId),
@@ -1631,7 +1631,7 @@ export async function renderReader(root, params) {
   } catch (err) {
     openError = err;
     // Not a library item: a manga chapter read straight from its source?
-    const streamed = await openStreamChapter(itemId).catch(function (streamErr) {
+    const streamed = await openStreamChapter(itemId, params.get('manga')).catch(function (streamErr) {
       openError = streamErr;
       return null;
     });
@@ -1665,6 +1665,8 @@ export async function renderReader(root, params) {
   const seriesTitle = isComic ? mangaSeriesTitle(item) : '';
   const seriesKey = seriesTitle ? seriesShelfKey(mangaSeriesKey(seriesTitle)) : '';
   if (seriesKey) {
+    // Reading a series puts it on the reader's Manga shelf.
+    ensureInLibrary(seriesKey);
     const shelf = await Promise.race([loadShelf('manga'), new Promise((resolve) => setTimeout(() => resolve(null), 1500))]);
     const prefs = (shelf && shelf.Series && shelf.Series[seriesKey]) || {};
     if (prefs.ComicLayout) settings.comicLayout = prefs.ComicLayout;
@@ -1727,6 +1729,7 @@ export async function renderReader(root, params) {
   const pagePill = el('div', 'jellio-reader-page-pill');
   root.appendChild(pagePill);
 
+  let paintComicTools = function () {};
   const footer = el('div', 'jellio-reader-footer');
   const scrubber = document.createElement('input');
   scrubber.type = 'range';
@@ -1781,6 +1784,7 @@ export async function renderReader(root, params) {
       PageCount: totalPages,
       ListenedSeconds: 0,
       Finished: finished,
+      MangaId: item.Stream ? item.Stream.MangaId : null,
     });
     sessionStartPage = sessionMaxPage;
     if (finished) finishedReported = true;
@@ -1980,6 +1984,7 @@ export async function renderReader(root, params) {
     tocButton.hidden = true;
     searchButton.hidden = true;
     root.classList.add('jellio-reader-comic-mode');
+    buildComicTools();
     // Mihon style: just the page, menus over it on a tap in the middle.
     root.classList.add('jellio-reader-immersive');
   }
@@ -2233,6 +2238,88 @@ export async function renderReader(root, params) {
     }, 0);
   }
 
+  function currentComicMode() {
+    return settings.comicLayout === 'single' ? reader.getDirection() : settings.comicLayout;
+  }
+
+  function applyComicMode(value) {
+    const mode = COMIC_MODES.find((entry) => entry.value === value);
+    if (!mode) return;
+    if (mode.direction) {
+      reader.setDirection(mode.direction);
+      settings.comicDirection = mode.direction;
+      saveSeriesMode({ ComicLayout: mode.layout, ComicDirection: mode.direction });
+    } else {
+      saveSeriesMode({ ComicLayout: mode.layout });
+    }
+    updateSettings({ comicLayout: mode.layout });
+  }
+
+  // Mihon's bottom bar for comics: reading mode, crop borders and the
+  // rest of the settings, right under the page slider.
+  function buildComicTools() {
+    const tools = el('div', 'jellio-reader-comic-tools');
+    const modeButton = el('button', 'jellio-reader-comic-tool');
+    modeButton.type = 'button';
+    const modeIcon = el('span', 'material-icons');
+    const modeLabel = el('span', 'jellio-reader-comic-tool-label');
+    modeButton.appendChild(modeIcon);
+    modeButton.appendChild(modeLabel);
+    const cropButton = el('button', 'jellio-reader-comic-tool');
+    cropButton.type = 'button';
+    cropButton.appendChild(el('span', 'material-icons crop'));
+    const cropLabel = el('span', 'jellio-reader-comic-tool-label');
+    cropButton.appendChild(cropLabel);
+    const moreButton = el('button', 'jellio-reader-comic-tool');
+    moreButton.type = 'button';
+    moreButton.appendChild(el('span', 'material-icons settings'));
+    moreButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Settings'));
+    tools.appendChild(modeButton);
+    tools.appendChild(cropButton);
+    tools.appendChild(moreButton);
+    footer.appendChild(tools);
+
+    const menu = el('div', 'jellio-reader-comic-mode-menu');
+    menu.hidden = true;
+    root.appendChild(menu);
+    const icons = { rtl: 'west', ltr: 'east', 'paged-vertical': 'south', spread: 'auto_stories', vertical: 'view_day', 'vertical-gaps': 'view_agenda' };
+
+    paintComicTools = function () {
+      const mode = COMIC_MODES.find((entry) => entry.value === currentComicMode()) || COMIC_MODES[0];
+      modeIcon.className = 'material-icons ' + icons[mode.value];
+      modeLabel.textContent = mode.label;
+      cropLabel.textContent = settings.comicCrop ? 'Crop on' : 'Crop off';
+      cropButton.classList.toggle('jellio-reader-comic-tool-on', !!settings.comicCrop);
+      cropButton.setAttribute('aria-pressed', settings.comicCrop ? 'true' : 'false');
+      menu.textContent = '';
+      COMIC_MODES.forEach(function (entry) {
+        const option = el('button', 'jellio-reader-comic-mode-option' + (entry.value === mode.value ? ' jellio-reader-comic-mode-option-active' : ''));
+        option.type = 'button';
+        option.appendChild(el('span', 'material-icons ' + icons[entry.value]));
+        option.appendChild(el('span', null, entry.label));
+        option.addEventListener('click', function () {
+          menu.hidden = true;
+          applyComicMode(entry.value);
+        });
+        menu.appendChild(option);
+      });
+    };
+    paintComicTools();
+    modeButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      menu.hidden = !menu.hidden;
+    });
+    document.addEventListener('pointerdown', function (event) {
+      if (!menu.hidden && !menu.contains(event.target) && !modeButton.contains(event.target)) menu.hidden = true;
+    });
+    cropButton.addEventListener('click', function () {
+      updateSettings({ comicCrop: !settings.comicCrop });
+    });
+    moreButton.addEventListener('click', function () {
+      openPanel(settingsPanel, paintSettings);
+    });
+  }
+
   function updateSettings(patch) {
     root.classList.remove('jellio-reader-theme-' + settings.theme);
     Object.assign(settings, patch);
@@ -2245,6 +2332,7 @@ export async function renderReader(root, params) {
       paintDirection();
     });
     paintSettings();
+    paintComicTools();
   }
 
   function paintSettings() {
@@ -2272,17 +2360,7 @@ export async function renderReader(root, params) {
       settingsPanel.appendChild(
         settingGroup(
           'Reading mode',
-          optionChips(COMIC_MODES, activeMode, function (value) {
-            const mode = COMIC_MODES.find((entry) => entry.value === value);
-            if (mode.direction) {
-              reader.setDirection(mode.direction);
-              settings.comicDirection = mode.direction;
-              saveSeriesMode({ ComicLayout: mode.layout, ComicDirection: mode.direction });
-            } else {
-              saveSeriesMode({ ComicLayout: mode.layout });
-            }
-            updateSettings({ comicLayout: mode.layout });
-          }),
+          optionChips(COMIC_MODES, activeMode, applyComicMode),
         ),
       );
       settingsPanel.appendChild(
