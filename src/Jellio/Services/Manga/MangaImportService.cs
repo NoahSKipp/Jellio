@@ -29,6 +29,11 @@ public class PendingChapterProgress
 
     // Mihon's own 0-based page index.
     public long LastPageRead { get; set; }
+
+    public bool Bookmark { get; set; }
+
+    // Unix milliseconds, 0 when Mihon had no history for it.
+    public long LastReadAt { get; set; }
 }
 
 public record MangaImportSeriesResult(string Title, string Outcome, int QueuedChapters, string? Message);
@@ -55,11 +60,13 @@ public class MangaImportJob
 /// had read is kept per reader and applied to Jellio's own reading
 /// progress once Jellyfin has the chapter (now, or when a later library
 /// scan adds it), matched by series folder and chapter file name - the
-/// way Suwayomi names its downloads.
+/// way Suwayomi names its downloads. Categories, per-series settings and
+/// bookmarks go to the reader's shelf (ShelfStore).
 /// </summary>
 public class MangaImportService(
     SuwayomiClient suwayomi,
     ReadingProgressStore progressStore,
+    ShelfStore shelfStore,
     ILibraryManager libraryManager,
     IApplicationPaths applicationPaths,
     ILogger<MangaImportService> logger) : IHostedService
@@ -116,7 +123,7 @@ public class MangaImportService(
     }
 
     // Returns null when this reader already has an import running.
-    public MangaImportJob? Start(Guid userId, IReadOnlyList<MihonManga> library)
+    public MangaImportJob? Start(Guid userId, IReadOnlyList<MihonManga> library, IReadOnlyList<MihonCategory> categories)
     {
         var job = new MangaImportJob { Total = library.Count };
         if (_jobs.TryGetValue(userId, out var existing) && existing.Status == "running")
@@ -125,21 +132,22 @@ public class MangaImportService(
         }
 
         _jobs[userId] = job;
-        _ = Task.Run(() => RunAsync(userId, library, job));
+        _ = Task.Run(() => RunAsync(userId, library, categories, job));
         return job;
     }
 
-    private async Task RunAsync(Guid userId, IReadOnlyList<MihonManga> library, MangaImportJob job)
+    private async Task RunAsync(Guid userId, IReadOnlyList<MihonManga> library, IReadOnlyList<MihonCategory> categories, MangaImportJob job)
     {
         try
         {
+            var categoryIds = ImportCategories(userId, categories);
             foreach (var manga in library)
             {
                 MangaImportSeriesResult result;
                 try
                 {
                     using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-                    result = await ImportSeriesAsync(userId, manga, timeout.Token).ConfigureAwait(false);
+                    result = await ImportSeriesAsync(userId, manga, categoryIds, timeout.Token).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -168,9 +176,10 @@ public class MangaImportService(
         }
     }
 
-    private async Task<MangaImportSeriesResult> ImportSeriesAsync(Guid userId, MihonManga manga, CancellationToken cancellationToken)
+    private async Task<MangaImportSeriesResult> ImportSeriesAsync(Guid userId, MihonManga manga, Dictionary<long, string> categoryIds, CancellationToken cancellationToken)
     {
         var found = await suwayomi.FindMangaAsync(manga.SourceId, manga.Url, manga.Title, cancellationToken).ConfigureAwait(false);
+        ImportShelf(userId, manga, found?.Title ?? manga.Title, categoryIds);
         if (found is null)
         {
             return new MangaImportSeriesResult(manga.Title, "not-found", 0, "Not found on " + manga.SourceName + ". Is that extension installed in Suwayomi?");
@@ -192,8 +201,10 @@ public class MangaImportService(
         var started = manga.Chapters.Where(chapter => chapter.Read || chapter.LastPageRead > 0).ToList();
         var numbered = started.Where(chapter => chapter.ChapterNumber >= 0).ToList();
         float? resumeAt = numbered.Count > 0 ? numbered.Max(chapter => chapter.ChapterNumber) : null;
+        var excluded = new HashSet<string>(manga.ExcludedScanlators, StringComparer.OrdinalIgnoreCase);
         var toDownload = chapters
             .Where(chapter => !chapter.IsDownloaded && (resumeAt is null || chapter.ChapterNumber >= resumeAt.Value))
+            .Where(chapter => excluded.Count == 0 || !excluded.Contains(chapter.Scanlator ?? string.Empty))
             .Select(chapter => chapter.Id)
             .ToList();
         if (!await suwayomi.EnqueueDownloadsAsync(toDownload, cancellationToken).ConfigureAwait(false))
@@ -204,13 +215,16 @@ public class MangaImportService(
         // Named the way Suwayomi names the files: its own chapter record
         // for the same URL when it has one.
         var byUrl = chapters.GroupBy(chapter => chapter.Url, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        var progress = started
+        var progress = manga.Chapters
+            .Where(chapter => chapter.Read || chapter.LastPageRead > 0 || chapter.Bookmark)
             .Select(chapter => new PendingChapterProgress
             {
                 Series = Normalize(found.Title),
                 Chapter = Normalize(byUrl.TryGetValue(chapter.Url, out var own) ? own.Name : chapter.Name),
                 Read = chapter.Read,
                 LastPageRead = chapter.LastPageRead,
+                Bookmark = chapter.Bookmark,
+                LastReadAt = chapter.LastReadAt,
             })
             .Where(entry => entry.Series.Length > 0 && entry.Chapter.Length > 0)
             .ToList();
@@ -309,24 +323,140 @@ public class MangaImportService(
 
         foreach (var (userId, book, entry) in applied)
         {
+            if (entry.Bookmark)
+            {
+                var key = book.Id.ToString("N");
+                shelfStore.Update(userId, data =>
+                {
+                    if (!data.Bookmarks.Contains(key))
+                    {
+                        data.Bookmarks.Add(key);
+                    }
+                });
+            }
+
             // Never overwrite progress made in Jellio itself.
-            if (progressStore.Get(userId, book.Id) is not null)
+            if ((!entry.Read && entry.LastPageRead <= 0) || progressStore.Get(userId, book.Id) is not null)
             {
                 continue;
             }
 
             var pages = CountPages(book.Path);
+            DateTimeOffset? readAt = entry.LastReadAt > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(entry.LastReadAt) : null;
             if (entry.Read)
             {
-                progressStore.Set(userId, book.Id, "page:" + (pages ?? 1), 1, pages);
+                progressStore.Set(userId, book.Id, "page:" + (pages ?? 1), 1, pages, readAt);
             }
             else
             {
                 var page = (int)Math.Min(entry.LastPageRead + 1, pages ?? int.MaxValue);
                 var fraction = pages is > 1 ? (page - 1) / (double)(pages.Value - 1) : 0;
-                progressStore.Set(userId, book.Id, "page:" + page, Math.Max(fraction, 0.01), pages);
+                progressStore.Set(userId, book.Id, "page:" + page, Math.Max(fraction, 0.01), pages, readAt);
             }
         }
+    }
+
+    // Mihon's categories on the Manga shelf, matched by name so a second
+    // import doesn't duplicate them. Returns Mihon order -> category id.
+    private Dictionary<long, string> ImportCategories(Guid userId, IReadOnlyList<MihonCategory> categories)
+    {
+        var ids = new Dictionary<long, string>();
+        if (categories.Count == 0)
+        {
+            return ids;
+        }
+
+        shelfStore.Update(userId, data =>
+        {
+            foreach (var mihon in categories)
+            {
+                var name = ShelfStore.CleanName(mihon.Name);
+                if (name.Length == 0)
+                {
+                    continue;
+                }
+
+                var category = data.Categories.FirstOrDefault(entry => entry.Kind == "manga" && string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (category is null)
+                {
+                    if (data.Categories.Count(entry => entry.Kind == "manga") >= ShelfStore.MaxCategories)
+                    {
+                        continue;
+                    }
+
+                    category = new ShelfCategory { Id = ShelfStore.NewId(), Kind = "manga", Name = name };
+                    data.Categories.Add(category);
+                }
+
+                (category.Sort, category.Descending) = MihonSort(mihon.Flags);
+                ids[mihon.Order] = category.Id;
+            }
+        });
+        return ids;
+    }
+
+    // Mihon's LibrarySort: type in bits 2 to 5, ascending in bit 6.
+    private static (string Sort, bool Descending) MihonSort(long flags)
+    {
+        var sort = (flags & 0b111100) switch
+        {
+            0b000100 => "last-read",
+            0b001000 or 0b010100 or 0b011000 => "latest",
+            0b001100 => "unread",
+            0b010000 => "chapters",
+            0b011100 => "added",
+            _ => "title",
+        };
+        return (sort, (flags & 0b1000000) == 0);
+    }
+
+    // Category membership and the series' own settings, under the key the
+    // Manga shelf groups the downloaded chapters by.
+    private void ImportShelf(Guid userId, MihonManga manga, string title, Dictionary<long, string> categoryIds)
+    {
+        var key = ShelfStore.SeriesShelfKey(title);
+        if (key.Length <= 2)
+        {
+            return;
+        }
+
+        var inCategories = manga.Categories.Select(order => categoryIds.GetValueOrDefault(order)).OfType<string>().ToHashSet();
+        shelfStore.Update(userId, data =>
+        {
+            foreach (var category in data.Categories.Where(entry => entry.Kind == "manga"))
+            {
+                if (inCategories.Contains(category.Id))
+                {
+                    if (!category.Items.Contains(key))
+                    {
+                        category.Items.Add(key);
+                    }
+                }
+                else if (categoryIds.ContainsValue(category.Id))
+                {
+                    category.Items.Remove(key);
+                }
+            }
+
+            var prefs = data.Series.GetValueOrDefault(key) ?? new SeriesPrefs();
+            prefs.AddedAt = manga.DateAdded > 0 ? manga.DateAdded : prefs.AddedAt;
+            prefs.Note = manga.Notes ?? prefs.Note;
+
+            // Mihon's chapter flags: bit 0 ascending, 0x2 unread only,
+            // 0x20 bookmarked only.
+            prefs.ChapterDescending = (manga.ChapterFlags & 0x1) == 0;
+            prefs.ChapterFilter = (manga.ChapterFlags & 0x20) != 0 ? "bookmarked" : (manga.ChapterFlags & 0x2) != 0 ? "unread" : "all";
+
+            // Mihon's reading mode (viewer flags, low 3 bits).
+            (prefs.ComicLayout, prefs.ComicDirection) = (manga.ViewerFlags & 0x7) switch
+            {
+                1 => ("single", "ltr"),
+                2 => ("single", "rtl"),
+                3 or 4 or 5 => ("vertical", prefs.ComicDirection),
+                _ => (prefs.ComicLayout, prefs.ComicDirection),
+            };
+            data.Series[key] = prefs;
+        });
     }
 
     private static int? CountPages(string path)

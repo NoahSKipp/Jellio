@@ -44,7 +44,7 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
-    public ReadingProgressRecord Set(Guid userId, Guid itemId, string locator, double progress, int? totalPages)
+    public ReadingProgressRecord Set(Guid userId, Guid itemId, string locator, double progress, int? totalPages, DateTimeOffset? updatedAt = null)
     {
         lock (_lock)
         {
@@ -60,7 +60,7 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
                 Locator = locator,
                 Progress = Math.Clamp(progress, 0, 1),
                 TotalPages = totalPages ?? items.GetValueOrDefault(Key(itemId))?.TotalPages,
-                UpdatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow,
             };
             items[Key(itemId)] = record;
             SaveLocked(all);
