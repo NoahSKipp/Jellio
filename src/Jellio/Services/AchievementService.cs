@@ -276,7 +276,26 @@ public class AchievementService(
     // (or time listened), where they got to, and whether they finished.
     // Client-reported like CreditRealWatchAsync; the controller has
     // already checked the item and clamped the numbers.
-    public async Task CreditReadingSessionAsync(Guid userId, BaseItem item, ReadingSession session)
+    public Task CreditReadingSessionAsync(Guid userId, BaseItem item, ReadingSession session)
+    {
+        // An audiobook's tracks all belong to one book (its album).
+        var bookName = item is AudioBook && !string.IsNullOrWhiteSpace(item.Album) ? item.Album : item.Name;
+        var completionKey = item is AudioBook ? "audiobook:" + (item.ParentId.ToString("N") + "|" + bookName) : item.Id.ToString("N");
+
+        // A manga chapter's series: Jellyfin's when it has one, else the
+        // folder its files sit in (Suwayomi's layout).
+        var seriesName = (item as IHasSeries)?.SeriesName;
+        if (string.IsNullOrWhiteSpace(seriesName) && session.Kind == "manga" && !string.IsNullOrEmpty(item.Path))
+        {
+            seriesName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(item.Path));
+        }
+
+        return CreditReadingSessionAsync(userId, item.Id, bookName, seriesName, completionKey, session);
+    }
+
+    // Also for chapters read straight from a source (MangaStreamService),
+    // which have no library item.
+    public async Task CreditReadingSessionAsync(Guid userId, Guid itemId, string bookName, string? seriesName, string completionKey, ReadingSession session)
     {
         var itemType = session.Kind switch
         {
@@ -305,9 +324,6 @@ public class AchievementService(
 
             stats.ListenedTicks += session.ListenedTicks;
 
-            // An audiobook's tracks all belong to one book (its album).
-            var bookName = item is AudioBook && !string.IsNullOrWhiteSpace(item.Album) ? item.Album : item.Name;
-            var completionKey = itemType == "AudioBook" ? "audiobook:" + (item.ParentId.ToString("N") + "|" + bookName) : item.Id.ToString("N");
             var newlyFinished = session.Finished && stats.CompletedReadingIds.Add(completionKey);
             if (newlyFinished)
             {
@@ -335,14 +351,6 @@ public class AchievementService(
 
             // Several sessions on the same book the same day are one feed
             // entry, not one per sitting.
-            // A manga chapter's series: Jellyfin's when it has one, else
-            // the folder its files sit in (Suwayomi's layout).
-            var seriesName = (item as IHasSeries)?.SeriesName;
-            if (string.IsNullOrWhiteSpace(seriesName) && itemType == "Manga" && !string.IsNullOrEmpty(item.Path))
-            {
-                seriesName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(item.Path));
-            }
-
             var latest = stats.RecentActivity.Count > 0 ? stats.RecentActivity[0] : null;
             if (latest is not null
                 && latest.ItemType == itemType
@@ -364,7 +372,7 @@ public class AchievementService(
                 stats.RecentActivity.Insert(
                     0,
                     new ActivityEntry(
-                        item.Id,
+                        itemId,
                         bookName,
                         itemType,
                         string.IsNullOrWhiteSpace(seriesName) ? null : seriesName,

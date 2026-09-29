@@ -2,6 +2,7 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Jellio.Services;
+using Jellio.Services.Manga;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
@@ -18,7 +19,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/reading/session")]
 [Authorize]
-public class ReadingActivityController(AchievementService achievementService, ILibraryManager libraryManager, IUserManager userManager) : ControllerBase
+public class ReadingActivityController(AchievementService achievementService, MangaStreamService streamService, ILibraryManager libraryManager, IUserManager userManager) : ControllerBase
 {
     private const int MaxPagesPerSession = 2000;
     private const int MaxListenSecondsPerSession = 24 * 60 * 60;
@@ -36,6 +37,27 @@ public class ReadingActivityController(AchievementService achievementService, IL
 
         var user = userManager.GetUserById(userId);
         var item = body is null ? null : libraryManager.GetItemById(body.ItemId);
+        if (user is not null && item is null && body!.Kind?.Trim().ToLowerInvariant() == "manga"
+            && await streamService.FindChapterAsync(body.ItemId.ToString("N"), HttpContext.RequestAborted).ConfigureAwait(false) is { } streamed)
+        {
+            // A chapter read straight from its source.
+            var streamPageCount = body.PageCount is > 0 and < 100_000 ? body.PageCount : null;
+            await achievementService.CreditReadingSessionAsync(
+                userId,
+                body.ItemId,
+                streamed.Chapter.Name,
+                streamed.Series.Title,
+                body.ItemId.ToString("N"),
+                new AchievementService.ReadingSession(
+                    "manga",
+                    Math.Clamp(body.PagesRead, 0, Math.Min(MaxPagesPerSession, streamPageCount ?? MaxPagesPerSession)),
+                    body.CurrentPage is > 0 ? Math.Min(body.CurrentPage.Value, streamPageCount ?? body.CurrentPage.Value) : null,
+                    streamPageCount,
+                    0,
+                    body.Finished)).ConfigureAwait(false);
+            return NoContent();
+        }
+
         if (user is null || item is null || !item.IsVisible(user))
         {
             return NotFound();

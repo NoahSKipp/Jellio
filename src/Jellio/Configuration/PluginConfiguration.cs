@@ -189,4 +189,9 @@ public class PluginConfiguration : BasePluginConfiguration
     // Search sources Suwayomi flags NSFW. Most general manga aggregators
     // carry the flag for the whole source, so with it off they're skipped.
     public bool SuwayomiIncludeNsfw { get; set; }
+
+    // Manga is read straight from Suwayomi's sources (streamed) unless
+    // this is on, in which case requested series are also downloaded
+    // into the Jellyfin library. Readers can still save single series.
+    public bool SuwayomiDownloadRequests { get; set; }
 }

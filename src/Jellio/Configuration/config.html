@@ -74,11 +74,11 @@
             <input is="emby-input" type="url" id="txtSuwayomiUrl" autocomplete="off"
               placeholder="http://192.168.1.10:4567" />
             <div class="fieldDescription">
-              Suwayomi-Server (self-hosted Tachiyomi/Mihon) for manga, manhwa and manhua requests: the
-              Manga shelf searches its sources, adds a series and downloads every chapter. Point its
-              downloads folder at the Jellyfin library the Manga shelf reads, and turn on "Download as
-              CBZ" and automatic new-chapter downloads in Suwayomi. Must be reachable from the Jellyfin
-              server.
+              Suwayomi-Server (self-hosted Tachiyomi/Mihon) for manga, manhwa and manhua: the Manga shelf
+              searches its sources and adds series to its library, and chapters are read straight from
+              the source, like Mihon. Series saved to the server are downloaded into Suwayomi's downloads
+              folder: point it at the Jellyfin library the Manga shelf reads and turn on "Download as
+              CBZ". Must be reachable from the Jellyfin server.
             </div>
           </div>
 
@@ -111,6 +111,18 @@
             <div class="fieldDescription checkboxFieldDescription">
               Suwayomi flags whole sources as NSFW, including most general manga sites that host some adult
               titles. Leave off to skip them in manga searches.
+            </div>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="chkSuwayomiDownloadRequests" />
+              <span>Download requested manga to the server</span>
+            </label>
+            <div class="fieldDescription checkboxFieldDescription">
+              Off: requested series are streamed from their source and take no space. On: every chapter
+              of a requested series is also downloaded into the library. Readers can save single series
+              either way.
             </div>
           </div>
 
@@ -449,6 +461,7 @@
           document.querySelector('#txtSuwayomiPassword').value = withDefault(config.SuwayomiPassword, '');
           document.querySelector('#txtSuwayomiLanguages').value = withDefault(config.SuwayomiLanguages, 'en');
           document.querySelector('#chkSuwayomiIncludeNsfw').checked = withDefault(config.SuwayomiIncludeNsfw, false);
+          document.querySelector('#chkSuwayomiDownloadRequests').checked = withDefault(config.SuwayomiDownloadRequests, false);
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -475,6 +488,7 @@
           config.SuwayomiPassword = document.querySelector('#txtSuwayomiPassword').value;
           config.SuwayomiLanguages = document.querySelector('#txtSuwayomiLanguages').value.trim() || 'en';
           config.SuwayomiIncludeNsfw = document.querySelector('#chkSuwayomiIncludeNsfw').checked;
+          config.SuwayomiDownloadRequests = document.querySelector('#chkSuwayomiDownloadRequests').checked;
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();

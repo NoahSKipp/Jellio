@@ -26,6 +26,7 @@ namespace Jellio.Controllers;
 public partial class MangaRequestController(
     SuwayomiClient suwayomi,
     MangaImportService importService,
+    MangaStreamService streamService,
     MangaCoverService coverService,
     ILibraryManager libraryManager,
     IUserManager userManager,
@@ -173,7 +174,12 @@ public partial class MangaRequestController(
             return BadRequest("MangaId is required");
         }
 
-        var result = await suwayomi.AddAndDownloadAsync(body.MangaId, cancellationToken).ConfigureAwait(false);
+        // Streamed from the source unless the admin keeps requests on the
+        // server too.
+        var result = JellioPlugin.Instance?.Configuration.SuwayomiDownloadRequests == true
+            ? await suwayomi.AddAndDownloadAsync(body.MangaId, cancellationToken).ConfigureAwait(false)
+            : await suwayomi.AddAndFetchAsync(body.MangaId, cancellationToken).ConfigureAwait(false);
+        streamService.Invalidate();
         var requester = HttpContext.User.Identity is ClaimsIdentity identity
             && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
                 ? userManager.GetUserById(userId)?.Username

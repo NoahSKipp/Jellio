@@ -147,6 +147,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<Jellio.Services.Manga.AniListClient>();
         services.AddHttpClient(nameof(Jellio.Services.Manga.SuwayomiClient));
         services.AddSingleton<Jellio.Services.Manga.SuwayomiClient>();
+        services.AddSingleton<Jellio.Services.Manga.MangaStreamService>();
         services.AddSingleton<Jellio.Services.Manga.MangaImportService>();
         services.AddSingleton<Jellio.Services.Manga.MangaCoverService>();
         services.AddHostedService(sp => sp.GetRequiredService<Jellio.Services.Manga.MangaImportService>());
