@@ -14,6 +14,7 @@ import {
   getAllReadingProgress,
   audiobookGroupKey,
   getStreamLibrary,
+  invalidateStreamLibrary,
 } from '../runtime/api.js';
 import {
   groupMangaSeries,
@@ -25,7 +26,7 @@ import {
 } from '../components/mangaSeries.js';
 import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
-import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey } from '../runtime/shelf.js';
+import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
@@ -400,7 +401,13 @@ function mangaEntries(items, info, progress, shelf, stream) {
   });
   grouped.singles.forEach((item) => entries.push(describe(item, info, progress)));
   continueEntries.sort((a, b) => b.lastRead - a.lastRead);
-  return { entries: entries, continueEntries: continueEntries.slice(0, ROW_LIMIT) };
+  // The reader's own library (Mihon style): series they added or have
+  // read. Streamed series already come filtered from the server.
+  const mine = new Set(shelf.Library || []);
+  const kept = entries.filter(
+    (entry) => mine.has(entry.key) || (entry.seriesGroup && entry.seriesGroup.stream) || entry.lastRead > 0 || entry.readCount > 0,
+  );
+  return { entries: kept, continueEntries: continueEntries.slice(0, ROW_LIMIT) };
 }
 
 export function renderBookshelf(root, params, parentId) {
@@ -433,15 +440,29 @@ export function renderBookshelf(root, params, parentId) {
 
   const shelfCardOptions = {
     extraOptions: function (item, entry) {
-      return [
+      const key = entry ? entry.key : keyForItem(item);
+      const options = [
         {
           label: 'Categories…',
           icon: 'label',
           onClick: function () {
-            openCategoryPicker(kind, [entry ? entry.key : keyForItem(item)], entry ? entry.item.Name : item.Name);
+            openCategoryPicker(kind, [key], entry ? entry.item.Name : item.Name);
           },
         },
       ];
+      if (kind === 'manga' && key.indexOf('s:') === 0) {
+        options.push({
+          label: 'Remove from library',
+          icon: 'heart_broken',
+          onClick: function () {
+            invalidateStreamLibrary();
+            setInLibrary(key, false).catch(function (err) {
+              console.warn('Jellio: could not update the library', err);
+            });
+          },
+        });
+      }
+      return options;
     },
   };
 
@@ -664,7 +685,7 @@ export function renderBookshelf(root, params, parentId) {
     if (selected) gridTitle.textContent = 'By ' + selected.author;
     else if (query) gridTitle.textContent = matches.length + ' ' + (matches.length === 1 ? copy.one : copy.many) + ' found';
     else if (category) gridTitle.textContent = category.Name;
-    else gridTitle.textContent = 'All ' + copy.many;
+    else gridTitle.textContent = kind === 'manga' ? 'Library' : 'All ' + copy.many;
 
     if (!matches.length && category && !query && !selectedAuthor) {
       grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing in ' + category.Name + ' yet. Right click (or hold) a cover and choose Categories to add it.'));
@@ -689,7 +710,7 @@ export function renderBookshelf(root, params, parentId) {
 
   function renderAuthors(authorGroups) {
     authorsSection.textContent = '';
-    if (!authorGroups.length) {
+    if (!authorGroups.length || kind === 'manga') {
       authorsSection.hidden = true;
       return;
     }
@@ -727,6 +748,8 @@ export function renderBookshelf(root, params, parentId) {
       .filter(Boolean);
     const continueRow = bookRow(copy.continueTitle, continueEntries, Object.assign({ openReader: true }, shelfCardOptions));
     if (continueRow) rows.appendChild(continueRow);
+    // Manga is the reader's own library; Discover is for browsing.
+    if (kind === 'manga') return;
 
     if (entries.length >= RECENT_ROW_MIN_ITEMS) {
       const recent = entries
@@ -769,7 +792,12 @@ export function renderBookshelf(root, params, parentId) {
     gridSection.hidden = true;
     const empty = el('div', 'jellio-bookshelf-empty');
     empty.appendChild(el('span', 'material-icons ' + copy.emptyIcon));
-    empty.appendChild(el('p', null, 'No ' + copy.many + ' on this shelf yet.'));
+    empty.appendChild(el('p', null, kind === 'manga' ? 'Your manga library is empty.' : 'No ' + copy.many + ' on this shelf yet.'));
+    if (kind === 'manga') {
+      empty.appendChild(
+        el('p', 'jellio-bookshelf-stats', 'Find series with Discover or Request manga, or bring your Mihon library over in Settings.'),
+      );
+    }
     rows.appendChild(empty);
   }
 
@@ -795,7 +823,7 @@ export function renderBookshelf(root, params, parentId) {
 
   Promise.all([
     getBookshelfItems(parentId, kind, params.get('mangaLibrary') === '1'),
-    getBookShelfInfo(parentId),
+    kind === 'manga' ? Promise.resolve({}) : getBookShelfInfo(parentId),
     copy.loadContinue(20).catch(function () {
       return [];
     }),
@@ -855,9 +883,11 @@ export function renderBookshelf(root, params, parentId) {
   // Categories changed (here or in a dialog): repaint with the new ones.
   const stopShelf = onShelfChange(function () {
     if (!loadedItems) return;
-    loadShelf(kind).then(function (next) {
+    Promise.all([loadShelf(kind), kind === 'manga' ? getStreamLibrary() : Promise.resolve(loadedItems.stream)]).then(function (results) {
+      const next = results[0];
       if (cancelled || !entries.length) return;
       shelf = next;
+      loadedItems.stream = results[1];
       if (activeCategory && !currentCategory()) {
         activeCategory = '';
         writeCategory(kind, '');
