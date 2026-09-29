@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.36.0] - 2026-09-29\n\n### 🚀 Features\n\n- Add shelf categories, series settings and chapter bookmarks\n- Import Mihon categories, history, bookmarks and series settings\n- Add categories to the Manga, Books and Audiobooks shelves\n- Add series notes, reading mode, chapter filters and bookmarks\n- Remove a whole series or show from downloads\n- Stream manga from Suwayomi's sources instead of downloading every chapter\n- Show streamed manga on the shelf and series page, with save to server\n- Read streamed chapters page by page\n- Download streamed chapters to the device\n\n### 🐛 Bug Fixes\n\n- Rename a shadowed variable in the Mihon backup reader\n\n### 📚 Documentation\n\n- Describe streaming in the manga request and import screens\n",
+        "checksum": "8861b97dea7824aa016003c496bc2299",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.36.0/jellio_1.36.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-29T00:24:16Z",
+        "version": "1.36.0"
+      },
+      {
         "changelog": "## [1.35.1] - 2026-09-28\n\n### 🐛 Bug Fixes\n\n- Treat Mihon backup series as in the library unless marked otherwise\n",
         "checksum": "149f02fb6a2abadd9433be4b78b2f357",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.35.1/jellio_1.35.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-24T13:03:14Z",
         "version": "1.15.0"
-      },
-      {
-        "changelog": "## [1.14.1] - 2026-09-22\n\n### 🐛 Bug Fixes\n\n- SkipMe.db rejecting every request for a missing User-Agent\n- Make every Skip Intro/Credits community tier's outcome visible in logs\n",
-        "checksum": "b009ab7a21184d52ee0fe6961da97ff0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.14.1/jellio_1.14.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-22T16:57:24Z",
-        "version": "1.14.1"
       }
     ]
   }
