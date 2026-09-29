@@ -10007,6 +10007,7 @@
 }
 
 .jellio-settings-import-not-found,
+.jellio-settings-import-skipped,
 .jellio-settings-import-error {
   border-left-color: var(--jellio-trending-color);
 }

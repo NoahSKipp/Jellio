@@ -584,7 +584,7 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
 // Import from Mihon: a reader's backup file brings their manga library
 // over through Suwayomi (Services/Manga/MangaImportService.cs). Only
 // offered when the server has Suwayomi set up.
-const IMPORT_OUTCOMES = { imported: 'Imported', 'not-found': 'Not found', error: 'Failed' };
+const IMPORT_OUTCOMES = { imported: 'Imported', 'not-found': 'Not found', error: 'Failed', skipped: 'Skipped' };
 
 function buildMihonImportCard() {
   const { card, body } = buildCard(
