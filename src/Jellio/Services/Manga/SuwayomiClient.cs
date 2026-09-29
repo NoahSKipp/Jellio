@@ -27,6 +27,11 @@ public record SuwayomiManga(int Id, string Title, string? Author, string? Status
 
 public record SuwayomiChapter(int Id, string Url, string Name, string? Scanlator, float ChapterNumber, bool IsDownloaded);
 
+// A chapter as the stream shelf needs it. UploadDate: unix milliseconds.
+public record SuwayomiStreamChapter(int Id, int MangaId, string Name, float ChapterNumber, string? Scanlator, bool IsDownloaded, int PageCount, int SourceOrder, long UploadDate);
+
+public record SuwayomiLibraryManga(int Id, string Title, string? Author, string? Status, IReadOnlyList<SuwayomiStreamChapter> Chapters);
+
 public record SuwayomiSettings(bool DownloadAsCbz, bool AutoDownloadNewChapters, string? DownloadsPath);
 
 public record SuwayomiRequestResult(bool Success, bool AlreadyInLibrary, int QueuedChapters, int TotalChapters, string? Message);
@@ -187,6 +192,120 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         return await EnqueueDownloadsAsync(pending, cancellationToken).ConfigureAwait(false)
             ? new SuwayomiRequestResult(true, false, pending.Count, chapters.Count, null)
             : new SuwayomiRequestResult(false, false, 0, chapters.Count, "Suwayomi could not queue the downloads");
+    }
+
+    // Add to Suwayomi's library and load its chapters, without
+    // downloading anything: the shelf reads them from the source.
+    public async Task<SuwayomiRequestResult> AddAndFetchAsync(int mangaId, CancellationToken cancellationToken)
+    {
+        if (!await AddToLibraryAsync(mangaId, cancellationToken).ConfigureAwait(false))
+        {
+            return new SuwayomiRequestResult(false, false, 0, 0, "Suwayomi could not add this series");
+        }
+
+        var chapters = await FetchChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false) ?? [];
+        _library = null;
+        return new SuwayomiRequestResult(true, false, 0, chapters.Count, chapters.Count == 0 ? "No chapters found on this source yet" : null);
+    }
+
+    private const string StreamChapterFields = "id mangaId name chapterNumber scanlator isDownloaded pageCount sourceOrder uploadDate";
+
+    // Every series in Suwayomi's library with its chapters, in one query.
+    public async Task<IReadOnlyList<SuwayomiLibraryManga>?> GetLibraryWithChaptersAsync(CancellationToken cancellationToken)
+    {
+        var data = await QueryAsync(
+            "query { mangas(condition: { inLibrary: true }) { nodes { id title author status chapters { nodes { " + StreamChapterFields + " } } } } }",
+            null,
+            cancellationToken).ConfigureAwait(false);
+        if (data?["mangas"]?["nodes"] is not JsonArray nodes)
+        {
+            return null;
+        }
+
+        return nodes.OfType<JsonObject>()
+            .Select(node => new SuwayomiLibraryManga(
+                (int)ReadLong(node["id"]),
+                ChaptarrClient.ReadString(node["title"]) ?? string.Empty,
+                ChaptarrClient.ReadString(node["author"]),
+                ChaptarrClient.ReadString(node["status"]),
+                ReadStreamChapters(node["chapters"]?["nodes"] as JsonArray)))
+            .Where(manga => manga.Id > 0 && manga.Title.Length > 0)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<SuwayomiStreamChapter>?> GetChaptersAsync(int mangaId, CancellationToken cancellationToken)
+    {
+        var data = await QueryAsync(
+            "query ($id: Int!) { chapters(condition: { mangaId: $id }) { nodes { " + StreamChapterFields + " } } }",
+            new JsonObject { ["id"] = mangaId },
+            cancellationToken).ConfigureAwait(false);
+        return data?["chapters"]?["nodes"] is JsonArray nodes ? ReadStreamChapters(nodes) : null;
+    }
+
+    private static List<SuwayomiStreamChapter> ReadStreamChapters(JsonArray? nodes) =>
+        (nodes?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+            .Select(chapter => new SuwayomiStreamChapter(
+                (int)ReadLong(chapter["id"]),
+                (int)ReadLong(chapter["mangaId"]),
+                ChaptarrClient.ReadString(chapter["name"]) ?? string.Empty,
+                chapter["chapterNumber"] is JsonValue number && number.TryGetValue<double>(out var value) ? (float)value : -1f,
+                ChaptarrClient.ReadString(chapter["scanlator"]),
+                ChaptarrClient.ReadBool(chapter["isDownloaded"]),
+                (int)ReadLong(chapter["pageCount"]),
+                (int)ReadLong(chapter["sourceOrder"]),
+                ReadLong(chapter["uploadDate"])))
+            .Where(chapter => chapter.Id > 0)
+            .ToList();
+
+    // The chapter's page image paths on Suwayomi (it loads them from the
+    // source the first time).
+    public async Task<IReadOnlyList<string>?> FetchChapterPagesAsync(int chapterId, CancellationToken cancellationToken)
+    {
+        const string Mutation = @"mutation ($input: FetchChapterPagesInput!) {
+  fetchChapterPages(input: $input) { pages }
+}";
+        var data = await QueryAsync(Mutation, new JsonObject { ["input"] = new JsonObject { ["chapterId"] = chapterId } }, cancellationToken).ConfigureAwait(false);
+        return (data?["fetchChapterPages"]?["pages"] as JsonArray)?
+            .Select(page => ChaptarrClient.ReadString(page))
+            .OfType<string>()
+            .ToList();
+    }
+
+    // An image Suwayomi serves (a page or thumbnail), by path or URL.
+    public async Task<(byte[] Bytes, string ContentType)?> GetImageAsync(string pathOrUrl, CancellationToken cancellationToken)
+    {
+        var (baseUrl, _, _) = Config();
+        if (baseUrl.Length == 0)
+        {
+            return null;
+        }
+
+        var url = pathOrUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? pathOrUrl : baseUrl + (pathOrUrl.StartsWith('/') ? pathOrUrl : "/" + pathOrUrl);
+        if (!url.StartsWith(baseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var response = await SendAsync(() => new HttpRequestMessage(HttpMethod.Get, url), cancellationToken).ConfigureAwait(false);
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return (await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false), contentType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Jellio: Suwayomi image {Url} failed", url);
+            return null;
+        }
     }
 
     public async Task<bool> AddToLibraryAsync(int mangaId, CancellationToken cancellationToken)

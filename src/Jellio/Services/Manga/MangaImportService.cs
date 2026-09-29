@@ -67,6 +67,7 @@ public class MangaImportService(
     SuwayomiClient suwayomi,
     ReadingProgressStore progressStore,
     ShelfStore shelfStore,
+    MangaStreamService streamService,
     ILibraryManager libraryManager,
     IApplicationPaths applicationPaths,
     ILogger<MangaImportService> logger) : IHostedService
@@ -202,19 +203,27 @@ public class MangaImportService(
         var numbered = started.Where(chapter => chapter.ChapterNumber >= 0).ToList();
         float? resumeAt = numbered.Count > 0 ? numbered.Max(chapter => chapter.ChapterNumber) : null;
         var excluded = new HashSet<string>(manga.ExcludedScanlators, StringComparer.OrdinalIgnoreCase);
-        var toDownload = chapters
-            .Where(chapter => !chapter.IsDownloaded && (resumeAt is null || chapter.ChapterNumber >= resumeAt.Value))
-            .Where(chapter => excluded.Count == 0 || !excluded.Contains(chapter.Scanlator ?? string.Empty))
-            .Select(chapter => chapter.Id)
-            .ToList();
+        // Streamed from the source unless the admin keeps manga on the
+        // server, in which case it downloads from where they left off.
+        var download = JellioPlugin.Instance?.Configuration.SuwayomiDownloadRequests == true;
+        List<int> toDownload = download
+            ? chapters
+                .Where(chapter => !chapter.IsDownloaded && (resumeAt is null || chapter.ChapterNumber >= resumeAt.Value))
+                .Where(chapter => excluded.Count == 0 || !excluded.Contains(chapter.Scanlator ?? string.Empty))
+                .Select(chapter => chapter.Id)
+                .ToList()
+            : [];
         if (!await suwayomi.EnqueueDownloadsAsync(toDownload, cancellationToken).ConfigureAwait(false))
         {
             return new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't queue the downloads");
         }
 
+        streamService.Invalidate();
+
         // Named the way Suwayomi names the files: its own chapter record
         // for the same URL when it has one.
         var byUrl = chapters.GroupBy(chapter => chapter.Url, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        ApplyToStream(userId, manga, byUrl);
         var progress = manga.Chapters
             .Where(chapter => chapter.Read || chapter.LastPageRead > 0 || chapter.Bookmark)
             .Select(chapter => new PendingChapterProgress
@@ -353,6 +362,46 @@ public class MangaImportService(
                 var fraction = pages is > 1 ? (page - 1) / (double)(pages.Value - 1) : 0;
                 progressStore.Set(userId, book.Id, "page:" + page, Math.Max(fraction, 0.01), pages, readAt);
             }
+        }
+    }
+
+    // Progress and bookmarks on the streamed chapters (MangaStreamService
+    // ids), straight away. Never over progress made in Jellio itself.
+    private void ApplyToStream(Guid userId, MihonManga manga, Dictionary<string, SuwayomiChapter> byUrl)
+    {
+        var bookmarks = new List<string>();
+        foreach (var chapter in manga.Chapters)
+        {
+            if (!byUrl.TryGetValue(chapter.Url, out var own))
+            {
+                continue;
+            }
+
+            var id = MangaStreamService.ChapterId(own.Id);
+            if (chapter.Bookmark)
+            {
+                bookmarks.Add(id);
+            }
+
+            if ((!chapter.Read && chapter.LastPageRead <= 0) || progressStore.Get(userId, Guid.Parse(id)) is not null)
+            {
+                continue;
+            }
+
+            DateTimeOffset? readAt = chapter.LastReadAt > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(chapter.LastReadAt) : null;
+            if (chapter.Read)
+            {
+                progressStore.Set(userId, Guid.Parse(id), "page:1", 1, null, readAt);
+            }
+            else
+            {
+                progressStore.Set(userId, Guid.Parse(id), "page:" + (chapter.LastPageRead + 1), 0.05, null, readAt);
+            }
+        }
+
+        if (bookmarks.Count > 0)
+        {
+            shelfStore.Update(userId, data => data.Bookmarks.AddRange(bookmarks.Where(id => !data.Bookmarks.Contains(id))));
         }
     }
 
