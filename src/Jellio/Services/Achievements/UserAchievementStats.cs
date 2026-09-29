@@ -99,8 +99,11 @@ public class UserAchievementStats
 
     public long ListenedTicks { get; set; }
 
-    // Time spent in the reader (books and manga), active time only.
+    // Active time in the reader: books in ReadingTicks, manga, manhwa
+    // and manhua in MangaReadingTicks.
     public long ReadingTicks { get; set; }
+
+    public long MangaReadingTicks { get; set; }
 
     public HashSet<string> CompletedReadingIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
