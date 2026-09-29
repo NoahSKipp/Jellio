@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.37.0] - 2026-09-29\n\n### 🚀 Features\n\n- Full screen reading on phones, with toolbars hidden\n- Mihon-style comic reader with reading modes, zoom, crop borders and sliding menus\n- Map Mihon's paged vertical and long strip modes per series\n\n### 🐛 Bug Fixes\n\n- Show streamed manga when Suwayomi won't answer the full library query\n- Skip a source that keeps timing out during a Mihon import\n",
+        "checksum": "9c7db306331b0e1aa69e5f0c890d999d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.37.0/jellio_1.37.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-29T02:21:55Z",
+        "version": "1.37.0"
+      },
+      {
         "changelog": "## [1.36.0] - 2026-09-29\n\n### 🚀 Features\n\n- Add shelf categories, series settings and chapter bookmarks\n- Import Mihon categories, history, bookmarks and series settings\n- Add categories to the Manga, Books and Audiobooks shelves\n- Add series notes, reading mode, chapter filters and bookmarks\n- Remove a whole series or show from downloads\n- Stream manga from Suwayomi's sources instead of downloading every chapter\n- Show streamed manga on the shelf and series page, with save to server\n- Read streamed chapters page by page\n- Download streamed chapters to the device\n\n### 🐛 Bug Fixes\n\n- Rename a shadowed variable in the Mihon backup reader\n\n### 📚 Documentation\n\n- Describe streaming in the manga request and import screens\n",
         "checksum": "8861b97dea7824aa016003c496bc2299",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.36.0/jellio_1.36.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-24T20:04:07Z",
         "version": "1.16.0"
-      },
-      {
-        "changelog": "## [1.15.0] - 2026-09-24\n\n### 🚀 Features\n\n- Change profile picture directly from your own Profile page\n\n### 🐛 Bug Fixes\n\n- Carry the current audio language forward on Up Next auto-advance\n- Stop the player's loading logo getting stuck on a real playback failure\n- Merge Skip Intro/Credits per category instead of per tier\n\n### ⚡ Performance\n\n- Skip the guaranteed-403 SkipMe.db tier by default and cache community-skip misses\n",
-        "checksum": "79524b2b9bdc1c11e4ebe0cd913164b5",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.15.0/jellio_1.15.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-24T13:03:14Z",
-        "version": "1.15.0"
       }
     ]
   }
