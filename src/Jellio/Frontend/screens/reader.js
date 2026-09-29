@@ -15,6 +15,9 @@ import {
   setPlayed,
   getJellioConfig,
   reportReadingSession,
+  getStreamChapter,
+  getStreamPageCount,
+  getStreamPageUrl,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
@@ -496,18 +499,28 @@ function comicDirectionKey(itemId) {
 // vendored JSZip epub.js uses. Pages are the images in natural filename
 // order; ComicInfo.xml's <Manga> tag decides right-to-left when the
 // reader hasn't chosen a direction for this volume themselves.
-async function openComic(stage, buffer, savedLocator, settings, handlers, itemId) {
-  await loadVendorScript('jszip.min.js');
-  if (!window.JSZip) throw new Error('JSZip did not load');
-  const zip = await window.JSZip.loadAsync(buffer);
-  const allNames = Object.keys(zip.files);
-  const names = allNames
-    .filter(function (name) {
-      const file = name.split('/').pop();
-      return !zip.files[name].dir && COMIC_IMAGE.test(name) && !/(^|\/)__MACOSX\//.test(name) && file.charAt(0) !== '.';
-    })
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-  if (!names.length) throw new Error('No pages in this archive');
+// source: the archive's bytes, or { chapterId, count } for a chapter
+// read straight from its source, page images loaded as they're needed.
+async function openComic(stage, source, savedLocator, settings, handlers, itemId) {
+  const streamed = source && source.chapterId ? source : null;
+  let zip = null;
+  let allNames = [];
+  let names;
+  if (streamed) {
+    names = Array.from({ length: streamed.count }, (_, i) => String(i));
+  } else {
+    await loadVendorScript('jszip.min.js');
+    if (!window.JSZip) throw new Error('JSZip did not load');
+    zip = await window.JSZip.loadAsync(source);
+    allNames = Object.keys(zip.files);
+    names = allNames
+      .filter(function (name) {
+        const file = name.split('/').pop();
+        return !zip.files[name].dir && COMIC_IMAGE.test(name) && !/(^|\/)__MACOSX\//.test(name) && file.charAt(0) !== '.';
+      })
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }
+  if (!names.length) throw new Error('No pages in this chapter');
   const count = names.length;
 
   let infoDirection = null;
@@ -538,6 +551,13 @@ async function openComic(stage, buffer, savedLocator, settings, handlers, itemId
   const urls = new Map();
 
   function pageUrl(i) {
+    if (streamed && !urls.has(i)) {
+      const url = getStreamPageUrl(streamed.chapterId, i);
+      // Starts the download now, so pages ahead are ready when turned to.
+      const warm = new Image();
+      warm.src = url;
+      urls.set(i, Promise.resolve(url));
+    }
     if (!urls.has(i)) {
       urls.set(
         i,
@@ -1217,6 +1237,29 @@ function failureDetail(err) {
   return reason ? ' (' + String(reason).slice(0, 160) + ')' : '';
 }
 
+// A chapter read straight from its source (MangaStreamController): the
+// same [item, progress, file] the library path gives, pages by URL.
+async function openStreamChapter(itemId) {
+  const chapter = await getStreamChapter(itemId).catch(() => null);
+  if (!chapter) return null;
+  const [count, saved] = await Promise.all([
+    getStreamPageCount(chapter.ChapterId),
+    getReadingProgress(itemId).catch(() => null),
+  ]);
+  if (!count) throw new Error('The source didn’t send this chapter’s pages');
+  return [
+    {
+      Id: itemId,
+      Name: chapter.Name,
+      Type: 'Book',
+      SeriesName: chapter.SeriesTitle,
+      Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId },
+    },
+    saved,
+    { contentType: 'application/vnd.comicbook+zip', stream: { chapterId: chapter.ChapterId, count: count } },
+  ];
+}
+
 export async function renderReader(root, params) {
   const itemId = params.get('id');
   root.textContent = '';
@@ -1228,6 +1271,7 @@ export async function renderReader(root, params) {
   let item;
   let saved;
   let file;
+  let openError = null;
   try {
     [item, saved, file] = await Promise.all([
       getItem(itemId),
@@ -1237,6 +1281,18 @@ export async function renderReader(root, params) {
       fetchBookFile(itemId),
     ]);
   } catch (err) {
+    openError = err;
+    // Not a library item: a manga chapter read straight from its source?
+    const streamed = await openStreamChapter(itemId).catch(function (streamErr) {
+      openError = streamErr;
+      return null;
+    });
+    if (streamed) {
+      [item, saved, file] = streamed;
+    }
+  }
+  if (!file) {
+    const err = openError;
     console.warn('Jellio: could not open book', err);
     renderRetry(
       root,
@@ -1519,7 +1575,7 @@ export async function renderReader(root, params) {
 
   try {
     reader = isComic
-      ? await openComic(stage, file.buffer, latestLocator, settings, handlers, itemId)
+      ? await openComic(stage, file.stream || file.buffer, latestLocator, settings, handlers, itemId)
       : isPdf
         ? await openPdf(stage, file.buffer, latestLocator, settings, handlers)
         : await openEpub(stage, file.buffer, latestLocator, settings, handlers);
