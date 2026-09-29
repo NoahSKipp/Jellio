@@ -11073,3 +11073,16 @@
 .jellio-reader-comic-mode-option-active {
   font-weight: 700;
 }
+
+/* screens/feed.js: the person on a row opens their profile. */
+.jellio-feed-person {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.jellio-feed-person:hover .jellio-feed-user {
+  text-decoration: underline;
+}
