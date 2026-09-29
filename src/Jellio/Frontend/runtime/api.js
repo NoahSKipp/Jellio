@@ -760,12 +760,16 @@ export function invalidateStreamLibrary() {
   invalidateCache('manga-stream-library');
 }
 
+export function findStreamSeries(key) {
+  return getJson('/Jellio/manga/stream/by-key?key=' + encodeURIComponent(key), 30000);
+}
+
 export function getStreamSeries(mangaId) {
   return getJson('/Jellio/manga/stream/series/' + mangaId, 60000);
 }
 
-export function getStreamChapter(id) {
-  return getJson('/Jellio/manga/stream/chapter/' + encodeURIComponent(id), 30000);
+export function getStreamChapter(id, mangaId) {
+  return getJson('/Jellio/manga/stream/chapter/' + encodeURIComponent(id) + (mangaId ? '?manga=' + mangaId : ''), 30000);
 }
 
 export function getStreamPageCount(chapterId) {

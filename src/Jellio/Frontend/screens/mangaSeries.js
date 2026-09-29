@@ -9,6 +9,7 @@ import {
   getImageUrl,
   getStreamLibrary,
   getStreamSeries,
+  findStreamSeries,
   saveStreamSeries,
 } from '../runtime/api.js';
 import {
@@ -22,14 +23,14 @@ import {
 } from '../components/mangaSeries.js';
 import { buildDownloadButton, downloadBook } from '../components/downloads.js';
 import { findAnyDownload, removeDownload } from '../runtime/offline.js';
-import { loadShelf, onShelfChange, saveSeriesPrefs, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
+import { loadShelf, onShelfChange, setInLibrary, isInLibrary, saveSeriesPrefs, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
 import { openCategoryPicker } from '../components/shelfCategories.js';
 import { showToast } from '../components/toast.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
 function openChapter(item) {
-  navigateTo('#/read?id=' + item.Id);
+  navigateTo('#/read?id=' + item.Id + (item.Stream && item.Stream.MangaId ? '&manga=' + item.Stream.MangaId : ''));
 }
 
 export function renderMangaSeries(root, params, parentId) {
@@ -70,7 +71,8 @@ export function renderMangaSeries(root, params, parentId) {
       const loose = saved ? [] : library.singles.filter((item) => mangaSeriesKey(mangaSeriesTitle(item)) === key);
       const progress = results[1];
       shelf = results[2];
-      const summary = (results[3] || []).find((series) => series.Key === key) || null;
+      const summary =
+        (results[3] || []).find((series) => series.Key === key) || (await findStreamSeries(key).catch(() => null));
       const streamed = summary ? await getStreamSeries(summary.MangaId).catch(() => null) : null;
       if (cancelled) return;
       body.textContent = '';
@@ -235,6 +237,30 @@ export function renderMangaSeries(root, params, parentId) {
       removeDownloads.hidden = true;
     });
     actions.appendChild(removeDownloads);
+
+    // Mihon's "In library": on this reader's Manga shelf or not.
+    const libraryButton = el('button', 'jellio-manga-series-order');
+    libraryButton.type = 'button';
+    const libraryIcon = el('span', 'material-icons');
+    const libraryLabel = el('span');
+    libraryButton.appendChild(libraryIcon);
+    libraryButton.appendChild(libraryLabel);
+    function paintLibrary() {
+      const on = isInLibrary(shelf, shelfKey);
+      libraryIcon.className = 'material-icons ' + (on ? 'favorite' : 'favorite_border');
+      libraryLabel.textContent = on ? 'In library' : 'Add to library';
+      libraryButton.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    paintLibrary();
+    libraryButton.addEventListener('click', function () {
+      const on = !isInLibrary(shelf, shelfKey);
+      shelf.Library = (shelf.Library || []).filter((key) => key !== shelfKey).concat(on ? [shelfKey] : []);
+      paintLibrary();
+      setInLibrary(shelfKey, on).catch(function (err) {
+        console.warn('Jellio: could not update the library', err);
+      });
+    });
+    actions.appendChild(libraryButton);
 
     const categoriesButton = el('button', 'jellio-manga-series-order');
     categoriesButton.type = 'button';

@@ -4,7 +4,7 @@
 // change fires jellio:shelf-changed so open screens can repaint.
 import { getServerAddress, getAuthHeaders } from './auth.js';
 
-const EMPTY = { Categories: [], Series: {}, Bookmarks: [] };
+const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [] };
 const loaded = new Map();
 
 function idKey(id) {
@@ -103,6 +103,26 @@ export async function saveSeriesPrefs(key, patch) {
   const prefs = await send('PUT', '/series', Object.assign({ Key: key }, patch));
   changed(null);
   return prefs;
+}
+
+// Manga series on the reader's shelf (Mihon's library).
+export function isInLibrary(shelf, key) {
+  return (shelf.Library || []).indexOf(key) !== -1;
+}
+
+export async function setInLibrary(key, inLibrary) {
+  await send('PUT', '/library', { Key: key, InLibrary: inLibrary });
+  changed('manga');
+}
+
+// Adds a series when the reader opens it, once per session.
+const ensured = new Set();
+export function ensureInLibrary(key) {
+  if (!key || ensured.has(key)) return;
+  ensured.add(key);
+  loadShelf('manga').then(function (shelf) {
+    if (!isInLibrary(shelf, key)) setInLibrary(key, true).catch(() => ensured.delete(key));
+  });
 }
 
 export function isBookmarked(shelf, itemId) {

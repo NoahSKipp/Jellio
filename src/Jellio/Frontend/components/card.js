@@ -451,7 +451,7 @@ export function buildCard(item, options) {
   // book right where the reader left off.
   const targetHash =
     options && options.openReader
-      ? '#/' + (item.Type === 'AudioBook' ? 'listen' : 'read') + '?id=' + item.Id
+      ? '#/' + (item.Type === 'AudioBook' ? 'listen' : 'read') + '?id=' + item.Id + (item.Stream && item.Stream.MangaId ? '&manga=' + item.Stream.MangaId : '')
       : '#/item?id=' + item.Id;
   card.addEventListener('click', function () {
     navigateTo(targetHash);
