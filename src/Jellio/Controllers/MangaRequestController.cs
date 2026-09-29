@@ -228,7 +228,7 @@ public partial class MangaRequestController(
             return BadRequest("Send a Mihon backup file (.tachibk)");
         }
 
-        IReadOnlyList<MihonManga> backup;
+        MihonBackup backup;
         try
         {
             backup = MihonBackupReader.Read(buffer.ToArray());
@@ -239,13 +239,13 @@ public partial class MangaRequestController(
             return BadRequest("That file isn't a Mihon backup. Create one in Mihon under Settings, Data and storage, Create backup.");
         }
 
-        var library = backup.Where(manga => manga.Favorite).ToList();
+        var library = backup.Manga.Where(manga => manga.Favorite).ToList();
         if (library.Count == 0)
         {
             return BadRequest("This backup has no series in its library");
         }
 
-        var job = importService.Start(userId, library);
+        var job = importService.Start(userId, library, backup.Categories);
         if (job is null)
         {
             return Conflict("An import is already running");
