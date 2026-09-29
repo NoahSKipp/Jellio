@@ -29,6 +29,8 @@ import {
   defaultTargetLanguage,
 } from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
+import { loadShelf, saveSeriesPrefs, seriesShelfKey } from '../runtime/shelf.js';
+import { mangaSeriesTitle, mangaSeriesKey } from '../components/mangaSeries.js';
 
 const SETTINGS_KEY = 'jellio-reader-settings';
 const SAVE_DEBOUNCE_MS = 2000;
@@ -526,7 +528,8 @@ async function openComic(stage, buffer, savedLocator, settings, handlers, itemId
   } catch (err) {
     savedDirection = null;
   }
-  let direction = savedDirection === 'rtl' || savedDirection === 'ltr' ? savedDirection : infoDirection || settings.comicDirection;
+  let direction =
+    savedDirection === 'rtl' || savedDirection === 'ltr' ? savedDirection : settings.seriesDirection || infoDirection || settings.comicDirection;
   let current = Object.assign({}, settings);
 
   const saved = /^page:(\d+)$/.exec(savedLocator || '');
@@ -1251,6 +1254,29 @@ export async function renderReader(root, params) {
   const settings = loadSettings();
   const isPdf = /pdf/i.test(file.contentType);
   const isComic = /comicbook|zip/i.test(file.contentType) && !/epub/i.test(file.contentType);
+
+  // A manga series' own reading mode (Mihon style, runtime/shelf.js)
+  // wins over the reader-wide default, and changes made here go to it.
+  const baseComic = { comicLayout: settings.comicLayout, comicDirection: settings.comicDirection };
+  const seriesTitle = isComic ? mangaSeriesTitle(item) : '';
+  const seriesKey = seriesTitle ? seriesShelfKey(mangaSeriesKey(seriesTitle)) : '';
+  if (seriesKey) {
+    const shelf = await Promise.race([loadShelf('manga'), new Promise((resolve) => setTimeout(() => resolve(null), 1500))]);
+    const prefs = (shelf && shelf.Series && shelf.Series[seriesKey]) || {};
+    if (prefs.ComicLayout) settings.comicLayout = prefs.ComicLayout;
+    if (prefs.ComicDirection) settings.seriesDirection = prefs.ComicDirection;
+  }
+  function persistSettings() {
+    const copy = Object.assign({}, settings, seriesKey ? baseComic : {});
+    delete copy.seriesDirection;
+    storeSettings(copy);
+  }
+  function saveSeriesMode(patch) {
+    if (!seriesKey) return;
+    saveSeriesPrefs(seriesKey, patch).catch(function (err) {
+      console.warn('Jellio: could not save the series reading mode', err);
+    });
+  }
   // PDFs and comics are paged: their scrubber and labels count pages.
   const isPaged = isPdf || isComic;
 
@@ -1746,7 +1772,7 @@ export async function renderReader(root, params) {
     root.classList.add('jellio-reader-theme-' + settings.theme);
     root.dataset.width = settings.width;
     root.dataset.layout = settings.layout;
-    storeSettings(settings);
+    persistSettings();
     Promise.resolve(reader.applySettings(settings)).then(function () {
       reader.resize();
       paintDirection();
@@ -1775,7 +1801,13 @@ export async function renderReader(root, params) {
 
     if (reader.kind === 'comic') {
       settingsPanel.appendChild(
-        settingGroup('Layout', optionChips(COMIC_LAYOUTS, settings.comicLayout, (value) => updateSettings({ comicLayout: value }))),
+        settingGroup(
+          'Layout',
+          optionChips(COMIC_LAYOUTS, settings.comicLayout, function (value) {
+            saveSeriesMode({ ComicLayout: value });
+            updateSettings({ comicLayout: value });
+          }),
+        ),
       );
       if (settings.comicLayout !== 'vertical') {
         settingsPanel.appendChild(
@@ -1787,7 +1819,8 @@ export async function renderReader(root, params) {
             optionChips(COMIC_DIRECTIONS, reader.getDirection(), function (value) {
               reader.setDirection(value);
               settings.comicDirection = value;
-              storeSettings(settings);
+              saveSeriesMode({ ComicDirection: value });
+              persistSettings();
               paintDirection();
               paintSettings();
             }),
@@ -1876,7 +1909,7 @@ export async function renderReader(root, params) {
         settings.targetLang,
         function (value) {
           settings.targetLang = value;
-          storeSettings(settings);
+          persistSettings();
         },
       );
       languageRow.appendChild(labelled('Translate into', target));
