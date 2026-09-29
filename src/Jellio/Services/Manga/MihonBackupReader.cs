@@ -55,9 +55,9 @@ public static class MihonBackupReader
 
         foreach (var (field, value) in Fields(bytes))
         {
-            if (field == 1 && value is byte[] manga)
+            if (field == 1 && value is byte[] message)
             {
-                mangaMessages.Add(manga);
+                mangaMessages.Add(message);
             }
             else if (field == 2 && value is byte[] category && ReadCategory(category) is { } parsed)
             {
