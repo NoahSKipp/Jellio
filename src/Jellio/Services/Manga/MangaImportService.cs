@@ -77,7 +77,10 @@ public class MangaImportService(
     private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".bmp"];
 
     private const int MaxSourceFailures = 2;
-    private static readonly TimeSpan SeriesTimeout = TimeSpan.FromSeconds(90);
+    private const int FallbackSearches = 4;
+    private static readonly TimeSpan SeriesTimeout = TimeSpan.FromSeconds(150);
+    private static readonly TimeSpan OriginalSourceTimeout = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan FallbackSearchTimeout = TimeSpan.FromSeconds(20);
 
     private readonly ConcurrentDictionary<Guid, MangaImportJob> _jobs = new();
     private readonly object _storeLock = new();
@@ -148,39 +151,36 @@ public class MangaImportService(
 
             // A source that keeps timing out (one needing a WebView Suwayomi
             // can't start, or a site that's down) would hold every series
-            // on it for the full timeout: after two in a row, the rest of
-            // that source's series are skipped. Importing again retries them.
+            // on it: after two in a row it isn't asked again, and its series
+            // go straight to the other installed sources.
             var failures = new Dictionary<long, int>();
             foreach (var manga in library)
             {
                 MangaImportSeriesResult result;
-                if (failures.GetValueOrDefault(manga.SourceId) >= MaxSourceFailures)
+                var down = failures.Where(pair => pair.Value >= MaxSourceFailures).Select(pair => pair.Key).ToHashSet();
+                try
                 {
+                    using var timeout = new CancellationTokenSource(SeriesTimeout);
+                    var (imported, originalFailed) = await ImportSeriesAsync(userId, manga, categoryIds, down, timeout.Token).ConfigureAwait(false);
+                    result = imported;
+                    if (!down.Contains(manga.SourceId))
+                    {
+                        failures[manga.SourceId] = originalFailed ? failures.GetValueOrDefault(manga.SourceId) + 1 : 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Jellio: Mihon import of {Title} from {Source} failed", manga.Title, manga.SourceName);
                     ImportShelf(userId, manga, manga.Title, categoryIds);
                     result = new MangaImportSeriesResult(
                         manga.Title,
-                        "skipped",
+                        "error",
                         0,
-                        "Skipped: " + manga.SourceName + " isn't responding in Suwayomi. Import again later to retry.");
-                }
-                else
-                {
-                    try
+                        manga.SourceName + " didn't answer in time and no other source had it. If Suwayomi's log shows WebView timeouts, that source needs a WebView Suwayomi can't start.");
+                    if (!down.Contains(manga.SourceId))
                     {
-                        using var timeout = new CancellationTokenSource(SeriesTimeout);
-                        result = await ImportSeriesAsync(userId, manga, categoryIds, timeout.Token).ConfigureAwait(false);
+                        failures[manga.SourceId] = failures.GetValueOrDefault(manga.SourceId) + 1;
                     }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Jellio: Mihon import of {Title} from {Source} failed", manga.Title, manga.SourceName);
-                        result = new MangaImportSeriesResult(
-                            manga.Title,
-                            "error",
-                            0,
-                            manga.SourceName + " didn't answer in time. If Suwayomi's log shows WebView timeouts, that source needs a WebView Suwayomi can't start.");
-                    }
-
-                    failures[manga.SourceId] = result.Outcome == "error" ? failures.GetValueOrDefault(manga.SourceId) + 1 : 0;
                 }
 
                 lock (job)
@@ -204,27 +204,54 @@ public class MangaImportService(
         }
     }
 
-    private async Task<MangaImportSeriesResult> ImportSeriesAsync(Guid userId, MihonManga manga, Dictionary<long, string> categoryIds, CancellationToken cancellationToken)
+    // The series on the source Mihon read it from; when that source doesn't
+    // answer or doesn't have it, the same title on another installed
+    // source. originalFailed: Mihon's source timed out or errored.
+    private async Task<(MangaImportSeriesResult Result, bool OriginalFailed)> ImportSeriesAsync(
+        Guid userId,
+        MihonManga manga,
+        Dictionary<long, string> categoryIds,
+        HashSet<long> downSources,
+        CancellationToken cancellationToken)
     {
-        var found = await suwayomi.FindMangaAsync(manga.SourceId, manga.Url, manga.Title, cancellationToken).ConfigureAwait(false);
-        ImportShelf(userId, manga, found?.Title ?? manga.Title, categoryIds);
-        if (found is null)
+        SuwayomiManga? found = null;
+        IReadOnlyList<SuwayomiChapter>? chapters = null;
+        var originalFailed = false;
+        string? otherSource = null;
+        if (!downSources.Contains(manga.SourceId))
         {
-            return new MangaImportSeriesResult(manga.Title, "not-found", 0, "Not found on " + manga.SourceName + ". Is that extension installed in Suwayomi?");
+            using var first = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            first.CancelAfter(OriginalSourceTimeout);
+            try
+            {
+                found = await suwayomi.FindMangaAsync(manga.SourceId, manga.Url, manga.Title, first.Token).ConfigureAwait(false);
+                chapters = found is null ? null : await LoadChaptersAsync(found, first.Token).ConfigureAwait(false);
+                originalFailed = found is not null && chapters is null;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                originalFailed = true;
+            }
         }
 
-        if (!await suwayomi.AddToLibraryAsync(found.Id, cancellationToken).ConfigureAwait(false))
-        {
-            return new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't add it to its library");
-        }
-
-        // Already in Suwayomi (an earlier import or request): its stored
-        // chapters, without asking the source again.
-        var stored = found.InLibrary ? await suwayomi.GetStoredChaptersAsync(found.Id, cancellationToken).ConfigureAwait(false) : null;
-        var chapters = stored is { Count: > 0 } ? stored : await suwayomi.FetchChaptersAsync(found.Id, cancellationToken).ConfigureAwait(false);
         if (chapters is null)
         {
-            return new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't load its chapters");
+            var elsewhere = await FindElsewhereAsync(manga, downSources, cancellationToken).ConfigureAwait(false);
+            if (elsewhere is { } other)
+            {
+                found = other.Manga;
+                otherSource = other.SourceName;
+                chapters = await LoadChaptersAsync(found, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        ImportShelf(userId, manga, found?.Title ?? manga.Title, categoryIds);
+        if (found is null || chapters is null)
+        {
+            var why = originalFailed || downSources.Contains(manga.SourceId)
+                ? manga.SourceName + " isn't responding in Suwayomi and no other installed source has this title."
+                : "Not found on " + manga.SourceName + " or any other installed source. Is that extension installed in Suwayomi?";
+            return (new MangaImportSeriesResult(manga.Title, originalFailed ? "error" : "not-found", 0, why), originalFailed);
         }
 
         // Where they left off: the furthest chapter they finished or
@@ -253,13 +280,23 @@ public class MangaImportService(
         // Named the way Suwayomi names the files: its own chapter record
         // for the same URL when it has one.
         var byUrl = chapters.GroupBy(chapter => chapter.Url, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        ApplyToStream(userId, manga, byUrl);
+
+        // Another source has its own chapter URLs: those match by number.
+        var byNumber = chapters
+            .Where(chapter => chapter.ChapterNumber >= 0)
+            .GroupBy(chapter => chapter.ChapterNumber)
+            .ToDictionary(group => group.Key, group => group.First());
+        SuwayomiChapter? Match(MihonChapter chapter) =>
+            byUrl.TryGetValue(chapter.Url, out var own) ? own
+            : chapter.ChapterNumber >= 0 && byNumber.TryGetValue(chapter.ChapterNumber, out var numbered) ? numbered
+            : null;
+        ApplyToStream(userId, manga, Match);
         var progress = manga.Chapters
             .Where(chapter => chapter.Read || chapter.LastPageRead > 0 || chapter.Bookmark)
             .Select(chapter => new PendingChapterProgress
             {
                 Series = Normalize(found.Title),
-                Chapter = Normalize(byUrl.TryGetValue(chapter.Url, out var own) ? own.Name : chapter.Name),
+                Chapter = Normalize(Match(chapter)?.Name ?? chapter.Name),
                 Read = chapter.Read,
                 LastPageRead = chapter.LastPageRead,
                 Bookmark = chapter.Bookmark,
@@ -269,11 +306,87 @@ public class MangaImportService(
             .ToList();
         AddPending(userId, progress);
 
-        return new MangaImportSeriesResult(
-            manga.Title,
-            "imported",
-            toDownload.Count,
-            started.Count > 0 ? started.Count + " chapters of progress" : null);
+        var notes = new List<string>();
+        if (otherSource is not null)
+        {
+            notes.Add("From " + otherSource + (originalFailed || downSources.Contains(manga.SourceId) ? " (" + manga.SourceName + " didn't answer)" : " (not on " + manga.SourceName + ")"));
+        }
+
+        if (started.Count > 0)
+        {
+            notes.Add(started.Count + " chapters of progress");
+        }
+
+        return (new MangaImportSeriesResult(manga.Title, "imported", toDownload.Count, notes.Count > 0 ? string.Join(" · ", notes) : null), originalFailed);
+    }
+
+    // Added to Suwayomi's library with its chapter list: the stored one
+    // when it has it (an earlier import or request), else from the source.
+    private async Task<IReadOnlyList<SuwayomiChapter>?> LoadChaptersAsync(SuwayomiManga manga, CancellationToken cancellationToken)
+    {
+        if (!await suwayomi.AddToLibraryAsync(manga.Id, cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var stored = manga.InLibrary ? await suwayomi.GetStoredChaptersAsync(manga.Id, cancellationToken).ConfigureAwait(false) : null;
+        return stored is { Count: > 0 } ? stored : await suwayomi.FetchChaptersAsync(manga.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The same title on the reader's other installed sources, searched a
+    // few at a time; only an exact title match counts, so a different
+    // series with a similar name is never picked.
+    private async Task<(SuwayomiManga Manga, string SourceName)?> FindElsewhereAsync(MihonManga manga, HashSet<long> downSources, CancellationToken cancellationToken)
+    {
+        var sources = await suwayomi.GetSourcesAsync(cancellationToken).ConfigureAwait(false);
+        var candidates = sources?.Matching.Where(source => source.Id != manga.SourceId && !downSources.Contains(source.Id)).ToList();
+        if (candidates is null || candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var wanted = ShelfStore.SeriesKey(manga.Title);
+        using var throttle = new SemaphoreSlim(FallbackSearches);
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var searches = candidates.Select(async source =>
+        {
+            await throttle.WaitAsync(stop.Token).ConfigureAwait(false);
+            try
+            {
+                using var budget = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+                budget.CancelAfter(FallbackSearchTimeout);
+                var results = await suwayomi.SearchAsync(source.Id, manga.Title, budget.Token).ConfigureAwait(false);
+                var match = results?.FirstOrDefault(result => ShelfStore.SeriesKey(result.Title) == wanted);
+                if (match is not null)
+                {
+                    await stop.CancelAsync().ConfigureAwait(false);
+                }
+
+                return match is null ? ((SuwayomiManga, string)?)null : (match, source.Name);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }).ToList();
+
+        try
+        {
+            await Task.WhenAll(searches).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Stopped early: one matched.
+        }
+
+        return searches
+            .Where(search => search.IsCompletedSuccessfully && search.Result is not null)
+            .Select(search => search.Result)
+            .FirstOrDefault();
     }
 
     private void OnItemAdded(object? sender, ItemChangeEventArgs e)
@@ -391,13 +504,13 @@ public class MangaImportService(
 
     // Progress and bookmarks on the streamed chapters (MangaStreamService
     // ids), straight away. Never over progress made in Jellio itself.
-    private void ApplyToStream(Guid userId, MihonManga manga, Dictionary<string, SuwayomiChapter> byUrl)
+    private void ApplyToStream(Guid userId, MihonManga manga, Func<MihonChapter, SuwayomiChapter?> match)
     {
         var bookmarks = new List<string>();
         var progress = new List<(Guid, string, double, int?, DateTimeOffset?)>();
         foreach (var chapter in manga.Chapters)
         {
-            if (!byUrl.TryGetValue(chapter.Url, out var own))
+            if (match(chapter) is not { } own)
             {
                 continue;
             }
