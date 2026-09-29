@@ -16,20 +16,27 @@ public record StreamChapter(string Id, int ChapterId, int MangaId, string Name, 
 
 public record StreamSeries(int MangaId, string Title, string? Author, string? Status, string Key, IReadOnlyList<StreamChapter> Chapters);
 
+public record StreamTitle(int MangaId, string Title, string Key);
+
 /// <summary>
 /// Manga read straight from Suwayomi's sources, the way Mihon reads:
-/// Suwayomi's library is the shelf, and pages come from the source (via
-/// Suwayomi) as they're read. Nothing is kept on the server unless a
-/// reader saves a series (SuwayomiClient.EnqueueDownloadsAsync).
+/// Suwayomi's library holds the series, each reader's shelf shows their
+/// own, and pages come from the source (via Suwayomi) as they're read.
+/// Chapters load per series, when a series is shown or opened, and are
+/// cached. Nothing is kept on the server unless a reader saves a series
+/// (SuwayomiClient.EnqueueDownloadsAsync).
 /// </summary>
 public class MangaStreamService(SuwayomiClient suwayomi)
 {
-    private static readonly TimeSpan LibraryTtl = TimeSpan.FromMinutes(5);
+    private const int ParallelSeries = 6;
+    private static readonly TimeSpan TitlesTtl = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan SeriesTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan PagesTtl = TimeSpan.FromMinutes(30);
 
-    private readonly SemaphoreSlim _libraryLock = new(1, 1);
     private readonly ConcurrentDictionary<int, (DateTime At, IReadOnlyList<string> Pages)> _pages = new();
-    private (DateTime At, List<StreamSeries> Series, Dictionary<string, (StreamChapter Chapter, StreamSeries Series)> ById)? _library;
+    private readonly ConcurrentDictionary<int, (DateTime At, StreamSeries Series)> _series = new();
+    private readonly ConcurrentDictionary<string, (StreamChapter Chapter, StreamSeries Series)> _byId = new(StringComparer.Ordinal);
+    private (DateTime At, IReadOnlyList<StreamTitle> Titles)? _titles;
 
     public static string ChapterId(int chapterId)
     {
@@ -37,94 +44,117 @@ public class MangaStreamService(SuwayomiClient suwayomi)
         return new Guid(hash).ToString("N");
     }
 
-    public void Invalidate() => _library = null;
-
-    public async Task<IReadOnlyList<StreamSeries>?> GetLibraryAsync(CancellationToken cancellationToken)
+    public void Invalidate()
     {
-        if (_library is { } cached && DateTime.UtcNow - cached.At < LibraryTtl)
+        _titles = null;
+        _series.Clear();
+    }
+
+    // Every series in Suwayomi's library, titles only (cheap).
+    public async Task<IReadOnlyList<StreamTitle>?> GetTitlesAsync(CancellationToken cancellationToken)
+    {
+        if (_titles is { } cached && DateTime.UtcNow - cached.At < TitlesTtl)
+        {
+            return cached.Titles;
+        }
+
+        var library = await suwayomi.GetLibraryAsync(cancellationToken).ConfigureAwait(false);
+        if (library is null)
+        {
+            return _titles?.Titles;
+        }
+
+        var titles = library.Select(entry => new StreamTitle(entry.Id, entry.Title, ShelfStore.SeriesKey(entry.Title))).ToList();
+        _titles = (DateTime.UtcNow, titles);
+        return titles;
+    }
+
+    // One series with its chapters; a series Suwayomi has never loaded
+    // chapters for gets them fetched from the source now.
+    public async Task<StreamSeries?> GetSeriesAsync(int mangaId, CancellationToken cancellationToken)
+    {
+        if (_series.TryGetValue(mangaId, out var cached) && DateTime.UtcNow - cached.At < SeriesTtl)
         {
             return cached.Series;
         }
 
-        await _libraryLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        var titles = await GetTitlesAsync(cancellationToken).ConfigureAwait(false);
+        var title = titles?.FirstOrDefault(entry => entry.MangaId == mangaId);
+        if (title is null)
         {
-            if (_library is { } fresh && DateTime.UtcNow - fresh.At < LibraryTtl)
-            {
-                return fresh.Series;
-            }
-
-            var library = await suwayomi.GetLibraryWithChaptersAsync(cancellationToken).ConfigureAwait(false);
-            List<StreamSeries> series;
-            if (library is not null)
-            {
-                series = library.Select(manga => ToSeries(manga.Id, manga.Title, manga.Author, manga.Status, manga.Chapters)).ToList();
-            }
-            else
-            {
-                // A Suwayomi that won't answer the full query (older
-                // schema, or too much at once): the series alone, their
-                // chapters loaded when opened.
-                var titles = await suwayomi.GetLibraryAsync(cancellationToken).ConfigureAwait(false);
-                if (titles is null)
-                {
-                    return _library?.Series;
-                }
-
-                series = titles.Select(entry => ToSeries(entry.Id, entry.Title, null, null, [])).ToList();
-            }
-
-            Store(series);
-            return series;
-        }
-        finally
-        {
-            _libraryLock.Release();
-        }
-    }
-
-    // One series; a series Suwayomi has never loaded chapters for gets them
-    // fetched from the source now.
-    public async Task<StreamSeries?> GetSeriesAsync(int mangaId, CancellationToken cancellationToken)
-    {
-        var library = await GetLibraryAsync(cancellationToken).ConfigureAwait(false);
-        var series = library?.FirstOrDefault(entry => entry.MangaId == mangaId);
-        if (series is null || series.Chapters.Count > 0)
-        {
-            return series;
+            return null;
         }
 
-        await suwayomi.FetchChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false);
         var chapters = await suwayomi.GetChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false);
-        if (chapters is null || chapters.Count == 0)
+        if (chapters is { Count: 0 })
         {
-            return series;
+            await suwayomi.FetchChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false);
+            chapters = await suwayomi.GetChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false);
         }
 
-        var loaded = ToSeries(series.MangaId, series.Title, series.Author, series.Status, chapters);
-        if (_library is { } current)
+        if (chapters is null)
         {
-            var list = current.Series.Select(entry => entry.MangaId == mangaId ? loaded : entry).ToList();
-            Store(list);
+            return cached.Series;
         }
 
-        return loaded;
+        var series = ToSeries(mangaId, title.Title, null, null, chapters);
+        _series[mangaId] = (DateTime.UtcNow, series);
+        foreach (var chapter in series.Chapters)
+        {
+            _byId[chapter.Id] = (chapter, series);
+        }
+
+        return series;
     }
 
-    public async Task<(StreamChapter Chapter, StreamSeries Series)?> FindChapterAsync(string id, CancellationToken cancellationToken)
+    // Several series, a few at a time.
+    public async Task<IReadOnlyList<StreamSeries>> GetSeriesAsync(IEnumerable<int> mangaIds, CancellationToken cancellationToken)
+    {
+        using var throttle = new SemaphoreSlim(ParallelSeries);
+        var loads = mangaIds.Distinct().Select(async id =>
+        {
+            await throttle.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await GetSeriesAsync(id, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }).ToList();
+        var loaded = await Task.WhenAll(loads).ConfigureAwait(false);
+        return loaded.OfType<StreamSeries>().ToList();
+    }
+
+    // A chapter by its stream id. mangaHint (the series it belongs to, when
+    // the caller knows it) saves looking through every series.
+    public async Task<(StreamChapter Chapter, StreamSeries Series)?> FindChapterAsync(string id, int? mangaHint, CancellationToken cancellationToken)
     {
         var key = id.Replace("-", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
-        if (_library?.ById.TryGetValue(key, out var hit) == true)
+        if (_byId.TryGetValue(key, out var hit))
         {
             return hit;
         }
 
-        await GetLibraryAsync(cancellationToken).ConfigureAwait(false);
-        return _library?.ById.TryGetValue(key, out var found) == true ? found : null;
-    }
+        if (mangaHint is > 0)
+        {
+            await GetSeriesAsync(mangaHint.Value, cancellationToken).ConfigureAwait(false);
+            if (_byId.TryGetValue(key, out var hinted))
+            {
+                return hinted;
+            }
+        }
 
-    public async Task<(StreamChapter Chapter, StreamSeries Series)?> FindChapterAsync(int chapterId, CancellationToken cancellationToken) =>
-        await FindChapterAsync(ChapterId(chapterId), cancellationToken).ConfigureAwait(false);
+        var titles = await GetTitlesAsync(cancellationToken).ConfigureAwait(false);
+        if (titles is null)
+        {
+            return null;
+        }
+
+        await GetSeriesAsync(titles.Select(title => title.MangaId).Where(mangaId => !_series.ContainsKey(mangaId)), cancellationToken).ConfigureAwait(false);
+        return _byId.TryGetValue(key, out var found) ? found : null;
+    }
 
     public async Task<IReadOnlyList<string>?> GetPagesAsync(int chapterId, CancellationToken cancellationToken)
     {
@@ -178,19 +208,5 @@ public class MangaStreamService(SuwayomiClient suwayomi)
                 chapter.UploadDate))
             .ToList();
         return new StreamSeries(mangaId, title, author, status, ShelfStore.SeriesKey(title), ordered);
-    }
-
-    private void Store(List<StreamSeries> series)
-    {
-        var byId = new Dictionary<string, (StreamChapter, StreamSeries)>(StringComparer.Ordinal);
-        foreach (var entry in series)
-        {
-            foreach (var chapter in entry.Chapters)
-            {
-                byId[chapter.Id] = (chapter, entry);
-            }
-        }
-
-        _library = (DateTime.UtcNow, series, byId);
     }
 }

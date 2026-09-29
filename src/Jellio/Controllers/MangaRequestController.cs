@@ -27,6 +27,7 @@ public partial class MangaRequestController(
     SuwayomiClient suwayomi,
     MangaImportService importService,
     MangaStreamService streamService,
+    Jellio.Services.Reading.ShelfStore shelfStore,
     MangaCoverService coverService,
     ILibraryManager libraryManager,
     IUserManager userManager,
@@ -180,6 +181,14 @@ public partial class MangaRequestController(
             ? await suwayomi.AddAndDownloadAsync(body.MangaId, cancellationToken).ConfigureAwait(false)
             : await suwayomi.AddAndFetchAsync(body.MangaId, cancellationToken).ConfigureAwait(false);
         streamService.Invalidate();
+
+        // On the requester's own shelf.
+        var requesterId = GetUserId();
+        if (result.Success && requesterId != Guid.Empty && !string.IsNullOrWhiteSpace(body.Title))
+        {
+            shelfStore.SetInLibrary(requesterId, Jellio.Services.Reading.ShelfStore.SeriesShelfKey(body.Title), true);
+        }
+
         var requester = HttpContext.User.Identity is ClaimsIdentity identity
             && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
                 ? userManager.GetUserById(userId)?.Username

@@ -27,6 +27,7 @@ public class MangaStreamController(
     MangaStreamService stream,
     SuwayomiClient suwayomi,
     ReadingProgressStore progressStore,
+    ShelfStore shelfStore,
     ILogger<MangaStreamController> logger) : ControllerBase
 {
     private const double Finished = 0.98;
@@ -57,14 +58,28 @@ public class MangaStreamController(
             return Ok(Array.Empty<SeriesSummary>());
         }
 
-        var library = await stream.GetLibraryAsync(cancellationToken).ConfigureAwait(false);
-        if (library is null)
+        // This reader's series only: Discover and requests find the rest.
+        var titles = await stream.GetTitlesAsync(cancellationToken).ConfigureAwait(false);
+        if (titles is null)
         {
             return StatusCode(502, "Suwayomi could not be reached");
         }
 
+        var mine = shelfStore.Library(userId);
+        var ids = titles.Where(title => mine.Contains(ShelfStore.SeriesShelfKey(title.Title))).Select(title => title.MangaId);
+        var library = await stream.GetSeriesAsync(ids, cancellationToken).ConfigureAwait(false);
         var progress = progressStore.GetAll(userId);
         return Ok(library.Select(series => Summarize(series, progress)).ToList());
+    }
+
+    // Any series in Suwayomi's library by its shelf key (not only this
+    // reader's), for opening one that isn't on their shelf.
+    [HttpGet("by-key")]
+    public async Task<IActionResult> ByKey([FromQuery] string key, CancellationToken cancellationToken)
+    {
+        var titles = await stream.GetTitlesAsync(cancellationToken).ConfigureAwait(false);
+        var match = titles?.FirstOrDefault(title => title.Key == (key ?? string.Empty));
+        return match is null ? NotFound() : Ok(new { match.MangaId, match.Title, match.Key });
     }
 
     [HttpGet("series/{mangaId:int}")]
@@ -76,9 +91,9 @@ public class MangaStreamController(
 
     // A chapter by its stream id, for the reader.
     [HttpGet("chapter/{id}")]
-    public async Task<IActionResult> Chapter(string id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Chapter(string id, [FromQuery] int? manga, CancellationToken cancellationToken)
     {
-        var found = await stream.FindChapterAsync(id, cancellationToken).ConfigureAwait(false);
+        var found = await stream.FindChapterAsync(id, manga, cancellationToken).ConfigureAwait(false);
         if (found is null)
         {
             return NotFound();

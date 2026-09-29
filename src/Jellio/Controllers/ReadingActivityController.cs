@@ -24,7 +24,7 @@ public class ReadingActivityController(AchievementService achievementService, Ma
     private const int MaxPagesPerSession = 2000;
     private const int MaxListenSecondsPerSession = 24 * 60 * 60;
 
-    public record SessionBody(Guid ItemId, string Kind, int PagesRead, int? CurrentPage, int? PageCount, int ListenedSeconds, bool Finished);
+    public record SessionBody(Guid ItemId, string Kind, int PagesRead, int? CurrentPage, int? PageCount, int ListenedSeconds, bool Finished, int? MangaId = null);
 
     [HttpPost]
     public async Task<IActionResult> Report([FromBody] SessionBody body)
@@ -38,7 +38,7 @@ public class ReadingActivityController(AchievementService achievementService, Ma
         var user = userManager.GetUserById(userId);
         var item = body is null ? null : libraryManager.GetItemById(body.ItemId);
         if (user is not null && item is null && body!.Kind?.Trim().ToLowerInvariant() == "manga"
-            && await streamService.FindChapterAsync(body.ItemId.ToString("N"), HttpContext.RequestAborted).ConfigureAwait(false) is { } streamed)
+            && await streamService.FindChapterAsync(body.ItemId.ToString("N"), body.MangaId, HttpContext.RequestAborted).ConfigureAwait(false) is { } streamed)
         {
             // A chapter read straight from its source.
             var streamPageCount = body.PageCount is > 0 and < 100_000 ? body.PageCount : null;
