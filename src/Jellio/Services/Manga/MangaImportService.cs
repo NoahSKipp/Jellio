@@ -605,6 +605,7 @@ public class MangaImportService(
         }
 
         var inCategories = manga.Categories.Select(order => categoryIds.GetValueOrDefault(order)).OfType<string>().ToHashSet();
+        shelfStore.SetInLibrary(userId, key, true);
         shelfStore.Update(userId, data =>
         {
             foreach (var category in data.Categories.Where(entry => entry.Kind == "manga"))

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using MediaBrowser.Common.Configuration;
@@ -54,6 +55,10 @@ public class ShelfData
 
     // Bookmarked chapters (item ids, no dashes).
     public List<string> Bookmarks { get; set; } = [];
+
+    // The manga series on this reader's shelf (series keys, "s:..."), like
+    // Mihon's library. Null until first used.
+    public List<string>? Library { get; set; }
 }
 
 /// <summary>
@@ -75,6 +80,40 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
     public ShelfData Load(Guid userId) => _store.Load(userId);
 
     public ShelfData Update(Guid userId, Action<ShelfData> mutate) => _store.Update(userId, mutate);
+
+    // A reader's manga library. The first time, it's seeded with the
+    // series they already have settings or categories for (earlier
+    // imports), so nobody's shelf empties out.
+    public HashSet<string> Library(Guid userId)
+    {
+        var data = _store.Load(userId);
+        if (data.Library is null)
+        {
+            data = _store.Update(userId, SeedLibrary);
+        }
+
+        return new HashSet<string>(data.Library ?? [], StringComparer.Ordinal);
+    }
+
+    public void SetInLibrary(Guid userId, string key, bool inLibrary) =>
+        _store.Update(userId, data =>
+        {
+            SeedLibrary(data);
+            data.Library!.Remove(key);
+            if (inLibrary)
+            {
+                data.Library.Add(key);
+            }
+        });
+
+    private static void SeedLibrary(ShelfData data)
+    {
+        data.Library ??= data.Series.Keys
+            .Concat(data.Categories.Where(category => category.Kind == "manga").SelectMany(category => category.Items))
+            .Where(key => key.StartsWith("s:", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
 
     public static string NewId() => Guid.NewGuid().ToString("N")[..12];
 

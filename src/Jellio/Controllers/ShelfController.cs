@@ -21,7 +21,7 @@ public class ShelfController(ShelfStore store) : ControllerBase
     private const int MaxKeyLength = 300;
     private const int MaxItemsPerCategory = 10000;
 
-    public record ShelfResponse(IReadOnlyList<ShelfCategory> Categories, Dictionary<string, SeriesPrefs> Series, IReadOnlyList<string> Bookmarks);
+    public record ShelfResponse(IReadOnlyList<ShelfCategory> Categories, Dictionary<string, SeriesPrefs> Series, IReadOnlyList<string> Bookmarks, IReadOnlyCollection<string> Library);
 
     public record CreateBody(string? Name);
 
@@ -35,6 +35,8 @@ public class ShelfController(ShelfStore store) : ControllerBase
 
     public record BookmarkBody(bool Bookmarked);
 
+    public record LibraryBody(string? Key, bool InLibrary);
+
     [HttpGet("{kind}")]
     public IActionResult Get(string kind)
     {
@@ -44,7 +46,7 @@ public class ShelfController(ShelfStore store) : ControllerBase
         }
 
         var data = store.Load(userId);
-        return Ok(new ShelfResponse(data.Categories.Where(category => category.Kind == kind).ToList(), data.Series, data.Bookmarks));
+        return Ok(new ShelfResponse(data.Categories.Where(category => category.Kind == kind).ToList(), data.Series, data.Bookmarks, store.Library(userId)));
     }
 
     [HttpPost("{kind}/categories")]
@@ -225,6 +227,19 @@ public class ShelfController(ShelfStore store) : ControllerBase
             data.Series[body.Key!] = prefs;
         });
         return Ok(prefs);
+    }
+
+    // A manga series on or off the reader's shelf.
+    [HttpPut("library")]
+    public IActionResult Library([FromBody] LibraryBody body)
+    {
+        if (!TryUser(out var userId) || body is null || !ValidKey(body.Key) || !body.Key!.StartsWith("s:", StringComparison.Ordinal))
+        {
+            return BadRequest("Invalid request");
+        }
+
+        store.SetInLibrary(userId, body.Key, body.InLibrary);
+        return Ok();
     }
 
     [HttpPut("bookmarks/{itemId}")]
