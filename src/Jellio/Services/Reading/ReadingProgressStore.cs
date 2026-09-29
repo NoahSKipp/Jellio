@@ -68,6 +68,48 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
+    // Many at once (a Mihon import), saved once: a save rewrites the whole
+    // file, so one per chapter grows quadratically with a big library.
+    // keepExisting leaves progress already made in Jellio alone.
+    public int SetMany(Guid userId, IEnumerable<(Guid ItemId, string Locator, double Progress, int? TotalPages, DateTimeOffset? UpdatedAt)> entries, bool keepExisting)
+    {
+        lock (_lock)
+        {
+            var all = LoadLocked();
+            if (!all.TryGetValue(Key(userId), out var items))
+            {
+                items = new Dictionary<string, ReadingProgressRecord>();
+                all[Key(userId)] = items;
+            }
+
+            var written = 0;
+            foreach (var entry in entries)
+            {
+                var key = Key(entry.ItemId);
+                if (keepExisting && items.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                items[key] = new ReadingProgressRecord
+                {
+                    Locator = entry.Locator,
+                    Progress = Math.Clamp(entry.Progress, 0, 1),
+                    TotalPages = entry.TotalPages ?? items.GetValueOrDefault(key)?.TotalPages,
+                    UpdatedAt = entry.UpdatedAt ?? DateTimeOffset.UtcNow,
+                };
+                written++;
+            }
+
+            if (written > 0)
+            {
+                SaveLocked(all);
+            }
+
+            return written;
+        }
+    }
+
     // Everything this reader has progress on, keyed by item id (no dashes).
     public Dictionary<string, ReadingProgressRecord> GetAll(Guid userId)
     {
@@ -102,27 +144,41 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
 
     private static string Key(Guid id) => id.ToString("N");
 
+    // Read from disk once and kept: every read used to parse the whole
+    // file, all users' progress, under the lock.
+    private Dictionary<string, Dictionary<string, ReadingProgressRecord>>? _cache;
+
     private Dictionary<string, Dictionary<string, ReadingProgressRecord>> LoadLocked()
     {
+        if (_cache is not null)
+        {
+            return _cache;
+        }
+
         if (!File.Exists(StorePath))
         {
-            return new Dictionary<string, Dictionary<string, ReadingProgressRecord>>();
+            return _cache = new Dictionary<string, Dictionary<string, ReadingProgressRecord>>();
         }
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, ReadingProgressRecord>>>(File.ReadAllText(StorePath))
+            _cache = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, ReadingProgressRecord>>>(File.ReadAllText(StorePath))
                 ?? new Dictionary<string, Dictionary<string, ReadingProgressRecord>>();
         }
         catch (JsonException)
         {
-            return new Dictionary<string, Dictionary<string, ReadingProgressRecord>>();
+            _cache = new Dictionary<string, Dictionary<string, ReadingProgressRecord>>();
         }
+
+        return _cache;
     }
 
     private void SaveLocked(Dictionary<string, Dictionary<string, ReadingProgressRecord>> all)
     {
+        _cache = all;
         Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        File.WriteAllText(StorePath, JsonSerializer.Serialize(all));
+        var temp = StorePath + ".tmp";
+        File.WriteAllText(temp, JsonSerializer.Serialize(all));
+        File.Move(temp, StorePath, true);
     }
 }
