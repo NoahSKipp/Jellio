@@ -18,6 +18,8 @@ import {
   getStreamChapter,
   getStreamPageCount,
   getStreamPageUrl,
+  reportNowReading,
+  clearNowReading,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
@@ -1978,6 +1980,24 @@ export async function renderReader(root, params) {
     return;
   }
   scrubber.value = String(reader.scrubValue(latestProgress));
+
+  // Now Playing: reading has no Jellyfin session, so the reader checks in
+  // while the book or chapter is open and on screen.
+  function checkInReading() {
+    if (document.visibilityState !== 'visible') return;
+    reportNowReading({
+      ItemId: itemId,
+      Kind: isComic ? 'manga' : 'book',
+      Title: item.Name || 'Untitled',
+      SeriesTitle: seriesTitle || item.SeriesName || null,
+      MangaId: item.Stream ? item.Stream.MangaId : null,
+      Page: currentPageNumber,
+      PageCount: totalPages || null,
+    });
+  }
+  checkInReading();
+  const nowReadingTimer = window.setInterval(checkInReading, 30000);
+
   // Images have no contents or text to search; manga reads right to left,
   // so its scrubber runs that way too.
   if (reader.kind === 'comic') {
@@ -2534,6 +2554,8 @@ export async function renderReader(root, params) {
   return function cleanup() {
     flushSave();
     flushSession();
+    window.clearInterval(nowReadingTimer);
+    clearNowReading(itemId);
     document.removeEventListener('visibilitychange', onVisibility);
     if (study) study.destroy();
     searchToken++;

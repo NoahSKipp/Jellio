@@ -2780,6 +2780,18 @@ export function getNowPlayingSessions() {
   return getJson('/Jellio/now-playing');
 }
 
+// The reader checking in for Now Playing (reading has no Jellyfin
+// session). Best effort: a missed check-in just drops out of the list.
+export function reportNowReading(entry) {
+  if (isOffline()) return Promise.resolve();
+  return postJson('/Jellio/now-playing/reading', entry, 10000).catch(() => {});
+}
+
+export function clearNowReading(itemId) {
+  if (isOffline()) return Promise.resolve();
+  return deleteJson('/Jellio/now-playing/reading/' + encodeURIComponent(itemId), 10000).catch(() => {});
+}
+
 // Real endpoint, GET /Jellio/online-users (Controllers/OnlineUsersController.cs),
 // the same ISessionManager.Sessions above reads, unfiltered by
 // NowPlayingItem: every user id with a real session on the server right
