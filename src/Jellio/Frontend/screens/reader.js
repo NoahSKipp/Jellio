@@ -81,7 +81,22 @@ const PDF_FITS = [
 const COMIC_LAYOUTS = [
   { value: 'single', label: 'Single page' },
   { value: 'spread', label: 'Two pages' },
-  { value: 'vertical', label: 'Vertical scroll' },
+  { value: 'paged-vertical', label: 'Paged (vertical)' },
+  { value: 'vertical', label: 'Long strip' },
+  { value: 'vertical-gaps', label: 'Long strip with gaps' },
+];
+// Mihon's reading modes, as layout plus direction.
+const COMIC_MODES = [
+  { value: 'rtl', label: 'Paged (right to left)', layout: 'single', direction: 'rtl' },
+  { value: 'ltr', label: 'Paged (left to right)', layout: 'single', direction: 'ltr' },
+  { value: 'paged-vertical', label: 'Paged (vertical)', layout: 'paged-vertical' },
+  { value: 'spread', label: 'Two pages', layout: 'spread' },
+  { value: 'vertical', label: 'Long strip', layout: 'vertical' },
+  { value: 'vertical-gaps', label: 'Long strip with gaps', layout: 'vertical-gaps' },
+];
+const ON_OFF = [
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' },
 ];
 const COMIC_FITS = [
   { value: 'height', label: 'Fit height' },
@@ -107,6 +122,7 @@ const DEFAULT_SETTINGS = {
   comicLayout: 'single',
   comicFit: 'height',
   comicDirection: 'rtl',
+  comicCrop: false,
 };
 
 function pick(options, value, fallback) {
@@ -130,6 +146,7 @@ function loadSettings() {
       comicLayout: pick(COMIC_LAYOUTS, saved.comicLayout, DEFAULT_SETTINGS.comicLayout),
       comicFit: pick(COMIC_FITS, saved.comicFit, DEFAULT_SETTINGS.comicFit),
       comicDirection: pick(COMIC_DIRECTIONS, saved.comicDirection, DEFAULT_SETTINGS.comicDirection),
+      comicCrop: saved.comicCrop === true,
     };
   } catch (err) {
     return Object.assign({}, DEFAULT_SETTINGS, { targetLang: defaultTargetLanguage() });
@@ -495,6 +512,79 @@ function comicDirectionKey(itemId) {
   return 'jellio-comic-dir:' + itemId;
 }
 
+// Mihon-style reading modes for comics: paged (left to right, right to
+// left, or vertical), two pages, and long strip with or without gaps.
+function isStripLayout(layout) {
+  return layout === 'vertical' || layout === 'vertical-gaps';
+}
+
+const COMIC_MAX_ZOOM = 4;
+
+function loadImage(src) {
+  return new Promise(function (resolve, reject) {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Page image did not load'));
+    img.src = src;
+  });
+}
+
+// Mihon's "Crop borders": trims a scan's plain white or black margins.
+// Strips only lose their sides, so the gaps between panels stay.
+async function cropPageBorders(src, sidesOnly) {
+  const img = await loadImage(src);
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+  const scale = Math.min(1, 400 / Math.max(width, height));
+  const sampleW = Math.max(1, Math.round(width * scale));
+  const sampleH = Math.max(1, Math.round(height * scale));
+  const sample = document.createElement('canvas');
+  sample.width = sampleW;
+  sample.height = sampleH;
+  const context = sample.getContext('2d', { willReadFrequently: true });
+  context.drawImage(img, 0, 0, sampleW, sampleH);
+  const data = context.getImageData(0, 0, sampleW, sampleH).data;
+  const corner = [data[0], data[1], data[2]];
+  const brightness = (corner[0] + corner[1] + corner[2]) / 3;
+  if (brightness > 40 && brightness < 215) return src;
+  function isContent(x, y) {
+    const i = (y * sampleW + x) * 4;
+    return Math.abs(data[i] - corner[0]) + Math.abs(data[i + 1] - corner[1]) + Math.abs(data[i + 2] - corner[2]) > 90;
+  }
+  function rowHasContent(y) {
+    let hits = 0;
+    for (let x = 0; x < sampleW; x++) if (isContent(x, y) && ++hits > sampleW * 0.004) return true;
+    return false;
+  }
+  function columnHasContent(x) {
+    let hits = 0;
+    for (let y = 0; y < sampleH; y++) if (isContent(x, y) && ++hits > sampleH * 0.004) return true;
+    return false;
+  }
+  let top = 0;
+  let bottom = sampleH - 1;
+  let left = 0;
+  let right = sampleW - 1;
+  if (!sidesOnly) {
+    while (top < bottom && !rowHasContent(top)) top++;
+    while (bottom > top && !rowHasContent(bottom)) bottom--;
+  }
+  while (left < right && !columnHasContent(left)) left++;
+  while (right > left && !columnHasContent(right)) right--;
+  if (right - left < sampleW * 0.3 || bottom - top < sampleH * 0.3) return src;
+  if (left + (sampleW - 1 - right) + top + (sampleH - 1 - bottom) < 3) return src;
+  const cropX = Math.max(0, Math.floor(left / scale) - 2);
+  const cropY = Math.max(0, Math.floor(top / scale) - 2);
+  const cropW = Math.min(width - cropX, Math.ceil((right - left + 1) / scale) + 4);
+  const cropH = Math.min(height - cropY, Math.ceil((bottom - top + 1) / scale) + 4);
+  const out = document.createElement('canvas');
+  out.width = cropW;
+  out.height = cropH;
+  out.getContext('2d').drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.92));
+  return blob ? URL.createObjectURL(blob) : src;
+}
+
 // Comic/manga volumes (CBZ): a zip of page images, opened with the same
 // vendored JSZip epub.js uses. Pages are the images in natural filename
 // order; ComicInfo.xml's <Manga> tag decides right-to-left when the
@@ -549,6 +639,8 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
   let index = saved ? Math.min(count - 1, Math.max(0, Number(saved[1]) - 1)) : 0;
   let renderToken = 0;
   const urls = new Map();
+  const cropped = new Map();
+  const createdUrls = [];
 
   function pageUrl(i) {
     if (streamed && !urls.has(i)) {
@@ -564,21 +656,44 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
         zip
           .file(names[i])
           .async('blob')
-          .then((blob) => URL.createObjectURL(blob)),
+          .then(function (blob) {
+            const url = URL.createObjectURL(blob);
+            createdUrls.push(url);
+            return url;
+          }),
       );
     }
     return urls.get(i);
   }
 
+  // What's shown for a page: the image, or its border-cropped copy.
+  function displayUrl(i) {
+    if (!current.comicCrop) return pageUrl(i);
+    const sidesOnly = isStripLayout(current.comicLayout);
+    const key = i + (sidesOnly ? ':sides' : ':all');
+    if (!cropped.has(key)) {
+      cropped.set(
+        key,
+        pageUrl(i).then(function (src) {
+          return cropPageBorders(src, sidesOnly)
+            .then(function (url) {
+              if (url !== src) createdUrls.push(url);
+              return url;
+            })
+            .catch(() => src);
+        }),
+      );
+    }
+    return cropped.get(key);
+  }
+
   stage.classList.add('jellio-reader-stage-comic');
   const view = el('div', 'jellio-reader-comic');
   stage.appendChild(view);
-  // Taps turn pages (mirrored for right-to-left) like the other formats.
-  stage.addEventListener('click', function (event) {
-    handlers.onTap(event.clientX, current.comicLayout === 'vertical', event.detail, function () {
-      return false;
-    });
-  });
+
+  function strip() {
+    return isStripLayout(current.comicLayout);
+  }
 
   // The cover stands alone; after it pages pair up as printed spreads.
   function pagesAt(i) {
@@ -594,6 +709,65 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     });
   }
 
+  // Zoom: paged modes scale the page (and pan it by dragging); long
+  // strips widen the strip and scroll sideways.
+  let zoom = 1;
+  let panX = 0;
+  let panY = 0;
+
+  function clampPan() {
+    const width = view.offsetWidth * zoom;
+    const height = view.offsetHeight * zoom;
+    panX = Math.min(0, Math.max(stage.clientWidth - width, panX));
+    panY = Math.min(0, Math.max(Math.min(0, stage.clientHeight - height), panY));
+  }
+
+  function applyZoom() {
+    stage.classList.toggle('jellio-reader-comic-zoomed', zoom > 1);
+    if (strip()) {
+      view.style.transform = '';
+      view.style.setProperty('--strip-zoom', String(zoom));
+      return;
+    }
+    view.style.removeProperty('--strip-zoom');
+    if (zoom === 1) {
+      panX = 0;
+      panY = 0;
+      view.style.transform = '';
+      return;
+    }
+    clampPan();
+    view.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + ')';
+  }
+
+  function setZoom(next, clientX, clientY) {
+    const target = Math.min(COMIC_MAX_ZOOM, Math.max(1, next));
+    const rect = stage.getBoundingClientRect();
+    const x = (clientX === undefined ? rect.left + rect.width / 2 : clientX) - rect.left;
+    const y = (clientY === undefined ? rect.top + rect.height / 2 : clientY) - rect.top;
+    if (strip()) {
+      const ratio = target / zoom;
+      const left = (stage.scrollLeft + x) * ratio - x;
+      const top = (stage.scrollTop + y) * ratio - y;
+      zoom = target;
+      applyZoom();
+      stage.scrollLeft = left;
+      stage.scrollTop = top;
+      return;
+    }
+    const contentX = (x - panX) / zoom;
+    const contentY = (y - panY) / zoom;
+    zoom = target;
+    panX = x - contentX * zoom;
+    panY = y - contentY * zoom;
+    applyZoom();
+  }
+
+  function resetZoom() {
+    zoom = 1;
+    applyZoom();
+  }
+
   let scrollHandler = null;
   let observer = null;
 
@@ -604,18 +778,25 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     observer = null;
   }
 
-  async function renderPaged() {
+  async function renderPaged(step) {
     teardownVertical();
     const token = ++renderToken;
     const pages = pagesAt(index);
-    const sources = await Promise.all(pages.map(pageUrl));
+    const sources = await Promise.all(pages.map(displayUrl));
     if (token !== renderToken) return;
+    resetZoom();
     view.textContent = '';
+    const vertical = current.comicLayout === 'paged-vertical';
     view.className =
       'jellio-reader-comic jellio-reader-comic-paged jellio-reader-comic-fit-' +
-      current.comicFit +
+      (vertical ? 'height' : current.comicFit) +
       (pages.length > 1 ? ' jellio-reader-comic-two' : '');
-    view.dir = direction;
+    view.dir = vertical ? 'ltr' : direction;
+    if (step) {
+      const forward = step > 0;
+      const axis = vertical ? 'y' : direction === 'rtl' ? 'x-rtl' : 'x';
+      view.classList.add('jellio-reader-comic-turn-' + axis + (forward ? '-next' : '-prev'));
+    }
     sources.forEach(function (src) {
       const img = el('img', 'jellio-reader-comic-page');
       img.src = src;
@@ -626,18 +807,22 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     stage.scrollTop = 0;
     report();
     for (let ahead = 1; ahead <= 3; ahead++) {
-      if (index + ahead < count) pageUrl(index + ahead);
+      if (index + ahead < count) displayUrl(index + ahead);
     }
   }
 
-  // Webtoon-style: every page stacked, images loaded as they near the
-  // viewport, the page crossing the middle of the screen is "current".
+  // Long strip: every page stacked (with or without gaps), images loaded
+  // as they near the viewport; the page crossing the middle of the
+  // screen is "current".
   function renderVertical() {
     teardownVertical();
     renderToken++;
     view.textContent = '';
-    view.className = 'jellio-reader-comic jellio-reader-comic-vertical';
+    view.style.transform = '';
+    view.className =
+      'jellio-reader-comic jellio-reader-comic-vertical' + (current.comicLayout === 'vertical-gaps' ? ' jellio-reader-comic-gaps' : '');
     view.dir = 'ltr';
+    applyZoom();
     const slots = names.map(function (name, i) {
       const slot = el('div', 'jellio-reader-comic-slot');
       slot.dataset.page = String(i);
@@ -650,7 +835,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
           if (!record.isIntersecting) return;
           const slot = record.target;
           observer.unobserve(slot);
-          pageUrl(Number(slot.dataset.page)).then(function (src) {
+          displayUrl(Number(slot.dataset.page)).then(function (src) {
             const img = el('img', 'jellio-reader-comic-page');
             img.src = src;
             img.alt = '';
@@ -686,12 +871,14 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
   }
 
   function render() {
-    return current.comicLayout === 'vertical' ? renderVertical() : renderPaged();
+    stage.classList.toggle('jellio-reader-stage-comic-strip', strip());
+    stage.classList.toggle('jellio-reader-stage-comic-vpaged', current.comicLayout === 'paged-vertical');
+    return strip() ? renderVertical() : renderPaged();
   }
 
   function show(target) {
     const clamped = Math.min(count - 1, Math.max(0, target));
-    if (current.comicLayout === 'vertical') {
+    if (strip()) {
       index = clamped;
       const slot = view.children[clamped];
       if (slot) slot.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -699,34 +886,185 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       return Promise.resolve();
     }
     if (clamped === index) return Promise.resolve();
+    const step = clamped > index ? 1 : -1;
     index = clamped;
-    return renderPaged();
+    return renderPaged(step);
   }
+
+  function next() {
+    if (strip()) {
+      stage.scrollBy({ top: stage.clientHeight * 0.85, behavior: 'smooth' });
+      return;
+    }
+    const pages = pagesAt(index);
+    show(pages[pages.length - 1] + 1);
+  }
+
+  function prev() {
+    if (strip()) {
+      stage.scrollBy({ top: -stage.clientHeight * 0.85, behavior: 'smooth' });
+      return;
+    }
+    const target = pagesAt(index)[0] - 1;
+    if (target < 0) return;
+    show(pagesAt(target)[0]);
+  }
+
+  function isRtl() {
+    return direction === 'rtl' && (current.comicLayout === 'single' || current.comicLayout === 'spread');
+  }
+
+  // Taps: a double tap zooms in on that spot (or back out), a single tap
+  // goes to the reader's tap zones. A drag that panned isn't a tap.
+  let lastTap = null;
+  let suppressClick = false;
+  stage.addEventListener('click', function (event) {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
+    const now = Date.now();
+    if (lastTap && now - lastTap.time < 300 && Math.abs(event.clientX - lastTap.x) < 40 && Math.abs(event.clientY - lastTap.y) < 40) {
+      lastTap = null;
+      if (handlers.cancelTap) handlers.cancelTap();
+      if (zoom > 1) resetZoom();
+      else setZoom(2, event.clientX, event.clientY);
+      return;
+    }
+    lastTap = { time: now, x: event.clientX, y: event.clientY };
+    handlers.onTap(event.clientX, strip() || zoom > 1, 1, function () {
+      return false;
+    });
+  });
+
+  // Ctrl + wheel (and a trackpad pinch) zooms around the pointer.
+  stage.addEventListener(
+    'wheel',
+    function (event) {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      setZoom(zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12), event.clientX, event.clientY);
+    },
+    { passive: false },
+  );
+
+  // A mouse drag pans a zoomed page.
+  let drag = null;
+  stage.addEventListener('pointerdown', function (event) {
+    if (event.pointerType !== 'mouse' || event.button !== 0 || zoom === 1 || strip()) return;
+    drag = { x: event.clientX, y: event.clientY, panX: panX, panY: panY, moved: false };
+  });
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  function onPointerMove(event) {
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+    panX = drag.panX + dx;
+    panY = drag.panY + dy;
+    applyZoom();
+  }
+  function onPointerUp() {
+    if (drag && drag.moved) suppressClick = true;
+    drag = null;
+  }
+
+  // Touch: two fingers pinch-zoom, one finger pans a zoomed page or
+  // swipes to the next or previous page.
+  let pinch = null;
+  let swipe = null;
+  function distance(touches) {
+    return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY) || 1;
+  }
+  stage.addEventListener(
+    'touchstart',
+    function (event) {
+      if (event.touches.length === 2) {
+        pinch = {
+          distance: distance(event.touches),
+          zoom: zoom,
+          x: (event.touches[0].clientX + event.touches[1].clientX) / 2,
+          y: (event.touches[0].clientY + event.touches[1].clientY) / 2,
+        };
+        swipe = null;
+        event.preventDefault();
+      } else if (event.touches.length === 1) {
+        const touch = event.touches[0];
+        swipe = { x: touch.clientX, y: touch.clientY, time: Date.now(), panX: panX, panY: panY, moved: false };
+      }
+    },
+    { passive: false },
+  );
+  stage.addEventListener(
+    'touchmove',
+    function (event) {
+      if (pinch && event.touches.length === 2) {
+        event.preventDefault();
+        setZoom(pinch.zoom * (distance(event.touches) / pinch.distance), pinch.x, pinch.y);
+        return;
+      }
+      if (!swipe || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const dx = touch.clientX - swipe.x;
+      const dy = touch.clientY - swipe.y;
+      if (Math.abs(dx) + Math.abs(dy) > 8) swipe.moved = true;
+      if (zoom > 1 && !strip()) {
+        event.preventDefault();
+        panX = swipe.panX + dx;
+        panY = swipe.panY + dy;
+        applyZoom();
+      }
+    },
+    { passive: false },
+  );
+  stage.addEventListener('touchend', function (event) {
+    if (pinch) {
+      if (event.touches.length < 2) {
+        pinch = null;
+        if (zoom < 1.05) resetZoom();
+        suppressClick = true;
+      }
+      return;
+    }
+    if (!swipe) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - swipe.x;
+    const dy = touch.clientY - swipe.y;
+    const quick = Date.now() - swipe.time < 700;
+    const moved = swipe.moved;
+    swipe = null;
+    if (moved) suppressClick = true;
+    if (!moved || !quick || zoom > 1 || strip()) return;
+    const fits = stage.scrollHeight <= stage.clientHeight + 2;
+    if (current.comicLayout === 'paged-vertical') {
+      if (fits && Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) {
+        if (dy < 0) next();
+        else prev();
+      }
+      return;
+    }
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const forward = isRtl() ? dx > 0 : dx < 0;
+      if (forward) next();
+      else prev();
+    }
+  });
 
   handlers.onScrubReady(count, count);
   await render();
 
   return {
     kind: 'comic',
-    isRtl: function () {
-      return direction === 'rtl' && current.comicLayout !== 'vertical';
+    isRtl: isRtl,
+    verticalPages: function () {
+      return current.comicLayout === 'paged-vertical';
     },
-    next: function () {
-      if (current.comicLayout === 'vertical') {
-        stage.scrollBy({ top: stage.clientHeight * 0.85, behavior: 'smooth' });
-        return;
-      }
-      const pages = pagesAt(index);
-      show(pages[pages.length - 1] + 1);
-    },
-    prev: function () {
-      if (current.comicLayout === 'vertical') {
-        stage.scrollBy({ top: -stage.clientHeight * 0.85, behavior: 'smooth' });
-        return;
-      }
-      const target = pagesAt(index)[0] - 1;
-      if (target < 0) return;
-      show(pagesAt(target)[0]);
+    next: next,
+    prev: prev,
+    zoomBy: function (factor) {
+      if (factor === 0) resetZoom();
+      else setZoom(zoom * factor);
     },
     goTo: function (target) {
       return show((Number(target) || 1) - 1);
@@ -777,7 +1115,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       return null;
     },
     isBookmarkHere: function (bookmarks) {
-      const pages = current.comicLayout === 'vertical' ? [index] : pagesAt(index);
+      const pages = strip() ? [index] : pagesAt(index);
       return (
         bookmarks.find(function (bookmark) {
           const match = /^page:(\d+)$/.exec(bookmark.Locator || '');
@@ -785,18 +1123,28 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
         }) || null
       );
     },
-    applySettings: function (next) {
-      const rerender = next.comicLayout !== current.comicLayout || next.comicFit !== current.comicFit;
-      current = Object.assign({}, next);
-      if (rerender) return render();
+    applySettings: function (nextSettings) {
+      const rerender =
+        nextSettings.comicLayout !== current.comicLayout ||
+        nextSettings.comicFit !== current.comicFit ||
+        nextSettings.comicCrop !== current.comicCrop;
+      current = Object.assign({}, nextSettings);
+      if (rerender) {
+        zoom = 1;
+        return render();
+      }
       return undefined;
     },
-    resize: function () {},
+    resize: function () {
+      if (zoom > 1) applyZoom();
+    },
     destroy: function () {
       renderToken++;
       teardownVertical();
-      urls.forEach(function (promise) {
-        promise.then((url) => URL.revokeObjectURL(url)).catch(function () {});
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      createdUrls.forEach((url) => {
+        if (url.indexOf('blob:') === 0) URL.revokeObjectURL(url);
       });
     },
   };
@@ -1375,6 +1723,10 @@ export async function renderReader(root, params) {
   body.appendChild(nextButton);
   root.appendChild(body);
 
+  // The page number while the menus are hidden (comics).
+  const pagePill = el('div', 'jellio-reader-page-pill');
+  root.appendChild(pagePill);
+
   const footer = el('div', 'jellio-reader-footer');
   const scrubber = document.createElement('input');
   scrubber.type = 'range';
@@ -1471,6 +1823,7 @@ export async function renderReader(root, params) {
       ? 'Page ' + info.pageNumber + ' of ' + info.pageCount + ' · ' + percent
       : percent + (pagesLeft > 0 ? ' · ' + pagesLeft + (pagesLeft === 1 ? ' page left' : ' pages left') : '');
     if (typeof info.chapter === 'string') chapterLabel.textContent = info.chapter;
+    if (info.pageCount) pagePill.textContent = info.pageNumber + ' / ' + info.pageCount;
     const pageNow = info.pageNumber || (totalPages ? Math.max(1, Math.round(latestProgress * totalPages)) : null);
     if (pageNow) {
       currentPageNumber = pageNow;
@@ -1499,10 +1852,26 @@ export async function renderReader(root, params) {
     if (reader) scrubber.value = String(reader.scrubValue(latestProgress));
   }
 
+  // Comics on a phone go full screen while the menus are hidden and come
+  // back out with them, the way Mihon hides the system bars.
+  const touchScreen = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  let autoFullscreen = false;
   function toggleImmersive(force) {
     const next = typeof force === 'boolean' ? force : !root.classList.contains('jellio-reader-immersive');
     root.classList.toggle('jellio-reader-immersive', next);
     if (next) closePanels();
+    if (!isComic || !touchScreen || !document.fullscreenEnabled) return;
+    if (next && !document.fullscreenElement && root.requestFullscreen) {
+      root
+        .requestFullscreen({ navigationUI: 'hide' })
+        .then(function () {
+          autoFullscreen = true;
+        })
+        .catch(function () {});
+    } else if (!next && autoFullscreen && document.fullscreenElement) {
+      autoFullscreen = false;
+      document.exitFullscreen().catch(function () {});
+    }
   }
 
   // Left and right thirds turn the page, the middle hides the chrome
@@ -1555,6 +1924,17 @@ export async function renderReader(root, params) {
       else reader.prev();
       return;
     }
+    // Paged (vertical) comics turn with up and down; + and - zoom.
+    if (reader.verticalPages && reader.verticalPages() && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      if (event.preventDefault) event.preventDefault();
+      if (event.key === 'ArrowDown') reader.next();
+      else reader.prev();
+      return;
+    }
+    if (reader.zoomBy && (event.key === '+' || event.key === '=' || event.key === '-' || event.key === '0') && !event.ctrlKey && !event.metaKey) {
+      reader.zoomBy(event.key === '-' ? 1 / 1.25 : event.key === '0' ? 0 : 1.25);
+      return;
+    }
     if (event.key === 'ArrowRight' || event.key === 'PageDown' || (event.key === ' ' && !event.shiftKey)) {
       if (event.key === ' ' && settings.layout === 'scroll' && !isPaged) return;
       if (event.preventDefault) event.preventDefault();
@@ -1573,7 +1953,12 @@ export async function renderReader(root, params) {
     }
   }
 
-  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey };
+  function cancelTap() {
+    if (tapTimer) window.clearTimeout(tapTimer);
+    tapTimer = null;
+  }
+
+  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey, cancelTap: cancelTap };
 
   try {
     reader = isComic
@@ -1595,6 +1980,8 @@ export async function renderReader(root, params) {
     tocButton.hidden = true;
     searchButton.hidden = true;
     root.classList.add('jellio-reader-comic-mode');
+    // Mihon style: just the page, menus over it on a tap in the middle.
+    root.classList.add('jellio-reader-immersive');
   }
   function paintDirection() {
     const rtl = !!(reader.isRtl && reader.isRtl());
@@ -1686,7 +2073,8 @@ export async function renderReader(root, params) {
     if (touchStartX === null) return;
     const delta = event.changedTouches[0].clientX - touchStartX;
     touchStartX = null;
-    if (stage.classList.contains('jellio-reader-stage-overflow')) return;
+    // Comics handle their own swipes, pinches and pans (openComic).
+    if (reader.kind === 'comic' || stage.classList.contains('jellio-reader-stage-overflow')) return;
     const rtl = !!(reader.isRtl && reader.isRtl());
     if (delta < -50) {
       if (rtl) reader.prev();
@@ -1879,19 +2267,47 @@ export async function renderReader(root, params) {
     settingsPanel.appendChild(settingGroup('Theme', themeRow));
 
     if (reader.kind === 'comic') {
+      const layout = settings.comicLayout;
+      const activeMode = layout === 'single' ? reader.getDirection() : layout;
       settingsPanel.appendChild(
         settingGroup(
-          'Layout',
-          optionChips(COMIC_LAYOUTS, settings.comicLayout, function (value) {
-            saveSeriesMode({ ComicLayout: value });
-            updateSettings({ comicLayout: value });
+          'Reading mode',
+          optionChips(COMIC_MODES, activeMode, function (value) {
+            const mode = COMIC_MODES.find((entry) => entry.value === value);
+            if (mode.direction) {
+              reader.setDirection(mode.direction);
+              settings.comicDirection = mode.direction;
+              saveSeriesMode({ ComicLayout: mode.layout, ComicDirection: mode.direction });
+            } else {
+              saveSeriesMode({ ComicLayout: mode.layout });
+            }
+            updateSettings({ comicLayout: mode.layout });
           }),
         ),
       );
-      if (settings.comicLayout !== 'vertical') {
+      settingsPanel.appendChild(
+        settingGroup(
+          'Crop borders',
+          optionChips(ON_OFF, settings.comicCrop ? 'on' : 'off', (value) => updateSettings({ comicCrop: value === 'on' })),
+        ),
+      );
+      const zoomRow = el('div', 'jellio-reader-setting-row');
+      const zoomOut = iconButton('zoom_out', 'Zoom out');
+      const zoomReset = iconButton('fit_screen', 'Reset zoom');
+      const zoomIn = iconButton('zoom_in', 'Zoom in');
+      zoomOut.addEventListener('click', () => reader.zoomBy(1 / 1.25));
+      zoomReset.addEventListener('click', () => reader.zoomBy(0));
+      zoomIn.addEventListener('click', () => reader.zoomBy(1.25));
+      zoomRow.appendChild(zoomOut);
+      zoomRow.appendChild(zoomReset);
+      zoomRow.appendChild(zoomIn);
+      settingsPanel.appendChild(settingGroup('Zoom (or double tap, pinch, Ctrl + scroll)', zoomRow));
+      if (layout === 'single' || layout === 'spread') {
         settingsPanel.appendChild(
           settingGroup('Fit', optionChips(COMIC_FITS, settings.comicFit, (value) => updateSettings({ comicFit: value }))),
         );
+      }
+      if (layout === 'spread') {
         settingsPanel.appendChild(
           settingGroup(
             'Reading direction',
