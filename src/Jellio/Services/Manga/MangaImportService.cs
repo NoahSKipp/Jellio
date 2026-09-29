@@ -360,38 +360,32 @@ public class MangaImportService(
             }
         }
 
-        foreach (var (userId, book, entry) in applied)
+        foreach (var perUser in applied.GroupBy(entry => entry.UserId))
         {
-            if (entry.Bookmark)
+            var bookmarks = perUser.Where(entry => entry.Entry.Bookmark).Select(entry => entry.Book.Id.ToString("N")).ToList();
+            if (bookmarks.Count > 0)
             {
-                var key = book.Id.ToString("N");
-                shelfStore.Update(userId, data =>
+                shelfStore.Update(perUser.Key, data => data.Bookmarks.AddRange(bookmarks.Where(id => !data.Bookmarks.Contains(id)).Distinct()));
+            }
+
+            // Never over progress made in Jellio itself (keepExisting).
+            var progress = perUser
+                .Where(entry => entry.Entry.Read || entry.Entry.LastPageRead > 0)
+                .Select(entry =>
                 {
-                    if (!data.Bookmarks.Contains(key))
+                    var pages = CountPages(entry.Book.Path);
+                    DateTimeOffset? readAt = entry.Entry.LastReadAt > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(entry.Entry.LastReadAt) : null;
+                    if (entry.Entry.Read)
                     {
-                        data.Bookmarks.Add(key);
+                        return (entry.Book.Id, "page:" + (pages ?? 1), 1d, pages, readAt);
                     }
-                });
-            }
 
-            // Never overwrite progress made in Jellio itself.
-            if ((!entry.Read && entry.LastPageRead <= 0) || progressStore.Get(userId, book.Id) is not null)
-            {
-                continue;
-            }
-
-            var pages = CountPages(book.Path);
-            DateTimeOffset? readAt = entry.LastReadAt > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(entry.LastReadAt) : null;
-            if (entry.Read)
-            {
-                progressStore.Set(userId, book.Id, "page:" + (pages ?? 1), 1, pages, readAt);
-            }
-            else
-            {
-                var page = (int)Math.Min(entry.LastPageRead + 1, pages ?? int.MaxValue);
-                var fraction = pages is > 1 ? (page - 1) / (double)(pages.Value - 1) : 0;
-                progressStore.Set(userId, book.Id, "page:" + page, Math.Max(fraction, 0.01), pages, readAt);
-            }
+                    var page = (int)Math.Min(entry.Entry.LastPageRead + 1, pages ?? int.MaxValue);
+                    var fraction = pages is > 1 ? (page - 1) / (double)(pages.Value - 1) : 0;
+                    return (entry.Book.Id, "page:" + page, Math.Max(fraction, 0.01), pages, readAt);
+                })
+                .ToList();
+            progressStore.SetMany(perUser.Key, progress, keepExisting: true);
         }
     }
 
@@ -400,6 +394,7 @@ public class MangaImportService(
     private void ApplyToStream(Guid userId, MihonManga manga, Dictionary<string, SuwayomiChapter> byUrl)
     {
         var bookmarks = new List<string>();
+        var progress = new List<(Guid, string, double, int?, DateTimeOffset?)>();
         foreach (var chapter in manga.Chapters)
         {
             if (!byUrl.TryGetValue(chapter.Url, out var own))
@@ -413,21 +408,18 @@ public class MangaImportService(
                 bookmarks.Add(id);
             }
 
-            if ((!chapter.Read && chapter.LastPageRead <= 0) || progressStore.Get(userId, Guid.Parse(id)) is not null)
+            if (!chapter.Read && chapter.LastPageRead <= 0)
             {
                 continue;
             }
 
             DateTimeOffset? readAt = chapter.LastReadAt > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(chapter.LastReadAt) : null;
-            if (chapter.Read)
-            {
-                progressStore.Set(userId, Guid.Parse(id), "page:1", 1, null, readAt);
-            }
-            else
-            {
-                progressStore.Set(userId, Guid.Parse(id), "page:" + (chapter.LastPageRead + 1), 0.05, null, readAt);
-            }
+            var locator = chapter.Read ? "page:1" : "page:" + (chapter.LastPageRead + 1);
+            progress.Add((Guid.Parse(id), locator, chapter.Read ? 1 : 0.05, (int?)null, readAt));
         }
+
+        // One save for the whole series; never over progress made in Jellio.
+        progressStore.SetMany(userId, progress, keepExisting: true);
 
         if (bookmarks.Count > 0)
         {
