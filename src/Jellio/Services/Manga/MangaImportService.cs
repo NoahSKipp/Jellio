@@ -76,6 +76,9 @@ public class MangaImportService(
     private static readonly string[] ComicExtensions = [".cbz", ".cbr", ".cb7", ".cbt", ".zip"];
     private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".bmp"];
 
+    private const int MaxSourceFailures = 2;
+    private static readonly TimeSpan SeriesTimeout = TimeSpan.FromSeconds(90);
+
     private readonly ConcurrentDictionary<Guid, MangaImportJob> _jobs = new();
     private readonly object _storeLock = new();
 
@@ -142,18 +145,42 @@ public class MangaImportService(
         try
         {
             var categoryIds = ImportCategories(userId, categories);
+
+            // A source that keeps timing out (one needing a WebView Suwayomi
+            // can't start, or a site that's down) would hold every series
+            // on it for the full timeout: after two in a row, the rest of
+            // that source's series are skipped. Importing again retries them.
+            var failures = new Dictionary<long, int>();
             foreach (var manga in library)
             {
                 MangaImportSeriesResult result;
-                try
+                if (failures.GetValueOrDefault(manga.SourceId) >= MaxSourceFailures)
                 {
-                    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-                    result = await ImportSeriesAsync(userId, manga, categoryIds, timeout.Token).ConfigureAwait(false);
+                    ImportShelf(userId, manga, manga.Title, categoryIds);
+                    result = new MangaImportSeriesResult(
+                        manga.Title,
+                        "skipped",
+                        0,
+                        "Skipped: " + manga.SourceName + " isn't responding in Suwayomi. Import again later to retry.");
                 }
-                catch (Exception ex)
+                else
                 {
-                    logger.LogWarning(ex, "Jellio: Mihon import of {Title} failed", manga.Title);
-                    result = new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi didn't answer in time");
+                    try
+                    {
+                        using var timeout = new CancellationTokenSource(SeriesTimeout);
+                        result = await ImportSeriesAsync(userId, manga, categoryIds, timeout.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Jellio: Mihon import of {Title} from {Source} failed", manga.Title, manga.SourceName);
+                        result = new MangaImportSeriesResult(
+                            manga.Title,
+                            "error",
+                            0,
+                            manga.SourceName + " didn't answer in time. If Suwayomi's log shows WebView timeouts, that source needs a WebView Suwayomi can't start.");
+                    }
+
+                    failures[manga.SourceId] = result.Outcome == "error" ? failures.GetValueOrDefault(manga.SourceId) + 1 : 0;
                 }
 
                 lock (job)
@@ -191,7 +218,10 @@ public class MangaImportService(
             return new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't add it to its library");
         }
 
-        var chapters = await suwayomi.FetchChaptersAsync(found.Id, cancellationToken).ConfigureAwait(false);
+        // Already in Suwayomi (an earlier import or request): its stored
+        // chapters, without asking the source again.
+        var stored = found.InLibrary ? await suwayomi.GetStoredChaptersAsync(found.Id, cancellationToken).ConfigureAwait(false) : null;
+        var chapters = stored is { Count: > 0 } ? stored : await suwayomi.FetchChaptersAsync(found.Id, cancellationToken).ConfigureAwait(false);
         if (chapters is null)
         {
             return new MangaImportSeriesResult(manga.Title, "error", 0, "Suwayomi couldn't load its chapters");

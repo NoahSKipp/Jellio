@@ -320,17 +320,18 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         return added is not null;
     }
 
-    // Refreshes the chapter list from the source and returns it.
-    public async Task<IReadOnlyList<SuwayomiChapter>?> FetchChaptersAsync(int mangaId, CancellationToken cancellationToken)
+    // The chapters Suwayomi already has for a series (no source request).
+    public async Task<IReadOnlyList<SuwayomiChapter>?> GetStoredChaptersAsync(int mangaId, CancellationToken cancellationToken)
     {
-        const string ChaptersMutation = @"mutation ($input: FetchChaptersInput!) {
-  fetchChapters(input: $input) { chapters { id url name scanlator chapterNumber isDownloaded } }
-}";
-        var fetched = await QueryAsync(
-            ChaptersMutation,
-            new JsonObject { ["input"] = new JsonObject { ["mangaId"] = mangaId } },
+        var data = await QueryAsync(
+            "query ($id: Int!) { chapters(condition: { mangaId: $id }) { nodes { id url name scanlator chapterNumber isDownloaded } } }",
+            new JsonObject { ["id"] = mangaId },
             cancellationToken).ConfigureAwait(false);
-        return (fetched?["fetchChapters"]?["chapters"] as JsonArray)?
+        return ReadChapters(data?["chapters"]?["nodes"] as JsonArray);
+    }
+
+    private static List<SuwayomiChapter>? ReadChapters(JsonArray? nodes) =>
+        nodes?
             .OfType<JsonObject>()
             .Select(chapter => new SuwayomiChapter(
                 (int)ReadLong(chapter["id"]),
@@ -341,6 +342,18 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
                 ChaptarrClient.ReadBool(chapter["isDownloaded"])))
             .Where(chapter => chapter.Id > 0)
             .ToList();
+
+    // Refreshes the chapter list from the source and returns it.
+    public async Task<IReadOnlyList<SuwayomiChapter>?> FetchChaptersAsync(int mangaId, CancellationToken cancellationToken)
+    {
+        const string ChaptersMutation = @"mutation ($input: FetchChaptersInput!) {
+  fetchChapters(input: $input) { chapters { id url name scanlator chapterNumber isDownloaded } }
+}";
+        var fetched = await QueryAsync(
+            ChaptersMutation,
+            new JsonObject { ["input"] = new JsonObject { ["mangaId"] = mangaId } },
+            cancellationToken).ConfigureAwait(false);
+        return ReadChapters(fetched?["fetchChapters"]?["chapters"] as JsonArray);
     }
 
     public async Task<bool> EnqueueDownloadsAsync(IReadOnlyCollection<int> chapterIds, CancellationToken cancellationToken)
