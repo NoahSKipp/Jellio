@@ -4258,10 +4258,6 @@
   .jellio-reader-turn {
     width: 2em;
   }
-
-  .jellio-reader-fullscreen-button {
-    display: none;
-  }
 }
 
 /* Audiobook player (screens/listen.js). */
