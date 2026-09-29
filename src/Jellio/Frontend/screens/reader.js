@@ -1773,11 +1773,35 @@ export async function renderReader(root, params) {
   let currentPageNumber = null;
   let finishedReported = false;
 
+  // Time actually spent reading: counted while the tab is visible and
+  // there was some input (a page turn, scroll, tap or key) in the last
+  // two minutes, so a reader left open overnight doesn't count.
+  const READ_IDLE_MS = 120000;
+  const READ_TICK_MS = 5000;
+  let lastReadInput = Date.now();
+  let lastReadTick = Date.now();
+  let activeReadMs = 0;
+  function noteReadInput() {
+    lastReadInput = Date.now();
+  }
+  const readInputEvents = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'];
+  readInputEvents.forEach(function (type) {
+    document.addEventListener(type, noteReadInput, { capture: true, passive: true });
+  });
+  const readTimer = window.setInterval(function () {
+    const now = Date.now();
+    const elapsed = Math.min(now - lastReadTick, READ_TICK_MS + 1000);
+    lastReadTick = now;
+    if (document.visibilityState === 'visible' && now - lastReadInput < READ_IDLE_MS) activeReadMs += elapsed;
+  }, READ_TICK_MS);
+
   function flushSession() {
     if (!reader || sessionStartPage === null) return;
     const pagesRead = Math.max(0, sessionMaxPage - sessionStartPage);
     const finished = latestProgress >= FINISHED_THRESHOLD && !finishedReported;
-    if (!pagesRead && !finished) return;
+    const readSeconds = Math.floor(activeReadMs / 1000);
+    if (!pagesRead && !finished && readSeconds < 60) return;
+    activeReadMs -= readSeconds * 1000;
     reportReadingSession({
       ItemId: itemId,
       Kind: reader.kind === 'comic' ? 'manga' : 'book',
@@ -1785,6 +1809,7 @@ export async function renderReader(root, params) {
       CurrentPage: currentPageNumber,
       PageCount: totalPages,
       ListenedSeconds: 0,
+      ReadSeconds: readSeconds,
       Finished: finished,
       MangaId: item.Stream ? item.Stream.MangaId : null,
     });
@@ -2554,6 +2579,10 @@ export async function renderReader(root, params) {
   return function cleanup() {
     flushSave();
     flushSession();
+    window.clearInterval(readTimer);
+    readInputEvents.forEach(function (type) {
+      document.removeEventListener(type, noteReadInput, { capture: true });
+    });
     window.clearInterval(nowReadingTimer);
     clearNowReading(itemId);
     document.removeEventListener('visibilitychange', onVisibility);

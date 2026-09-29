@@ -99,6 +99,9 @@ public class UserAchievementStats
 
     public long ListenedTicks { get; set; }
 
+    // Time spent in the reader (books and manga), active time only.
+    public long ReadingTicks { get; set; }
+
     public HashSet<string> CompletedReadingIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public DateTime? LastReadingDate { get; set; }
