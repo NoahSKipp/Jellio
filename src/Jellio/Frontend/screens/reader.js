@@ -1363,7 +1363,7 @@ export async function renderReader(root, params) {
   topbar.appendChild(notesButton);
   topbar.appendChild(bookmarkButton);
   topbar.appendChild(settingsButton);
-  if (document.fullscreenEnabled) topbar.appendChild(fullscreenButton);
+  topbar.appendChild(fullscreenButton);
   root.appendChild(topbar);
 
   const body = el('div', 'jellio-reader-body');
@@ -1565,6 +1565,8 @@ export async function renderReader(root, params) {
     } else if (event.key === 'Escape') {
       if (panelOpen()) closePanels();
       else toggleImmersive(false);
+    } else if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      toggleFullscreen();
     } else if (event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key === 'f')) {
       if (event.preventDefault) event.preventDefault();
       openPanel(searchPanel, paintSearch);
@@ -1702,16 +1704,37 @@ export async function renderReader(root, params) {
   }
   window.addEventListener('resize', handleResize);
 
+  // Full screen hides the toolbars too (a tap in the middle brings them
+  // back). Where the browser can't go full screen (iPhone Safari), the
+  // button just hides the toolbars.
   function syncFullscreenIcon() {
     const icon = fullscreenButton.querySelector('.material-icons');
     const on = !!document.fullscreenElement;
     icon.className = 'material-icons ' + (on ? 'fullscreen_exit' : 'fullscreen');
     fullscreenButton.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+    fullscreenButton.title = on ? 'Exit full screen' : 'Full screen';
+    if (!on) toggleImmersive(false);
+    Promise.resolve(reader && reader.resize && reader.resize()).catch(function () {});
   }
-  fullscreenButton.addEventListener('click', function () {
-    if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
-    else root.requestFullscreen().catch(function () {});
-  });
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(function () {});
+      return;
+    }
+    if (!document.fullscreenEnabled || !root.requestFullscreen) {
+      toggleImmersive(true);
+      return;
+    }
+    root
+      .requestFullscreen({ navigationUI: 'hide' })
+      .then(function () {
+        toggleImmersive(true);
+      })
+      .catch(function () {
+        toggleImmersive(true);
+      });
+  }
+  fullscreenButton.addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', syncFullscreenIcon);
 
   function paintToc() {
