@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.38.0] - 2026-09-29\n\n### 🚀 Features\n\n- Import a series from another installed source when Mihon's source fails\n- Make the Manga shelf each reader's own library\n- Reading mode and crop borders in the manga reader's bottom bar\n\n### 🐛 Bug Fixes\n\n- Save a Mihon import's reading progress once per series instead of once per chapter\n- Return the import result and source state together when queueing fails\n\n### ⚡ Performance\n\n- Load streamed manga per series for each reader's own library\n",
+        "checksum": "0ef0fd8b9a484705123c6cd6002df8ea",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.38.0/jellio_1.38.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-09-29T17:47:29Z",
+        "version": "1.38.0"
+      },
+      {
         "changelog": "## [1.37.0] - 2026-09-29\n\n### 🚀 Features\n\n- Full screen reading on phones, with toolbars hidden\n- Mihon-style comic reader with reading modes, zoom, crop borders and sliding menus\n- Map Mihon's paged vertical and long strip modes per series\n\n### 🐛 Bug Fixes\n\n- Show streamed manga when Suwayomi won't answer the full library query\n- Skip a source that keeps timing out during a Mihon import\n",
         "checksum": "9c7db306331b0e1aa69e5f0c890d999d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.37.0/jellio_1.37.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-25T09:55:48Z",
         "version": "1.17.0"
-      },
-      {
-        "changelog": "## [1.16.0] - 2026-09-24\n\n### 🚀 Features\n\n- Turn Skip Intro/Credits into a card matching Up Next's style\n",
-        "checksum": "c78652cb8cf84d95373f10499fb4b3fb",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.16.0/jellio_1.16.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-24T20:04:07Z",
-        "version": "1.16.0"
       }
     ]
   }
