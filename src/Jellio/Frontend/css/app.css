@@ -10542,3 +10542,299 @@
   margin-left: 0;
   padding-left: 0;
 }
+
+/* Shelf categories (screens/bookshelf.js, components/shelfCategories.js) */
+.jellio-shelf-tabs {
+  display: flex;
+  gap: 0.4em;
+  overflow-x: auto;
+  padding: 0 var(--jellio-safe-gutter) clamp(12px, 1.6vw, 18px);
+  scrollbar-width: none;
+}
+
+.jellio-shelf-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.jellio-shelf-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.45em 0.95em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-secondary, var(--jellio-text-color));
+  font-family: var(--jellio-font-family);
+  font-size: 0.88em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.jellio-shelf-tab:hover,
+.jellio-shelf-tab:focus-visible {
+  border-color: rgb(255 255 255 / 0.3);
+  color: var(--jellio-text-color);
+}
+
+.jellio-shelf-tab-active {
+  border-color: var(--jellio-secondary-color);
+  background: var(--jellio-secondary-color);
+  color: #111;
+}
+
+.jellio-shelf-tab-active:hover,
+.jellio-shelf-tab-active:focus-visible {
+  color: #111;
+}
+
+.jellio-shelf-tab-count {
+  font-weight: 500;
+  opacity: 0.65;
+}
+
+.jellio-shelf-tab-edit {
+  border-style: dashed;
+}
+
+.jellio-shelf-tab-edit .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-bookshelf-sort-direction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.3em;
+  height: 2.3em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+}
+
+.jellio-shelf-categories-panel {
+  position: relative;
+  width: min(90vw, 28em);
+}
+
+.jellio-shelf-categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 1em;
+}
+
+.jellio-shelf-categories-check {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.6em 0.8em;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.04);
+  cursor: pointer;
+}
+
+.jellio-shelf-categories-check input {
+  width: 1.15em;
+  height: 1.15em;
+  accent-color: var(--jellio-secondary-color);
+}
+
+.jellio-shelf-categories-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jellio-shelf-categories-row input,
+.jellio-shelf-categories-new input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.55em 0.8em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.25);
+  color: var(--jellio-text-color);
+  font: inherit;
+}
+
+.jellio-shelf-categories-count {
+  min-width: 2em;
+  color: var(--jellio-text-tertiary);
+  font-size: 0.85em;
+  text-align: center;
+}
+
+.jellio-shelf-categories-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.3em;
+  height: 2.3em;
+  border: 0;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.05);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+}
+
+.jellio-shelf-categories-icon:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.jellio-shelf-categories-new {
+  display: flex;
+  gap: 0.5em;
+}
+
+.jellio-shelf-categories-add,
+.jellio-shelf-categories-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.55em 1.1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-shelf-categories-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.2em;
+}
+
+.jellio-shelf-categories-save {
+  border-color: var(--jellio-secondary-color);
+  background: var(--jellio-secondary-color);
+  color: #111;
+}
+
+/* Series settings (screens/mangaSeries.js) */
+.jellio-manga-series-mode,
+.jellio-manga-series-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.jellio-manga-series-mode {
+  margin-top: 0.9em;
+}
+
+.jellio-manga-series-mode-label {
+  margin-right: 0.3em;
+  color: var(--jellio-text-tertiary);
+  font-size: 0.85em;
+}
+
+.jellio-manga-series-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.35em 0.85em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.jellio-manga-series-chip .material-icons {
+  font-size: 1.2em;
+}
+
+.jellio-manga-series-chip-active {
+  border-color: var(--jellio-secondary-color);
+  background: var(--jellio-secondary-color);
+  color: #111;
+}
+
+.jellio-manga-series-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5em;
+  margin-top: 0.9em;
+  max-width: 40em;
+}
+
+.jellio-manga-series-note-text {
+  margin: 0;
+  color: var(--jellio-text-secondary, var(--jellio-text-color));
+  white-space: pre-wrap;
+}
+
+.jellio-manga-series-note textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.6em 0.8em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.25);
+  color: var(--jellio-text-color);
+  font: inherit;
+  resize: vertical;
+}
+
+.jellio-manga-series-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  margin-bottom: 0.8em;
+}
+
+.jellio-manga-chapter-bookmark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.6em;
+  height: 2.6em;
+  border: 0;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.03);
+  color: var(--jellio-text-tertiary);
+  cursor: pointer;
+}
+
+.jellio-manga-chapter-bookmark:hover,
+.jellio-manga-chapter-bookmark:focus-visible,
+.jellio-manga-chapter-bookmarked {
+  color: var(--jellio-text-color);
+}
+
+.jellio-manga-chapter-empty {
+  padding: 1em 0;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-downloads-group-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jellio-downloads-group-bar > .jellio-downloads-group-head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jellio-manga-series-order[hidden] {
+  display: none;
+}

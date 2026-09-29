@@ -14,7 +14,10 @@ import {
   getAllReadingProgress,
   audiobookGroupKey,
 } from '../runtime/api.js';
-import { groupMangaSeries, resumePoint, useSeriesCover } from '../components/mangaSeries.js';
+import { groupMangaSeries, resumePoint, useSeriesCover, mangaSeriesTitle, mangaSeriesKey } from '../components/mangaSeries.js';
+import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
+import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
+import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
@@ -60,13 +63,22 @@ const KINDS = {
   },
 };
 
+// desc: the direction a sort starts in when picked.
 const SORTS = [
   { value: 'title', label: 'Title' },
   { value: 'author', label: 'Author' },
-  { value: 'added', label: 'Recently added' },
-  { value: 'year-desc', label: 'Newest published' },
-  { value: 'year-asc', label: 'Oldest published' },
+  { value: 'added', label: 'Date added', desc: true },
+  { value: 'year', label: 'Published' },
+  { value: 'last-read', label: 'Last read', desc: true },
+  { value: 'unread', label: 'Unread chapters', manga: true, desc: true },
+  { value: 'chapters', label: 'Total chapters', manga: true, desc: true },
+  { value: 'latest', label: 'Latest chapter', manga: true, desc: true },
 ];
+const LEGACY_SORTS = {
+  added: { sort: 'added', desc: true },
+  'year-desc': { sort: 'year', desc: true },
+  'year-asc': { sort: 'year', desc: false },
+};
 
 const ROW_LIMIT = 20;
 const MAX_AUTHOR_ROWS = 6;
@@ -78,21 +90,46 @@ function sortStorageKey(kind) {
   return 'jellio-bookshelf-sort:' + kind;
 }
 
+// { sort, desc }
 function readSort(kind) {
   try {
     const saved = localStorage.getItem(sortStorageKey(kind));
-    if (SORTS.some((sort) => sort.value === saved)) return saved;
+    if (LEGACY_SORTS[saved]) return LEGACY_SORTS[saved];
+    if (SORTS.some((sort) => sort.value === saved)) return { sort: saved, desc: false };
+    const parsed = JSON.parse(saved || 'null');
+    if (parsed && SORTS.some((sort) => sort.value === parsed.sort)) return { sort: parsed.sort, desc: !!parsed.desc };
   } catch (err) {
-    // Storage unavailable (private window): fall back to the default.
+    // Storage unavailable (private window) or an old value: the default.
   }
-  return 'title';
+  return { sort: 'title', desc: false };
 }
 
 function writeSort(kind, value) {
   try {
-    localStorage.setItem(sortStorageKey(kind), value);
+    localStorage.setItem(sortStorageKey(kind), JSON.stringify(value));
   } catch (err) {
     // Not worth surfacing; the sort still applies for this visit.
+  }
+}
+
+function categoryStorageKey(kind) {
+  return 'jellio-bookshelf-category:' + kind;
+}
+
+function readCategory(kind) {
+  try {
+    return localStorage.getItem(categoryStorageKey(kind)) || '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function writeCategory(kind, id) {
+  try {
+    if (id) localStorage.setItem(categoryStorageKey(kind), id);
+    else localStorage.removeItem(categoryStorageKey(kind));
+  } catch (err) {
+    // Only remembered for this visit.
   }
 }
 
@@ -112,40 +149,62 @@ function authorKey(name) {
 // One card's worth of what the shelf knows about a book, Jellyfin's own
 // fields first (an audiobook's album artist is its author), then
 // Chaptarr's via shelf-info.
-function describe(item, info) {
+function lastReadOf(item, progress) {
+  const record = progress && progress[idKey(item.Id).toLowerCase()];
+  const read = record ? Date.parse(record.UpdatedAt) || 0 : 0;
+  const played = item.UserData && item.UserData.LastPlayedDate ? Date.parse(item.UserData.LastPlayedDate) || 0 : 0;
+  return Math.max(read, played);
+}
+
+function isFinished(item, progress) {
+  const record = progress && progress[idKey(item.Id).toLowerCase()];
+  return !!((record && record.Progress >= 0.98) || (item.UserData && item.UserData.Played));
+}
+
+function describe(item, info, progress) {
   const meta = info[idKey(item.Id)] || {};
   const author = item.AlbumArtist || meta.Authors || '';
+  const added = item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0;
   return {
     item: item,
+    key: itemShelfKey(item),
     author: author,
     authorKey: author ? authorKey(author) : '',
     year: item.ProductionYear || meta.Year || null,
     series: meta.SeriesTitle || '',
-    added: item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0,
+    added: added,
+    latest: added,
+    lastRead: lastReadOf(item, progress),
+    chapters: 1,
+    unread: isFinished(item, progress) ? 0 : 1,
     search: ((item.Name || '') + ' ' + author + ' ' + (meta.SeriesTitle || '')).toLowerCase(),
   };
 }
 
-function compareBy(sort) {
+// Ascending order for each sort; desc flips it. Ties go by title.
+function compareBy(sort, desc) {
   const byTitle = (a, b) => (a.item.SortName || a.item.Name || '').localeCompare(b.item.SortName || b.item.Name || '');
+  let compare;
   if (sort === 'author') {
-    return (a, b) => {
+    compare = (a, b) => {
       if (!a.author !== !b.author) return a.author ? -1 : 1;
-      return a.author.localeCompare(b.author) || byTitle(a, b);
+      return a.author.localeCompare(b.author);
     };
+  } else if (sort === 'year') {
+    compare = (a, b) => (a.year || (desc ? 0 : Infinity)) - (b.year || (desc ? 0 : Infinity));
+  } else if (sort === 'added' || sort === 'last-read' || sort === 'unread' || sort === 'chapters' || sort === 'latest') {
+    const field = { added: 'added', 'last-read': 'lastRead', unread: 'unread', chapters: 'chapters', latest: 'latest' }[sort];
+    compare = (a, b) => (a[field] || 0) - (b[field] || 0);
+  } else {
+    return desc ? (a, b) => byTitle(b, a) : byTitle;
   }
-  if (sort === 'added') return (a, b) => b.added - a.added || byTitle(a, b);
-  if (sort === 'year-desc') return (a, b) => (b.year || 0) - (a.year || 0) || byTitle(a, b);
-  if (sort === 'year-asc') {
-    return (a, b) => (a.year || Infinity) - (b.year || Infinity) || byTitle(a, b);
-  }
-  return byTitle;
+  return (a, b) => (desc ? compare(b, a) : compare(a, b)) || byTitle(a, b);
 }
 
 // Cards carry the author under the title; books are told apart by who
 // wrote them far more often than by year.
 function bookCard(entry, cardOptions) {
-  if (entry.seriesGroup) return seriesCard(entry);
+  if (entry.seriesGroup) return seriesCard(entry, cardOptions);
   const card = buildCard(entry.item, cardOptions);
   if (entry.author) card.appendChild(el('div', 'jellio-card-subtitle', entry.author));
   return card;
@@ -162,7 +221,7 @@ function bookRow(title, entries, cardOptions) {
   cards.forEach(function (card, index) {
     const entry = entries[index];
     if (entry && entry.seriesGroup) {
-      card.replaceWith(seriesCard(entry));
+      card.replaceWith(seriesCard(entry, cardOptions));
       return;
     }
     if (entry && entry.author) card.appendChild(el('div', 'jellio-card-subtitle', entry.author));
@@ -173,7 +232,7 @@ function bookRow(title, entries, cardOptions) {
 // A manga series: the first chapter's card, relabelled, opening the
 // series (screens/mangaSeries.js) instead of one chapter. Cloned to drop
 // the chapter card's own click handling.
-function seriesCard(entry) {
+function seriesCard(entry, cardOptions) {
   const card = buildCard(entry.item).cloneNode(true);
   card.classList.add('jellio-card-manga-series');
   const group = entry.seriesGroup;
@@ -211,6 +270,12 @@ function seriesCard(entry) {
       open();
     }
   });
+  if (cardOptions && cardOptions.extraOptions) {
+    attachCardOptionsTrigger(card, entry.item, null, {
+      onlyExtra: true,
+      extraOptions: cardOptions.extraOptions(entry.item, entry),
+    });
+  }
   return card;
 }
 
@@ -231,27 +296,35 @@ function groupBy(entries, keyOf, labelOf) {
 // (cover from its first chapter), files that belong to no series on
 // their own. Continue reading is worked out per series from reading
 // progress, so finishing a chapter moves the series on to the next one.
-function mangaEntries(items, info, progress) {
+function mangaEntries(items, info, progress, shelf) {
   const grouped = groupMangaSeries(items);
   const continueEntries = [];
   const entries = grouped.series.map(function (group) {
     const coverItem = group.chapters.find((item) => item.ImageTags && item.ImageTags.Primary) || group.chapters[0];
-    const base = describe(coverItem, info);
+    const base = describe(coverItem, info, progress);
     const resume = resumePoint(group.chapters, progress);
     if (resume.lastRead && resume.chapter) {
-      const entry = describe(resume.chapter, info);
+      const entry = describe(resume.chapter, info, progress);
       continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead }));
     }
+    const key = seriesShelfKey(group.key);
+    const prefs = (shelf.Series || {})[key] || {};
+    const latest = Math.max.apply(null, group.chapters.map((item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0)));
     return Object.assign(base, {
       item: Object.assign({}, coverItem, { Name: group.title, SortName: group.title, UserData: null }),
+      key: key,
       series: '',
       seriesGroup: group,
       readCount: resume.readCount,
-      added: Math.max.apply(null, group.chapters.map((item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0))),
+      added: prefs.AddedAt || latest,
+      latest: latest,
+      lastRead: resume.lastRead,
+      chapters: group.chapters.length,
+      unread: group.chapters.length - resume.readCount,
       search: (group.title + ' ' + base.author).toLowerCase(),
     });
   });
-  grouped.singles.forEach((item) => entries.push(describe(item, info)));
+  grouped.singles.forEach((item) => entries.push(describe(item, info, progress)));
   continueEntries.sort((a, b) => b.lastRead - a.lastRead);
   return { entries: entries, continueEntries: continueEntries.slice(0, ROW_LIMIT) };
 }
@@ -270,6 +343,33 @@ export function renderBookshelf(root, params, parentId) {
   let filterText = '';
   let selectedAuthor = '';
   let sort = readSort(kind);
+  let shelf = { Categories: [], Series: {}, Bookmarks: [] };
+  let activeCategory = readCategory(kind);
+  let loadedItems = null;
+
+  // Manga chapters belong to their series' categories.
+  function keyForItem(item) {
+    if (kind === 'manga') {
+      const title = mangaSeriesTitle(item);
+      const key = title ? seriesShelfKey(mangaSeriesKey(title)) : '';
+      if (key && entries.some((entry) => entry.key === key)) return key;
+    }
+    return itemShelfKey(item);
+  }
+
+  const shelfCardOptions = {
+    extraOptions: function (item, entry) {
+      return [
+        {
+          label: 'Categories…',
+          icon: 'label',
+          onClick: function () {
+            openCategoryPicker(kind, [entry ? entry.key : keyForItem(item)], entry ? entry.item.Name : item.Name);
+          },
+        },
+      ];
+    },
+  };
 
   const header = el('header', 'jellio-library-header jellio-bookshelf-header');
   header.appendChild(el('h1', 'jellio-library-title', copy.title));
@@ -290,14 +390,18 @@ export function renderBookshelf(root, params, parentId) {
   const sortSelect = document.createElement('select');
   sortSelect.className = 'jellio-library-filter-select';
   sortSelect.setAttribute('aria-label', 'Sort by');
-  SORTS.forEach(function (option) {
+  SORTS.filter((option) => !option.manga || kind === 'manga').forEach(function (option) {
     const optionEl = document.createElement('option');
     optionEl.value = option.value;
     optionEl.textContent = option.label;
     sortSelect.appendChild(optionEl);
   });
-  sortSelect.value = sort;
   toolbar.appendChild(sortSelect);
+  const sortDirection = el('button', 'jellio-bookshelf-sort-direction');
+  sortDirection.type = 'button';
+  const sortDirectionIcon = el('span', 'material-icons');
+  sortDirection.appendChild(sortDirectionIcon);
+  toolbar.appendChild(sortDirection);
 
   // Words saved while reading, reviewed as flashcards (screens/vocab.js).
   const vocabButton = el('button', 'jellio-bookshelf-vocab');
@@ -314,6 +418,11 @@ export function renderBookshelf(root, params, parentId) {
   // shelf's format.
   const requestMount = el('div', 'jellio-book-request-mount');
   root.appendChild(requestMount);
+
+  // Mihon-style categories: All, then the reader's own.
+  const tabs = el('div', 'jellio-shelf-tabs');
+  tabs.setAttribute('role', 'tablist');
+  root.appendChild(tabs);
   getJellioConfig()
     .then(function (config) {
       // Chaptarr and Open Library cover books, not manga.
@@ -390,33 +499,108 @@ export function renderBookshelf(root, params, parentId) {
   gridSection.appendChild(grid);
   root.appendChild(gridSection);
 
+  function currentCategory() {
+    return activeCategory ? shelf.Categories.find((category) => category.Id === activeCategory) || null : null;
+  }
+
   function isFiltering() {
-    return !!(filterText || selectedAuthor);
+    return !!(filterText || selectedAuthor || currentCategory());
+  }
+
+  // The category's own sort while one is open, else this shelf's.
+  function currentSort() {
+    const category = currentCategory();
+    return category ? { sort: category.Sort || 'title', desc: !!category.Descending } : sort;
+  }
+
+  function paintSortControls() {
+    const current = currentSort();
+    sortSelect.value = current.sort;
+    sortDirectionIcon.className = 'material-icons ' + (current.desc ? 'arrow_downward' : 'arrow_upward');
+    const label = current.desc ? 'Descending' : 'Ascending';
+    sortDirection.setAttribute('aria-label', label);
+    sortDirection.title = label;
+  }
+
+  function setSort(next) {
+    const category = currentCategory();
+    if (category) {
+      category.Sort = next.sort;
+      category.Descending = next.desc;
+      updateCategory(kind, category.Id, { Sort: next.sort, Descending: next.desc }).catch(function (err) {
+        console.warn('Jellio: could not save the category sort', err);
+      });
+    } else {
+      sort = next;
+      writeSort(kind, sort);
+    }
+    paintSortControls();
+    renderGrid();
+  }
+
+  function renderTabs() {
+    tabs.textContent = '';
+    const keys = new Set(entries.map((entry) => entry.key));
+    function tab(label, id, count) {
+      const button = el('button', 'jellio-shelf-tab' + (activeCategory === id ? ' jellio-shelf-tab-active' : ''));
+      button.type = 'button';
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', activeCategory === id ? 'true' : 'false');
+      button.appendChild(el('span', null, label));
+      button.appendChild(el('span', 'jellio-shelf-tab-count', String(count)));
+      button.addEventListener('click', function () {
+        activeCategory = id;
+        writeCategory(kind, id);
+        renderTabs();
+        paintSortControls();
+        renderGrid();
+      });
+      tabs.appendChild(button);
+    }
+    tab('All', '', entries.length);
+    shelf.Categories.forEach(function (category) {
+      tab(category.Name, category.Id, category.Items.filter((key) => keys.has(key)).length);
+    });
+    const edit = el('button', 'jellio-shelf-tab jellio-shelf-tab-edit');
+    edit.type = 'button';
+    edit.appendChild(el('span', 'material-icons ' + (shelf.Categories.length ? 'edit' : 'add')));
+    edit.appendChild(el('span', null, shelf.Categories.length ? 'Edit' : 'Category'));
+    edit.setAttribute('aria-label', shelf.Categories.length ? 'Edit categories' : 'Add a category');
+    edit.addEventListener('click', () => openCategoryManager(kind));
+    tabs.appendChild(edit);
   }
 
   function renderGrid() {
     const query = filterText.toLowerCase();
+    const category = currentCategory();
+    const inCategory = category ? new Set(category.Items) : null;
+    const current = currentSort();
     const matches = entries
+      .filter((entry) => !inCategory || inCategory.has(entry.key))
       .filter((entry) => !selectedAuthor || entry.authorKey === selectedAuthor)
       .filter((entry) => !query || entry.search.indexOf(query) !== -1)
-      .sort(compareBy(sort));
+      .sort(compareBy(current.sort, current.desc));
 
     grid.textContent = '';
     matches.forEach(function (entry) {
-      grid.appendChild(bookCard(entry));
+      grid.appendChild(bookCard(entry, shelfCardOptions));
     });
 
     const selected = selectedAuthor && entries.find((entry) => entry.authorKey === selectedAuthor);
     if (selected) gridTitle.textContent = 'By ' + selected.author;
     else if (query) gridTitle.textContent = matches.length + ' ' + (matches.length === 1 ? copy.one : copy.many) + ' found';
+    else if (category) gridTitle.textContent = category.Name;
     else gridTitle.textContent = 'All ' + copy.many;
 
-    if (!matches.length && entries.length) {
+    if (!matches.length && category && !query && !selectedAuthor) {
+      grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing in ' + category.Name + ' yet. Right click (or hold) a cover and choose Categories to add it.'));
+    } else if (!matches.length && entries.length) {
       grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing on this shelf matches.'));
     }
 
     rows.hidden = isFiltering();
-    clearFilter.hidden = !isFiltering();
+    authorsSection.hidden = !!category || !authorsSection.childElementCount;
+    clearFilter.hidden = !(filterText || selectedAuthor);
     authorsSection.querySelectorAll('.jellio-bookshelf-author-chip').forEach(function (chip) {
       chip.classList.toggle('jellio-bookshelf-author-chip-active', chip.dataset.author === selectedAuthor);
       chip.setAttribute('aria-pressed', chip.dataset.author === selectedAuthor ? 'true' : 'false');
@@ -467,15 +651,15 @@ export function renderBookshelf(root, params, parentId) {
         return entry ? Object.assign({}, entry, { item: item }) : null;
       })
       .filter(Boolean);
-    const continueRow = bookRow(copy.continueTitle, continueEntries, { openReader: true });
+    const continueRow = bookRow(copy.continueTitle, continueEntries, Object.assign({ openReader: true }, shelfCardOptions));
     if (continueRow) rows.appendChild(continueRow);
 
     if (entries.length >= RECENT_ROW_MIN_ITEMS) {
       const recent = entries
         .slice()
-        .sort(compareBy('added'))
+        .sort(compareBy('latest', true))
         .slice(0, ROW_LIMIT);
-      const recentRow = bookRow('Recently added', recent);
+      const recentRow = bookRow('Recently added', recent, shelfCardOptions);
       if (recentRow) rows.appendChild(recentRow);
     }
 
@@ -487,7 +671,7 @@ export function renderBookshelf(root, params, parentId) {
     const inSeriesRow = new Set();
     seriesGroups.slice(0, copy.seriesRows || MAX_SERIES_ROWS).forEach(function (group) {
       group.entries.forEach((entry) => inSeriesRow.add(entry));
-      const row = bookRow(group.label, group.entries.slice().sort(compareBy('year-asc')).slice(0, ROW_LIMIT));
+      const row = bookRow(group.label, group.entries.slice().sort(compareBy('year', false)).slice(0, ROW_LIMIT), shelfCardOptions);
       if (row) {
         row.classList.add('jellio-bookshelf-series-row');
         rows.appendChild(row);
@@ -501,7 +685,7 @@ export function renderBookshelf(root, params, parentId) {
       .filter((group) => group.entries.some((entry) => !inSeriesRow.has(entry)))
       .slice(0, MAX_AUTHOR_ROWS)
       .forEach(function (group) {
-        const row = bookRow('More by ' + group.label, group.entries.slice().sort(compareBy('title')).slice(0, ROW_LIMIT));
+        const row = bookRow('More by ' + group.label, group.entries.slice().sort(compareBy('title', false)).slice(0, ROW_LIMIT), shelfCardOptions);
         if (row) rows.appendChild(row);
       });
   }
@@ -520,10 +704,14 @@ export function renderBookshelf(root, params, parentId) {
     renderGrid();
   });
   sortSelect.addEventListener('change', function () {
-    sort = sortSelect.value;
-    writeSort(kind, sort);
-    renderGrid();
+    const option = SORTS.find((entry) => entry.value === sortSelect.value);
+    setSort({ sort: sortSelect.value, desc: !!(option && option.desc) });
   });
+  sortDirection.addEventListener('click', function () {
+    const current = currentSort();
+    setSort({ sort: current.sort, desc: !current.desc });
+  });
+  paintSortControls();
   clearFilter.addEventListener('click', function () {
     filterText = '';
     selectedAuthor = '';
@@ -537,18 +725,22 @@ export function renderBookshelf(root, params, parentId) {
     copy.loadContinue(20).catch(function () {
       return [];
     }),
-    kind === 'manga' ? getAllReadingProgress().catch(() => ({})) : Promise.resolve(null),
+    kind === 'audiobook' ? Promise.resolve({}) : getAllReadingProgress().catch(() => ({})),
+    loadShelf(kind),
   ])
     .then(function (results) {
       if (cancelled) return;
       const items = results[0];
       const info = results[1] || {};
+      shelf = results[4];
+      if (activeCategory && !currentCategory()) activeCategory = '';
+      loadedItems = { items: items, info: info, progress: results[3] || {} };
       if (kind === 'manga') {
-        const manga = mangaEntries(items, info, results[3] || {});
+        const manga = mangaEntries(items, info, results[3] || {}, shelf);
         entries = manga.entries;
         results[2] = manga.continueEntries;
       } else {
-        entries = items.map((item) => describe(item, info));
+        entries = items.map((item) => describe(item, info, results[3] || {}));
       }
 
       if (!entries.length) {
@@ -570,6 +762,8 @@ export function renderBookshelf(root, params, parentId) {
 
       renderRows(results[2] || [], authorGroups);
       renderAuthors(authorGroups);
+      renderTabs();
+      paintSortControls();
       renderGrid();
     })
     .catch(function (err) {
@@ -580,8 +774,28 @@ export function renderBookshelf(root, params, parentId) {
       rows.appendChild(el('p', 'jellio-service-empty', 'Could not load this shelf. Try again in a moment.'));
     });
 
+  // Categories changed (here or in a dialog): repaint with the new ones.
+  const stopShelf = onShelfChange(function () {
+    if (!loadedItems) return;
+    loadShelf(kind).then(function (next) {
+      if (cancelled || !entries.length) return;
+      shelf = next;
+      if (activeCategory && !currentCategory()) {
+        activeCategory = '';
+        writeCategory(kind, '');
+      }
+      if (kind === 'manga') {
+        entries = mangaEntries(loadedItems.items, loadedItems.info, loadedItems.progress, shelf).entries;
+      }
+      renderTabs();
+      paintSortControls();
+      renderGrid();
+    });
+  });
+
   return function () {
     cancelled = true;
+    stopShelf();
     if (closeMangaSheet) closeMangaSheet();
   };
 }
