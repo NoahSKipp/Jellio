@@ -1,0 +1,108 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
+using MediaBrowser.Common.Configuration;
+
+namespace Jellio.Services.Reading;
+
+public class ShelfCategory
+{
+    public string Id { get; set; } = string.Empty;
+
+    // "manga", "ebook" or "audiobook": the shelf the category belongs to.
+    public string Kind { get; set; } = "manga";
+
+    public string Name { get; set; } = string.Empty;
+
+    // How the shelf orders the category: title, author, added, year,
+    // last-read, unread, chapters or latest.
+    public string Sort { get; set; } = "title";
+
+    public bool Descending { get; set; }
+
+    // Shelf keys: "s:<series key>" for a manga series, "i:<item id>" for
+    // a single book, audiobook or manga file.
+    public List<string> Items { get; set; } = [];
+}
+
+public class SeriesPrefs
+{
+    public string? Note { get; set; }
+
+    // When the series joined the reader's library (Mihon's date added),
+    // unix milliseconds.
+    public long? AddedAt { get; set; }
+
+    public bool? ChapterDescending { get; set; }
+
+    // "all", "unread" or "bookmarked".
+    public string? ChapterFilter { get; set; }
+
+    // Reader overrides for this series: single, spread or vertical, and
+    // rtl or ltr.
+    public string? ComicLayout { get; set; }
+
+    public string? ComicDirection { get; set; }
+}
+
+public class ShelfData
+{
+    public List<ShelfCategory> Categories { get; set; } = [];
+
+    public Dictionary<string, SeriesPrefs> Series { get; set; } = [];
+
+    // Bookmarked chapters (item ids, no dashes).
+    public List<string> Bookmarks { get; set; } = [];
+}
+
+/// <summary>
+/// A reader's own shelf organisation, Mihon style: categories on the
+/// Manga, Books and Audiobooks shelves, per-series settings and chapter
+/// bookmarks.
+/// </summary>
+public partial class ShelfStore(IApplicationPaths applicationPaths)
+{
+    public const int MaxCategories = 50;
+    public const int MaxNameLength = 40;
+    public const int MaxNoteLength = 4000;
+
+    public static readonly string[] Kinds = ["manga", "ebook", "audiobook"];
+    public static readonly string[] Sorts = ["title", "author", "added", "year", "last-read", "unread", "chapters", "latest"];
+
+    private readonly JsonUserStore<ShelfData> _store = new(applicationPaths, "shelf", () => new ShelfData());
+
+    public ShelfData Load(Guid userId) => _store.Load(userId);
+
+    public ShelfData Update(Guid userId, Action<ShelfData> mutate) => _store.Update(userId, mutate);
+
+    public static string NewId() => Guid.NewGuid().ToString("N")[..12];
+
+    public static string CleanName(string? name)
+    {
+        var text = (name ?? string.Empty).Trim();
+        return text.Length > MaxNameLength ? text[..MaxNameLength] : text;
+    }
+
+    // Same key the frontend groups manga series by
+    // (components/mangaSeries.js mangaSeriesKey).
+    public static string SeriesKey(string title)
+    {
+        var decomposed = title.ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(decomposed.Length);
+        foreach (var c in decomposed)
+        {
+            if (c < '̀' || c > 'ͯ')
+            {
+                builder.Append(c);
+            }
+        }
+
+        return NonAlphanumeric().Replace(builder.ToString(), " ").Trim();
+    }
+
+    public static string SeriesShelfKey(string title) => "s:" + SeriesKey(title);
+
+    [GeneratedRegex("[^a-z0-9]+", RegexOptions.CultureInvariant)]
+    private static partial Regex NonAlphanumeric();
+}
