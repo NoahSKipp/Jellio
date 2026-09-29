@@ -1,12 +1,14 @@
 // Discover for the Manga shelf (#/discover?kind=manga): manga, manhwa and
 // manhua series from AniList through Controllers/BookRequestController.cs's
-// discover-manga, never prose books. AniList knows series, Chaptarr knows
-// volumes, so a card's "Request" opens Chaptarr's search for that series
-// and each volume is requested from there.
-import { discoverManga, getBookshelfItems, getJellioConfig, getMangaCoverUrl } from '../runtime/api.js';
+// discover-manga, never prose books. A card's Read opens the series (read
+// straight from a Suwayomi source, like Mihon's Browse), picking the
+// source first if Suwayomi doesn't have it yet; Chaptarr volumes are
+// still requested from the same sheet.
+import { discoverManga, getBookshelfItems, getJellioConfig, getMangaCoverUrl, findStreamSeries } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { openMangaRequestSheet } from '../components/mangaRequest.js';
+import { mangaSeriesKey } from '../components/mangaSeries.js';
 import { el } from '../runtime/dom.js';
 
 const COUNTRIES = [
@@ -80,7 +82,7 @@ export async function renderMangaDiscover(root, params) {
   header.appendChild(back);
   const headingWrap = el('div', 'jellio-discover-heading');
   headingWrap.appendChild(el('h1', 'jellio-library-title', 'Discover manga'));
-  headingWrap.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga, manhwa and manhua. Request the series you want.'));
+  headingWrap.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga, manhwa and manhua. Read any series straight from its source.'));
   header.appendChild(headingWrap);
   root.appendChild(header);
 
@@ -104,6 +106,17 @@ export async function renderMangaDiscover(root, params) {
 
   let closeSheet = null;
   let config = null;
+  function openSeries(key) {
+    navigateTo(
+      '#/books?topParentId=' +
+        parentId +
+        '&collectionType=books&bookKind=manga' +
+        (mangaLibrary ? '&mangaLibrary=1' : '') +
+        '&series=' +
+        encodeURIComponent(key),
+    );
+  }
+
   function openRequestSheet(series) {
     if (closeSheet) closeSheet();
     closeSheet = openMangaRequestSheet(root, {
@@ -112,7 +125,27 @@ export async function renderMangaDiscover(root, params) {
       heading: series.Title,
       suwayomi: !!(config && config.MangaRequestsEnabled),
       chaptarr: !!(config && config.BookRequestsEnabled),
+      openSeries: parentId ? openSeries : null,
     });
+  }
+
+  // Straight to the series when Suwayomi already has it (someone read it
+  // before); otherwise pick a source for it first.
+  async function readSeries(series, button) {
+    if (parentId && config && config.MangaRequestsEnabled) {
+      button.disabled = true;
+      const titles = [series.Title, series.AltTitle].filter(Boolean);
+      for (const title of titles) {
+        const found = await findStreamSeries(mangaSeriesKey(title)).catch(() => null);
+        if (found && found.Key) {
+          button.disabled = false;
+          openSeries(found.Key);
+          return;
+        }
+      }
+      button.disabled = false;
+    }
+    openRequestSheet(series);
   }
 
   // --- cards --------------------------------------------------------------
@@ -156,10 +189,10 @@ export async function renderMangaDiscover(root, params) {
     if (!requestsEnabled) {
       button.hidden = true;
     } else {
-      button.textContent = have ? 'In library · more' : 'Request';
+      button.textContent = have ? 'Open' : 'Read';
       if (have) button.classList.add('jellio-discover-request-done');
       button.addEventListener('click', function () {
-        openRequestSheet(series);
+        readSeries(series, button);
       });
     }
     card.appendChild(button);

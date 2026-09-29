@@ -1,12 +1,12 @@
-// The Manga shelf's request sheet, shared by the shelf and Discover. Two
-// ways to get a series, whichever the server has set up:
+// The Manga shelf's "find a series" sheet, shared by the shelf and
+// Discover. Two ways to get a series, whichever the server has set up:
 // - Chapters, from Suwayomi (Controllers/MangaRequestController.cs): its
-//   sources are searched in parallel, results grouped by source, and a
-//   pick adds the series to the shelf, read straight from the source
-//   (downloaded too if the admin keeps requests on the server). Covers manhwa and
-//   manhua, which rarely exist as published volumes.
-// - Volumes, from Chaptarr: the book request panel, searching for the
-//   series' published volumes.
+//   sources are searched in parallel, results grouped by source, and Read
+//   opens the series, read straight from the source like Mihon's Browse
+//   (downloaded too if the admin keeps requests on the server). Covers
+//   manhwa and manhua, which rarely exist as published volumes.
+// - Volumes, from Chaptarr: the book request panel, a real request for
+//   the series' published volumes.
 import {
   invalidateStreamLibrary,
   getMangaRequestStatus,
@@ -15,6 +15,7 @@ import {
 } from '../runtime/api.js';
 import { getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { buildBookRequestPanel } from './bookRequest.js';
+import { mangaSeriesKey } from './mangaSeries.js';
 import { el } from '../runtime/dom.js';
 
 function thumbnailSrc(path) {
@@ -52,7 +53,8 @@ function statusLabel(status) {
 
 // options: query (series title), altQuery (another title to try when the
 // first finds nothing), heading, suwayomi and chaptarr (which backends are
-// set up). Returns a function that closes the sheet.
+// set up), openSeries(key) (opens a series page; Read calls it). Returns a
+// function that closes the sheet.
 export function openMangaRequestSheet(root, options) {
   const opts = options || {};
   const sheet = el('div', 'jellio-manga-sheet');
@@ -72,7 +74,7 @@ export function openMangaRequestSheet(root, options) {
   document.addEventListener('keydown', onKey);
 
   const head = el('div', 'jellio-manga-sheet-head');
-  head.appendChild(el('h2', 'jellio-row-title', opts.heading || 'Request manga'));
+  head.appendChild(el('h2', 'jellio-row-title', opts.heading || 'Find manga'));
   const closeButton = el('button', 'jellio-discover-back');
   closeButton.type = 'button';
   closeButton.setAttribute('aria-label', 'Close');
@@ -87,8 +89,8 @@ export function openMangaRequestSheet(root, options) {
   panel.appendChild(body);
 
   const panes = [];
-  if (opts.suwayomi) panes.push({ key: 'chapters', label: 'Chapters · Suwayomi', build: buildChaptersPane });
-  if (opts.chaptarr) panes.push({ key: 'volumes', label: 'Volumes · Chaptarr', build: buildVolumesPane });
+  if (opts.suwayomi) panes.push({ key: 'chapters', label: 'Read online', build: buildChaptersPane });
+  if (opts.chaptarr) panes.push({ key: 'volumes', label: 'Request volumes', build: buildVolumesPane });
   if (!panes.length) {
     body.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga requests aren’t set up on this server.'));
   }
@@ -173,7 +175,7 @@ export function openMangaRequestSheet(root, options) {
             return;
           }
           status.textContent = sources.length
-            ? 'Found on ' + sources.length + (sources.length === 1 ? ' source.' : ' sources.') + ' Pick the best match.'
+            ? 'Found on ' + sources.length + (sources.length === 1 ? ' source.' : ' sources.') + ' Pick one to read.'
             : emptyReason(query, response);
           sources.forEach(function (source) {
             results.appendChild(buildSource(source));
@@ -228,31 +230,34 @@ export function openMangaRequestSheet(root, options) {
     const actions = el('div', 'jellio-book-request-actions');
     const button = el('button', 'jellio-book-request-action');
     button.type = 'button';
-    button.appendChild(el('span', 'material-icons ' + (manga.InLibrary ? 'check' : 'add')));
-    const text = el('span', null, manga.InLibrary ? 'On the shelf · refresh' : 'Add to shelf');
+    button.appendChild(el('span', 'material-icons menu_book'));
+    const text = el('span', null, 'Read');
     button.appendChild(text);
+    // Like opening a series in Mihon's Browse: Suwayomi loads its chapters
+    // and the series page opens. It joins the reader's shelf when they
+    // read it (or tap the heart), not before.
     button.addEventListener('click', function () {
       button.disabled = true;
-      text.textContent = 'Adding…';
-      requestMangaSeries(manga.MangaId, manga.Title)
+      text.textContent = 'Opening…';
+      requestMangaSeries(manga.MangaId, manga.Title, false)
         .then(function (response) {
           invalidateStreamLibrary();
-          if (response && response.Status === 'added') {
-            text.textContent = response.QueuedChapters
-              ? 'Downloading ' + response.QueuedChapters + (response.QueuedChapters === 1 ? ' chapter' : ' chapters')
-              : 'Added · ' + response.TotalChapters + (response.TotalChapters === 1 ? ' chapter' : ' chapters') + ' to read';
-          } else if (response && response.Status === 'exists') {
-            text.textContent = response.Message || 'All ' + response.TotalChapters + ' chapters already downloaded';
-          } else {
-            text.textContent = (response && response.Message) || 'Request failed';
+          if (!response || (response.Status !== 'added' && response.Status !== 'exists')) {
+            text.textContent = (response && response.Message) || 'Couldn’t open it';
             button.disabled = false;
             button.classList.add('jellio-book-request-action-error');
             return;
           }
+          if (opts.openSeries) {
+            close();
+            opts.openSeries(mangaSeriesKey(manga.Title));
+            return;
+          }
+          text.textContent = response.TotalChapters + (response.TotalChapters === 1 ? ' chapter' : ' chapters') + ' ready';
           button.classList.add('jellio-book-request-action-done');
         })
         .catch(function () {
-          text.textContent = 'Request failed';
+          text.textContent = 'Couldn’t open it';
           button.disabled = false;
           button.classList.add('jellio-book-request-action-error');
         });

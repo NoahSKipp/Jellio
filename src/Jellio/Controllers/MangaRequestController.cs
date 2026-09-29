@@ -54,7 +54,9 @@ public partial class MangaRequestController(
         int NsfwSources,
         IReadOnlyList<SourceResult> Sources);
 
-    public record RequestBody(int MangaId, string? Title);
+    // AddToLibrary: false when the reader is only opening the series to
+    // read (Discover's Read); reading it adds it to their shelf anyway.
+    public record RequestBody(int MangaId, string? Title, bool AddToLibrary = true);
 
     [HttpGet("status")]
     public async Task<IActionResult> Status(CancellationToken cancellationToken)
@@ -184,7 +186,7 @@ public partial class MangaRequestController(
 
         // On the requester's own shelf.
         var requesterId = GetUserId();
-        if (result.Success && requesterId != Guid.Empty && !string.IsNullOrWhiteSpace(body.Title))
+        if (result.Success && body.AddToLibrary && requesterId != Guid.Empty && !string.IsNullOrWhiteSpace(body.Title))
         {
             shelfStore.SetInLibrary(requesterId, Jellio.Services.Reading.ShelfStore.SeriesShelfKey(body.Title), true);
         }
