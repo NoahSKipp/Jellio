@@ -5128,6 +5128,21 @@
   box-shadow: 0 0.6em 1.6em rgb(0 0 0 / 0.5);
 }
 
+.jellio-player-scrub-preview-image[hidden] {
+  display: none;
+}
+
+/* A dark frame with a soft pulse while the first server frame loads. */
+.jellio-player-scrub-preview-image-empty {
+  animation: jellio-scrub-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes jellio-scrub-pulse {
+  50% {
+    background-color: #1a1a1a;
+  }
+}
+
 .jellio-player-scrub-preview-time {
   font-size: 0.78em;
   font-weight: 600;
