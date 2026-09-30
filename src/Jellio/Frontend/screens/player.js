@@ -716,17 +716,21 @@ export async function renderPlayer(root, params) {
     loadingLogo = el('div', 'jellio-player-loading-logo');
     loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
     root.appendChild(loadingLogo);
-    video.addEventListener(
-      'playing',
-      function () {
-        if (loadingLogo) {
-          loadingLogo.remove();
-          loadingLogo = null;
-        }
-      },
-      { once: true },
-    );
+    logoShownAtTime = video.currentTime;
   }
+
+  // The logo goes once the video is really playing: 'playing', or the
+  // clock moving while unpaused. 'playing' alone could fire before the
+  // logo went up (a quick reload) and leave it over a playing title.
+  let logoShownAtTime = 0;
+  function hideLogoIfPlaying() {
+    if (!loadingLogo || video.paused) return;
+    if (video.readyState >= 3 && Math.abs(video.currentTime - logoShownAtTime) > 0.25) hideLoadingLogo();
+  }
+  video.addEventListener('playing', function () {
+    if (loadingLogo && video.readyState >= 3) hideLoadingLogo();
+  });
+  video.addEventListener('timeupdate', hideLogoIfPlaying);
 
   // Real bug, found live: showLoadingLogo()'s own overlay only ever had
   // a success path, video's own real 'playing' event. A source slow
