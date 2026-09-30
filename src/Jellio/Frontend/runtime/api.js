@@ -2163,6 +2163,14 @@ export function getTrickplayTileUrl(itemId, mediaSourceId, width, tileIndex) {
   return getServerAddress() + '/Videos/' + itemId + '/Trickplay/' + width + '/' + tileIndex + '.jpg?' + params.toString();
 }
 
+// Seek bar frames for titles without trickplay (Jellio's
+// ScrubPreviewController), one per 10 seconds, grabbed server side.
+export function getScrubPreviewUrl(itemId, mediaSourceId, seconds) {
+  const params = new URLSearchParams({ ApiKey: getAccessToken() || '' });
+  if (mediaSourceId) params.set('mediaSourceId', mediaSourceId);
+  return getServerAddress() + '/Jellio/scrub-preview/' + itemId + '/' + Math.max(0, Math.floor(seconds)) + '.jpg?' + params.toString();
+}
+
 // A real MediaSource can carry more than one real generated resolution
 // (BaseItemDto.Trickplay is width keyed), screens/player.js's own seek
 // bar preview wants exactly one to work from: the smallest available,

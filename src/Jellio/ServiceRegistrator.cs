@@ -104,6 +104,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<IntroCreditsStore>();
         services.AddSingleton<ChromaprintExtractor>();
         services.AddSingleton<IntroCreditsAnalyzer>();
+        services.AddSingleton<Jellio.Services.ScrubPreview.ScrubPreviewService>();
         services.AddSingleton<IntroCreditsBulkScanner>();
 
         // Services/CommunitySkip: the real NuvioTV-style tier, tried

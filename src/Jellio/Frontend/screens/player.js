@@ -42,6 +42,7 @@ import {
   getEpisodes,
   getCurrentUser,
   getTrickplayTileUrl,
+  getScrubPreviewUrl,
   pickTrickplayInfo,
   TICKS_PER_SECOND,
   getGroupWatchMessages,
@@ -1128,52 +1129,132 @@ export async function renderPlayer(root, params) {
   // upstream. Real hover feature when the data is there, silent no-op
   // when it is not.
   const trickplayInfo = pickTrickplayInfo(item, mediaSource.Id);
-  if (trickplayInfo) {
+  {
+    // Without trickplay (every Gelato stream), frames come from
+    // Jellio/scrub-preview, one per SCRUB_BUCKET_SECONDS, grabbed
+    // server side and cached. If the first few can't be grabbed, the
+    // preview falls back to just the time.
+    const SCRUB_BUCKET_SECONDS = 10;
+    const videoStream = (mediaSource.MediaStreams || []).find(function (stream) {
+      return stream.Type === 'Video';
+    });
+    const aspect = videoStream && videoStream.Width && videoStream.Height ? videoStream.Width / videoStream.Height : 16 / 9;
+    const previewWidth = trickplayInfo ? trickplayInfo.Width : 240;
+    const previewHeight = trickplayInfo ? trickplayInfo.Height : Math.round(240 / aspect);
+
     const scrubPreview = el('div', 'jellio-player-scrub-preview');
     const scrubImage = el('div', 'jellio-player-scrub-preview-image');
     const scrubTime = el('div', 'jellio-player-scrub-preview-time', '0:00');
-    scrubImage.style.width = trickplayInfo.Width + 'px';
-    scrubImage.style.height = trickplayInfo.Height + 'px';
+    scrubImage.style.width = previewWidth + 'px';
+    scrubImage.style.height = previewHeight + 'px';
     scrubPreview.appendChild(scrubImage);
     scrubPreview.appendChild(scrubTime);
     seekWrap.appendChild(scrubPreview);
 
-    const thumbsPerTile = Math.max(1, trickplayInfo.TileWidth * trickplayInfo.TileHeight);
+    const thumbsPerTile = trickplayInfo ? Math.max(1, trickplayInfo.TileWidth * trickplayInfo.TileHeight) : 1;
     let lastTileIndex = -1;
+    let serverFrames = !trickplayInfo;
+    let wantedBucket = -1;
+    let shownBucket = -1;
+    let bucketTimer = null;
+    let failures = 0;
+    let successes = 0;
+    const loadedBuckets = new Set();
+    if (serverFrames) scrubImage.classList.add('jellio-player-scrub-preview-image-empty');
+
+    function showBucket(bucket) {
+      if (bucket === shownBucket) return;
+      shownBucket = bucket;
+      scrubImage.style.backgroundImage = 'url("' + getScrubPreviewUrl(itemId, mediaSource.Id, bucket) + '")';
+      scrubImage.style.backgroundSize = 'cover';
+      scrubImage.style.backgroundPosition = 'center';
+      scrubImage.classList.remove('jellio-player-scrub-preview-image-empty');
+    }
+
+    function loadBucket(bucket) {
+      if (loadedBuckets.has(bucket)) {
+        showBucket(bucket);
+        return;
+      }
+      const image = new Image();
+      image.onload = function () {
+        successes++;
+        loadedBuckets.add(bucket);
+        if (wantedBucket === bucket) showBucket(bucket);
+      };
+      image.onerror = function () {
+        failures++;
+        if (!successes && failures >= 3) {
+          serverFrames = false;
+          scrubImage.hidden = true;
+        }
+      };
+      image.src = getScrubPreviewUrl(itemId, mediaSource.Id, bucket);
+    }
 
     function showScrubPreview(clientX) {
       const rect = seekBar.getBoundingClientRect();
       const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
       const hoveredSeconds = ratio * durationSeconds;
 
-      const thumbnailIndex = Math.max(0, Math.floor((hoveredSeconds * 1000) / trickplayInfo.Interval));
-      const tileIndex = Math.floor(thumbnailIndex / thumbsPerTile);
-      const indexInTile = thumbnailIndex % thumbsPerTile;
-      const col = indexInTile % trickplayInfo.TileWidth;
-      const row = Math.floor(indexInTile / trickplayInfo.TileWidth);
+      if (trickplayInfo) {
+        const thumbnailIndex = Math.max(0, Math.floor((hoveredSeconds * 1000) / trickplayInfo.Interval));
+        const tileIndex = Math.floor(thumbnailIndex / thumbsPerTile);
+        const indexInTile = thumbnailIndex % thumbsPerTile;
+        const col = indexInTile % trickplayInfo.TileWidth;
+        const row = Math.floor(indexInTile / trickplayInfo.TileWidth);
 
-      if (tileIndex !== lastTileIndex) {
-        lastTileIndex = tileIndex;
-        scrubImage.style.backgroundImage =
-          'url(' + getTrickplayTileUrl(itemId, mediaSource.Id, trickplayInfo.Width, tileIndex) + ')';
+        if (tileIndex !== lastTileIndex) {
+          lastTileIndex = tileIndex;
+          scrubImage.style.backgroundImage =
+            'url(' + getTrickplayTileUrl(itemId, mediaSource.Id, trickplayInfo.Width, tileIndex) + ')';
+        }
+        scrubImage.style.backgroundSize =
+          trickplayInfo.TileWidth * trickplayInfo.Width + 'px ' + trickplayInfo.TileHeight * trickplayInfo.Height + 'px';
+        scrubImage.style.backgroundPosition = -(col * trickplayInfo.Width) + 'px ' + -(row * trickplayInfo.Height) + 'px';
+      } else if (serverFrames && durationSeconds > 0) {
+        // Only ask once the pointer settles, so sweeping across the bar
+        // doesn't start a frame grab for every bucket passed over.
+        const bucket = Math.floor(hoveredSeconds / SCRUB_BUCKET_SECONDS) * SCRUB_BUCKET_SECONDS;
+        if (bucket !== wantedBucket) {
+          wantedBucket = bucket;
+          if (bucketTimer) window.clearTimeout(bucketTimer);
+          if (loadedBuckets.has(bucket)) showBucket(bucket);
+          else
+            bucketTimer = window.setTimeout(function () {
+              bucketTimer = null;
+              loadBucket(bucket);
+            }, 150);
+        }
       }
-      scrubImage.style.backgroundSize =
-        trickplayInfo.TileWidth * trickplayInfo.Width + 'px ' + trickplayInfo.TileHeight * trickplayInfo.Height + 'px';
-      scrubImage.style.backgroundPosition = -(col * trickplayInfo.Width) + 'px ' + -(row * trickplayInfo.Height) + 'px';
       scrubTime.textContent = formatTime(hoveredSeconds);
 
-      const previewHalfWidth = trickplayInfo.Width / 2;
+      const previewHalfWidth = (scrubImage.hidden ? scrubTime.offsetWidth : previewWidth) / 2;
       const left = Math.min(rect.width - previewHalfWidth, Math.max(previewHalfWidth, ratio * rect.width));
       scrubPreview.style.left = left + 'px';
       scrubPreview.classList.add('jellio-player-scrub-preview-visible');
     }
 
+    function hideScrubPreview() {
+      scrubPreview.classList.remove('jellio-player-scrub-preview-visible');
+      if (bucketTimer) window.clearTimeout(bucketTimer);
+      bucketTimer = null;
+      wantedBucket = -1;
+    }
+
     seekWrap.addEventListener('mousemove', function (event) {
       showScrubPreview(event.clientX);
     });
-    seekWrap.addEventListener('mouseleave', function () {
-      scrubPreview.classList.remove('jellio-player-scrub-preview-visible');
-    });
+    seekWrap.addEventListener('mouseleave', hideScrubPreview);
+    seekWrap.addEventListener(
+      'touchmove',
+      function (event) {
+        if (event.touches[0]) showScrubPreview(event.touches[0].clientX);
+      },
+      { passive: true },
+    );
+    seekWrap.addEventListener('touchend', hideScrubPreview);
+    seekWrap.addEventListener('touchcancel', hideScrubPreview);
   }
 
   // === Floating pill: Speed, Subtitles, Audio, Sources, Episodes, Sleep ===
