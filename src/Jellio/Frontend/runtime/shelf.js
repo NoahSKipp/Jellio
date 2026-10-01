@@ -4,7 +4,7 @@
 // change fires jellio:shelf-changed so open screens can repaint.
 import { getServerAddress, getAuthHeaders } from './auth.js';
 
-const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [] };
+const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [], LibraryRemoved: [] };
 const loaded = new Map();
 
 function idKey(id) {

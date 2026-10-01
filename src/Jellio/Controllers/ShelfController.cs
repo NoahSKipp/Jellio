@@ -21,7 +21,7 @@ public class ShelfController(ShelfStore store) : ControllerBase
     private const int MaxKeyLength = 300;
     private const int MaxItemsPerCategory = 10000;
 
-    public record ShelfResponse(IReadOnlyList<ShelfCategory> Categories, Dictionary<string, SeriesPrefs> Series, IReadOnlyList<string> Bookmarks, IReadOnlyCollection<string> Library);
+    public record ShelfResponse(IReadOnlyList<ShelfCategory> Categories, Dictionary<string, SeriesPrefs> Series, IReadOnlyList<string> Bookmarks, IReadOnlyCollection<string> Library, IReadOnlyList<string> LibraryRemoved);
 
     public record CreateBody(string? Name);
 
@@ -46,7 +46,7 @@ public class ShelfController(ShelfStore store) : ControllerBase
         }
 
         var data = store.Load(userId);
-        return Ok(new ShelfResponse(data.Categories.Where(category => category.Kind == kind).ToList(), data.Series, data.Bookmarks, store.Library(userId)));
+        return Ok(new ShelfResponse(data.Categories.Where(category => category.Kind == kind).ToList(), data.Series, data.Bookmarks, store.Library(userId), data.LibraryRemoved));
     }
 
     [HttpPost("{kind}/categories")]

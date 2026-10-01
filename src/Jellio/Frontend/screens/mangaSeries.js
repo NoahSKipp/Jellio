@@ -11,7 +11,10 @@ import {
   getStreamSeries,
   findStreamSeries,
   saveStreamSeries,
+  markReadingItems,
+  setPlayed,
 } from '../runtime/api.js';
+import { openCardOptionsMenu } from '../components/cardOptionsMenu.js';
 import {
   groupMangaSeries,
   chapterState,
@@ -37,6 +40,8 @@ export function renderMangaSeries(root, params, parentId) {
   const key = params.get('series') || '';
   let cancelled = false;
   let descending = false;
+  // Kept across a repaint (marking chapters read).
+  let keptView = null;
   let shelf = { Categories: [], Series: {}, Bookmarks: [] };
   const shelfKey = seriesShelfKey(key);
   root.classList.add('jellio-screen-bookshelf', 'jellio-screen-manga-series');
@@ -109,10 +114,63 @@ export function renderMangaSeries(root, params, parentId) {
 
   function render(group, progress) {
     const chapters = group.chapters;
+
+    // Marks chapters read or unread, here at once and then on the server.
+    function setRead(list, read) {
+      const ids = [];
+      list.forEach(function (chapter) {
+        ids.push(chapter.Id);
+        if (chapter.StreamId) ids.push(chapter.StreamId);
+      });
+      const now = new Date().toISOString();
+      ids.forEach(function (id) {
+        const key = String(id).replace(/-/g, '');
+        if (read) progress[key] = { Locator: 'page:1', Progress: 1, TotalPages: null, UpdatedAt: now };
+        else delete progress[key];
+      });
+      if (stopShelf) stopShelf();
+      keptView = { filter: filter, descending: descending };
+      const scrollY = window.scrollY;
+      body.textContent = '';
+      render(group, progress);
+      window.scrollTo(0, scrollY);
+      markReadingItems(ids, read)
+        .then(function () {
+          if (read) return null;
+          // A chapter marked watched before would still count as read.
+          return Promise.all(
+            list.filter((chapter) => chapter.UserData && chapter.UserData.Played).map((chapter) => setPlayed(chapter.Id, false).catch(() => null)),
+          );
+        })
+        .catch(function (err) {
+          console.warn('Jellio: could not update read state', err);
+          showToast('Could not save the read state. Try again.');
+        });
+    }
+
+    // Right-click or long-press on a chapter, Mihon style.
+    function openChapterMenu(item, anchor) {
+      const read = chapterState(item, progress).read;
+      const index = chapters.indexOf(item);
+      const before = chapters.slice(0, index).filter((chapter) => !chapterState(chapter, progress).read);
+      const options = [
+        {
+          label: read ? 'Mark as unread' : 'Mark as read',
+          icon: read ? 'remove_done' : 'done',
+          onClick: () => setRead([item], !read),
+        },
+      ];
+      if (before.length) {
+        options.push({ label: 'Mark previous as read', icon: 'done_all', onClick: () => setRead(before, true) });
+      }
+      openCardOptionsMenu(item, anchor.getBoundingClientRect(), null, { onlyExtra: true, extraOptions: options });
+    }
     const resume = resumePoint(chapters, progress);
     const prefs = Object.assign({}, shelf.Series[shelfKey]);
-    descending = !!prefs.ChapterDescending;
-    let filter = prefs.ChapterFilter || 'all';
+    const repaint = keptView;
+    keptView = null;
+    descending = repaint ? repaint.descending : !!prefs.ChapterDescending;
+    let filter = repaint ? repaint.filter : prefs.ChapterFilter || 'all';
 
     const hero = el('section', 'jellio-manga-series-hero');
     const cover = el('div', 'jellio-manga-series-cover');
@@ -166,6 +224,16 @@ export function renderMangaSeries(root, params, parentId) {
 
     // Everything not read yet, for reading offline (components/downloads.js).
     const unread = chapters.filter((chapter) => !chapterState(chapter, progress).read);
+
+    const markAll = el('button', 'jellio-manga-series-order');
+    markAll.type = 'button';
+    markAll.appendChild(el('span', 'material-icons ' + (unread.length ? 'done_all' : 'remove_done')));
+    markAll.appendChild(el('span', null, unread.length ? 'Mark all as read' : 'Mark all as unread'));
+    markAll.addEventListener('click', function () {
+      if (unread.length) setRead(unread, true);
+      else if (window.confirm('Mark every chapter of “' + group.title + '” as unread?')) setRead(chapters, false);
+    });
+    actions.appendChild(markAll);
     if (unread.length) {
       const save = el('button', 'jellio-manga-series-order');
       save.type = 'button';
@@ -408,10 +476,42 @@ export function renderMangaSeries(root, params, parentId) {
         } else if (item === resume.chapter) status = 'Up next';
         if (status) button.appendChild(el('span', 'jellio-manga-chapter-status', status));
         if (state.read) button.appendChild(el('span', 'material-icons check'));
+        let held = false;
+        let holdTimer = null;
         button.addEventListener('click', function () {
+          if (held) {
+            held = false;
+            return;
+          }
           openChapter(item);
         });
+        button.addEventListener('contextmenu', function (event) {
+          event.preventDefault();
+          openChapterMenu(item, button);
+        });
+        button.addEventListener('pointerdown', function (event) {
+          if (event.pointerType === 'mouse') return;
+          held = false;
+          holdTimer = window.setTimeout(function () {
+            held = true;
+            openChapterMenu(item, button);
+          }, 500);
+        });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (type) {
+          button.addEventListener(type, function () {
+            window.clearTimeout(holdTimer);
+          });
+        });
         row.appendChild(button);
+        const readToggle = el('button', 'jellio-manga-chapter-bookmark' + (state.read ? ' jellio-manga-chapter-bookmarked' : ''));
+        readToggle.type = 'button';
+        readToggle.setAttribute('aria-label', state.read ? 'Mark as unread' : 'Mark as read');
+        readToggle.title = state.read ? 'Mark as unread' : 'Mark as read';
+        readToggle.appendChild(el('span', 'material-icons ' + (state.read ? 'remove_done' : 'done')));
+        readToggle.addEventListener('click', function () {
+          setRead([item], !state.read);
+        });
+        row.appendChild(readToggle);
         const marked = bookmarked(item);
         const bookmark = el('button', 'jellio-manga-chapter-bookmark' + (marked ? ' jellio-manga-chapter-bookmarked' : ''));
         bookmark.type = 'button';
@@ -452,7 +552,7 @@ export function renderMangaSeries(root, params, parentId) {
     });
 
     const upNext = list.querySelector('.jellio-manga-chapter-next');
-    if (upNext && resume.index > 3) upNext.scrollIntoView({ block: 'center' });
+    if (!repaint && upNext && resume.index > 3) upNext.scrollIntoView({ block: 'center' });
   }
 
   let stopShelf = null;
