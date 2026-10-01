@@ -762,11 +762,85 @@ function jellioVersion() {
   }
 }
 
+// The macOS app (Jellio-macOS) checks, downloads and installs its own
+// updates; this card shows where that's at and drives it.
+function describeAppUpdate(state) {
+  switch (state.status) {
+    case 'checking':
+      return 'Checking for updates…';
+    case 'up-to-date':
+      return 'You’re up to date.';
+    case 'available':
+      return 'Version ' + state.latest + ' is available.';
+    case 'downloading':
+      return 'Downloading ' + state.latest + '… ' + Math.round((state.progress || 0) * 100) + '%';
+    case 'installing':
+      return 'Installing ' + state.latest + '…';
+    case 'restarting':
+      return 'Restarting into ' + state.latest + '…';
+    case 'error':
+      return state.error || 'Something went wrong.';
+    default:
+      return state.checkedAt ? 'Last checked ' + new Date(state.checkedAt).toLocaleString() + '.' : 'Not checked yet.';
+  }
+}
+
+function buildAppUpdateCard(native) {
+  const { card, body } = buildCard('laptop_mac', 'Jellio for macOS', 'Updates for this Mac app.');
+  const action = el('button', 'jellio-settings-button', 'Check for updates');
+  action.type = 'button';
+  const statusRow = buildRow(null, 'Version', '', action);
+  const description = el('span', 'jellio-settings-row-description');
+  statusRow.querySelector('.jellio-settings-row-text').appendChild(description);
+  body.appendChild(statusRow);
+
+  let current = null;
+  let toggleInput = null;
+  body.appendChild(
+    buildToggleRow(null, 'Check automatically', 'Looks for a new version when Jellio starts and every few hours.', true, function (checked) {
+      native.setAutomatic(checked).catch(function (err) {
+        console.warn('Jellio: could not save the update setting', err);
+      });
+    }),
+  );
+  toggleInput = body.querySelector('.jellio-settings-toggle-input');
+
+  function paint(state) {
+    if (!state) return;
+    current = state;
+    statusRow.querySelector('.jellio-settings-row-title').textContent = 'Version ' + state.current;
+    description.textContent = describeAppUpdate(state);
+    const working = ['checking', 'downloading', 'installing', 'restarting'].indexOf(state.status) !== -1;
+    action.disabled = working;
+    action.textContent = state.status === 'available' ? 'Install ' + state.latest : working ? 'Working…' : 'Check for updates';
+    if (toggleInput) toggleInput.checked = state.automatic !== false;
+  }
+
+  action.addEventListener('click', function () {
+    const call = current && current.status === 'available' ? native.install() : native.check();
+    call.then(paint).catch(function (err) {
+      console.warn('Jellio: update action failed', err);
+    });
+  });
+
+  const stop = native.onChange(function (state) {
+    if (!card.isConnected) {
+      stop();
+      return;
+    }
+    paint(state);
+  });
+  native.getState().then(paint).catch(function () {});
+  return card;
+}
+
 function buildAboutCategory() {
   const wrap = el('div', 'jellio-settings-category');
   const version = jellioVersion();
   const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
+  const native = window.jellioNative && window.jellioNative.updates;
+  if (native) wrap.appendChild(buildAppUpdateCard(native));
   return wrap;
 }
 
