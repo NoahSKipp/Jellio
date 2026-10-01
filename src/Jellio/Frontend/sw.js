@@ -8,7 +8,7 @@
 //   reached.
 // - Item images and book covers fall back to a downloaded copy.
 // - Everything else (the API) goes straight to the network.
-const SHELL_CACHE = 'jellio-shell-v1';
+const SHELL_CACHE = 'jellio-shell-v2';
 const FILES_CACHE = 'jellio-offline-files';
 const FILE_PREFIX = '/__jellio_offline__/';
 const NETWORK_TIMEOUT_MS = 10000;
