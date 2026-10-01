@@ -1,4 +1,6 @@
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using MediaBrowser.Controller;
 using MediaBrowser.Model.Plugins;
@@ -151,13 +153,10 @@ public class IndexHtmlPatchService(
     // modulepreload tells the browser about every one of these the
     // moment this markup itself parses, in parallel with app.js's own
     // fetch rather than waiting on it, collapsing that same three level
-    // wait down to effectively one. No query string on any of these,
-    // deliberately: app.js's own real `from './x.js'` specifiers
-    // resolve to this same fixed URL with no version suffix (see
-    // FrontendController's own header for why only app.js and app.css
-    // carry one), and a preload hint has to name the exact URL the
-    // real import will also request or a browser treats them as two
-    // different resources and fetches both. Kept in sync by hand,
+    // wait down to effectively one. They carry the same ?v= the import
+    // map (BuildImportMap) gives the real imports, since a preload hint
+    // has to name the exact URL the import will request or the browser
+    // fetches both. Kept in sync by hand,
     // same real convention components/sidebar.js's own LIBRARY_ROUTES
     // comment already explains for the same reason: add a real file
     // under Frontend/, add it here too.
@@ -200,11 +199,44 @@ public class IndexHtmlPatchService(
         "components/rowListModal.js",
     ];
 
+    // Every module under runtime/, screens/ and components/, requested
+    // as <file>?v=<version> through an import map. Only app.js and
+    // app.css carried a version, so after an update a browser, a service
+    // worker or a CDN could keep serving the previous release's copy of
+    // any module app.js imports (a Settings page without the new card),
+    // mixing old code into new. The map is keyed by the plain URL every
+    // import resolves to, so modules keep a single identity.
+    private static string BuildImportMap(string version)
+    {
+        const string prefix = "Jellio.Frontend.";
+        string[] folders = ["runtime", "screens", "components"];
+        var imports = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var name in Assembly.GetExecutingAssembly().GetManifestResourceNames())
+        {
+            if (!name.StartsWith(prefix, StringComparison.Ordinal) || !name.EndsWith(".js", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var rest = name[prefix.Length..];
+            foreach (var folder in folders)
+            {
+                if (rest.StartsWith(folder + ".", StringComparison.Ordinal))
+                {
+                    var url = "/Jellio/frontend/" + folder + "/" + rest[(folder.Length + 1)..];
+                    imports[url] = url + "?v=" + version;
+                }
+            }
+        }
+
+        return JsonSerializer.Serialize(new { imports });
+    }
+
     private static string BuildBlock(string version)
     {
         var preloadLinks = string.Concat(
             ModulePreloadPaths.Select(path =>
-                $"<link rel=\"modulepreload\" href=\"/Jellio/frontend/{path}\">\n"
+                $"<link rel=\"modulepreload\" href=\"/Jellio/frontend/{path}?v={version}\">\n"
             )
         );
 
@@ -223,6 +255,7 @@ public class IndexHtmlPatchService(
             + "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n"
             + "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap\">\n"
             + $"<link rel=\"stylesheet\" href=\"/Jellio/frontend/css/app.css?v={version}\">\n"
+            + $"<script type=\"importmap\">{BuildImportMap(version)}</script>\n"
             + preloadLinks
             + $"<script type=\"module\" src=\"/Jellio/frontend/app.js?v={version}\"></script>\n"
             + $"{EndMarker}\n";
