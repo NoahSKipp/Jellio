@@ -425,7 +425,8 @@ export function buildCard(item, options) {
   function handleChanged(updatedItem) {
     paintCardState(imageWrap, updatedItem);
   }
-  imageWrap.appendChild(buildCardActions(item, card, imageWrap, options, handleChanged));
+  // Books and manga have no watchlist or watched state.
+  if (!(options && options.reading)) imageWrap.appendChild(buildCardActions(item, card, imageWrap, options, handleChanged));
 
   card.appendChild(imageWrap);
 

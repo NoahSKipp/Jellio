@@ -230,7 +230,7 @@ async function openEpub(stage, buffer, savedLocator, settings, handlers) {
   let rendition = null;
   let currentLayout = null;
   let locationsReady = false;
-  let lastCfi = savedLocator || null;
+  let lastCfi = savedLocator && String(savedLocator).indexOf('epubcfi(') === 0 ? savedLocator : null;
   let flatToc = [];
   let searchHighlight = null;
   let selectCallback = null;

@@ -32,6 +32,38 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
 
     public record ProgressBody(string Locator, double Progress, int? TotalPages);
 
+    public record MarkBody(List<Guid>? ItemIds, bool Read);
+
+    // Marks books or chapters (saved or streamed) read or unread at once:
+    // the shelf's and the series page's Mark as read.
+    [HttpPost("progress/mark")]
+    public IActionResult Mark([FromBody] MarkBody body)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        var ids = (body?.ItemIds ?? []).Where(id => id != Guid.Empty).Distinct().Take(5000).ToList();
+        if (ids.Count == 0)
+        {
+            return NoContent();
+        }
+
+        if (body!.Read)
+        {
+            var now = DateTimeOffset.UtcNow;
+            store.SetMany(userId, ids.Select(id => (id, "page:1", 1.0, (int?)null, (DateTimeOffset?)now)), keepExisting: false);
+        }
+        else
+        {
+            store.RemoveMany(userId, ids);
+        }
+
+        return NoContent();
+    }
+
     [HttpGet("progress/{itemId}")]
     public IActionResult GetProgress([FromRoute] Guid itemId)
     {

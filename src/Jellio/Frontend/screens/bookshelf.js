@@ -15,7 +15,11 @@ import {
   audiobookGroupKey,
   getStreamLibrary,
   invalidateStreamLibrary,
+  getStreamSeries,
+  markReadingItems,
+  setPlayed,
 } from '../runtime/api.js';
+import { showToast } from '../components/toast.js';
 import {
   groupMangaSeries,
   resumePoint,
@@ -242,7 +246,7 @@ function bookRow(title, entries, cardOptions) {
 // series (screens/mangaSeries.js) instead of one chapter. Cloned to drop
 // the chapter card's own click handling.
 function seriesCard(entry, cardOptions) {
-  const card = buildCard(entry.item).cloneNode(true);
+  const card = buildCard(entry.item, { reading: true }).cloneNode(true);
   card.classList.add('jellio-card-manga-series');
   const group = entry.seriesGroup;
   let img = card.querySelector('img.jellio-card-image');
@@ -343,7 +347,7 @@ function mangaEntries(items, info, progress, shelf, stream) {
       streamContinue(streamed, streamLastRead);
     } else if (resume.lastRead && resume.chapter) {
       const entry = describe(resume.chapter, info, progress);
-      continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead }));
+      continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead, seriesKey: seriesShelfKey(group.key) }));
     }
     const key = seriesShelfKey(group.key);
     const prefs = (shelf.Series || {})[key] || {};
@@ -402,12 +406,17 @@ function mangaEntries(items, info, progress, shelf, stream) {
   grouped.singles.forEach((item) => entries.push(describe(item, info, progress)));
   continueEntries.sort((a, b) => b.lastRead - a.lastRead);
   // The reader's own library (Mihon style): series they added or have
-  // read. Streamed series already come filtered from the server.
+  // read, minus any they removed. Streamed series already come filtered
+  // from the server.
   const mine = new Set(shelf.Library || []);
+  const removed = new Set(shelf.LibraryRemoved || []);
   const kept = entries.filter(
-    (entry) => mine.has(entry.key) || (entry.seriesGroup && entry.seriesGroup.stream) || entry.lastRead > 0 || entry.readCount > 0,
+    (entry) =>
+      !removed.has(entry.key) &&
+      (mine.has(entry.key) || (entry.seriesGroup && entry.seriesGroup.stream) || entry.lastRead > 0 || entry.readCount > 0),
   );
-  return { entries: kept, continueEntries: continueEntries.slice(0, ROW_LIMIT) };
+  const continuing = continueEntries.filter((entry) => !removed.has(entry.seriesKey || entry.key));
+  return { entries: kept, continueEntries: continuing.slice(0, ROW_LIMIT) };
 }
 
 export function renderBookshelf(root, params, parentId) {
@@ -438,9 +447,66 @@ export function renderBookshelf(root, params, parentId) {
     return itemShelfKey(item);
   }
 
+  // Every chapter id a series card stands for: saved chapters (and the
+  // streamed ones they match), plus the rest from its source.
+  async function seriesChapterIds(entry) {
+    const group = entry.seriesGroup;
+    const ids = [];
+    group.chapters.forEach(function (chapter) {
+      ids.push(chapter.Id);
+      if (chapter.StreamId) ids.push(chapter.StreamId);
+    });
+    if (group.stream && group.stream.MangaId) {
+      const series = await getStreamSeries(group.stream.MangaId).catch(() => null);
+      ((series && series.Chapters) || []).forEach((chapter) => ids.push(chapter.Id));
+    }
+    return ids;
+  }
+
+  async function markRead(entry, item, read) {
+    const chapters = entry && entry.seriesGroup ? entry.seriesGroup.chapters : [item];
+    const ids = entry && entry.seriesGroup ? await seriesChapterIds(entry) : [item.Id];
+    if (!ids.length) return;
+    await markReadingItems(ids, read);
+    // A chapter marked watched before counts as read too; clear that.
+    if (!read) {
+      await Promise.all(
+        chapters.filter((chapter) => chapter.UserData && chapter.UserData.Played).map((chapter) => setPlayed(chapter.Id, false).catch(() => null)),
+      );
+    }
+    load();
+  }
+
+  function readOptions(item, entry) {
+    if (kind === 'audiobook') return [];
+    const options = [];
+    const progress = (loadedItems && loadedItems.progress) || {};
+    const allRead = entry && entry.seriesGroup ? entry.chapters > 0 && entry.readCount >= entry.chapters : isFinished(item, progress);
+    const someRead = entry && entry.seriesGroup ? entry.readCount > 0 : allRead;
+    function option(read) {
+      return {
+        label: read ? 'Mark as read' : 'Mark as unread',
+        icon: read ? 'done_all' : 'remove_done',
+        onClick: function () {
+          markRead(entry, item, read).catch(function (err) {
+            console.warn('Jellio: could not update read state', err);
+            showToast('Could not update read state. Try again.');
+          });
+        },
+      };
+    }
+    if (!allRead) options.push(option(true));
+    if (someRead) options.push(option(false));
+    return options;
+  }
+
   const shelfCardOptions = {
-    extraOptions: function (item, entry) {
-      const key = entry ? entry.key : keyForItem(item);
+    reading: true,
+    onlyExtra: true,
+    extraOptions: function (item, givenEntry) {
+      const key = givenEntry ? givenEntry.key : keyForItem(item);
+      // A Continue reading card is one chapter; its series is the entry.
+      const entry = givenEntry || entries.find((candidate) => candidate.key === key) || null;
       const options = [
         {
           label: 'Categories…',
@@ -458,11 +524,12 @@ export function renderBookshelf(root, params, parentId) {
             invalidateStreamLibrary();
             setInLibrary(key, false).catch(function (err) {
               console.warn('Jellio: could not update the library', err);
+              showToast('Could not remove it from your library. Try again.');
             });
           },
         });
       }
-      return options;
+      return readOptions(item, entry && (entry.seriesGroup || entry.item.Id === item.Id) ? entry : null).concat(options);
     },
   };
 
@@ -826,6 +893,7 @@ export function renderBookshelf(root, params, parentId) {
     renderGrid();
   });
 
+  function load() {
   Promise.all([
     getBookshelfItems(parentId, kind, params.get('mangaLibrary') === '1'),
     kind === 'manga' ? Promise.resolve({}) : getBookShelfInfo(parentId),
@@ -884,6 +952,8 @@ export function renderBookshelf(root, params, parentId) {
       gridSection.hidden = true;
       rows.appendChild(el('p', 'jellio-service-empty', 'Could not load this shelf. Try again in a moment.'));
     });
+  }
+  load();
 
   // Categories changed (here or in a dialog): repaint with the new ones.
   const stopShelf = onShelfChange(function () {

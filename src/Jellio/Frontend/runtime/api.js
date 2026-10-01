@@ -558,6 +558,12 @@ export function saveReadingProgress(itemId, locator, progress, totalPages) {
   return sendOrQueue('POST', '/Jellio/reading/progress/' + itemId, body);
 }
 
+// Marks books or chapters (saved or streamed ids) read or unread.
+export function markReadingItems(itemIds, read) {
+  invalidateStreamLibrary();
+  return postJson('/Jellio/reading/progress/mark', { ItemIds: itemIds, Read: !!read });
+}
+
 // Sends now, or queues the request for when the server is back (the
 // queued case resolves to null).
 function sendOrQueue(method, path, body) {

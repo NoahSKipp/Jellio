@@ -110,6 +110,27 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
+    // Clears progress (marking chapters unread), saved once.
+    public int RemoveMany(Guid userId, IEnumerable<Guid> itemIds)
+    {
+        lock (_lock)
+        {
+            var all = LoadLocked();
+            if (!all.TryGetValue(Key(userId), out var items))
+            {
+                return 0;
+            }
+
+            var removed = itemIds.Count(itemId => items.Remove(Key(itemId)));
+            if (removed > 0)
+            {
+                SaveLocked(all);
+            }
+
+            return removed;
+        }
+    }
+
     // Everything this reader has progress on, keyed by item id (no dashes).
     public Dictionary<string, ReadingProgressRecord> GetAll(Guid userId)
     {

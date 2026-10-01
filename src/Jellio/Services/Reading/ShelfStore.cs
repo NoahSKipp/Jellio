@@ -59,6 +59,10 @@ public class ShelfData
     // The manga series on this reader's shelf (series keys, "s:..."), like
     // Mihon's library. Null until first used.
     public List<string>? Library { get; set; }
+
+    // Series the reader removed from the library, kept off the shelf even
+    // if they have read chapters, until added again.
+    public List<string> LibraryRemoved { get; set; } = [];
 }
 
 /// <summary>
@@ -100,9 +104,14 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
         {
             SeedLibrary(data);
             data.Library!.Remove(key);
+            data.LibraryRemoved.Remove(key);
             if (inLibrary)
             {
                 data.Library.Add(key);
+            }
+            else
+            {
+                data.LibraryRemoved.Add(key);
             }
         });
 
