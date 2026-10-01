@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.40.0] - 2026-10-01\n\n### 🚀 Features\n\n- Show seek bar previews for titles without trickplay\n- Show macOS app updates in Settings About\n\n### 🐛 Bug Fixes\n\n- Remove the loading logo once playback is actually running\n- Mark manga and books read, and make Remove from library stick\n",
+        "checksum": "af52e05260d51ebe9c20b015d9c7f3b5",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.40.0/jellio_1.40.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-01T16:22:01Z",
+        "version": "1.40.0"
+      },
+      {
         "changelog": "## [1.39.0] - 2026-09-29\n\n### 🚀 Features\n\n- Read manga from Discover instead of requesting it\n- Open the show, manga series or item from a Feed entry\n- Show reading books and manga, and listening, in Now Playing\n- Track time spent in the reader\n- Link titles in profile activity and show reading time\n- Split manga reading time from books on profiles\n\n### 🐛 Bug Fixes\n\n- Keep profile activity times aligned on the right\n",
         "checksum": "855e3b3956a09c876050a81fcc4f570e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.39.0/jellio_1.39.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-25T23:01:41Z",
         "version": "1.19.0"
-      },
-      {
-        "changelog": "## [1.18.0] - 2026-09-25\n\n### 🚀 Features\n\n- Add a config-driven Books sidebar entry linking to Audiobookshelf\n- Embed Audiobookshelf in an iframe instead of a new tab\n\n### 🐛 Bug Fixes\n\n- Wait for the stopped-playback report before Home re-fetches Up Next/Continue Watching\n",
-        "checksum": "f1296e38ac5ad0994a7df7a774fe4b7c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.18.0/jellio_1.18.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-25T22:13:37Z",
-        "version": "1.18.0"
       }
     ]
   }
