@@ -711,27 +711,48 @@ export async function renderPlayer(root, params) {
   // just the first one.
   let loadingLogo = null;
   const logoUrl = seriesAwareLogoUrl(800);
+  let logoWatchdog = null;
+  let logoLastTime = 0;
+  let logoShownAt = 0;
+
+  // The logo goes as soon as the video is really running, whichever way
+  // that shows: 'playing', or the clock moving while unpaused. Checked
+  // on a short timer as well as on events, since a reload that resumes
+  // before the logo goes up, or a webview that fires few media events,
+  // leaves the events with nothing to react to.
+  function logoSeesPlayback() {
+    if (!loadingLogo || video.paused || video.ended || video.seeking) return false;
+    const moved = Math.abs(video.currentTime - logoLastTime) > 0.05;
+    logoLastTime = video.currentTime;
+    return moved || (video.readyState >= 3 && Date.now() - logoShownAt > 1500 && video.currentTime > 0);
+  }
+
   function showLoadingLogo() {
     if (!logoUrl) return;
     if (loadingLogo) loadingLogo.remove();
     loadingLogo = el('div', 'jellio-player-loading-logo');
     loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
     root.appendChild(loadingLogo);
-    logoShownAtTime = video.currentTime;
+    logoLastTime = video.currentTime;
+    logoShownAt = Date.now();
+    window.clearInterval(logoWatchdog);
+    logoWatchdog = window.setInterval(function () {
+      if (!loadingLogo) {
+        window.clearInterval(logoWatchdog);
+        return;
+      }
+      if (logoSeesPlayback()) hideLoadingLogo();
+    }, 400);
   }
 
-  // The logo goes once the video is really playing: 'playing', or the
-  // clock moving while unpaused. 'playing' alone could fire before the
-  // logo went up (a quick reload) and leave it over a playing title.
-  let logoShownAtTime = 0;
-  function hideLogoIfPlaying() {
-    if (!loadingLogo || video.paused) return;
-    if (video.readyState >= 3 && Math.abs(video.currentTime - logoShownAtTime) > 0.25) hideLoadingLogo();
-  }
   video.addEventListener('playing', function () {
     if (loadingLogo && video.readyState >= 3) hideLoadingLogo();
   });
-  video.addEventListener('timeupdate', hideLogoIfPlaying);
+  ['timeupdate', 'seeked', 'canplay'].forEach(function (type) {
+    video.addEventListener(type, function () {
+      if (logoSeesPlayback()) hideLoadingLogo();
+    });
+  });
 
   // Real bug, found live: showLoadingLogo()'s own overlay only ever had
   // a success path, video's own real 'playing' event. A source slow
@@ -743,6 +764,7 @@ export async function renderPlayer(root, params) {
   // covering the one real message telling a reader what happened.
   // attemptPlay's own final failure branch calls this directly now.
   function hideLoadingLogo() {
+    window.clearInterval(logoWatchdog);
     if (loadingLogo) {
       loadingLogo.remove();
       loadingLogo = null;
@@ -3812,6 +3834,7 @@ export async function renderPlayer(root, params) {
   async function cleanup() {
     if (screenTornDown) return;
     screenTornDown = true;
+    window.clearInterval(logoWatchdog);
     document.removeEventListener('keydown', onPlayerKeydown);
     exitFullscreenOnCleanup();
     // Real feedback: this reader closing out of a synced session used
