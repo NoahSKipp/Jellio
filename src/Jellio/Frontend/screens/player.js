@@ -713,6 +713,7 @@ export async function renderPlayer(root, params) {
   const logoUrl = seriesAwareLogoUrl(800);
   let logoWatchdog = null;
   let logoLastTime = 0;
+  let logoLastFrames = 0;
   let logoShownAt = 0;
 
   // The logo goes as soon as the video is really running, whichever way
@@ -722,6 +723,12 @@ export async function renderPlayer(root, params) {
   // leaves the events with nothing to react to.
   function logoSeesPlayback() {
     if (!loadingLogo || video.paused || video.ended || video.seeking) return false;
+    // Frames being drawn count too, whatever the clock and events say.
+    const quality = typeof video.getVideoPlaybackQuality === 'function' ? video.getVideoPlaybackQuality() : null;
+    if (quality) {
+      if (quality.totalVideoFrames < logoLastFrames) logoLastFrames = quality.totalVideoFrames;
+      else if (quality.totalVideoFrames - logoLastFrames >= 3) return true;
+    }
     const moved = Math.abs(video.currentTime - logoLastTime) > 0.05;
     logoLastTime = video.currentTime;
     return moved || (video.readyState >= 3 && Date.now() - logoShownAt > 1500 && video.currentTime > 0);
@@ -734,7 +741,21 @@ export async function renderPlayer(root, params) {
     loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
     root.appendChild(loadingLogo);
     logoLastTime = video.currentTime;
+    logoLastFrames = typeof video.getVideoPlaybackQuality === 'function' ? video.getVideoPlaybackQuality().totalVideoFrames : 0;
     logoShownAt = Date.now();
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      const shown = loadingLogo;
+      let frames = 0;
+      const onFrame = function () {
+        if (loadingLogo !== shown) return;
+        if (!video.paused && ++frames >= 3) {
+          hideLoadingLogo();
+          return;
+        }
+        video.requestVideoFrameCallback(onFrame);
+      };
+      video.requestVideoFrameCallback(onFrame);
+    }
     window.clearInterval(logoWatchdog);
     logoWatchdog = window.setInterval(function () {
       if (!loadingLogo) {
