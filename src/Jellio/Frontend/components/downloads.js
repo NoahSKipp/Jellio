@@ -30,6 +30,7 @@ import {
   onDownloadsChange,
   setLocalProgress,
   isOffline,
+  timeLeftSeconds,
 } from '../runtime/offline.js';
 import { mangaSeriesTitle, mangaSeriesKey } from './mangaSeries.js';
 import { showToast } from './toast.js';
@@ -52,15 +53,34 @@ function idKey(id) {
   return String(id || '').replace(/-/g, '').toLowerCase();
 }
 
+// Like the streaming apps: Low is small and quick to fetch, Higher keeps
+// 1080p. Anything above these caps is re-encoded on the server; a file
+// already under one is kept as it is. Low is the default.
+const DOWNLOAD_AUDIO_BITRATE = 128000;
 export const VIDEO_QUALITIES = [
-  // A generous cap: an H.264 file up to 1080p is then only repackaged,
-  // at network speed, instead of re-encoded to shrink it. Only files that
-  // need it (HEVC, 4K) are converted.
-  { value: '1080', label: '1080p · fastest', height: 1080, bitrate: 40000000 },
-  { value: '720', label: '720p', height: 720, bitrate: 4000000 },
-  { value: '480', label: '480p · smallest', height: 480, bitrate: 1500000 },
-  { value: 'original', label: 'Original file', height: 0, bitrate: 0 },
+  { value: 'low', name: 'Low', detail: '480p', height: 480, bitrate: 1000000 },
+  { value: 'high', name: 'High', detail: '720p', height: 720, bitrate: 2500000 },
+  { value: 'higher', name: 'Higher', detail: '1080p', height: 1080, bitrate: 5000000 },
+  { value: 'original', name: 'Original file', detail: 'largest', height: 0, bitrate: 0 },
 ];
+
+// "High · 720p · ~1.1 GB" for a title of known length, else per hour.
+export function qualityLabel(option, runtimeTicks) {
+  if (!option.bitrate) return option.name + ' · ' + option.detail;
+  const perSecond = (option.bitrate + DOWNLOAD_AUDIO_BITRATE) / 8;
+  const size = runtimeTicks ? formatBytes(perSecond * (runtimeTicks / 1e7)) : '~' + formatBytes(perSecond * 3600) + ' per hour';
+  return option.name + ' · ' + option.detail + ' · ' + (runtimeTicks ? '~' : '') + size;
+}
+
+// "about 5 min left" from runtime/offline.js's seconds estimate.
+export function formatTimeLeft(seconds) {
+  if (seconds == null) return '';
+  if (seconds < 45) return 'less than a minute left';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return 'about ' + minutes + ' min left';
+  const hours = Math.floor(minutes / 60);
+  return 'about ' + hours + ' h ' + (minutes % 60) + ' min left';
+}
 
 export function formatBytes(bytes) {
   if (!bytes) return '0 MB';
@@ -167,7 +187,7 @@ function sourceInLanguage(sources, language) {
 // chosen quality (or the original file), with its text subtitles as
 // WebVTT.
 export async function downloadVideo(item, quality) {
-  const option = VIDEO_QUALITIES.find((entry) => entry.value === quality) || VIDEO_QUALITIES[1];
+  const option = VIDEO_QUALITIES.find((entry) => entry.value === quality) || VIDEO_QUALITIES[0];
   const [details, sources, language] = await Promise.all([
     getItemDetails(item.Id),
     getMediaSources(item.Id).catch(() => []),
@@ -210,7 +230,7 @@ export async function downloadVideo(item, quality) {
       AudioChannels: '2',
       MaxHeight: String(option.height),
       VideoBitrate: String(option.bitrate),
-      AudioBitrate: '192000',
+      AudioBitrate: String(DOWNLOAD_AUDIO_BITRATE),
       DeviceId: getDeviceId(),
       PlaySessionId: info.PlaySessionId || 'jellio-download-' + Date.now(),
     });
@@ -257,7 +277,7 @@ export async function downloadVideo(item, quality) {
     // At most the cap, and no more than the source itself when known.
     EstimatedBytes:
       option.bitrate && details.RunTimeTicks
-        ? Math.round(((Math.min(option.bitrate, source.Bitrate || option.bitrate) + 192000) / 8) * (details.RunTimeTicks / 1e7))
+        ? Math.round(((Math.min(option.bitrate, source.Bitrate || option.bitrate) + DOWNLOAD_AUDIO_BITRATE) / 8) * (details.RunTimeTicks / 1e7))
         : 0,
     Subtitles: subtitles.map(function (stream) {
       return {
@@ -291,7 +311,8 @@ function statusText(record) {
   if (record.Status === 'error') return 'Download failed';
   if (record.Status === 'queued') return 'Waiting to download';
   const total = record.TotalBytes || record.EstimatedBytes;
-  if (total) return 'Downloading ' + Math.min(99, Math.floor((record.DoneBytes / total) * 100)) + '%';
+  const left = formatTimeLeft(timeLeftSeconds(record));
+  if (total) return 'Downloading ' + Math.min(99, Math.floor((record.DoneBytes / total) * 100)) + '%' + (left ? ' · ' + left : '');
   return 'Downloading · ' + formatBytes(record.DoneBytes);
 }
 
@@ -403,7 +424,7 @@ export function buildDownloadButton(item, options) {
     if (kind === 'video') {
       openMenu(
         button,
-        VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + option.label, onSelect: () => start(option.value) })),
+        VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + qualityLabel(option, item.RunTimeTicks), onSelect: () => start(option.value) })),
       );
     } else {
       start();
@@ -491,7 +512,7 @@ function openEpisodesMenu(item, anchor, busyButton) {
       onSelect: () =>
         openMenu(
           anchor,
-          VIDEO_QUALITIES.map((option) => ({ label: option.label, onSelect: () => queue(choice.pick, option.value) })),
+          VIDEO_QUALITIES.map((option) => ({ label: qualityLabel(option), onSelect: () => queue(choice.pick, option.value) })),
         ),
     })),
   );
@@ -536,7 +557,7 @@ export function promptDownload(item, anchorRect) {
     if (kind === 'video') {
       openMenu(
         anchorRect,
-        VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + option.label, onSelect: () => start(option.value) })),
+        VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + qualityLabel(option, item.RunTimeTicks), onSelect: () => start(option.value) })),
       );
     } else {
       start();

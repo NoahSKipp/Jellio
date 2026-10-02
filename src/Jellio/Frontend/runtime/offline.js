@@ -152,7 +152,44 @@ export function onDownloadsChange(listener) {
   };
 }
 
+// How fast each running download is receiving, from its last 30 seconds,
+// for an estimate of the time left. Kept in memory only.
+const rateSamples = new Map();
+const RATE_WINDOW_MS = 30000;
+
+function sampleRate(record) {
+  if (record.Status !== 'downloading') {
+    rateSamples.delete(record.Id);
+    return;
+  }
+  const now = Date.now();
+  let samples = rateSamples.get(record.Id);
+  if (!samples || (samples.length && record.DoneBytes < samples[samples.length - 1].bytes)) {
+    samples = [];
+    rateSamples.set(record.Id, samples);
+  }
+  samples.push({ at: now, bytes: record.DoneBytes });
+  while (samples.length > 2 && now - samples[0].at > RATE_WINDOW_MS) samples.shift();
+}
+
+// Seconds left, or null until there is a steady rate and a size to
+// measure against (a converted video's size is an estimate, so this
+// stops at "finishing up" instead of going negative).
+export function timeLeftSeconds(record) {
+  if (!record || record.Status !== 'downloading') return null;
+  const samples = rateSamples.get(record.Id);
+  const total = record.TotalBytes || record.EstimatedBytes;
+  if (!samples || samples.length < 2 || !total) return null;
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  const seconds = (last.at - first.at) / 1000;
+  const rate = seconds >= 4 ? (last.bytes - first.bytes) / seconds : 0;
+  if (rate <= 0 || total <= record.DoneBytes) return null;
+  return (total - record.DoneBytes) / rate;
+}
+
 function notify(record) {
+  sampleRate(record);
   listeners.forEach(function (listener) {
     try {
       listener(record);
