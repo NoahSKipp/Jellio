@@ -50,6 +50,7 @@ import {
   creditGroupWatchTogether,
   creditRealWatch,
   reportRealDuration,
+  probeRealDuration,
   setPlayed,
   voteRankingSession,
   startJoinSync,
@@ -639,7 +640,24 @@ export async function renderPlayer(root, params) {
   // streamOffsetTicks the same way currentPositionTicks() already
   // does for position, so a forced transcode's own truncated-from-
   // startTicks duration still reads as the title's full real length.
-  let durationSeconds = (item.RunTimeTicks || 0) / TICKS_PER_SECOND;
+  // The negotiated source's own length (probed) before the catalog's.
+  let durationSeconds = (mediaSource.RunTimeTicks || item.RunTimeTicks || 0) / TICKS_PER_SECOND;
+  // The browser's own video.duration is the episode's length for a file
+  // or an HLS stream, but for a converted stream it is only what has
+  // been produced so far and grows as you watch, which made position
+  // and length climb together and counted as 100% watched. So it is
+  // only used where it is final, and the length comes from the source
+  // (or the server's probe of it) otherwise.
+  let fallbackDurationSeconds = durationSeconds;
+  let videoDurationGrowing = false;
+  let videoDurationStrikes = 0;
+  let lastVideoDuration = 0;
+  function videoDurationIsFinal() {
+    return !videoDurationGrowing && (!streamIsTranscoded || supportsNativeHls());
+  }
+  function paintDuration() {
+    durationLabel.textContent = durationSeconds ? formatTime(durationSeconds) : '--:--';
+  }
 
   // A real saved position asks first rather than always silently
   // seeking there: autoplay stays off until the reader actually picks
@@ -1155,7 +1173,7 @@ export async function renderPlayer(root, params) {
   seekBar.max = '100';
   seekBar.value = '0';
   seekBar.setAttribute('aria-label', 'Seek');
-  const durationLabel = el('span', 'jellio-player-time', '0:00');
+  const durationLabel = el('span', 'jellio-player-time', durationSeconds ? formatTime(durationSeconds) : '--:--');
   seekWrap.appendChild(seekBar);
   seekRow.appendChild(currentTimeLabel);
   seekRow.appendChild(seekWrap);
@@ -3289,11 +3307,11 @@ export async function renderPlayer(root, params) {
   // they do fire, always >= any lower bound reported before them, so
   // this same rule lets either of those through regardless of order.
   let lastReportedDurationSeconds = 0;
-  function reportRealDurationIfUseful(candidateSeconds) {
+  function reportRealDurationIfUseful(candidateSeconds, exact) {
     if (!candidateSeconds || !isFinite(candidateSeconds) || candidateSeconds <= 0) return;
     if (candidateSeconds < lastReportedDurationSeconds + 5) return;
     lastReportedDurationSeconds = candidateSeconds;
-    reportRealDuration(itemId, candidateSeconds * TICKS_PER_SECOND).catch(function () {
+    reportRealDuration(itemId, candidateSeconds * TICKS_PER_SECOND, exact).catch(function () {
       // Not fatal, Continue Watching just keeps showing the library's
       // own metadata runtime for this title until a later real sitting
       // reports a good value.
@@ -3345,13 +3363,47 @@ export async function renderPlayer(root, params) {
     return streamOffsetTicks + Math.round((video.currentTime || 0) * TICKS_PER_SECOND);
   }
 
+  // A converted stream can't report its length, so the server reads it
+  // from the source once (Jellio/real-duration/probe) and the player
+  // takes that instead.
+  let durationProbeRequested = false;
+  function requestProbedDuration() {
+    if (durationProbeRequested || videoDurationIsFinal()) return;
+    durationProbeRequested = true;
+    probeRealDuration(itemId)
+      .then(function (ticks) {
+        if (!ticks || screenTornDown) return;
+        fallbackDurationSeconds = ticks / TICKS_PER_SECOND;
+        if (!videoDurationIsFinal()) {
+          durationSeconds = fallbackDurationSeconds;
+          paintDuration();
+        }
+      })
+      .catch(function () {
+        // The library's own length (or none) stays in use.
+      });
+  }
+  requestProbedDuration();
+
   function reconcileDuration() {
     const real = video.duration;
-    if (real && isFinite(real) && real > 0) {
-      durationSeconds = streamOffsetTicks / TICKS_PER_SECOND + real;
-      durationLabel.textContent = formatTime(durationSeconds);
-      reportRealDurationIfUseful(durationSeconds);
+    if (!(real && isFinite(real) && real > 0)) return;
+    // A length that keeps growing while it plays is not a length, even
+    // on a stream that looked final.
+    if (lastVideoDuration && real > lastVideoDuration + 1 && (video.currentTime || 0) > 5) {
+      videoDurationStrikes += 1;
+      if (videoDurationStrikes >= 3 && !videoDurationGrowing) {
+        videoDurationGrowing = true;
+        durationSeconds = fallbackDurationSeconds;
+        paintDuration();
+        requestProbedDuration();
+      }
     }
+    lastVideoDuration = real;
+    if (!videoDurationIsFinal()) return;
+    durationSeconds = streamOffsetTicks / TICKS_PER_SECOND + real;
+    paintDuration();
+    reportRealDurationIfUseful(durationSeconds, true);
   }
 
   // A <video> element that fails to actually decode its own real src,
@@ -3416,7 +3468,7 @@ export async function renderPlayer(root, params) {
       pendingNativeSeekSeconds = null;
     }
     reconcileDuration();
-    durationLabel.textContent = formatTime(durationSeconds);
+    paintDuration();
   });
 
   // Native HLS in particular: loadedmetadata above can fire before the
@@ -3458,7 +3510,7 @@ export async function renderPlayer(root, params) {
     // this real stream's own real length, the strongest of the three
     // signals reportRealDurationIfUseful() takes since it needs no
     // video.duration at all.
-    reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0));
+    reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0), true);
     markRealWatchComplete();
   });
 

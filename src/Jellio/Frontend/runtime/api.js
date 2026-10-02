@@ -3461,8 +3461,17 @@ export function creditRealWatch(itemId) {
 // watch) is the only place a title's own real duration is ever
 // actually known. Reported once per real sitting, not on every tick,
 // see player.js's own reportRealDurationIfUseful().
-export function reportRealDuration(itemId, durationTicks) {
-  return postJson('/Jellio/real-duration', { ItemId: itemId, DurationTicks: Math.round(durationTicks) });
+// The length of a title as read from its playback source on the server,
+// for a stream that can't report it (null when it couldn't be read).
+export function probeRealDuration(itemId) {
+  return postJson('/Jellio/real-duration/probe', { ItemId: itemId }, 40000).then(function (answer) {
+    return (answer && answer.DurationTicks) || null;
+  });
+}
+
+// exact: the length itself; otherwise only a lower bound on it.
+export function reportRealDuration(itemId, durationTicks, exact) {
+  return postJson('/Jellio/real-duration', { ItemId: itemId, DurationTicks: Math.round(durationTicks), Exact: !!exact });
 }
 
 // getResumeItems below calls this once per fetch, not once per card:
