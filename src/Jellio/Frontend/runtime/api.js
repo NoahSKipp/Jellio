@@ -1708,18 +1708,18 @@ export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStre
   return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
 }
 
-// PlaybackInfo for a download (components/downloads.js): opens the
-// source the way playback does (Gelato's streams need that), with a
-// device profile describing a file every browser plays: MP4, H.264 and
-// AAC, at most maxHeight tall and maxBitrate. The answer's
-// TranscodingUrl is then a single progressive MP4, or the source
-// already fits and downloads as is. maxHeight 0: the original file.
 // How many downloads the server is converting and whether it has room
 // for this user's, plus whether it encodes HEVC in hardware.
 export function getConversionStatus() {
   return getJson('/Jellio/downloads/conversions', 8000);
 }
 
+// PlaybackInfo for a download (components/downloads.js): opens the
+// source the way playback does (Gelato's streams need that), with a
+// device profile describing a file every browser plays: MP4, H.264 and
+// AAC, at most maxHeight tall and maxBitrate. The answer's
+// TranscodingUrl is then a single progressive MP4, or the source
+// already fits and downloads as is. maxHeight 0: the original file.
 export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex, maxHeight, maxBitrate, hevc) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -1845,11 +1845,7 @@ export const TICKS_PER_SECOND = 10000000;
 // own header below is the one real exception to "never HLS": a native
 // HLS engine is the one target here that already parses an HLS master
 // playlist with no shim of its own either.
-const DIRECT_PLAY_CONTAINERS = new Set(['mp4', 'webm', 'm4v']);
-const DIRECT_PLAY_VIDEO_CODECS = new Set(['h264', 'vp8', 'vp9', 'av1']);
-const DIRECT_PLAY_AUDIO_CODECS = new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac']);
-
-// mkv was left out of DIRECT_PLAY_CONTAINERS above entirely, even
+// mkv was left out of the fixed container list entirely, even
 // though virtually every real Gelato/debrid release this runtime ever
 // plays is one: real feedback, found live, was that this forecloses
 // genuine zero-cost Direct Play (Static=true, no ffmpeg process at
@@ -1863,7 +1859,7 @@ const DIRECT_PLAY_AUDIO_CODECS = new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac'
 //
 // Not added to the plain Set above though: unlike mp4/webm/m4v, a
 // browser's own real Matroska support is not a safe fixed assumption
-// the way DIRECT_PLAY_VIDEO_CODECS/AUDIO_CODECS already are. Safari/
+// the way the codec lists already were. Safari/
 // WebKit (the exact engine this same file's own Static-fallback header
 // above already documents a hard-won live lesson about, the macOS
 // Desktop app's WKWebView included) has no Matroska demuxer at all -
@@ -1900,6 +1896,7 @@ function supportsMatroskaContainer() {
 // or proxy sniffing this URL's own file extension) actually recognises.
 function normalizeStreamContainer(rawContainer) {
   const container = String(rawContainer || '').toLowerCase();
+  if (container === 'mov') return 'mp4';
   return MATROSKA_CONTAINERS.has(container) ? 'mkv' : container;
 }
 
@@ -1954,25 +1951,142 @@ export function supportsNativeHls() {
   return support === 'probably' || support === 'maybe';
 }
 
+// What this engine plays as stored, asked of the engine itself (a
+// codec string per file through canPlayType) rather than assumed, so a
+// Mac's HEVC and a build with AC-3 are used where they exist and left
+// alone where they don't. The older fixed lists below are only for a
+// context with no <video> to ask.
+const LEGACY_VIDEO_CODECS = new Set(['h264', 'vp8', 'vp9', 'av1']);
+const LEGACY_AUDIO_CODECS = new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac']);
+
+const CONTAINER_MIME = {
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  mov: 'video/mp4',
+  webm: 'video/webm',
+  mkv: 'video/x-matroska',
+  matroska: 'video/x-matroska',
+};
+
+const H264_PROFILES = {
+  baseline: '42',
+  'constrained baseline': '42',
+  extended: '58',
+  main: '4d',
+  high: '64',
+  'high 10': '6e',
+  'high 4:2:2': '7a',
+  'high 4:4:4 predictive': 'f4',
+};
+
+function hex2(value) {
+  return Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
+}
+
+// The codec string a canPlayType() query takes, or null for a codec no
+// engine here plays.
+function videoCodecString(stream) {
+  const codec = String(stream.Codec || '').toLowerCase();
+  const depth = Number(stream.BitDepth) || 8;
+  const level = Number(stream.Level) || 0;
+  const profile = String(stream.Profile || '').toLowerCase();
+  if (codec === 'h264') return 'avc1.' + (H264_PROFILES[profile] || '64') + '00' + hex2(level || 40);
+  if (codec === 'hevc') return 'hvc1.' + (depth > 8 || profile === 'main 10' ? '2.4' : '1.6') + '.L' + (level || 153) + '.B0';
+  if (codec === 'vp9') return depth > 8 ? 'vp09.02.10.10' : 'vp09.00.10.08';
+  if (codec === 'av1') return 'av01.0.13M.' + (depth > 8 ? '10' : '08');
+  if (codec === 'vp8') return 'vp8';
+  return null;
+}
+
+function audioCodecString(stream) {
+  const codec = String(stream.Codec || '').toLowerCase();
+  if (codec === 'aac') return /he-aac/i.test(String(stream.Profile || '')) ? 'mp4a.40.5' : 'mp4a.40.2';
+  return { mp3: 'mp3', opus: 'opus', vorbis: 'vorbis', flac: 'flac', ac3: 'ac-3', eac3: 'ec-3', alac: 'alac' }[codec] || null;
+}
+
+const playTypeAnswers = new Map();
+
+function enginePlays(mime, codecs) {
+  const type = mime + '; codecs="' + codecs.join(', ') + '"';
+  if (!playTypeAnswers.has(type)) {
+    const probe = document.createElement('video');
+    playTypeAnswers.set(type, probe.canPlayType(type) !== '');
+  }
+  return playTypeAnswers.get(type);
+}
+
 export function canBrowserDirectPlay(mediaSource) {
   if (!mediaSource) return false;
   if (mediaSource.SupportsDirectPlay === false && mediaSource.SupportsDirectStream === false) {
     return false;
   }
   const container = String(mediaSource.Container || '').toLowerCase();
-  const matroskaEligible = MATROSKA_CONTAINERS.has(container) && supportsMatroskaContainer();
-  if (!DIRECT_PLAY_CONTAINERS.has(container) && !matroskaEligible) return false;
-
   const streams = mediaSource.MediaStreams || [];
   const video = streams.filter(function (stream) {
     return stream.Type === 'Video';
   })[0];
-  const audio = streams.filter(function (stream) {
-    return stream.Type === 'Audio';
-  })[0];
-  if (video && !DIRECT_PLAY_VIDEO_CODECS.has(String(video.Codec || '').toLowerCase())) return false;
-  if (audio && !DIRECT_PLAY_AUDIO_CODECS.has(String(audio.Codec || '').toLowerCase())) return false;
-  return true;
+  // The track that plays by default, not just the first one listed.
+  const audio =
+    streams.filter(function (stream) {
+      return stream.Type === 'Audio' && stream.Index === mediaSource.DefaultAudioStreamIndex;
+    })[0] ||
+    streams.filter(function (stream) {
+      return stream.Type === 'Audio';
+    })[0];
+
+  const canProbe = typeof document !== 'undefined' && typeof document.createElement('video').canPlayType === 'function';
+  if (!canProbe) {
+    const legacyMatroska = MATROSKA_CONTAINERS.has(container) && supportsMatroskaContainer();
+    if (!['mp4', 'webm', 'm4v'].includes(container) && !legacyMatroska) return false;
+    if (video && !LEGACY_VIDEO_CODECS.has(String(video.Codec || '').toLowerCase())) return false;
+    if (audio && !LEGACY_AUDIO_CODECS.has(String(audio.Codec || '').toLowerCase())) return false;
+    return true;
+  }
+
+  const mime = CONTAINER_MIME[container];
+  if (!mime) return false;
+  // Dolby Vision profile 5 has no HDR10 layer to fall back to, so it
+  // shows with wrong colours anywhere but a player built for it.
+  if (video && video.VideoRangeType === 'DOVI') return false;
+  const codecs = [];
+  if (video) {
+    const codec = videoCodecString(video);
+    if (!codec) return false;
+    codecs.push(codec);
+  }
+  if (audio) {
+    const codec = audioCodecString(audio);
+    if (!codec) return false;
+    codecs.push(codec);
+  }
+  if (!codecs.length) return false;
+  // Each stream has to be playable on its own as well as together, so a
+  // video the engine plays isn't held back by an audio track it can't.
+  return enginePlays(mime, codecs) && codecs.every((codec) => enginePlays(mime, [codec]));
+}
+
+// What this engine reports it can play, for checking a machine: each
+// container with each codec. Run from the console as
+// (await import('/Jellio/frontend/runtime/api.js')).directPlayReport().
+export function directPlayReport() {
+  const video = {
+    h264: 'avc1.640028',
+    'h264 high10': 'avc1.6e0028',
+    hevc: 'hvc1.1.6.L153.B0',
+    'hevc main10': 'hvc1.2.4.L153.B0',
+    vp9: 'vp09.00.10.08',
+    av1: 'av01.0.13M.08',
+    vp8: 'vp8',
+  };
+  const audio = { aac: 'mp4a.40.2', mp3: 'mp3', opus: 'opus', vorbis: 'vorbis', flac: 'flac', ac3: 'ac-3', eac3: 'ec-3', alac: 'alac' };
+  const report = { video: {}, audio: {} };
+  Object.keys(video).forEach(function (name) {
+    report.video[name] = ['video/mp4', 'video/webm', 'video/x-matroska'].filter((mime) => enginePlays(mime, [video[name]]));
+  });
+  Object.keys(audio).forEach(function (name) {
+    report.audio[name] = ['video/mp4', 'video/webm', 'video/x-matroska'].filter((mime) => enginePlays(mime, [audio[name]]));
+  });
+  return report;
 }
 
 // Leaving VideoBitRate unset on the forced transcode fallback above
