@@ -22,6 +22,7 @@ import {
   clearNowReading,
   getStreamSeries,
   findStreamSeries,
+  syncTracker,
 } from '../runtime/api.js';
 import { getMangaShelfHash } from '../components/navShared.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
@@ -2106,6 +2107,10 @@ export async function renderReader(root, params) {
       setPlayed(itemId, true).catch(function (err) {
         console.warn('Jellio: could not mark book as read', err);
       });
+      // After the debounced save, so the server sees the chapter as read.
+      if (isComic && seriesKey && item.Stream && item.Stream.MangaId) {
+        window.setTimeout(() => syncTracker(seriesKey, item.Stream.MangaId), SAVE_DEBOUNCE_MS + 1500);
+      }
     }
     if (saveTimer) window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(flushSave, SAVE_DEBOUNCE_MS);
