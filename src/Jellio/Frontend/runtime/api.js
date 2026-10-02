@@ -1714,9 +1714,16 @@ export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStre
 // AAC, at most maxHeight tall and maxBitrate. The answer's
 // TranscodingUrl is then a single progressive MP4, or the source
 // already fits and downloads as is. maxHeight 0: the original file.
-export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex, maxHeight, maxBitrate) {
+// How many downloads the server is converting and whether it has room
+// for this user's, plus whether it encodes HEVC in hardware.
+export function getConversionStatus() {
+  return getJson('/Jellio/downloads/conversions', 8000);
+}
+
+export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex, maxHeight, maxBitrate, hevc) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
+  const codecs = hevc ? ['hevc', 'h264'] : ['h264'];
   const body = {
     UserId: userId,
     StartTimeTicks: 0,
@@ -1732,7 +1739,7 @@ export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex,
       MaxStreamingBitrate: maxBitrate || 120000000,
       MaxStaticBitrate: maxBitrate || 120000000,
       DirectPlayProfiles: maxHeight
-        ? [{ Container: 'mp4,m4v', Type: 'Video', VideoCodec: 'h264', AudioCodec: 'aac,mp3' }]
+        ? [{ Container: 'mp4,m4v', Type: 'Video', VideoCodec: codecs.join(','), AudioCodec: 'aac,mp3' }]
         : [{ Type: 'Video' }],
       TranscodingProfiles: [
         {
@@ -1744,13 +1751,13 @@ export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex,
           // StreamBuilder), so a Static one never produced a
           // TranscodingUrl.
           Context: 'Streaming',
-          VideoCodec: 'h264',
+          VideoCodec: codecs.join(','),
           AudioCodec: 'aac',
           MaxAudioChannels: '2',
         },
       ],
       CodecProfiles: maxHeight
-        ? [{ Type: 'Video', Codec: 'h264', Conditions: [{ Condition: 'LessThanEqual', Property: 'Height', Value: String(maxHeight) }] }]
+        ? codecs.map((codec) => ({ Type: 'Video', Codec: codec, Conditions: [{ Condition: 'LessThanEqual', Property: 'Height', Value: String(maxHeight) }] }))
         : [],
       SubtitleProfiles: [{ Format: 'vtt', Method: 'External' }],
     },

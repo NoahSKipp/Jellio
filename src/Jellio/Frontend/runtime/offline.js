@@ -551,13 +551,70 @@ async function streamFile(record, file, cache, attempt, watch) {
   await cache.put(fileUrl(record.Id, file.Name), new Response(response.body.pipeThrough(counter), { headers: headers }));
 }
 
+// --- conversion slots ------------------------------------------------------
+// A download that needs the server to convert it (Controllers/
+// DownloadConversionsController.cs) holds a slot while it runs, so only a
+// couple encode at once. Anything unexpected about the slot (an older
+// plugin, a network hiccup) never blocks a download; only a plain "all
+// taken" does.
+
+const SLOT_PATH = '/Jellio/downloads/conversions';
+const SLOT_HEARTBEAT_MS = 20000;
+const SLOT_RETRY_MS = 30000;
+
+async function claimConversionSlot(itemId) {
+  try {
+    const response = await fetch(getServerAddress() + SLOT_PATH, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+      body: JSON.stringify({ ItemId: itemId }),
+    });
+    if (response.status === 429) {
+      const body = await response.json().catch(() => ({}));
+      return { full: true, message: body.Message || 'The server is converting other downloads right now. Waiting for a free slot.' };
+    }
+    if (!response.ok) return {};
+    const body = await response.json();
+    return { slotId: body.SlotId };
+  } catch (err) {
+    return {};
+  }
+}
+
+function keepConversionSlot(slotId) {
+  const timer = window.setInterval(function () {
+    fetch(getServerAddress() + SLOT_PATH + '/' + slotId + '/heartbeat', { method: 'POST', headers: getAuthHeaders() }).catch(() => {});
+  }, SLOT_HEARTBEAT_MS);
+  return function release() {
+    window.clearInterval(timer);
+    fetch(getServerAddress() + SLOT_PATH + '/' + slotId, { method: 'DELETE', headers: getAuthHeaders() }).catch(() => {});
+  };
+}
+
 async function download(record) {
+  // A conversion waits for a free slot before it starts; until then it
+  // stays queued, with the reason shown, and tries again shortly.
+  let slotId = null;
+  if ((record.Files || []).some((file) => file.Convert)) {
+    const claim = await claimConversionSlot(record.Id);
+    if (claim.full) {
+      record.Status = 'queued';
+      record.Waiting = claim.message;
+      await putRecord(record);
+      await new Promise((resolve) => window.setTimeout(resolve, SLOT_RETRY_MS));
+      return;
+    }
+    slotId = claim.slotId || null;
+  }
+  record.Waiting = null;
+  let releaseSlot = null;
   const controller = new AbortController();
   activeDownload = { id: record.Id, controller: controller, record: record };
   record.Status = 'downloading';
   record.DoneBytes = 0;
   await putRecord(record);
   const cache = await caches.open(FILES_CACHE);
+  if (slotId) releaseSlot = keepConversionSlot(slotId);
   try {
     for (const file of record.Files) {
       // A stream cut off part way (a proxy timeout, the server ending a
@@ -612,6 +669,7 @@ async function download(record) {
     await putRecord(record);
     if (record.Status === 'queued') throw err;
   } finally {
+    if (releaseSlot) releaseSlot();
     activeDownload = null;
   }
 }
