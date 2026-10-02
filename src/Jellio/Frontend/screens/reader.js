@@ -20,7 +20,10 @@ import {
   getStreamPageUrl,
   reportNowReading,
   clearNowReading,
+  getStreamSeries,
+  findStreamSeries,
 } from '../runtime/api.js';
+import { getMangaShelfHash } from '../components/navShared.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -35,7 +38,7 @@ import {
 } from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
 import { loadShelf, saveSeriesPrefs, seriesShelfKey, ensureInLibrary } from '../runtime/shelf.js';
-import { mangaSeriesTitle, mangaSeriesKey } from '../components/mangaSeries.js';
+import { mangaSeriesTitle, mangaSeriesKey, chapterNeighbors } from '../components/mangaSeries.js';
 
 const SETTINGS_KEY = 'jellio-reader-settings';
 const SAVE_DEBOUNCE_MS = 2000;
@@ -893,22 +896,38 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     return renderPaged(step);
   }
 
+  // Past either end of the chapter, the reader decides what comes next.
   function next() {
     if (strip()) {
+      if (stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 4) {
+        if (handlers.onEdge) handlers.onEdge('next');
+        return;
+      }
       stage.scrollBy({ top: stage.clientHeight * 0.85, behavior: 'smooth' });
       return;
     }
     const pages = pagesAt(index);
+    if (pages[pages.length - 1] + 1 >= count) {
+      if (handlers.onEdge) handlers.onEdge('next');
+      return;
+    }
     show(pages[pages.length - 1] + 1);
   }
 
   function prev() {
     if (strip()) {
+      if (stage.scrollTop <= 4) {
+        if (handlers.onEdge) handlers.onEdge('prev');
+        return;
+      }
       stage.scrollBy({ top: -stage.clientHeight * 0.85, behavior: 'smooth' });
       return;
     }
     const target = pagesAt(index)[0] - 1;
-    if (target < 0) return;
+    if (target < 0) {
+      if (handlers.onEdge) handlers.onEdge('prev');
+      return;
+    }
     show(pagesAt(target)[0]);
   }
 
@@ -1688,6 +1707,119 @@ export async function renderReader(root, params) {
   // PDFs and comics are paged: their scrubber and labels count pages.
   const isPaged = isPdf || isComic;
 
+  // A manga chapter goes back to its series, like Mihon.
+  async function goToSeries() {
+    if (seriesKey) {
+      const shelfHash = await getMangaShelfHash().catch(() => null);
+      if (shelfHash) {
+        navigateTo(shelfHash + '&series=' + encodeURIComponent(mangaSeriesKey(seriesTitle)));
+        return;
+      }
+    }
+    navigateTo('#/item?id=' + itemId);
+  }
+
+  // The chapters either side of this one (Mihon's next and previous
+  // chapter), found once the reader is up.
+  let chapterNav = { prev: null, next: null, ready: false };
+  let paintChapterNav = function () {};
+  let chapterCard = null;
+  let chapterCardKey = null;
+
+  function closeChapterCard() {
+    if (chapterCardKey) document.removeEventListener('keydown', chapterCardKey);
+    chapterCardKey = null;
+    if (chapterCard) chapterCard.remove();
+    chapterCard = null;
+  }
+
+  function openChapter(target) {
+    closeChapterCard();
+    navigateTo('#/read?id=' + target.Id + '&manga=' + target.MangaId);
+  }
+
+  function chapterLabelOf(chapter) {
+    return chapter.Name + (chapter.Scanlator ? ' · ' + chapter.Scanlator : '');
+  }
+
+  // Shown when a page turn runs off the end (or the start) of the chapter.
+  function showChapterCard(direction) {
+    closeChapterCard();
+    const target = direction === 'next' ? chapterNav.next : chapterNav.prev;
+    const card = el('div', 'jellio-reader-chapter-card');
+    card.dataset.direction = direction;
+    card.setAttribute('role', 'dialog');
+    card.appendChild(el('div', 'jellio-reader-chapter-card-eyebrow', direction === 'next' ? 'Finished' : 'Previous chapter'));
+    card.appendChild(el('div', 'jellio-reader-chapter-card-title', direction === 'next' ? item.Name || '' : chapterLabelOf(target)));
+    if (direction === 'next') {
+      card.appendChild(
+        el('div', 'jellio-reader-chapter-card-sub', target ? 'Next: ' + chapterLabelOf(target) : 'You’re all caught up.'),
+      );
+    }
+    const actions = el('div', 'jellio-reader-chapter-card-actions');
+    const go = el('button', 'jellio-reader-chapter-card-go', target ? (direction === 'next' ? 'Next chapter' : 'Previous chapter') : 'Back to series');
+    go.type = 'button';
+    go.addEventListener('click', function () {
+      if (target) openChapter(target);
+      else goToSeries();
+    });
+    actions.appendChild(go);
+    if (target && direction === 'next') {
+      const series = el('button', 'jellio-reader-chapter-card-secondary', 'Back to series');
+      series.type = 'button';
+      series.addEventListener('click', goToSeries);
+      actions.appendChild(series);
+    }
+    const stay = el('button', 'jellio-reader-chapter-card-secondary', 'Stay');
+    stay.type = 'button';
+    stay.addEventListener('click', closeChapterCard);
+    actions.appendChild(stay);
+    card.appendChild(actions);
+    chapterCardKey = function (event) {
+      if (event.key === 'Escape') closeChapterCard();
+    };
+    document.addEventListener('keydown', chapterCardKey);
+    root.appendChild(card);
+    chapterCard = card;
+    go.focus();
+  }
+
+  // A page turn past the end of the chapter: the card, and a second
+  // turn the same way carries on (the way Mihon asks for a second swipe).
+  function onEdge(direction) {
+    if (!isComic || !chapterNav.ready) return;
+    if (chapterCard) {
+      if (chapterCard.dataset.direction !== direction) return;
+      const target = direction === 'next' ? chapterNav.next : chapterNav.prev;
+      if (target) openChapter(target);
+      else if (direction === 'next') goToSeries();
+      return;
+    }
+    if (direction === 'prev' && !chapterNav.prev) return;
+    showChapterCard(direction);
+  }
+
+  async function loadChapterNav() {
+    if (!isComic || !seriesKey) return;
+    try {
+      let mangaId = item.Stream ? item.Stream.MangaId : params.get('manga');
+      if (!mangaId) {
+        const found = await findStreamSeries(mangaSeriesKey(seriesTitle)).catch(() => null);
+        mangaId = found && found.MangaId;
+      }
+      if (!mangaId) return;
+      const series = await getStreamSeries(mangaId);
+      if (!series || !series.Chapters || !series.Chapters.length) return;
+      const shelf = await loadShelf('manga').catch(() => null);
+      const prefs = (shelf && shelf.Series && shelf.Series[seriesKey]) || {};
+      const near = chapterNeighbors(series.Chapters, { id: itemId, name: item.Name }, prefs.ExcludedScanlators);
+      chapterNav = { prev: near.prev, next: near.next, ready: true };
+      paintChapterNav();
+    } catch (err) {
+      console.warn('Jellio: could not find the neighbouring chapters', err);
+    }
+  }
+
   root.textContent = '';
   root.classList.add('jellio-reader-theme-' + settings.theme);
   root.dataset.width = settings.width;
@@ -1696,7 +1828,7 @@ export async function renderReader(root, params) {
   const topbar = el('div', 'jellio-reader-topbar');
   const backButton = iconButton('arrow_back', 'Back');
   backButton.addEventListener('click', function () {
-    navigateTo('#/item?id=' + itemId);
+    goToSeries();
   });
   topbar.appendChild(backButton);
   const titleBlock = el('div', 'jellio-reader-title');
@@ -1989,7 +2121,7 @@ export async function renderReader(root, params) {
     tapTimer = null;
   }
 
-  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey, cancelTap: cancelTap };
+  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey, cancelTap: cancelTap, onEdge: onEdge };
 
   try {
     reader = isComic
@@ -2030,6 +2162,7 @@ export async function renderReader(root, params) {
     searchButton.hidden = true;
     root.classList.add('jellio-reader-comic-mode');
     buildComicTools();
+    loadChapterNav();
     // Mihon style: just the page, menus over it on a tap in the middle.
     root.classList.add('jellio-reader-immersive');
   }
@@ -2319,9 +2452,33 @@ export async function renderReader(root, params) {
     moreButton.type = 'button';
     moreButton.appendChild(el('span', 'material-icons settings'));
     moreButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Settings'));
+    const prevChapterButton = el('button', 'jellio-reader-comic-tool');
+    prevChapterButton.type = 'button';
+    prevChapterButton.hidden = true;
+    prevChapterButton.appendChild(el('span', 'material-icons skip_previous'));
+    prevChapterButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Previous'));
+    prevChapterButton.addEventListener('click', function () {
+      if (chapterNav.prev) openChapter(chapterNav.prev);
+    });
+    const nextChapterButton = el('button', 'jellio-reader-comic-tool');
+    nextChapterButton.type = 'button';
+    nextChapterButton.hidden = true;
+    nextChapterButton.appendChild(el('span', 'material-icons skip_next'));
+    nextChapterButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Next'));
+    nextChapterButton.addEventListener('click', function () {
+      if (chapterNav.next) openChapter(chapterNav.next);
+    });
+    paintChapterNav = function () {
+      prevChapterButton.hidden = !chapterNav.prev;
+      nextChapterButton.hidden = !chapterNav.next;
+      if (chapterNav.prev) prevChapterButton.title = chapterLabelOf(chapterNav.prev);
+      if (chapterNav.next) nextChapterButton.title = chapterLabelOf(chapterNav.next);
+    };
+    tools.appendChild(prevChapterButton);
     tools.appendChild(modeButton);
     tools.appendChild(cropButton);
     tools.appendChild(moreButton);
+    tools.appendChild(nextChapterButton);
     footer.appendChild(tools);
 
     const menu = el('div', 'jellio-reader-comic-mode-menu');

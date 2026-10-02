@@ -159,6 +159,46 @@ export function applyScanlatorFilter(chapters, excluded) {
   return shown.length ? shown : chapters;
 }
 
+// The chapters either side of the one being read, Mihon's way: the
+// series' scanlator filter applies, and the same chapter number from
+// several groups counts once, taking the one being read, else the same
+// group's copy, else the first. current: { id, name } of the open
+// chapter; chapters are the streamed series' own, in reading order.
+export function chapterNeighbors(chapters, current, excluded) {
+  const nameKey = chapterNameKey(current.name);
+  const here =
+    chapters.find((chapter) => chapter.Id === current.id) ||
+    chapters.find((chapter) => chapterNameKey(chapter.Name) === nameKey);
+  if (!here) return { prev: null, next: null };
+  const shown = applyScanlatorFilter(chapters, excluded);
+  const pool = shown.indexOf(here) === -1 ? chapters.filter((chapter) => chapter === here || shown.indexOf(chapter) !== -1) : shown;
+  const groups = new Map();
+  const order = [];
+  pool.forEach(function (chapter) {
+    const number = typeof chapter.Number === 'number' ? chapter.Number : -1;
+    if (number < 0) {
+      order.push([chapter]);
+      return;
+    }
+    if (!groups.has(number)) {
+      groups.set(number, []);
+      order.push(groups.get(number));
+    }
+    groups.get(number).push(chapter);
+  });
+  const list = order.map(
+    (group) =>
+      group.find((chapter) => chapter === here) ||
+      (here.Scanlator ? group.find((chapter) => chapter.Scanlator === here.Scanlator) : null) ||
+      group[0],
+  );
+  const index = list.indexOf(here);
+  return {
+    prev: index > 0 ? list[index - 1] : null,
+    next: index !== -1 && index < list.length - 1 ? list[index + 1] : null,
+  };
+}
+
 // The same chapter number from several groups is one chapter: once any
 // copy is read, the others count as read (Mihon's mark duplicate chapters
 // read). Returns progress with those extra reads added, stored progress
