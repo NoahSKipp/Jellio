@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 using Jellio.Services;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,9 +25,34 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/real-duration")]
 [Authorize]
-public class RealDurationController(RealDurationStore store) : ControllerBase
+public class RealDurationController(RealDurationStore store, DurationProbeService probe, ILibraryManager libraryManager) : ControllerBase
 {
-    public record ReportRequest(Guid ItemId, long DurationTicks);
+    public record ReportRequest(Guid ItemId, long DurationTicks, bool Exact = false);
+
+    public record ProbeRequest(Guid ItemId);
+
+    // The length read from the playback source itself, for a title whose
+    // converted stream can't report it.
+    [HttpPost("probe")]
+    public async Task<IActionResult> Probe([FromBody] ProbeRequest request, CancellationToken cancellationToken)
+    {
+        if (
+            HttpContext.User.Identity is not ClaimsIdentity identity
+            || !Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+        )
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        var item = libraryManager.GetItemById(request.ItemId);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        var ticks = await probe.ProbeAsync(item, userId, cancellationToken).ConfigureAwait(false);
+        return ticks is null ? NoContent() : Ok(new { DurationTicks = ticks.Value });
+    }
 
     [HttpPost]
     public IActionResult Report([FromBody] ReportRequest request)
@@ -33,7 +62,7 @@ public class RealDurationController(RealDurationStore store) : ControllerBase
             return BadRequest();
         }
 
-        store.Set(request.ItemId, request.DurationTicks);
+        store.Set(request.ItemId, request.DurationTicks, request.Exact);
         return Ok();
     }
 

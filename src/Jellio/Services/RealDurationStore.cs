@@ -24,12 +24,22 @@ public class RealDurationStore(IApplicationPaths applicationPaths)
     private string StorePath =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "real-duration.json");
 
-    public void Set(Guid itemId, long durationTicks)
+    // exact: the length itself (a probe, a finished stream, a file's own
+    // header) replaces whatever was stored. Otherwise it's only a lower
+    // bound on the length (where Up Next appeared), which can raise a
+    // stored length but never lower one.
+    public void Set(Guid itemId, long durationTicks, bool exact = false)
     {
         lock (_lock)
         {
             var overrides = LoadLocked();
-            overrides[itemId.ToString("N")] = durationTicks;
+            var key = itemId.ToString("N");
+            if (!exact && overrides.TryGetValue(key, out var existing) && existing >= durationTicks)
+            {
+                return;
+            }
+
+            overrides[key] = durationTicks;
             SaveLocked(overrides);
         }
     }

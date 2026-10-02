@@ -82,6 +82,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<Jellio.Services.Reading.NowReadingService>();
         services.AddSingleton<NotificationStore>();
         services.AddSingleton<RealDurationStore>();
+        services.AddSingleton<DurationProbeService>();
 
         // In memory only, same real reason GroupWatchChatService above
         // is, and takes a direct dependency on that exact instance to
