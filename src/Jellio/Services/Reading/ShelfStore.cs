@@ -141,6 +141,45 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
             }
         });
 
+    // Whether anyone other than this reader has the series on their shelf.
+    public bool OthersHaveSeries(Guid userId, string key) =>
+        _store.UserIds().Where(id => id != userId).Any(id => _store.Load(id).Library?.Contains(key) == true);
+
+    // Moves a reader's shelf entry for a series to another key (the same
+    // series from a different source can carry a different title): its
+    // settings, its place in the library and in categories.
+    public void MoveSeries(Guid userId, string fromKey, string toKey)
+    {
+        if (fromKey == toKey)
+        {
+            SetInLibrary(userId, toKey, true);
+            return;
+        }
+
+        _store.Update(userId, data =>
+        {
+            SeedLibrary(data);
+            if (data.Series.TryGetValue(fromKey, out var prefs) && !data.Series.ContainsKey(toKey))
+            {
+                data.Series[toKey] = prefs;
+            }
+
+            data.Series.Remove(fromKey);
+            data.Library!.Remove(fromKey);
+            data.Library.Remove(toKey);
+            data.Library.Add(toKey);
+            data.LibraryRemoved.Remove(toKey);
+            foreach (var category in data.Categories.Where(category => category.Items.Contains(fromKey)))
+            {
+                category.Items.Remove(fromKey);
+                if (!category.Items.Contains(toKey))
+                {
+                    category.Items.Add(toKey);
+                }
+            }
+        });
+    }
+
     private static void SeedLibrary(ShelfData data)
     {
         data.Library ??= data.Series.Keys
