@@ -11578,3 +11578,15 @@
   font-weight: 600;
   color: inherit;
 }
+
+.jellio-book-request-duplicate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.jellio-book-request-duplicate > p {
+  flex-basis: 100%;
+  margin: 0;
+}

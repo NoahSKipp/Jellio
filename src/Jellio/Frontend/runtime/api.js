@@ -949,12 +949,19 @@ export function getMangaImportStatus() {
 
 // Adds a series to Suwayomi so it can be read (streamed from its source).
 // addToLibrary false leaves the reader's shelf alone until they read it.
-export function requestMangaSeries(mangaId, title, addToLibrary) {
+export function requestMangaSeries(mangaId, title, addToLibrary, force) {
   return postJson(
     '/Jellio/manga/request',
-    { MangaId: mangaId, Title: title || null, AddToLibrary: addToLibrary !== false },
+    { MangaId: mangaId, Title: title || null, AddToLibrary: addToLibrary !== false, Force: !!force },
     60000,
   );
+}
+
+// Moves the reader's copy of a series to another source, keeping their
+// progress (Mihon's migrate).
+export function migrateMangaSeries(fromMangaId, toMangaId) {
+  invalidateStreamLibrary();
+  return postJson('/Jellio/manga/migrate', { FromMangaId: fromMangaId, ToMangaId: toMangaId }, 120000);
 }
 
 // Controllers/BookRequestController.cs's discover-manga: manga, manhwa

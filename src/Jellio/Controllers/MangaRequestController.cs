@@ -28,6 +28,7 @@ public partial class MangaRequestController(
     MangaImportService importService,
     MangaStreamService streamService,
     Jellio.Services.Reading.ShelfStore shelfStore,
+    Jellio.Services.Reading.ReadingProgressStore progressStore,
     MangaCoverService coverService,
     ILibraryManager libraryManager,
     IUserManager userManager,
@@ -56,7 +57,12 @@ public partial class MangaRequestController(
 
     // AddToLibrary: false when the reader is only opening the series to
     // read (Discover's Read); reading it adds it to their shelf anyway.
-    public record RequestBody(int MangaId, string? Title, bool AddToLibrary = true);
+    // Force: add it even though the library has a series by that title.
+    public record RequestBody(int MangaId, string? Title, bool AddToLibrary = true, bool Force = false);
+
+    // The same series from another source: ToMangaId replaces FromMangaId
+    // on the reader's shelf, keeping their progress.
+    public record MigrateBody(int FromMangaId, int ToMangaId, string? ToTitle);
 
     [HttpGet("status")]
     public async Task<IActionResult> Status(CancellationToken cancellationToken)
@@ -169,12 +175,94 @@ public partial class MangaRequestController(
                 .ToList()));
     }
 
+    // Switch a series to another source (Mihon's migrate): the new one is
+    // added and its chapters loaded, the reader's progress is carried over
+    // by chapter number, their settings and place on the shelf move to the
+    // new series, and the old one leaves the server's library unless
+    // someone else is still reading it.
+    [HttpPost("migrate")]
+    public async Task<IActionResult> Migrate([FromBody] MigrateBody body, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (body is null || body.FromMangaId <= 0 || body.ToMangaId <= 0 || body.FromMangaId == body.ToMangaId || userId == Guid.Empty)
+        {
+            return BadRequest();
+        }
+
+        var from = await streamService.GetSeriesAsync(body.FromMangaId, cancellationToken).ConfigureAwait(false);
+        if (from is null)
+        {
+            return NotFound();
+        }
+
+        var added = await suwayomi.AddAndFetchAsync(body.ToMangaId, cancellationToken).ConfigureAwait(false);
+        streamService.Invalidate();
+        var to = added.Success ? await streamService.GetSeriesAsync(body.ToMangaId, cancellationToken).ConfigureAwait(false) : null;
+        if (to is null)
+        {
+            return StatusCode(502, added.Message ?? "Suwayomi couldn't load the new source's chapters");
+        }
+
+        var progress = progressStore.GetAll(userId);
+        var carried = new List<(Guid, string, double, int?, DateTimeOffset?)>();
+        foreach (var chapter in from.Chapters.Where(chapter => chapter.Number >= 0))
+        {
+            if (!progress.TryGetValue(chapter.Id, out var record) || record.Progress <= 0)
+            {
+                continue;
+            }
+
+            foreach (var match in to.Chapters.Where(candidate => candidate.Number == chapter.Number))
+            {
+                if (Guid.TryParseExact(match.Id, "N", out var matchId))
+                {
+                    carried.Add((matchId, record.Locator, record.Progress, record.TotalPages, record.UpdatedAt));
+                }
+            }
+        }
+
+        var written = progressStore.SetMany(userId, carried, true);
+
+        var fromKey = Jellio.Services.Reading.ShelfStore.SeriesShelfKey(from.Title);
+        var toKey = Jellio.Services.Reading.ShelfStore.SeriesShelfKey(to.Title);
+        shelfStore.MoveSeries(userId, fromKey, toKey);
+
+        var removed = false;
+        if (!shelfStore.OthersHaveSeries(userId, fromKey))
+        {
+            removed = await suwayomi.RemoveFromLibraryAsync(body.FromMangaId, cancellationToken).ConfigureAwait(false);
+            streamService.Invalidate();
+        }
+
+        logger.LogInformation(
+            "Jellio: migrated {Title} from Suwayomi manga {From} to {To}, {Count} chapters of progress carried, old source removed: {Removed}",
+            to.Title,
+            body.FromMangaId,
+            body.ToMangaId,
+            written,
+            removed);
+        return Ok(new { Migrated = written, Removed = removed, MangaId = to.MangaId, to.Title, to.Key });
+    }
+
     [HttpPost("request")]
     public async Task<IActionResult> RequestSeries([FromBody] RequestBody body, CancellationToken cancellationToken)
     {
         if (body is null || body.MangaId <= 0)
         {
             return BadRequest("MangaId is required");
+        }
+
+        // The same title already in the library from another source: say so
+        // rather than quietly adding a second copy.
+        if (!body.Force && !string.IsNullOrWhiteSpace(body.Title))
+        {
+            var wanted = Jellio.Services.Reading.ShelfStore.SeriesKey(body.Title);
+            var titles = await streamService.GetTitlesAsync(cancellationToken).ConfigureAwait(false);
+            var existing = titles?.FirstOrDefault(title => title.MangaId != body.MangaId && title.Key == wanted);
+            if (existing is not null)
+            {
+                return Ok(new { Status = "duplicate", Existing = new { existing.MangaId, existing.Title, existing.Key } });
+            }
         }
 
         // Streamed from the source unless the admin keeps requests on the

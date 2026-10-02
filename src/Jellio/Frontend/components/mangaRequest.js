@@ -12,6 +12,7 @@ import {
   getMangaRequestStatus,
   searchMangaSources,
   requestMangaSeries,
+  migrateMangaSeries,
 } from '../runtime/api.js';
 import { getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { buildBookRequestPanel } from './bookRequest.js';
@@ -236,12 +237,75 @@ export function openMangaRequestSheet(root, options) {
     // Like opening a series in Mihon's Browse: Suwayomi loads its chapters
     // and the series page opens. It joins the reader's shelf when they
     // read it (or tap the heart), not before.
+    // The library has this title from another source: open that one,
+    // switch to this source keeping progress, or add this one as well.
+    function askDuplicate(existing) {
+      button.hidden = true;
+      const choice = el('div', 'jellio-book-request-duplicate');
+      choice.appendChild(
+        el('p', 'jellio-book-request-byline', '“' + existing.Title + '” is already in your library from another source.'),
+      );
+      const open = el('button', 'jellio-book-request-action', 'Open it');
+      open.type = 'button';
+      open.addEventListener('click', function () {
+        if (opts.openSeries) {
+          close();
+          opts.openSeries(existing.Key);
+        }
+      });
+      const move = el('button', 'jellio-book-request-action', 'Switch to this source');
+      move.type = 'button';
+      move.addEventListener('click', function () {
+        move.disabled = true;
+        move.textContent = 'Switching…';
+        migrateMangaSeries(existing.MangaId, manga.MangaId)
+          .then(function (result) {
+            invalidateStreamLibrary();
+            if (opts.openSeries) {
+              close();
+              opts.openSeries(result.Key);
+            } else {
+              choice.textContent = 'Switched. Your progress came with it.';
+            }
+          })
+          .catch(function () {
+            move.disabled = false;
+            move.textContent = 'Couldn’t switch';
+          });
+      });
+      const both = el('button', 'jellio-book-request-action', 'Add anyway');
+      both.type = 'button';
+      both.addEventListener('click', function () {
+        choice.remove();
+        button.hidden = false;
+        button.disabled = true;
+        text.textContent = 'Opening…';
+        requestMangaSeries(manga.MangaId, manga.Title, false, true)
+          .then(function () {
+            invalidateStreamLibrary();
+            if (opts.openSeries) {
+              close();
+              opts.openSeries(mangaSeriesKey(manga.Title));
+            }
+          })
+          .catch(function () {
+            text.textContent = 'Couldn’t open it';
+            button.disabled = false;
+          });
+      });
+      [open, move, both].forEach((b) => choice.appendChild(b));
+      actions.appendChild(choice);
+    }
     button.addEventListener('click', function () {
       button.disabled = true;
       text.textContent = 'Opening…';
       requestMangaSeries(manga.MangaId, manga.Title, false)
         .then(function (response) {
           invalidateStreamLibrary();
+          if (response && response.Status === 'duplicate') {
+            askDuplicate(response.Existing);
+            return;
+          }
           if (!response || (response.Status !== 'added' && response.Status !== 'exists')) {
             text.textContent = (response && response.Message) || 'Couldn’t open it';
             button.disabled = false;

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using MediaBrowser.Common.Configuration;
 
@@ -31,6 +33,23 @@ public class JsonUserStore<T>(IApplicationPaths applicationPaths, string subdire
         lock (_lock)
         {
             return LoadLocked(userId);
+        }
+    }
+
+    // Every user with a saved record.
+    public IReadOnlyList<Guid> UserIds()
+    {
+        lock (_lock)
+        {
+            if (!Directory.Exists(StoreDirectory))
+            {
+                return [];
+            }
+
+            return Directory.EnumerateFiles(StoreDirectory, "*.json")
+                .Select(file => Guid.TryParse(Path.GetFileNameWithoutExtension(file), out var id) ? id : Guid.Empty)
+                .Where(id => id != Guid.Empty)
+                .ToList();
         }
     }
 

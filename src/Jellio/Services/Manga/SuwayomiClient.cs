@@ -320,6 +320,19 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         return added is not null;
     }
 
+    public async Task<bool> RemoveFromLibraryAsync(int mangaId, CancellationToken cancellationToken)
+    {
+        const string Mutation = @"mutation ($input: UpdateMangaInput!) {
+  updateManga(input: $input) { manga { id inLibrary } }
+}";
+        var removed = await QueryAsync(
+            Mutation,
+            new JsonObject { ["input"] = new JsonObject { ["id"] = mangaId, ["patch"] = new JsonObject { ["inLibrary"] = false } } },
+            cancellationToken).ConfigureAwait(false);
+        _library = null;
+        return removed is not null;
+    }
+
     // The chapters Suwayomi already has for a series (no source request).
     public async Task<IReadOnlyList<SuwayomiChapter>?> GetStoredChaptersAsync(int mangaId, CancellationToken cancellationToken)
     {
