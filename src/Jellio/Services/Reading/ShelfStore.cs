@@ -67,6 +67,14 @@ public class SeriesPrefs
 
     // "title" or "number"; null means title.
     public string? ChapterDisplay { get; set; }
+
+    // Mihon's "skip when updating": no new-chapter notifications and no
+    // Updates entries for this series.
+    public bool? SkipUpdates { get; set; }
+
+    // Mihon's "delete after reading": a chapter downloaded to a device is
+    // removed from it once it's finished.
+    public bool? DeleteAfterRead { get; set; }
 }
 
 public class ShelfData
@@ -140,6 +148,9 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
                 data.LibraryRemoved.Add(key);
             }
         });
+
+    // Every reader with a shelf.
+    public IReadOnlyList<Guid> UserIds() => _store.UserIds();
 
     // Whether anyone other than this reader has the series on their shelf.
     public bool OthersHaveSeries(Guid userId, string key) =>

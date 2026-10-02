@@ -45,7 +45,9 @@ public class ShelfController(ShelfStore store) : ControllerBase
         string? FilterBookmarked = null,
         string? ChapterSort = null,
         string? ChapterDisplay = null,
-        bool? Reset = null);
+        bool? Reset = null,
+        bool? SkipUpdates = null,
+        bool? DeleteAfterRead = null);
 
     public record DefaultsBody(
         bool? ChapterDescending,
@@ -275,6 +277,8 @@ public class ShelfController(ShelfStore store) : ControllerBase
             prefs.FilterBookmarked = Text(body.FilterBookmarked, prefs.FilterBookmarked);
             prefs.ChapterSort = Text(body.ChapterSort, prefs.ChapterSort);
             prefs.ChapterDisplay = Text(body.ChapterDisplay, prefs.ChapterDisplay);
+            prefs.SkipUpdates = body.SkipUpdates ?? prefs.SkipUpdates;
+            prefs.DeleteAfterRead = body.DeleteAfterRead ?? prefs.DeleteAfterRead;
             data.Series[body.Key!] = prefs;
         });
         return Ok(prefs);

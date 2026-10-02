@@ -11590,3 +11590,146 @@
   flex-basis: 100%;
   margin: 0;
 }
+
+.jellio-reader-hide-pill .jellio-reader-page-pill {
+  display: none;
+}
+
+.jellio-reader-stage-comic-strip {
+  padding-inline: var(--comic-pad, 0);
+}
+
+.jellio-bookshelf-grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(clamp(90px, 8vw, 120px), 1fr));
+}
+
+.jellio-bookshelf-grid-cover .jellio-card-subtitle,
+.jellio-bookshelf-grid-cover .jellio-card-title {
+  display: none;
+}
+
+.jellio-card-manga-series {
+  position: relative;
+}
+
+.jellio-card-unread-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  min-width: 1.6em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--jellio-accent, #3b82f6);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+.jellio-bookshelf-view-button {
+  position: relative;
+}
+
+.jellio-bookshelf-view-count {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.jellio-bookshelf-view-active {
+  color: var(--jellio-accent, #3b82f6);
+}
+
+.jellio-library-view-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jellio-library-view-heading {
+  margin: 14px 0 4px;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  font-weight: 600;
+}
+
+.jellio-library-view-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-library-view-row:hover,
+.jellio-library-view-row:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jellio-library-view-hint {
+  margin-left: auto;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.jellio-search-manga-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.jellio-search-manga {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-search-manga:hover,
+.jellio-search-manga:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.jellio-search-manga-cover {
+  flex: none;
+  width: 44px;
+  height: 62px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jellio-search-manga-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.jellio-search-manga-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-search-manga-meta {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}

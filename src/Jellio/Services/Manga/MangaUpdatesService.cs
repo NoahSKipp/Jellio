@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellio.Services.Reading;
 using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -39,6 +40,9 @@ public class UpdatesData
 public class MangaUpdatesService(
     SuwayomiClient suwayomi,
     MangaStreamService stream,
+    ShelfStore shelfStore,
+    ReadingProgressStore progressStore,
+    NotificationStore notificationStore,
     IApplicationPaths applicationPaths,
     ILogger<MangaUpdatesService> logger) : BackgroundService
 {
@@ -98,6 +102,15 @@ public class MangaUpdatesService(
                 return 0;
             }
 
+            // A series every reader of it has set to skip isn't checked.
+            var shelves = shelfStore.UserIds().Select(id => shelfStore.Load(id)).ToList();
+            titles = titles.Where(title =>
+            {
+                var key = ShelfStore.SeriesShelfKey(title.Title);
+                var readers = shelves.Where(shelf => shelf.Library?.Contains(key) == true).ToList();
+                return readers.Count == 0 || readers.Any(shelf => !(shelf.Series.GetValueOrDefault(key)?.SkipUpdates ?? false));
+            }).ToList();
+
             using var throttle = new SemaphoreSlim(ParallelFetches);
             var fetched = await Task.WhenAll(titles.Select(async title =>
             {
@@ -123,6 +136,7 @@ public class MangaUpdatesService(
             })).ConfigureAwait(false);
 
             var added = 0;
+            var newByManga = new Dictionary<int, List<int>>();
             _store.Update(Guid.Empty, data =>
             {
                 foreach (var (mangaId, ids) in fetched)
@@ -138,6 +152,13 @@ public class MangaUpdatesService(
                         foreach (var id in ids.Where(id => !seen.Contains(id)))
                         {
                             data.Recent.Add(new SeenChapter { ChapterId = id, MangaId = mangaId, SeenAt = now });
+                            if (!newByManga.TryGetValue(mangaId, out var list))
+                            {
+                                list = [];
+                                newByManga[mangaId] = list;
+                            }
+
+                            list.Add(id);
                             added++;
                         }
                     }
@@ -152,6 +173,7 @@ public class MangaUpdatesService(
             if (added > 0)
             {
                 stream.Invalidate();
+                await NotifyAsync(newByManga, cancellationToken).ConfigureAwait(false);
             }
 
             logger.LogInformation("Jellio: manga library refresh found {Count} new chapters", added);
@@ -160,6 +182,77 @@ public class MangaUpdatesService(
         finally
         {
             _running.Release();
+        }
+    }
+
+    // One notification per reader who is reading the series (has progress
+    // in it within the last three months) and hasn't set it to skip updates.
+    private async Task NotifyAsync(Dictionary<int, List<int>> newByManga, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var series = await stream.GetSeriesAsync(newByManga.Keys, cancellationToken).ConfigureAwait(false);
+            var recentCutoff = DateTimeOffset.UtcNow.AddDays(-90);
+            foreach (var userId in shelfStore.UserIds())
+            {
+                var shelf = shelfStore.Load(userId);
+                var progress = progressStore.GetAll(userId);
+                foreach (var one in series)
+                {
+                    var key = ShelfStore.SeriesShelfKey(one.Title);
+                    if (shelf.Library?.Contains(key) != true)
+                    {
+                        continue;
+                    }
+
+                    var prefs = shelf.Series.GetValueOrDefault(key);
+                    if (prefs?.SkipUpdates == true)
+                    {
+                        continue;
+                    }
+
+                    var reading = one.Chapters.Any(chapter => progress.TryGetValue(chapter.Id, out var record) && record.UpdatedAt >= recentCutoff);
+                    if (!reading)
+                    {
+                        continue;
+                    }
+
+                    var excluded = prefs?.ExcludedScanlators;
+                    var fresh = one.Chapters
+                        .Where(chapter => newByManga[one.MangaId].Contains(chapter.ChapterId))
+                        .Where(chapter => excluded is not { Count: > 0 } || chapter.Scanlator is null || !excluded.Contains(chapter.Scanlator, StringComparer.OrdinalIgnoreCase))
+                        .OrderBy(chapter => chapter.Number)
+                        .ToList();
+                    if (fresh.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var newest = fresh[^1];
+                    var detail = fresh.Count == 1 ? newest.Name : fresh.Count + " new chapters, up to " + newest.Name;
+                    var id = "manga:" + one.MangaId + ":" + newest.ChapterId;
+                    var now = DateTime.UtcNow;
+                    notificationStore.Update(userId, notifications =>
+                    {
+                        if (notifications.Any(existing => existing.Id == id))
+                        {
+                            return;
+                        }
+
+                        notifications.Insert(
+                            0,
+                            new WatchlistNotification(id, Guid.Empty, one.Title, "Manga", now, "manga", detail, now, false, key, one.MangaId));
+                    });
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Jellio: could not send new chapter notifications");
         }
     }
 }

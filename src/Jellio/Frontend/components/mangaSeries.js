@@ -216,7 +216,7 @@ export function applyScanlatorFilter(chapters, excluded) {
 // several groups counts once, taking the one being read, else the same
 // group's copy, else the first. current: { id, name } of the open
 // chapter; chapters are the streamed series' own, in reading order.
-export function chapterNeighbors(chapters, current, excluded) {
+export function chapterNeighbors(chapters, current, excluded, skipRead) {
   const nameKey = chapterNameKey(current.name);
   const here =
     chapters.find((chapter) => chapter.Id === current.id) ||
@@ -244,10 +244,12 @@ export function chapterNeighbors(chapters, current, excluded) {
       (here.Scanlator ? group.find((chapter) => chapter.Scanlator === here.Scanlator) : null) ||
       group[0],
   );
-  const index = list.indexOf(here);
+  // Optionally leave out chapters already read (the open one stays).
+  const walk = skipRead ? list.filter((chapter) => chapter === here || !skipRead(chapter)) : list;
+  const index = walk.indexOf(here);
   return {
-    prev: index > 0 ? list[index - 1] : null,
-    next: index !== -1 && index < list.length - 1 ? list[index + 1] : null,
+    prev: index > 0 ? walk[index - 1] : null,
+    next: index !== -1 && index < walk.length - 1 ? walk[index + 1] : null,
   };
 }
 

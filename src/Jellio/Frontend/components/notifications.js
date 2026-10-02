@@ -7,9 +7,10 @@
 // same real reason that file's own header already gives for its own poll
 // loop and panel existing for the life of the page rather than being
 // rebuilt on every sidebar render.
-import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl } from '../runtime/api.js';
+import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl, getStreamCoverUrl } from '../runtime/api.js';
 import { isAuthenticated } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
+import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 
@@ -45,6 +46,9 @@ function messageFor(n) {
   if (n.Kind === 'announcement') {
     return n.Name;
   }
+  if (n.Kind === 'manga') {
+    return n.Name + ': ' + (n.Detail || 'a new chapter');
+  }
   if (n.Kind === 'episode') {
     return n.Name + (n.Detail ? ' ' + n.Detail : '') + ' is out now';
   }
@@ -53,12 +57,19 @@ function messageFor(n) {
 
 function subtitleFor(n) {
   if (n.Kind === 'announcement') return 'From the server';
+  if (n.Kind === 'manga') return n.Detail || 'New chapter';
   return n.Kind === 'episode' ? 'New episode' : 'Now streaming';
 }
 
 function openItem(n) {
   if (n.Kind === 'announcement') return;
   hideNotificationsPanel();
+  if (n.Kind === 'manga') {
+    getMangaShelfHash().then(function (hash) {
+      if (hash) navigateTo(hash + '&series=' + encodeURIComponent(String(n.SeriesKey || '').replace(/^s:/, '')));
+    });
+    return;
+  }
   navigateTo('#/item?id=' + n.ItemId);
 }
 
@@ -77,7 +88,8 @@ function buildRow(n) {
     icon.setAttribute('aria-hidden', 'true');
     poster.appendChild(icon);
   } else {
-    poster.style.backgroundImage = 'url(' + getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 }) + ')';
+    poster.style.backgroundImage =
+      'url(' + (n.Kind === 'manga' && n.MangaId ? getStreamCoverUrl(n.MangaId) : getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 })) + ')';
   }
   row.appendChild(poster);
 
