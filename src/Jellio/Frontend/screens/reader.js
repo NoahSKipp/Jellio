@@ -22,10 +22,12 @@ import {
   clearNowReading,
   getStreamSeries,
   findStreamSeries,
+  getAllReadingProgress,
   syncTracker,
 } from '../runtime/api.js';
 import { getMangaShelfHash } from '../components/navShared.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
+import { findAnyDownload, removeDownload } from '../runtime/offline.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
@@ -112,6 +114,18 @@ const COMIC_DIRECTIONS = [
   { value: 'rtl', label: 'Right to left' },
   { value: 'ltr', label: 'Left to right' },
 ];
+const COMIC_BACKGROUNDS = [
+  { value: 'black', label: 'Black' },
+  { value: 'gray', label: 'Gray' },
+  { value: 'white', label: 'White' },
+];
+const COMIC_BACKGROUND_CSS = { black: '', gray: '#4a4a4a', white: '#ffffff' };
+const STRIP_PADDINGS = [
+  { value: 'none', label: 'None' },
+  { value: 'small', label: 'Small' },
+  { value: 'large', label: 'Large' },
+];
+const STRIP_PADDING_CSS = { none: '', small: '8%', large: '18%' };
 const COMIC_FILTERS = [
   { value: 'none', label: 'Off' },
   { value: 'warm', label: 'Warm' },
@@ -156,6 +170,11 @@ const DEFAULT_SETTINGS = {
   comicTapInvert: false,
   comicSplit: false,
   comicAnimate: true,
+  comicBackground: 'black',
+  comicPageNumber: true,
+  comicKeepAwake: false,
+  comicSkipRead: false,
+  comicStripPadding: 'none',
 };
 
 function pick(options, value, fallback) {
@@ -186,6 +205,11 @@ function loadSettings() {
       comicTapInvert: saved.comicTapInvert === true,
       comicSplit: saved.comicSplit === true,
       comicAnimate: saved.comicAnimate !== false,
+      comicBackground: pick(COMIC_BACKGROUNDS, saved.comicBackground, DEFAULT_SETTINGS.comicBackground),
+      comicPageNumber: saved.comicPageNumber !== false,
+      comicKeepAwake: saved.comicKeepAwake === true,
+      comicSkipRead: saved.comicSkipRead === true,
+      comicStripPadding: pick(STRIP_PADDINGS, saved.comicStripPadding, DEFAULT_SETTINGS.comicStripPadding),
     };
   } catch (err) {
     return Object.assign({}, DEFAULT_SETTINGS, { targetLang: defaultTargetLanguage() });
@@ -1919,7 +1943,15 @@ export async function renderReader(root, params) {
       if (!series || !series.Chapters || !series.Chapters.length) return;
       const shelf = await loadShelf('manga').catch(() => null);
       const prefs = (shelf && shelf.Series && shelf.Series[seriesKey]) || {};
-      const near = chapterNeighbors(series.Chapters, { id: itemId, name: item.Name }, prefs.ExcludedScanlators);
+      let skipRead = null;
+      if (settings.comicSkipRead) {
+        const done = await getAllReadingProgress().catch(() => ({}));
+        skipRead = (chapter) => {
+          const record = done[String(chapter.Id).replace(/-/g, '')];
+          return !!record && record.Progress >= FINISHED_THRESHOLD;
+        };
+      }
+      const near = chapterNeighbors(series.Chapters, { id: itemId, name: item.Name }, prefs.ExcludedScanlators, skipRead);
       chapterNav = { prev: near.prev, next: near.next, ready: true };
       paintChapterNav();
     } catch (err) {
@@ -2107,6 +2139,16 @@ export async function renderReader(root, params) {
       setPlayed(itemId, true).catch(function (err) {
         console.warn('Jellio: could not mark book as read', err);
       });
+      // Mihon's delete after reading, for chapters kept on this device.
+      if (isComic && seriesKey) {
+        loadShelf('manga')
+          .then(function (shelfData) {
+            const prefs = shelfData.Series && shelfData.Series[seriesKey];
+            if (!prefs || !prefs.DeleteAfterRead) return null;
+            return findAnyDownload(itemId).then((record) => (record ? removeDownload(record.Id) : null));
+          })
+          .catch(() => null);
+      }
       // After the debounced save, so the server sees the chapter as read.
       if (isComic && seriesKey && item.Stream && item.Stream.MangaId) {
         window.setTimeout(() => syncTracker(seriesKey, item.Stream.MangaId), SAVE_DEBOUNCE_MS + 1500);
@@ -2219,7 +2261,34 @@ export async function renderReader(root, params) {
     if (settings.comicBrightness < 100) parts.push('brightness(' + settings.comicBrightness / 100 + ')');
     if (COMIC_FILTER_CSS[settings.comicFilter]) parts.push(COMIC_FILTER_CSS[settings.comicFilter]);
     stage.style.filter = parts.join(' ');
+    stage.style.background = COMIC_BACKGROUND_CSS[settings.comicBackground] || '';
+    stage.style.setProperty('--comic-pad', STRIP_PADDING_CSS[settings.comicStripPadding] || '0px');
+    root.classList.toggle('jellio-reader-hide-pill', !settings.comicPageNumber);
+    holdAwake(settings.comicKeepAwake);
   }
+
+  // Keeps the screen on while reading (where the browser allows it).
+  let wakeLock = null;
+  function holdAwake(on) {
+    if (!on) {
+      if (wakeLock) wakeLock.release().catch(() => null);
+      wakeLock = null;
+      return;
+    }
+    if (wakeLock || !navigator.wakeLock) return;
+    navigator.wakeLock
+      .request('screen')
+      .then(function (lock) {
+        wakeLock = lock;
+        lock.addEventListener('release', () => {
+          if (wakeLock === lock) wakeLock = null;
+        });
+      })
+      .catch(() => null);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && settings.comicKeepAwake && isComic) holdAwake(true);
+  });
 
   let pageMenu = null;
   function closePageMenu() {
@@ -2819,6 +2888,35 @@ export async function renderReader(root, params) {
         settingGroup('Colour filter', optionChips(COMIC_FILTERS, settings.comicFilter, (value) => updateSettings({ comicFilter: value }))),
       );
       settingsPanel.appendChild(
+        settingGroup('Background', optionChips(COMIC_BACKGROUNDS, settings.comicBackground, (value) => updateSettings({ comicBackground: value }))),
+      );
+      if (layout === 'vertical' || layout === 'vertical-gaps') {
+        settingsPanel.appendChild(
+          settingGroup('Side padding', optionChips(STRIP_PADDINGS, settings.comicStripPadding, (value) => updateSettings({ comicStripPadding: value }))),
+        );
+      }
+      settingsPanel.appendChild(
+        settingGroup(
+          'Show page number',
+          optionChips(ON_OFF, settings.comicPageNumber ? 'on' : 'off', (value) => updateSettings({ comicPageNumber: value === 'on' })),
+        ),
+      );
+      settingsPanel.appendChild(
+        settingGroup(
+          'Keep screen on',
+          optionChips(ON_OFF, settings.comicKeepAwake ? 'on' : 'off', (value) => updateSettings({ comicKeepAwake: value === 'on' })),
+        ),
+      );
+      settingsPanel.appendChild(
+        settingGroup(
+          'Skip read chapters',
+          optionChips(ON_OFF, settings.comicSkipRead ? 'on' : 'off', (value) => {
+            updateSettings({ comicSkipRead: value === 'on' });
+            loadChapterNav();
+          }),
+        ),
+      );
+      settingsPanel.appendChild(
         settingGroup('Tap zones', optionChips(TAP_ZONES, settings.comicTapZones, (value) => updateSettings({ comicTapZones: value }))),
       );
       if (settings.comicTapZones !== 'off') {
@@ -3008,6 +3106,7 @@ export async function renderReader(root, params) {
     window.removeEventListener('resize', handleResize);
     if (resizeTimer) window.clearTimeout(resizeTimer);
     if (tapTimer) window.clearTimeout(tapTimer);
+    holdAwake(false);
     if (document.fullscreenElement === root) document.exitFullscreen().catch(function () {});
     try {
       reader.destroy();

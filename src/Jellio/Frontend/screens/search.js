@@ -20,14 +20,56 @@
 // same query fresh, same real "screens fetch their own state" shape
 // every other screen here already uses rather than caching the actual
 // result set.
-import { searchItems, searchMovies, searchSeries } from '../runtime/api.js';
+import { searchItems, searchMovies, searchSeries, getStreamLibrary, getStreamCoverUrl } from '../runtime/api.js';
+import { getMangaShelfHash } from '../components/navShared.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { describeNetworkFailure } from '../runtime/network.js';
-import { reflectStateInAddressBar } from '../runtime/router.js';
+import { reflectStateInAddressBar, navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
 const DEBOUNCE_MS = 300;
+
+// The reader's manga library (series streamed from their sources) by
+// title, found locally from the library list the shelf already loads.
+async function searchMangaLibrary(term) {
+  const library = await getStreamLibrary();
+  const wanted = term.toLowerCase();
+  return (library || []).filter((series) => series.Title.toLowerCase().indexOf(wanted) !== -1 || (series.Author || '').toLowerCase().indexOf(wanted) !== -1);
+}
+
+function buildMangaSection(matches) {
+  const section = el('section', 'jellio-search-type-section');
+  section.appendChild(el('h2', 'jellio-row-title', 'Manga'));
+  const list = el('div', 'jellio-search-manga-list');
+  matches.slice(0, 24).forEach(function (series) {
+    const row = el('button', 'jellio-search-manga');
+    row.type = 'button';
+    const cover = el('img', 'jellio-search-manga-cover');
+    cover.alt = '';
+    cover.loading = 'lazy';
+    cover.src = getStreamCoverUrl(series.MangaId);
+    row.appendChild(cover);
+    const text = el('span', 'jellio-search-manga-text');
+    text.appendChild(el('span', 'jellio-search-manga-title', series.Title));
+    text.appendChild(
+      el(
+        'span',
+        'jellio-search-manga-meta',
+        [series.Author, series.ChapterCount + (series.ChapterCount === 1 ? ' chapter' : ' chapters')].filter(Boolean).join(' · '),
+      ),
+    );
+    row.appendChild(text);
+    row.addEventListener('click', function () {
+      getMangaShelfHash().then(function (hash) {
+        if (hash) navigateTo(hash + '&series=' + encodeURIComponent(series.Key));
+      });
+    });
+    list.appendChild(row);
+  });
+  section.appendChild(list);
+  return section;
+}
 
 export async function renderSearch(root, params) {
   root.textContent = '';
@@ -39,8 +81,8 @@ export async function renderSearch(root, params) {
   const input = document.createElement('input');
   input.type = 'search';
   input.className = 'jellio-search-input';
-  input.placeholder = 'Search movies and shows';
-  input.setAttribute('aria-label', 'Search movies and shows');
+  input.placeholder = 'Search movies, shows and manga';
+  input.setAttribute('aria-label', 'Search movies, shows and manga');
   input.autofocus = true;
   header.appendChild(input);
   root.appendChild(header);
@@ -118,6 +160,8 @@ export async function renderSearch(root, params) {
     const seriesSlot = el('div', 'jellio-search-type-slot');
     results.appendChild(moviesSlot);
     results.appendChild(seriesSlot);
+    const mangaSlot = el('div', 'jellio-search-type-slot');
+    results.appendChild(mangaSlot);
 
     let settledCount = 0;
     let anyResults = false;
@@ -126,7 +170,7 @@ export async function renderSearch(root, params) {
     function maybeFinishStatus() {
       if (thisRequest !== requestId) return;
       settledCount += 1;
-      if (settledCount < 2 || fellBack) return;
+      if (settledCount < 3 || fellBack) return;
       status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
     }
 
@@ -151,7 +195,7 @@ export async function renderSearch(root, params) {
           if (movieSection) moviesSlot.appendChild(movieSection);
           const seriesSection = buildTypeSection('Series', series);
           if (seriesSection) seriesSlot.appendChild(seriesSection);
-          status.textContent = items.length ? '' : 'No results for “' + term + '”.';
+          status.textContent = items.length || anyResults ? '' : 'No results for “' + term + '”.';
         })
         .catch(function (fallbackErr) {
           if (thisRequest !== requestId) return;
@@ -188,6 +232,19 @@ export async function renderSearch(root, params) {
 
     runOne(searchMovies, moviesSlot, 'Movies');
     runOne(searchSeries, seriesSlot, 'Series');
+    searchMangaLibrary(term)
+      .then(function (matches) {
+        if (thisRequest !== requestId) return;
+        if (matches.length) {
+          anyResults = true;
+          mangaSlot.appendChild(buildMangaSection(matches));
+          status.textContent = '';
+        }
+        maybeFinishStatus();
+      })
+      .catch(function () {
+        if (thisRequest === requestId) maybeFinishStatus();
+      });
   }
 
   input.addEventListener('input', function () {

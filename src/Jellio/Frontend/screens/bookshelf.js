@@ -33,6 +33,7 @@ import { openCategoryPicker, openCategoryManager } from '../components/shelfCate
 import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { renderMangaUpdates } from './mangaUpdates.js';
+import { loadLibraryView, openLibraryView, passesLibraryFilters, activeFilterCount } from '../components/libraryView.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildBookRequestPanel } from '../components/bookRequest.js';
@@ -217,6 +218,9 @@ function compareBy(sort, desc) {
 
 // Cards carry the author under the title; books are told apart by who
 // wrote them far more often than by year.
+// The manga shelf's filter and display choices (components/libraryView.js).
+let libraryViewState = loadLibraryView();
+
 function bookCard(entry, cardOptions) {
   if (entry.seriesGroup) return seriesCard(entry, cardOptions);
   const card = buildCard(entry.item, cardOptions);
@@ -278,6 +282,11 @@ function seriesCard(entry, cardOptions) {
   const facts = [total + (total === 1 ? ' chapter' : ' chapters')];
   if (entry.readCount) facts.push(entry.readCount >= total ? 'all read' : entry.readCount + ' read');
   card.appendChild(el('div', 'jellio-card-subtitle', facts.join(' · ')));
+  if (libraryViewState.badges && entry.unread > 0) {
+    const badge = el('span', 'jellio-card-unread-badge', String(entry.unread));
+    badge.title = entry.unread + (entry.unread === 1 ? ' unread chapter' : ' unread chapters');
+    card.appendChild(badge);
+  }
   function open() {
     const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
     params.set('series', group.key);
@@ -566,6 +575,19 @@ export function renderBookshelf(root, params, parentId) {
   const sortDirectionIcon = el('span', 'material-icons');
   sortDirection.appendChild(sortDirectionIcon);
   toolbar.appendChild(sortDirection);
+  const viewButton = el('button', 'jellio-bookshelf-sort-direction jellio-bookshelf-view-button');
+  viewButton.type = 'button';
+  viewButton.setAttribute('aria-label', 'Filter and display');
+  viewButton.appendChild(el('span', 'material-icons tune'));
+  const viewCount = el('span', 'jellio-bookshelf-view-count');
+  viewButton.appendChild(viewCount);
+  viewButton.hidden = kind !== 'manga';
+  viewButton.addEventListener('click', function () {
+    openLibraryView(libraryViewState, function () {
+      renderGrid();
+    });
+  });
+  toolbar.appendChild(viewButton);
 
   // Words saved while reading, reviewed as flashcards (screens/vocab.js).
   const vocabButton = el('button', 'jellio-bookshelf-vocab');
@@ -762,8 +784,14 @@ export function renderBookshelf(root, params, parentId) {
       .filter((entry) => !inCategory || inCategory.has(entry.key))
       .filter((entry) => !selectedAuthor || entry.authorKey === selectedAuthor)
       .filter((entry) => !query || entry.search.indexOf(query) !== -1)
+      .filter((entry) => kind !== 'manga' || passesLibraryFilters(entry, libraryViewState))
       .sort(compareBy(current.sort, current.desc));
 
+    const filterCount = kind === 'manga' ? activeFilterCount(libraryViewState) : 0;
+    viewCount.textContent = filterCount ? String(filterCount) : '';
+    viewButton.classList.toggle('jellio-bookshelf-view-active', filterCount > 0);
+    grid.classList.toggle('jellio-bookshelf-grid-compact', kind === 'manga' && libraryViewState.display === 'compact');
+    grid.classList.toggle('jellio-bookshelf-grid-cover', kind === 'manga' && libraryViewState.display === 'cover');
     grid.textContent = '';
     matches.forEach(function (entry) {
       grid.appendChild(bookCard(entry, shelfCardOptions));

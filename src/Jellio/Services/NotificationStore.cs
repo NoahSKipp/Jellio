@@ -13,7 +13,9 @@ public record WatchlistNotification(
     string Kind,
     string? Detail,
     DateTime CreatedUtc,
-    bool Read
+    bool Read,
+    string? SeriesKey = null,
+    int? MangaId = null
 );
 
 // Real per user watchlist release notifications, one plain JSON array per

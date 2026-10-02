@@ -121,6 +121,11 @@ public class MangaStreamController(
             }
 
             prefs.TryGetValue(ShelfStore.SeriesShelfKey(series.Title), out var seriesPrefs);
+            if (seriesPrefs?.SkipUpdates == true)
+            {
+                continue;
+            }
+
             var excluded = seriesPrefs?.ExcludedScanlators;
             if (excluded is { Count: > 0 } && chapter.Scanlator is not null && excluded.Contains(chapter.Scanlator, StringComparer.OrdinalIgnoreCase))
             {

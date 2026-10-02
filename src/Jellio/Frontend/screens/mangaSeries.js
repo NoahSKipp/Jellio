@@ -327,14 +327,18 @@ export function renderMangaSeries(root, params, parentId) {
     });
     actions.appendChild(markAll);
     if (unread.length) {
+      // Mihon's download menu: the next few unread chapters, or all.
       const save = el('button', 'jellio-manga-series-order');
       save.type = 'button';
       save.appendChild(el('span', 'material-icons download'));
-      save.appendChild(el('span', null, 'Download unread (' + unread.length + ')'));
-      save.addEventListener('click', async function () {
+      save.appendChild(el('span', null, 'Download'));
+      const inOrder = unread
+        .slice()
+        .sort((a, b) => (chapterNumberOf(a) < 0 ? Infinity : chapterNumberOf(a)) - (chapterNumberOf(b) < 0 ? Infinity : chapterNumberOf(b)));
+      async function downloadList(list) {
         save.disabled = true;
         let queued = 0;
-        for (const chapter of unread) {
+        for (const chapter of list) {
           const existing = await findAnyDownload(chapter.Id);
           if (existing && existing.Status !== 'error') continue;
           try {
@@ -344,11 +348,46 @@ export function renderMangaSeries(root, params, parentId) {
             console.warn('Jellio: could not queue a chapter', err);
           }
         }
-        showToast(queued ? 'Downloading ' + queued + (queued === 1 ? ' chapter.' : ' chapters.') : 'Unread chapters are already downloaded.');
+        showToast(queued ? 'Downloading ' + queued + (queued === 1 ? ' chapter.' : ' chapters.') : 'Those chapters are already downloaded.');
         save.disabled = false;
+      }
+      save.addEventListener('click', function () {
+        const options = [1, 5, 10, 25]
+          .filter((count) => count < inOrder.length)
+          .map((count) => ({
+            label: count === 1 ? 'Next chapter' : 'Next ' + count + ' chapters',
+            icon: 'download',
+            onClick: () => downloadList(inOrder.slice(0, count)),
+          }));
+        options.push({ label: 'All unread (' + inOrder.length + ')', icon: 'download_for_offline', onClick: () => downloadList(inOrder) });
+        openCardOptionsMenu(inOrder[0], save.getBoundingClientRect(), null, { onlyExtra: true, extraOptions: options });
       });
       actions.appendChild(save);
     }
+
+    // Per-series switches: no new-chapter alerts, and downloads removed
+    // from the device once read.
+    function prefToggle(icon, label, field) {
+      const button = el('button', 'jellio-manga-series-order');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons ' + icon));
+      button.appendChild(el('span', null, label));
+      function paint() {
+        const on = !!(shelf.Series[shelfKey] && shelf.Series[shelfKey][field]);
+        button.classList.toggle('jellio-manga-series-chip-active', on);
+        button.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      paint();
+      button.addEventListener('click', function () {
+        const on = !(shelf.Series[shelfKey] && shelf.Series[shelfKey][field]);
+        shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], { [field]: on });
+        paint();
+        saveSeriesPrefs(shelfKey, { [field]: on }).catch(() => showToast('Could not save that. Try again.'));
+      });
+      actions.appendChild(button);
+    }
+    prefToggle('notifications_off', 'Skip updates', 'SkipUpdates');
+    prefToggle('auto_delete', 'Delete after reading', 'DeleteAfterRead');
 
     // Streamed chapters into the library, to keep on the server.
     const unsaved = chapters.filter((chapter) => chapter.Stream);
