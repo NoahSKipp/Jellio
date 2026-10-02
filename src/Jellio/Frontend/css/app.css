@@ -1740,6 +1740,16 @@
   padding: 0 var(--jellio-safe-gutter);
 }
 
+/* The header insets by the gutter, and the title adds its own, so the
+   title sat a gutter further in than every other heading. */
+.jellio-bookshelf-all-header > .jellio-row-title {
+  padding-left: 0;
+}
+
+.jellio-bookshelf-all-header > .jellio-row-title::after {
+  left: 0;
+}
+
 .jellio-bookshelf-clear {
   display: inline-flex;
   align-items: center;
