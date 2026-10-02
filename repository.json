@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.42.0] - 2026-10-02\n\n### 🚀 Features\n\n- Per-manga scanlator filter like Mihon's\n- Next and previous chapter in the manga reader\n- Mihon's chapter filters, sort and display for each series\n- Reader options like Mihon's for manga pages\n- Updates feed and automatic library refresh for manga\n- AniList tracking for manga series\n- Warn about duplicate series and switch a series to another source\n- New chapter notifications, library filters and display, download controls, more reader settings\n- Carry over download, filter, reader, and tracking controls across libraries\n",
+        "checksum": "2a139cd38de873c62c4b4ce7df58a264",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.42.0/jellio_1.42.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-02T23:18:36Z",
+        "version": "1.42.0"
+      },
+      {
         "changelog": "## [1.41.2] - 2026-10-02\n\n### 🐛 Bug Fixes\n\n- Line up the Library heading with the other shelf headings\n",
         "checksum": "76ccbba4290951f997ef39bd537ef128",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.41.2/jellio_1.41.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-26T13:20:02Z",
         "version": "1.24.0"
-      },
-      {
-        "changelog": "## [1.23.0] - 2026-09-26\n\n### 🚀 Features\n\n- Give books and audiobooks their own shelves with author and series rows\n- Upgrade the book reader with layouts, search and a PDF text layer\n- Add highlight, vocabulary, translation and dictionary endpoints for the reader\n- Highlight, annotate, look up and translate text in the reader\n- Add a vocabulary screen with flashcard review and Anki export\n\n### 🐛 Bug Fixes\n\n- Rename book search scope parameter clashing with a loop local\n",
-        "checksum": "10d585167c91b9ff8bbdbc7aec072f38",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.23.0/jellio_1.23.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-26T12:38:36Z",
-        "version": "1.23.0"
       }
     ]
   }
