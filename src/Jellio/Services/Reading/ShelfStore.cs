@@ -45,6 +45,15 @@ public class SeriesPrefs
     public string? ComicLayout { get; set; }
 
     public string? ComicDirection { get; set; }
+
+    // Scanlators whose chapters are hidden for this series (Mihon's
+    // excluded scanlators), kept so the same chapter from several
+    // groups doesn't show up more than once. Null or empty: all shown.
+    public List<string>? ExcludedScanlators { get; set; }
+
+    // Whether a chapter counts as read once the same chapter number is
+    // read from another scanlator. Null means yes.
+    public bool? DuplicatesAsOne { get; set; }
 }
 
 public class ShelfData
