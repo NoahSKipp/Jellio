@@ -762,6 +762,17 @@ export function getStreamLibrary() {
   });
 }
 
+// New chapters from the latest library refreshes (MangaStreamController
+// updates); refresh asks the sources now.
+export function getMangaUpdates() {
+  return getJson('/Jellio/manga/stream/updates', 60000);
+}
+
+export function refreshMangaUpdates() {
+  invalidateStreamLibrary();
+  return postJson('/Jellio/manga/stream/updates/refresh', {}, 300000);
+}
+
 export function invalidateStreamLibrary() {
   invalidateCache('manga-stream-library');
 }
