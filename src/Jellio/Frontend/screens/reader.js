@@ -111,6 +111,27 @@ const COMIC_DIRECTIONS = [
   { value: 'rtl', label: 'Right to left' },
   { value: 'ltr', label: 'Left to right' },
 ];
+const COMIC_FILTERS = [
+  { value: 'none', label: 'Off' },
+  { value: 'warm', label: 'Warm' },
+  { value: 'sepia', label: 'Sepia' },
+  { value: 'gray', label: 'Grayscale' },
+  { value: 'invert', label: 'Invert' },
+];
+const COMIC_FILTER_CSS = {
+  none: '',
+  warm: 'sepia(0.35) saturate(1.1) hue-rotate(-10deg)',
+  sepia: 'sepia(0.85)',
+  gray: 'grayscale(1)',
+  invert: 'invert(1) hue-rotate(180deg)',
+};
+const TAP_ZONES = [
+  { value: 'default', label: 'Default' },
+  { value: 'lshaped', label: 'L-shaped' },
+  { value: 'kindle', label: 'Kindle-like' },
+  { value: 'edge', label: 'Edges' },
+  { value: 'off', label: 'Off' },
+];
 const COMIC_IMAGE = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
 
 const DEFAULT_SETTINGS = {
@@ -128,6 +149,12 @@ const DEFAULT_SETTINGS = {
   comicFit: 'height',
   comicDirection: 'rtl',
   comicCrop: false,
+  comicBrightness: 100,
+  comicFilter: 'none',
+  comicTapZones: 'default',
+  comicTapInvert: false,
+  comicSplit: false,
+  comicAnimate: true,
 };
 
 function pick(options, value, fallback) {
@@ -152,6 +179,12 @@ function loadSettings() {
       comicFit: pick(COMIC_FITS, saved.comicFit, DEFAULT_SETTINGS.comicFit),
       comicDirection: pick(COMIC_DIRECTIONS, saved.comicDirection, DEFAULT_SETTINGS.comicDirection),
       comicCrop: saved.comicCrop === true,
+      comicBrightness: Math.min(100, Math.max(30, Number(saved.comicBrightness) || DEFAULT_SETTINGS.comicBrightness)),
+      comicFilter: pick(COMIC_FILTERS, saved.comicFilter, DEFAULT_SETTINGS.comicFilter),
+      comicTapZones: pick(TAP_ZONES, saved.comicTapZones, DEFAULT_SETTINGS.comicTapZones),
+      comicTapInvert: saved.comicTapInvert === true,
+      comicSplit: saved.comicSplit === true,
+      comicAnimate: saved.comicAnimate !== false,
     };
   } catch (err) {
     return Object.assign({}, DEFAULT_SETTINGS, { targetLang: defaultTargetLanguage() });
@@ -643,6 +676,10 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
   const saved = /^page:(\d+)$/.exec(savedLocator || '');
   let index = saved ? Math.min(count - 1, Math.max(0, Number(saved[1]) - 1)) : 0;
   let renderToken = 0;
+  // A wide page cut in two (single page layout): which half is showing,
+  // 'last' when arriving from the page after it.
+  let half = 0;
+  let splitWide = false;
   const urls = new Map();
   const cropped = new Map();
   const createdUrls = [];
@@ -789,6 +826,20 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     const pages = pagesAt(index);
     const sources = await Promise.all(pages.map(displayUrl));
     if (token !== renderToken) return;
+    const splitting = current.comicSplit && current.comicLayout === 'single';
+    let ratio = 0;
+    if (splitting) {
+      ratio = await new Promise(function (resolve) {
+        const probe = new Image();
+        probe.onload = () => resolve(probe.naturalWidth / (probe.naturalHeight || 1));
+        probe.onerror = () => resolve(0);
+        probe.src = sources[0];
+      });
+      if (token !== renderToken) return;
+    }
+    splitWide = splitting && ratio > 1.15;
+    if (!splitWide) half = 0;
+    else if (half === 'last') half = 1;
     resetZoom();
     view.textContent = '';
     const vertical = current.comicLayout === 'paged-vertical';
@@ -797,7 +848,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       (vertical ? 'height' : current.comicFit) +
       (pages.length > 1 ? ' jellio-reader-comic-two' : '');
     view.dir = vertical ? 'ltr' : direction;
-    if (step) {
+    if (step && current.comicAnimate !== false) {
       const forward = step > 0;
       const axis = vertical ? 'y' : direction === 'rtl' ? 'x-rtl' : 'x';
       view.classList.add('jellio-reader-comic-turn-' + axis + (forward ? '-next' : '-prev'));
@@ -807,6 +858,14 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       img.src = src;
       img.alt = '';
       img.draggable = false;
+      img.dataset.page = String(pages[sources.indexOf(src)] + 1);
+      if (splitWide) {
+        // Reading order: the right half of a right-to-left page first.
+        const showRight = (direction === 'rtl') === (half === 0);
+        img.classList.add('jellio-reader-comic-half');
+        img.style.aspectRatio = String(ratio / 2);
+        img.style.objectPosition = showRight ? '100% 50%' : '0% 50%';
+      }
       view.appendChild(img);
     });
     stage.scrollTop = 0;
@@ -845,6 +904,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
             img.src = src;
             img.alt = '';
             img.draggable = false;
+            img.dataset.page = String(Number(slot.dataset.page) + 1);
             slot.appendChild(img);
             slot.classList.add('jellio-reader-comic-slot-loaded');
           });
@@ -893,6 +953,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     if (clamped === index) return Promise.resolve();
     const step = clamped > index ? 1 : -1;
     index = clamped;
+    half = step < 0 ? 'last' : 0;
     return renderPaged(step);
   }
 
@@ -904,6 +965,11 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
         return;
       }
       stage.scrollBy({ top: stage.clientHeight * 0.85, behavior: 'smooth' });
+      return;
+    }
+    if (splitWide && half === 0) {
+      half = 1;
+      renderPaged(1);
       return;
     }
     const pages = pagesAt(index);
@@ -921,6 +987,11 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
         return;
       }
       stage.scrollBy({ top: -stage.clientHeight * 0.85, behavior: 'smooth' });
+      return;
+    }
+    if (splitWide && half === 1) {
+      half = 0;
+      renderPaged(-1);
       return;
     }
     const target = pagesAt(index)[0] - 1;
@@ -955,7 +1026,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     lastTap = { time: now, x: event.clientX, y: event.clientY };
     handlers.onTap(event.clientX, strip() || zoom > 1, 1, function () {
       return false;
-    });
+    }, event.clientY);
   });
 
   // Ctrl + wheel (and a trackpad pinch) zooms around the pointer.
@@ -968,6 +1039,40 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     },
     { passive: false },
   );
+
+  // Holding a page (or right-clicking it) offers to save or share it.
+  let hold = null;
+  function clearHold() {
+    if (hold) window.clearTimeout(hold.timer);
+    hold = null;
+  }
+  stage.addEventListener('pointerdown', function (event) {
+    const img = event.target && event.target.closest ? event.target.closest('.jellio-reader-comic-page') : null;
+    if (!img || event.button > 0 || !handlers.onPageMenu) return;
+    clearHold();
+    hold = {
+      x: event.clientX,
+      y: event.clientY,
+      timer: window.setTimeout(function () {
+        hold = null;
+        suppressClick = true;
+        if (handlers.cancelTap) handlers.cancelTap();
+        handlers.onPageMenu(img.currentSrc || img.src, img.dataset.page);
+      }, 550),
+    };
+  });
+  window.addEventListener('pointermove', function (event) {
+    if (hold && Math.abs(event.clientX - hold.x) + Math.abs(event.clientY - hold.y) > 10) clearHold();
+  });
+  window.addEventListener('pointerup', clearHold);
+  window.addEventListener('pointercancel', clearHold);
+  stage.addEventListener('contextmenu', function (event) {
+    const img = event.target && event.target.closest ? event.target.closest('.jellio-reader-comic-page') : null;
+    if (!img || !handlers.onPageMenu) return;
+    event.preventDefault();
+    clearHold();
+    handlers.onPageMenu(img.currentSrc || img.src, img.dataset.page);
+  });
 
   // A mouse drag pans a zoomed page.
   let drag = null;
@@ -1148,7 +1253,8 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       const rerender =
         nextSettings.comicLayout !== current.comicLayout ||
         nextSettings.comicFit !== current.comicFit ||
-        nextSettings.comicCrop !== current.comicCrop;
+        nextSettings.comicCrop !== current.comicCrop ||
+        nextSettings.comicSplit !== current.comicSplit;
       current = Object.assign({}, nextSettings);
       if (rerender) {
         zoom = 1;
@@ -2044,7 +2150,7 @@ export async function renderReader(root, params) {
   // A tap is held back briefly: a double-click (or a drag) selecting a
   // word must never also turn the page or hide the chrome.
   let tapTimer = null;
-  function onTap(clientX, scrollingOnly, clickCount, hasSelection) {
+  function onTap(clientX, scrollingOnly, clickCount, hasSelection, clientY) {
     if (!reader) return;
     if (tapTimer) {
       window.clearTimeout(tapTimer);
@@ -2062,6 +2168,14 @@ export async function renderReader(root, params) {
       const rect = stage.getBoundingClientRect();
       const x = (clientX - rect.left) / (rect.width || 1);
       const rtl = !!(reader.isRtl && reader.isRtl());
+      if (isComic && !scrollingOnly) {
+        const y = (clientY - rect.top) / (rect.height || 1);
+        const action = comicTapAction(x, Number.isFinite(y) ? y : 0.5, rtl);
+        if (action === 'next') reader.next();
+        else if (action === 'prev') reader.prev();
+        else toggleImmersive();
+        return;
+      }
       if (!scrollingOnly && x < 0.3) {
         if (rtl) reader.next();
         else reader.prev();
@@ -2073,8 +2187,104 @@ export async function renderReader(root, params) {
     }, 250);
   }
 
+  // What a tap at (x, y), as fractions of the page, does.
+  function comicTapAction(x, y, rtl) {
+    const zones = settings.comicTapZones;
+    let action = 'menu';
+    if (zones === 'default' || zones === 'edge') {
+      const edge = zones === 'edge' ? 0.15 : 0.3;
+      if (x < edge) action = rtl ? 'next' : 'prev';
+      else if (x > 1 - edge) action = rtl ? 'prev' : 'next';
+    } else if (zones === 'lshaped') {
+      if (y < 0.33 || x < 0.33) action = 'prev';
+      else if (y > 0.67 || x > 0.67) action = 'next';
+      if (y >= 0.33 && y <= 0.67 && x >= 0.33 && x <= 0.67) action = 'menu';
+    } else if (zones === 'kindle') {
+      if (y < 0.15) action = 'menu';
+      else action = x < 0.33 ? 'prev' : 'next';
+    }
+    if (settings.comicTapInvert) action = action === 'next' ? 'prev' : action === 'prev' ? 'next' : action;
+    return action;
+  }
+
+  // Brightness and the colour filter dress the page, not the chrome.
+  function applyComicLook() {
+    if (!isComic) return;
+    const parts = [];
+    if (settings.comicBrightness < 100) parts.push('brightness(' + settings.comicBrightness / 100 + ')');
+    if (COMIC_FILTER_CSS[settings.comicFilter]) parts.push(COMIC_FILTER_CSS[settings.comicFilter]);
+    stage.style.filter = parts.join(' ');
+  }
+
+  let pageMenu = null;
+  function closePageMenu() {
+    if (pageMenu) pageMenu.remove();
+    pageMenu = null;
+  }
+  async function pageFile(src, number) {
+    const blob = await (await fetch(src)).blob();
+    const type = blob.type || 'image/jpeg';
+    const ext = (/image\/(\w+)/.exec(type) || [])[1] || 'jpg';
+    const base = (seriesTitle || item.Name || 'page').replace(/[^\w .-]+/g, '').trim() || 'page';
+    return new File([blob], base + ' - page ' + number + '.' + ext.replace('jpeg', 'jpg'), { type: type });
+  }
+  function openPageMenu(src, number) {
+    closePageMenu();
+    cancelTap();
+    const sheet = el('div', 'jellio-reader-page-menu');
+    const card = el('div', 'jellio-reader-page-menu-card');
+    card.appendChild(el('div', 'jellio-reader-page-menu-title', 'Page ' + number));
+    const status = el('div', 'jellio-reader-page-menu-status');
+    function action(icon, label, run) {
+      const button = el('button', 'jellio-reader-page-menu-action');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons ' + icon));
+      button.appendChild(el('span', '', label));
+      button.addEventListener('click', async function () {
+        status.textContent = '';
+        try {
+          await run();
+        } catch (err) {
+          if (!err || err.name !== 'AbortError') status.textContent = 'That didn’t work here.';
+          return;
+        }
+        closePageMenu();
+      });
+      card.appendChild(button);
+    }
+    action('download', 'Save image', async function () {
+      const file = await pageFile(src, number);
+      const url = URL.createObjectURL(file);
+      const link = el('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+    });
+    if (navigator.share) {
+      action('share', 'Share', async function () {
+        const file = await pageFile(src, number);
+        if (navigator.canShare && !navigator.canShare({ files: [file] })) throw new Error('unsupported');
+        await navigator.share({ files: [file], title: file.name });
+      });
+    }
+    card.appendChild(status);
+    sheet.appendChild(card);
+    sheet.addEventListener('click', function (event) {
+      if (event.target === sheet) closePageMenu();
+    });
+    root.appendChild(sheet);
+    pageMenu = sheet;
+  }
+
   function handleKey(event) {
     if (!reader) return;
+    if (pageMenu && event.key === 'Escape') {
+      closePageMenu();
+      return;
+    }
     const target = event.target;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
       if (event.key === 'Escape') closePanels();
@@ -2121,7 +2331,7 @@ export async function renderReader(root, params) {
     tapTimer = null;
   }
 
-  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey, cancelTap: cancelTap, onEdge: onEdge };
+  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey, cancelTap: cancelTap, onEdge: onEdge, onPageMenu: openPageMenu };
 
   try {
     reader = isComic
@@ -2162,6 +2372,7 @@ export async function renderReader(root, params) {
     searchButton.hidden = true;
     root.classList.add('jellio-reader-comic-mode');
     buildComicTools();
+    applyComicLook();
     loadChapterNav();
     // Mihon style: just the page, menus over it on a tap in the middle.
     root.classList.add('jellio-reader-immersive');
@@ -2529,6 +2740,7 @@ export async function renderReader(root, params) {
     root.dataset.width = settings.width;
     root.dataset.layout = settings.layout;
     persistSettings();
+    applyComicLook();
     Promise.resolve(reader.applySettings(settings)).then(function () {
       reader.resize();
       paintDirection();
@@ -2571,6 +2783,47 @@ export async function renderReader(root, params) {
           optionChips(ON_OFF, settings.comicCrop ? 'on' : 'off', (value) => updateSettings({ comicCrop: value === 'on' })),
         ),
       );
+      if (layout === 'single') {
+        settingsPanel.appendChild(
+          settingGroup(
+            'Split wide pages',
+            optionChips(ON_OFF, settings.comicSplit ? 'on' : 'off', (value) => updateSettings({ comicSplit: value === 'on' })),
+          ),
+        );
+      }
+      settingsPanel.appendChild(
+        settingGroup(
+          'Page transitions',
+          optionChips(ON_OFF, settings.comicAnimate ? 'on' : 'off', (value) => updateSettings({ comicAnimate: value === 'on' })),
+        ),
+      );
+      const brightness = el('input', 'jellio-reader-range');
+      brightness.type = 'range';
+      brightness.min = '30';
+      brightness.max = '100';
+      brightness.step = '5';
+      brightness.value = String(settings.comicBrightness);
+      brightness.setAttribute('aria-label', 'Brightness');
+      brightness.addEventListener('input', function () {
+        settings.comicBrightness = Number(brightness.value);
+        persistSettings();
+        applyComicLook();
+      });
+      settingsPanel.appendChild(settingGroup('Brightness', brightness));
+      settingsPanel.appendChild(
+        settingGroup('Colour filter', optionChips(COMIC_FILTERS, settings.comicFilter, (value) => updateSettings({ comicFilter: value }))),
+      );
+      settingsPanel.appendChild(
+        settingGroup('Tap zones', optionChips(TAP_ZONES, settings.comicTapZones, (value) => updateSettings({ comicTapZones: value }))),
+      );
+      if (settings.comicTapZones !== 'off') {
+        settingsPanel.appendChild(
+          settingGroup(
+            'Invert tap zones',
+            optionChips(ON_OFF, settings.comicTapInvert ? 'on' : 'off', (value) => updateSettings({ comicTapInvert: value === 'on' })),
+          ),
+        );
+      }
       const zoomRow = el('div', 'jellio-reader-setting-row');
       const zoomOut = iconButton('zoom_out', 'Zoom out');
       const zoomReset = iconButton('fit_screen', 'Reset zoom');
