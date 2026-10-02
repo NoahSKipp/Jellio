@@ -10,8 +10,9 @@ import {
   storageEstimate,
   isOffline,
   checkServer,
+  timeLeftSeconds,
 } from '../runtime/offline.js';
-import { formatBytes } from '../components/downloads.js';
+import { formatBytes, formatTimeLeft } from '../components/downloads.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -39,8 +40,9 @@ function statusLine(record) {
   if (record.Status === 'error') return 'Failed: ' + (record.Error || 'unknown error');
   if (record.Status === 'queued') return isOffline() ? 'Waiting for the server' : 'Waiting to download';
   const total = record.TotalBytes || record.EstimatedBytes;
+  const left = formatTimeLeft(timeLeftSeconds(record));
   return total
-    ? 'Downloading ' + formatBytes(record.DoneBytes) + ' of ' + (record.TotalBytes ? '' : '~') + formatBytes(total)
+    ? 'Downloading ' + formatBytes(record.DoneBytes) + ' of ' + (record.TotalBytes ? '' : '~') + formatBytes(total) + (left ? ' · ' + left : '')
     : 'Downloading · ' + formatBytes(record.DoneBytes);
 }
 
