@@ -38,6 +38,7 @@ function statusLine(record) {
     return 'Waiting for Jellyfin to start the video…';
   }
   if (record.Status === 'error') return 'Failed: ' + (record.Error || 'unknown error');
+  if (record.Status === 'queued' && record.Waiting) return record.Waiting;
   if (record.Status === 'queued') return isOffline() ? 'Waiting for the server' : 'Waiting to download';
   const total = record.TotalBytes || record.EstimatedBytes;
   const left = formatTimeLeft(timeLeftSeconds(record));

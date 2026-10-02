@@ -14,6 +14,7 @@ import {
   getMediaSources,
   getCurrentUser,
   getDownloadPlaybackInfo,
+  getConversionStatus,
   matchAudioStreamIndex,
   getAudioStreams,
 } from '../runtime/api.js';
@@ -64,10 +65,39 @@ export const VIDEO_QUALITIES = [
   { value: 'original', name: 'Original file', detail: 'largest', height: 0, bitrate: 0 },
 ];
 
+// HEVC holds about the same quality in around 60% of the bitrate.
+const HEVC_BITRATE_FACTOR = 0.6;
+let hevcResolved = false;
+let hevcPromise = null;
+
+// Whether this device asks for HEVC: the Mac app, when it can play it
+// and the server encodes it in hardware (a CPU encode would be slow).
+export function wantsHevc() {
+  if (hevcPromise) return hevcPromise;
+  hevcPromise = (async function () {
+    if (!(window.jellioNative && window.jellioNative.platform === 'macos')) return false;
+    if (!document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"')) return false;
+    const status = await getConversionStatus().catch(() => null);
+    if (!status) {
+      hevcPromise = null;
+      return false;
+    }
+    return !!status.HevcEncoding;
+  })().then(function (answer) {
+    if (hevcPromise) hevcResolved = answer;
+    return answer;
+  });
+  return hevcPromise;
+}
+
+function effectiveBitrate(option, hevc) {
+  return hevc ? Math.round(option.bitrate * HEVC_BITRATE_FACTOR) : option.bitrate;
+}
+
 // "High · 720p · ~1.1 GB" for a title of known length, else per hour.
 export function qualityLabel(option, runtimeTicks) {
   if (!option.bitrate) return option.name + ' · ' + option.detail;
-  const perSecond = (option.bitrate + DOWNLOAD_AUDIO_BITRATE) / 8;
+  const perSecond = (effectiveBitrate(option, hevcResolved) + DOWNLOAD_AUDIO_BITRATE) / 8;
   const size = runtimeTicks ? formatBytes(perSecond * (runtimeTicks / 1e7)) : '~' + formatBytes(perSecond * 3600) + ' per hour';
   return option.name + ' · ' + option.detail + ' · ' + (runtimeTicks ? '~' : '') + size;
 }
@@ -195,9 +225,11 @@ export async function downloadVideo(item, quality) {
   ]);
   const matchingSource = sourceInLanguage(sources, language);
   const chosen = matchingSource || sources[0] || null;
+  const hevc = option.bitrate ? await wantsHevc() : false;
+  const bitrate = effectiveBitrate(option, hevc);
 
   let audioIndex = chosen && language ? matchAudioStreamIndex(chosen, language) : null;
-  let info = await getDownloadPlaybackInfo(item.Id, chosen && chosen.Id, audioIndex, option.height, option.bitrate);
+  let info = await getDownloadPlaybackInfo(item.Id, chosen && chosen.Id, audioIndex, option.height, bitrate, hevc);
   let source = info && info.MediaSources && info.MediaSources[0];
   if (!source) throw new Error('No playable stream was found for this title');
 
@@ -207,7 +239,7 @@ export async function downloadVideo(item, quality) {
     const found = matchAudioStreamIndex(source, language);
     if (found != null) {
       audioIndex = found;
-      info = await getDownloadPlaybackInfo(item.Id, source.Id, audioIndex, option.height, option.bitrate);
+      info = await getDownloadPlaybackInfo(item.Id, source.Id, audioIndex, option.height, bitrate, hevc);
       source = (info && info.MediaSources && info.MediaSources[0]) || source;
     }
   }
@@ -225,11 +257,11 @@ export async function downloadVideo(item, quality) {
   } else {
     const params = new URLSearchParams({
       MediaSourceId: source.Id,
-      VideoCodec: 'h264',
+      VideoCodec: hevc ? 'hevc' : 'h264',
       AudioCodec: 'aac',
       AudioChannels: '2',
       MaxHeight: String(option.height),
-      VideoBitrate: String(option.bitrate),
+      VideoBitrate: String(bitrate),
       AudioBitrate: String(DOWNLOAD_AUDIO_BITRATE),
       DeviceId: getDeviceId(),
       PlaySessionId: info.PlaySessionId || 'jellio-download-' + Date.now(),
@@ -244,7 +276,20 @@ export async function downloadVideo(item, quality) {
   );
   // The file itself (not a conversion) can be fetched in parts at once,
   // when the server supports it (runtime/offline.js).
-  const files = [{ Name: 'video', Url: videoUrl, Label: details.Name, Parallel: videoUrl === staticUrl }];
+  // Anything but the file as stored is converted by the server, which
+  // only does a couple at a time (runtime/offline.js holds a slot for it).
+  const convert = videoUrl !== staticUrl;
+  if (convert) {
+    const status = await getConversionStatus().catch(() => null);
+    if (status && status.Available === false) {
+      const busy = new Error(
+        'The server is already converting ' + status.Max + ' downloads for other people. Try again in a few minutes, or choose Original file.',
+      );
+      busy.conversionFull = true;
+      throw busy;
+    }
+  }
+  const files = [{ Name: 'video', Url: videoUrl, Label: details.Name, Parallel: videoUrl === staticUrl, Convert: convert }];
   subtitles.forEach(function (stream) {
     files.push({
       Name: 'sub-' + stream.Index,
@@ -277,7 +322,7 @@ export async function downloadVideo(item, quality) {
     // At most the cap, and no more than the source itself when known.
     EstimatedBytes:
       option.bitrate && details.RunTimeTicks
-        ? Math.round(((Math.min(option.bitrate, source.Bitrate || option.bitrate) + DOWNLOAD_AUDIO_BITRATE) / 8) * (details.RunTimeTicks / 1e7))
+        ? Math.round(((Math.min(bitrate, source.Bitrate || bitrate) + DOWNLOAD_AUDIO_BITRATE) / 8) * (details.RunTimeTicks / 1e7))
         : 0,
     Subtitles: subtitles.map(function (stream) {
       return {
@@ -309,7 +354,7 @@ function statusText(record) {
   if (!record) return null;
   if (record.Status === 'done') return 'Downloaded';
   if (record.Status === 'error') return 'Download failed';
-  if (record.Status === 'queued') return 'Waiting to download';
+  if (record.Status === 'queued') return record.Waiting ? 'Waiting for the server' : 'Waiting to download';
   const total = record.TotalBytes || record.EstimatedBytes;
   const left = formatTimeLeft(timeLeftSeconds(record));
   if (total) return 'Downloading ' + Math.min(99, Math.floor((record.DoneBytes / total) * 100)) + '%' + (left ? ' · ' + left : '');
@@ -422,10 +467,12 @@ export function buildDownloadButton(item, options) {
         });
     }
     if (kind === 'video') {
-      openMenu(
-        button,
-        VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + qualityLabel(option, item.RunTimeTicks), onSelect: () => start(option.value) })),
-      );
+      wantsHevc().then(function () {
+        openMenu(
+          button,
+          VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + qualityLabel(option, item.RunTimeTicks), onSelect: () => start(option.value) })),
+        );
+      });
     } else {
       start();
     }
@@ -475,6 +522,7 @@ function openEpisodesMenu(item, anchor, busyButton) {
       }
       showToast('Getting ' + chosen.length + (chosen.length === 1 ? ' episode' : ' episodes') + ' ready to download…');
       let queued = 0;
+      let busy = null;
       for (const episode of chosen) {
         const existing = await findAnyDownload(episode.Id);
         if (existing && existing.Status !== 'error') continue;
@@ -483,9 +531,18 @@ function openEpisodesMenu(item, anchor, busyButton) {
           queued += 1;
         } catch (err) {
           console.warn('Jellio: could not queue an episode', err);
+          // No point asking again for the rest.
+          if (err && err.conversionFull) {
+            busy = err.message;
+            break;
+          }
         }
       }
-      showToast(queued ? 'Downloading ' + queued + (queued === 1 ? ' episode.' : ' episodes.') + ' Find them under Downloads.' : 'Those episodes are already downloaded.');
+      if (busy) {
+        showToast((queued ? 'Downloading ' + queued + (queued === 1 ? ' episode' : ' episodes') + '. The rest could not be added: ' : '') + busy);
+      } else {
+        showToast(queued ? 'Downloading ' + queued + (queued === 1 ? ' episode.' : ' episodes.') + ' Find them under Downloads.' : 'Those episodes are already downloaded.');
+      }
     } catch (err) {
       console.warn('Jellio: could not list episodes', err);
       showToast('Could not load the episodes.');
@@ -510,10 +567,12 @@ function openEpisodesMenu(item, anchor, busyButton) {
     choices.map((choice) => ({
       label: 'Download · ' + choice.label,
       onSelect: () =>
-        openMenu(
-          anchor,
-          VIDEO_QUALITIES.map((option) => ({ label: qualityLabel(option), onSelect: () => queue(choice.pick, option.value) })),
-        ),
+        wantsHevc().then(function () {
+          openMenu(
+            anchor,
+            VIDEO_QUALITIES.map((option) => ({ label: qualityLabel(option), onSelect: () => queue(choice.pick, option.value) })),
+          );
+        }),
     })),
   );
 }
@@ -555,10 +614,12 @@ export function promptDownload(item, anchorRect) {
         });
     }
     if (kind === 'video') {
-      openMenu(
-        anchorRect,
-        VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + qualityLabel(option, item.RunTimeTicks), onSelect: () => start(option.value) })),
-      );
+      wantsHevc().then(function () {
+        openMenu(
+          anchorRect,
+          VIDEO_QUALITIES.map((option) => ({ label: 'Download · ' + qualityLabel(option, item.RunTimeTicks), onSelect: () => start(option.value) })),
+        );
+      });
     } else {
       start();
     }
