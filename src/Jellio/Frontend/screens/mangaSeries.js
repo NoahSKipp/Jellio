@@ -11,6 +11,9 @@ import {
   getStreamSeries,
   findStreamSeries,
   saveStreamSeries,
+  getTrackerStatus,
+  getTrackerLink,
+  syncTracker,
   markReadingItems,
   setPlayed,
 } from '../runtime/api.js';
@@ -34,6 +37,7 @@ import {
 } from '../components/mangaSeries.js';
 import { openScanlatorFilter } from '../components/scanlatorFilter.js';
 import { openChapterSettings } from '../components/chapterSettings.js';
+import { openTrackerDialog } from '../components/trackerDialog.js';
 import { buildDownloadButton, downloadBook } from '../components/downloads.js';
 import { findAnyDownload, removeDownload } from '../runtime/offline.js';
 import { loadShelf, onShelfChange, setInLibrary, isInLibrary, saveSeriesPrefs, saveSeriesDefaults, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
@@ -52,6 +56,9 @@ export function renderMangaSeries(root, params, parentId) {
   // Set across a repaint (marking chapters read) so the page keeps its place.
   let keptView = null;
   let shelf = { Categories: [], Series: {}, Bookmarks: [] };
+  // AniList tracking: whether it's on, and this series' link.
+  let tracker = null;
+  let trackLink = null;
   const shelfKey = seriesShelfKey(key);
   root.classList.add('jellio-screen-bookshelf', 'jellio-screen-manga-series');
 
@@ -88,6 +95,11 @@ export function renderMangaSeries(root, params, parentId) {
       const summary =
         (results[3] || []).find((series) => series.Key === key) || (await findStreamSeries(key).catch(() => null));
       const streamed = summary ? await getStreamSeries(summary.MangaId).catch(() => null) : null;
+      if (summary) {
+        tracker = await getTrackerStatus().catch(() => null);
+        trackLink =
+          tracker && tracker.Connected ? await getTrackerLink(shelfKey).then((result) => result.Link).catch(() => null) : null;
+      }
       if (cancelled) return;
       body.textContent = '';
       const savedChapters = saved ? saved.chapters : loose;
@@ -160,6 +172,7 @@ export function renderMangaSeries(root, params, parentId) {
       window.scrollTo(0, scrollY);
       markReadingItems(ids, read)
         .then(function () {
+          if (read && trackLink && group.stream) syncTracker(shelfKey, group.stream.MangaId);
           if (read) return null;
           // A chapter marked watched before would still count as read.
           return Promise.all(
@@ -529,6 +542,24 @@ export function renderMangaSeries(root, params, parentId) {
       groups.textContent = filtered ? 'Scanlators · ' + shownGroups + ' of ' + scanlators.length : 'Scanlators';
       groups.addEventListener('click', openScanlators);
       filters.appendChild(groups);
+    }
+    if (tracker && tracker.Available && group.stream && group.stream.MangaId) {
+      const track = el('button', 'jellio-manga-series-chip' + (trackLink ? ' jellio-manga-series-chip-active' : ''));
+      track.type = 'button';
+      track.appendChild(el('span', 'material-icons sync'));
+      track.appendChild(el('span', null, trackLink ? 'Tracking' : 'Track'));
+      track.addEventListener('click', function () {
+        openTrackerDialog({
+          key: shelfKey,
+          mangaId: group.stream.MangaId,
+          title: group.title || key,
+          onChange: function (link) {
+            trackLink = link;
+            rerender();
+          },
+        });
+      });
+      filters.appendChild(track);
     }
     const sheet = el('button', 'jellio-manga-series-chip');
     sheet.type = 'button';

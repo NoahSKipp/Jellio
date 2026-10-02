@@ -194,4 +194,9 @@ public class PluginConfiguration : BasePluginConfiguration
     // this is on, in which case requested series are also downloaded
     // into the Jellyfin library. Readers can still save single series.
     public bool SuwayomiDownloadRequests { get; set; }
+
+    // Client id of an AniList API client (anilist.co/settings/developer),
+    // for readers to link their list from the manga series page. It is
+    // public, not a secret; each reader's own token stays on the server.
+    public string AniListClientId { get; set; } = string.Empty;
 }

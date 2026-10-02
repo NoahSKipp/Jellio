@@ -762,6 +762,46 @@ export function getStreamLibrary() {
   });
 }
 
+// AniList tracking (Controllers/TrackerController.cs). The reader's token
+// lives on the server; these only ever see the account name and entry.
+export function getTrackerStatus() {
+  return getJson('/Jellio/tracker/anilist', 15000);
+}
+
+export function connectTracker(token) {
+  return postJson('/Jellio/tracker/anilist/connect', { Token: token });
+}
+
+export function disconnectTracker() {
+  return deleteJson('/Jellio/tracker/anilist');
+}
+
+export function searchTracker(query) {
+  return getJson('/Jellio/tracker/anilist/search?q=' + encodeURIComponent(query), 20000);
+}
+
+export function getTrackerLink(key) {
+  return getJson('/Jellio/tracker/anilist/link?key=' + encodeURIComponent(key), 20000);
+}
+
+export function setTrackerLink(key, media) {
+  return putJson('/Jellio/tracker/anilist/link', { Key: key, MediaId: media.Id, Title: media.Title, CoverUrl: media.CoverUrl || null });
+}
+
+export function removeTrackerLink(key) {
+  return deleteJson('/Jellio/tracker/anilist/link?key=' + encodeURIComponent(key));
+}
+
+export function setTrackerEntry(key, patch) {
+  return putJson('/Jellio/tracker/anilist/entry', Object.assign({ Key: key }, patch));
+}
+
+export function syncTracker(key, mangaId) {
+  return postJson('/Jellio/tracker/anilist/sync', { Key: key, MangaId: mangaId }).catch(function () {
+    return null;
+  });
+}
+
 // New chapters from the latest library refreshes (MangaStreamController
 // updates); refresh asks the sources now.
 export function getMangaUpdates() {

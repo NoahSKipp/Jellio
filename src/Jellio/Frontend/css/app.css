@@ -11496,3 +11496,85 @@
 .jellio-screen-manga-updates > .jellio-bookshelf-stats {
   padding: 0 var(--jellio-gutter, 16px);
 }
+
+.jellio-tracker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jellio-tracker-link {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+}
+
+.jellio-tracker-input,
+.jellio-tracker-field select,
+.jellio-tracker-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+}
+
+.jellio-tracker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.jellio-tracker-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.jellio-tracker-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-tracker-result:hover,
+.jellio-tracker-result:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jellio-tracker-cover {
+  flex: none;
+  width: 40px;
+  height: 56px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.jellio-tracker-result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.jellio-tracker-result-year {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.jellio-tracker-linked-title {
+  font-weight: 600;
+  color: inherit;
+}

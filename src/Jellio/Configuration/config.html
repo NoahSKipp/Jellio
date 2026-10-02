@@ -60,6 +60,17 @@
           </div>
 
           <div class="inputContainer">
+            <label class="inputLabel" for="txtAniListClientId">AniList Client ID</label>
+            <input is="emby-input" type="text" id="txtAniListClientId" autocomplete="off" />
+            <div class="fieldDescription">
+              Lets readers link their AniList list to manga series and keep chapters read in sync.
+              Create an API client at anilist.co/settings/developer with the redirect URL
+              <code>https://anilist.co/api/v2/oauth/pin</code> and paste its ID here. Readers' tokens
+              stay on the server.
+            </div>
+          </div>
+
+          <div class="inputContainer">
             <label class="inputLabel" for="txtDeepLApiKey">DeepL API Key</label>
             <input is="emby-input" type="password" id="txtDeepLApiKey" autocomplete="off" />
             <div class="fieldDescription">
@@ -456,6 +467,7 @@
           document.querySelector('#txtChaptarrUrl').value = withDefault(config.ChaptarrUrl, '');
           document.querySelector('#txtChaptarrApiKey').value = withDefault(config.ChaptarrApiKey, '');
           document.querySelector('#txtDeepLApiKey').value = withDefault(config.DeepLApiKey, '');
+          document.querySelector('#txtAniListClientId').value = withDefault(config.AniListClientId, '');
           document.querySelector('#txtSuwayomiUrl').value = withDefault(config.SuwayomiUrl, '');
           document.querySelector('#txtSuwayomiUsername').value = withDefault(config.SuwayomiUsername, '');
           document.querySelector('#txtSuwayomiPassword').value = withDefault(config.SuwayomiPassword, '');
@@ -483,6 +495,7 @@
           config.ChaptarrUrl = document.querySelector('#txtChaptarrUrl').value.trim();
           config.ChaptarrApiKey = document.querySelector('#txtChaptarrApiKey').value.trim();
           config.DeepLApiKey = document.querySelector('#txtDeepLApiKey').value.trim();
+          config.AniListClientId = document.querySelector('#txtAniListClientId').value.trim();
           config.SuwayomiUrl = document.querySelector('#txtSuwayomiUrl').value.trim();
           config.SuwayomiUsername = document.querySelector('#txtSuwayomiUsername').value.trim();
           config.SuwayomiPassword = document.querySelector('#txtSuwayomiPassword').value;
