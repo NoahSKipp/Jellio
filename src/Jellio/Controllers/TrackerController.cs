@@ -34,7 +34,7 @@ public partial class TrackerController(
 
     public record EntryBody(string? Key, string? Status, int? ScoreRaw);
 
-    public record SyncBody(string? Key, int? MangaId);
+    public record SyncBody(string? Key, int? MangaId, int? Episode);
 
     [HttpGet]
     public IActionResult Status()
@@ -104,14 +104,15 @@ public partial class TrackerController(
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? type, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(q) || q.Length > 200)
         {
             return Ok(Array.Empty<object>());
         }
 
-        var results = await anilistSearch.BrowseAsync("SEARCH_MATCH", null, null, q.Trim(), 0, cancellationToken).ConfigureAwait(false);
+        var mediaType = string.Equals(type, "ANIME", StringComparison.OrdinalIgnoreCase) ? "ANIME" : "MANGA";
+        var results = await anilistSearch.BrowseAsync("SEARCH_MATCH", null, null, q.Trim(), 0, cancellationToken, mediaType).ConfigureAwait(false);
         return results is null
             ? StatusCode(502, "AniList could not be reached")
             : Ok(results.Take(12).Select(series => new { series.Id, series.Title, series.Year, series.CoverUrl }));
@@ -202,7 +203,7 @@ public partial class TrackerController(
         return saved is null ? StatusCode(502, "AniList didn't take that") : Ok(saved);
     }
 
-    // Writes the highest chapter the reader has finished to AniList, never
+    // Writes the highest chapter or episode the reader has finished to AniList, never
     // lowering what is already there. Quiet when nothing is linked.
     [HttpPost("sync")]
     public async Task<IActionResult> Sync([FromBody] SyncBody body, CancellationToken cancellationToken)
@@ -213,23 +214,36 @@ public partial class TrackerController(
         }
 
         var data = trackerStore.Load(userId);
-        if (string.IsNullOrEmpty(data.AniListToken) || string.IsNullOrEmpty(body.Key) || body.MangaId is not > 0 || !data.Links.TryGetValue(body.Key, out var link))
+        if (string.IsNullOrEmpty(data.AniListToken) || string.IsNullOrEmpty(body.Key) || !data.Links.TryGetValue(body.Key, out var link))
         {
             return Ok(new { Synced = false });
         }
 
-        var series = await stream.GetSeriesAsync(body.MangaId.Value, cancellationToken).ConfigureAwait(false);
-        if (series is null)
+        int furthest = 0;
+        if (body.Episode is > 0)
+        {
+            furthest = body.Episode.Value;
+        }
+        else if (body.MangaId is > 0)
+        {
+            var series = await stream.GetSeriesAsync(body.MangaId.Value, cancellationToken).ConfigureAwait(false);
+            if (series is null)
+            {
+                return Ok(new { Synced = false });
+            }
+
+            var progress = progressStore.GetAll(userId);
+            furthest = series.Chapters
+                .Where(chapter => chapter.Number >= 0 && progress.TryGetValue(chapter.Id, out var record) && record.Progress >= Finished)
+                .Select(chapter => (int)Math.Floor(chapter.Number))
+                .DefaultIfEmpty(0)
+                .Max();
+        }
+        else
         {
             return Ok(new { Synced = false });
         }
 
-        var progress = progressStore.GetAll(userId);
-        var furthest = series.Chapters
-            .Where(chapter => chapter.Number >= 0 && progress.TryGetValue(chapter.Id, out var record) && record.Progress >= Finished)
-            .Select(chapter => (int)Math.Floor(chapter.Number))
-            .DefaultIfEmpty(0)
-            .Max();
         var entry = await anilist.GetEntryAsync(data.AniListToken, link.MediaId, cancellationToken).ConfigureAwait(false);
         if (entry is null)
         {
@@ -241,8 +255,8 @@ public partial class TrackerController(
             return Ok(new { Synced = false, Entry = entry });
         }
 
-        // Reading something on a plan-to-read or dropped list puts it back
-        // on the reading list, like Mihon.
+        // Reading or watching something on a plan-to-read or dropped list puts it back
+        // on the active list, like Mihon.
         var status = entry.Status is null or "PLANNING" or "DROPPED" or "PAUSED" ? "CURRENT" : null;
         var saved = await anilist.SaveAsync(data.AniListToken, link.MediaId, status, furthest, null, cancellationToken).ConfigureAwait(false);
         return Ok(new { Synced = saved is not null, Entry = saved });

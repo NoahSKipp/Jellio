@@ -21,9 +21,10 @@ const DISPLAYS = [
 
 const DEFAULT_VIEW = { unread: '', started: '', completed: '', downloaded: '', display: 'comfortable', badges: true };
 
-export function loadLibraryView() {
+export function loadLibraryView(kind) {
+  const key = 'jellio-' + (kind || 'manga') + '-library-view';
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) || 'null') || {};
+    const saved = JSON.parse(localStorage.getItem(key) || 'null') || {};
     const view = Object.assign({}, DEFAULT_VIEW);
     FILTERS.forEach((filter) => (view[filter.key] = saved[filter.key] === 'include' || saved[filter.key] === 'exclude' ? saved[filter.key] : ''));
     view.display = DISPLAYS.some((option) => option.value === saved.display) ? saved.display : DEFAULT_VIEW.display;
@@ -34,9 +35,10 @@ export function loadLibraryView() {
   }
 }
 
-function saveLibraryView(view) {
+export function saveLibraryView(view, kind) {
+  const key = 'jellio-' + (kind || 'manga') + '-library-view';
   try {
-    localStorage.setItem(KEY, JSON.stringify(view));
+    localStorage.setItem(key, JSON.stringify(view));
   } catch (err) {
     // Remembering is a convenience only.
   }
@@ -47,14 +49,19 @@ export function activeFilterCount(view) {
 }
 
 // Whether a shelf entry passes the filters.
-export function passesLibraryFilters(entry, view) {
+export function passesLibraryFilters(entry, view, downloadedIds) {
   const stream = entry.seriesGroup && entry.seriesGroup.stream;
   const saved = entry.seriesGroup ? entry.seriesGroup.chapters.length : 0;
+  const isDownloaded =
+    (stream && stream.DownloadedCount > 0) ||
+    saved > 0 ||
+    entry.downloaded > 0 ||
+    (downloadedIds && entry.item && (downloadedIds.has(entry.item.Id) || downloadedIds.has(String(entry.item.Id).replace(/-/g, '').toLowerCase())));
   const facts = {
     unread: entry.unread > 0,
     started: entry.readCount > 0,
-    completed: entry.chapters > 0 && entry.unread <= 0,
-    downloaded: (stream && stream.DownloadedCount > 0) || saved > 0,
+    completed: entry.chapters > 0 ? entry.unread <= 0 : !entry.unread,
+    downloaded: !!isDownloaded,
   };
   return FILTERS.every(function (filter) {
     const mode = view[filter.key];
@@ -74,7 +81,7 @@ function onKeydown(event) {
 }
 
 // onChange(view) runs after each change.
-export function openLibraryView(view, onChange) {
+export function openLibraryView(view, onChange, kind = 'manga') {
   close();
   const overlay = el('div', 'jellio-avatar-picker-overlay');
   overlay.id = OVERLAY_ID;
@@ -98,7 +105,7 @@ export function openLibraryView(view, onChange) {
   panel.appendChild(body);
 
   function changed() {
-    saveLibraryView(view);
+    saveLibraryView(view, kind);
     onChange(view);
     paint();
   }
@@ -136,7 +143,7 @@ export function openLibraryView(view, onChange) {
     const badge = el('button', 'jellio-library-view-row');
     badge.type = 'button';
     badge.appendChild(el('span', 'material-icons ' + (view.badges ? 'check_box' : 'check_box_outline_blank')));
-    badge.appendChild(el('span', null, 'Unread chapters'));
+    badge.appendChild(el('span', null, kind === 'manga' ? 'Unread chapters' : 'Unread / Progress badge'));
     badge.addEventListener('click', function () {
       view.badges = !view.badges;
       changed();

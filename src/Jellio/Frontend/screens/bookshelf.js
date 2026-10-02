@@ -34,6 +34,7 @@ import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey,
 import { renderMangaSeries } from './mangaSeries.js';
 import { renderMangaUpdates } from './mangaUpdates.js';
 import { loadLibraryView, openLibraryView, passesLibraryFilters, activeFilterCount } from '../components/libraryView.js';
+import { listDownloads } from '../runtime/offline.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildBookRequestPanel } from '../components/bookRequest.js';
@@ -176,10 +177,15 @@ function isFinished(item, progress) {
   return !!((record && record.Progress >= 0.98) || (item.UserData && item.UserData.Played));
 }
 
-function describe(item, info, progress) {
+function describe(item, info, progress, downloadedSet) {
   const meta = info[idKey(item.Id)] || {};
   const author = item.AlbumArtist || meta.Authors || '';
   const added = item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0;
+  const finished = isFinished(item, progress);
+  const record = progress && progress[idKey(item.Id).toLowerCase()];
+  const hasProgress = (record && record.Progress > 0) || (item.UserData && (item.UserData.PlaybackPositionTicks > 0 || item.UserData.Played));
+  const rawId = String(item.Id).replace(/-/g, '').toLowerCase();
+  const isDownloaded = downloadedSet && (downloadedSet.has(item.Id) || downloadedSet.has(rawId));
   return {
     item: item,
     key: itemShelfKey(item),
@@ -191,7 +197,9 @@ function describe(item, info, progress) {
     latest: added,
     lastRead: lastReadOf(item, progress),
     chapters: 1,
-    unread: isFinished(item, progress) ? 0 : 1,
+    unread: finished ? 0 : 1,
+    readCount: finished ? 1 : (hasProgress ? 0.5 : 0),
+    downloaded: isDownloaded ? 1 : 0,
     search: ((item.Name || '') + ' ' + author + ' ' + (meta.SeriesTitle || '')).toLowerCase(),
   };
 }
@@ -218,13 +226,19 @@ function compareBy(sort, desc) {
 
 // Cards carry the author under the title; books are told apart by who
 // wrote them far more often than by year.
-// The manga shelf's filter and display choices (components/libraryView.js).
+// The shelf's filter and display choices (components/libraryView.js).
 let libraryViewState = loadLibraryView();
 
 function bookCard(entry, cardOptions) {
   if (entry.seriesGroup) return seriesCard(entry, cardOptions);
   const card = buildCard(entry.item, cardOptions);
   if (entry.author) card.appendChild(el('div', 'jellio-card-subtitle', entry.author));
+  if (libraryViewState && libraryViewState.badges && entry.unread > 0) {
+    const label = entry.readCount > 0 ? 'Started' : 'Unread';
+    const badge = el('span', 'jellio-card-unread-badge', label);
+    badge.title = label;
+    card.appendChild(badge);
+  }
   return card;
 }
 
@@ -447,6 +461,8 @@ export function renderBookshelf(root, params, parentId) {
   let shelf = { Categories: [], Series: {}, Bookmarks: [] };
   let activeCategory = readCategory(kind);
   let loadedItems = null;
+  let downloadedIds = new Set();
+  libraryViewState = loadLibraryView(kind);
 
   // Manga chapters belong to their series' categories.
   function keyForItem(item) {
@@ -581,11 +597,11 @@ export function renderBookshelf(root, params, parentId) {
   viewButton.appendChild(el('span', 'material-icons tune'));
   const viewCount = el('span', 'jellio-bookshelf-view-count');
   viewButton.appendChild(viewCount);
-  viewButton.hidden = kind !== 'manga';
+  viewButton.hidden = false;
   viewButton.addEventListener('click', function () {
     openLibraryView(libraryViewState, function () {
       renderGrid();
-    });
+    }, kind);
   });
   toolbar.appendChild(viewButton);
 
@@ -784,14 +800,14 @@ export function renderBookshelf(root, params, parentId) {
       .filter((entry) => !inCategory || inCategory.has(entry.key))
       .filter((entry) => !selectedAuthor || entry.authorKey === selectedAuthor)
       .filter((entry) => !query || entry.search.indexOf(query) !== -1)
-      .filter((entry) => kind !== 'manga' || passesLibraryFilters(entry, libraryViewState))
+      .filter((entry) => passesLibraryFilters(entry, libraryViewState, downloadedIds))
       .sort(compareBy(current.sort, current.desc));
 
-    const filterCount = kind === 'manga' ? activeFilterCount(libraryViewState) : 0;
+    const filterCount = activeFilterCount(libraryViewState);
     viewCount.textContent = filterCount ? String(filterCount) : '';
     viewButton.classList.toggle('jellio-bookshelf-view-active', filterCount > 0);
-    grid.classList.toggle('jellio-bookshelf-grid-compact', kind === 'manga' && libraryViewState.display === 'compact');
-    grid.classList.toggle('jellio-bookshelf-grid-cover', kind === 'manga' && libraryViewState.display === 'cover');
+    grid.classList.toggle('jellio-bookshelf-grid-compact', libraryViewState.display === 'compact');
+    grid.classList.toggle('jellio-bookshelf-grid-cover', libraryViewState.display === 'cover');
     grid.textContent = '';
     matches.forEach(function (entry) {
       grid.appendChild(bookCard(entry, shelfCardOptions));
@@ -947,20 +963,27 @@ export function renderBookshelf(root, params, parentId) {
     kind === 'audiobook' ? Promise.resolve({}) : getAllReadingProgress().catch(() => ({})),
     loadShelf(kind),
     kind === 'manga' ? getStreamLibrary() : Promise.resolve([]),
+    listDownloads().catch(function () {
+      return [];
+    }),
   ])
     .then(function (results) {
       if (cancelled) return;
       const items = results[0];
       const info = results[1] || {};
       shelf = results[4];
+      const downloadedRecords = results[6] || [];
+      downloadedIds = new Set(
+        downloadedRecords.map((r) => r.Id).concat(downloadedRecords.flatMap((r) => r.TrackIds || []))
+      );
       if (activeCategory && !currentCategory()) activeCategory = '';
-      loadedItems = { items: items, info: info, progress: results[3] || {}, stream: results[5] || [] };
+      loadedItems = { items: items, info: info, progress: results[3] || {}, stream: results[5] || [], downloaded: downloadedIds };
       if (kind === 'manga') {
         const manga = mangaEntries(items, info, results[3] || {}, shelf, results[5]);
         entries = manga.entries;
         results[2] = manga.continueEntries;
       } else {
-        entries = items.map((item) => describe(item, info, results[3] || {}));
+        entries = items.map((item) => describe(item, info, results[3] || {}, downloadedIds));
       }
 
       if (!entries.length) {
@@ -1013,6 +1036,8 @@ export function renderBookshelf(root, params, parentId) {
       }
       if (kind === 'manga') {
         entries = mangaEntries(loadedItems.items, loadedItems.info, loadedItems.progress, shelf, loadedItems.stream).entries;
+      } else {
+        entries = loadedItems.items.map((item) => describe(item, loadedItems.info, loadedItems.progress, loadedItems.downloaded || downloadedIds));
       }
       renderTabs();
       paintSortControls();

@@ -64,7 +64,7 @@ public class AniListTrackerClient(IHttpClientFactory httpClientFactory, ILogger<
     {
         var data = await QueryAsync(
             token,
-            "query ($id: Int) { Media(id: $id, type: MANGA) { chapters mediaListEntry { status progress scoreRaw } } }",
+            "query ($id: Int) { Media(id: $id) { episodes chapters mediaListEntry { status progress scoreRaw } } }",
             new JsonObject { ["id"] = mediaId },
             cancellationToken).ConfigureAwait(false);
         var media = data?["Media"];
@@ -78,7 +78,7 @@ public class AniListTrackerClient(IHttpClientFactory httpClientFactory, ILogger<
             entry?["status"]?.GetValue<string>(),
             ReadInt(entry?["progress"]) ?? 0,
             ReadInt(entry?["scoreRaw"]) ?? 0,
-            ReadInt(media["chapters"]));
+            ReadInt(media["episodes"]) ?? ReadInt(media["chapters"]));
     }
 
     // Only what's given changes: a null status, progress or score is

@@ -31,6 +31,8 @@ import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { openListMembershipMenu, isInsideListMembershipMenu } from '../components/listMembershipMenu.js';
 import { isAdminSync } from '../runtime/adminStatus.js';
 import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
+import { loadShelf, saveSeriesPrefs } from '../runtime/shelf.js';
+import { openTrackerDialog } from '../components/trackerDialog.js';
 import { showToast } from '../components/toast.js';
 import { formatRuntime } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
@@ -1201,6 +1203,107 @@ export async function renderDetail(root, params) {
       openStreamPicker(item, { forceChoice: true });
     });
     actions.appendChild(changeStreamButton);
+  }
+
+  // Per-title switches: delete downloaded episodes after watching, and mute notifications
+  const seriesOrItemKey = 's:' + String(item.Id).replace(/-/g, '').toLowerCase();
+  const rawKey = String(item.Id).replace(/-/g, '').toLowerCase();
+
+  if (item.Type === 'Series') {
+    const deleteToggle = el('button', iconActionClass);
+    deleteToggle.type = 'button';
+    deleteToggle.setAttribute('aria-label', 'Delete after watching');
+    deleteToggle.title = 'Delete downloaded episodes after watching';
+    deleteToggle.appendChild(el('span', 'material-icons auto_delete'));
+
+    function paintDeleteToggle(on) {
+      deleteToggle.classList.toggle('jellio-detail-icon-action-active', !!on);
+      deleteToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+
+    loadShelf('manga')
+      .then(function (shelf) {
+        const prefs = shelf.Series && (shelf.Series[seriesOrItemKey] || shelf.Series[rawKey] || shelf.Series[item.Id]);
+        paintDeleteToggle(prefs && prefs.DeleteAfterRead);
+      })
+      .catch(() => {});
+
+    deleteToggle.addEventListener('click', function (event) {
+      event.stopPropagation();
+      loadShelf('manga').then(function (shelf) {
+        const prefs = shelf.Series && (shelf.Series[seriesOrItemKey] || shelf.Series[rawKey] || shelf.Series[item.Id]);
+        const next = !(prefs && prefs.DeleteAfterRead);
+        saveSeriesPrefs(seriesOrItemKey, { DeleteAfterRead: next })
+          .then(function () {
+            paintDeleteToggle(next);
+            showToast(next ? 'Episodes will be deleted after watching.' : 'Episodes will be kept after watching.');
+          })
+          .catch(function () {
+            showToast('Could not save that setting.');
+          });
+      });
+    });
+    actions.appendChild(deleteToggle);
+  }
+
+  if (item.Type === 'Series' || item.Type === 'Movie') {
+    const muteToggle = el('button', iconActionClass);
+    muteToggle.type = 'button';
+    muteToggle.setAttribute('aria-label', 'Mute notifications');
+    muteToggle.title = 'Skip new-release notifications for this title';
+    muteToggle.appendChild(el('span', 'material-icons notifications_off'));
+
+    function paintMuteToggle(on) {
+      muteToggle.classList.toggle('jellio-detail-icon-action-active', !!on);
+      muteToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+
+    loadShelf('manga')
+      .then(function (shelf) {
+        const prefs = shelf.Series && (shelf.Series[seriesOrItemKey] || shelf.Series[rawKey] || shelf.Series[item.Id]);
+        paintMuteToggle(prefs && prefs.SkipUpdates);
+      })
+      .catch(() => {});
+
+    muteToggle.addEventListener('click', function (event) {
+      event.stopPropagation();
+      loadShelf('manga').then(function (shelf) {
+        const prefs = shelf.Series && (shelf.Series[seriesOrItemKey] || shelf.Series[rawKey] || shelf.Series[item.Id]);
+        const next = !(prefs && prefs.SkipUpdates);
+        saveSeriesPrefs(seriesOrItemKey, { SkipUpdates: next })
+          .then(function () {
+            paintMuteToggle(next);
+            showToast(next ? 'Notifications muted for this title.' : 'Notifications enabled for this title.');
+          })
+          .catch(function () {
+            showToast('Could not save that setting.');
+          });
+      });
+    });
+    actions.appendChild(muteToggle);
+  }
+
+  const isAnimeSeries =
+    item.Type === 'Series' &&
+    ((params && params.get('jellioKind') === 'anime') ||
+      (item.Genres && item.Genres.some((g) => /anime/i.test(g))) ||
+      (item.Tags && item.Tags.some((t) => /anime/i.test(t))));
+  if (isAnimeSeries) {
+    const trackerButton = el('button', iconActionClass);
+    trackerButton.type = 'button';
+    trackerButton.setAttribute('aria-label', 'Track on AniList');
+    trackerButton.title = 'Track on AniList';
+    trackerButton.appendChild(el('span', 'material-icons sync'));
+    trackerButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      openTrackerDialog({
+        key: seriesOrItemKey,
+        title: item.Name,
+        mediaType: 'ANIME',
+        onChange: function () {},
+      });
+    });
+    actions.appendChild(trackerButton);
   }
 
   // Real feedback: Watchlist, Mark Watched and Change Stream used to

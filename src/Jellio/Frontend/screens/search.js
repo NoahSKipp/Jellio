@@ -20,7 +20,7 @@
 // same query fresh, same real "screens fetch their own state" shape
 // every other screen here already uses rather than caching the actual
 // result set.
-import { searchItems, searchMovies, searchSeries, getStreamLibrary, getStreamCoverUrl } from '../runtime/api.js';
+import { searchItems, searchMovies, searchSeries, searchBooks, searchAudiobooks, getStreamLibrary, getStreamCoverUrl } from '../runtime/api.js';
 import { getMangaShelfHash } from '../components/navShared.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
@@ -81,8 +81,8 @@ export async function renderSearch(root, params) {
   const input = document.createElement('input');
   input.type = 'search';
   input.className = 'jellio-search-input';
-  input.placeholder = 'Search movies, shows and manga';
-  input.setAttribute('aria-label', 'Search movies, shows and manga');
+  input.placeholder = 'Search movies, shows, books, audiobooks and manga';
+  input.setAttribute('aria-label', 'Search movies, shows, books, audiobooks and manga');
   input.autofocus = true;
   header.appendChild(input);
   root.appendChild(header);
@@ -158,9 +158,13 @@ export async function renderSearch(root, params) {
 
     const moviesSlot = el('div', 'jellio-search-type-slot');
     const seriesSlot = el('div', 'jellio-search-type-slot');
+    const booksSlot = el('div', 'jellio-search-type-slot');
+    const audiobooksSlot = el('div', 'jellio-search-type-slot');
+    const mangaSlot = el('div', 'jellio-search-type-slot');
     results.appendChild(moviesSlot);
     results.appendChild(seriesSlot);
-    const mangaSlot = el('div', 'jellio-search-type-slot');
+    results.appendChild(booksSlot);
+    results.appendChild(audiobooksSlot);
     results.appendChild(mangaSlot);
 
     let settledCount = 0;
@@ -170,7 +174,7 @@ export async function renderSearch(root, params) {
     function maybeFinishStatus() {
       if (thisRequest !== requestId) return;
       settledCount += 1;
-      if (settledCount < 3 || fellBack) return;
+      if (settledCount < 5) return;
       status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
     }
 
@@ -191,11 +195,12 @@ export async function renderSearch(root, params) {
           seriesSlot.textContent = '';
           const movies = items.filter(function (item) { return item.Type === 'Movie'; });
           const series = items.filter(function (item) { return item.Type === 'Series'; });
+          if (movies.length || series.length) anyResults = true;
           const movieSection = buildTypeSection('Movies', movies);
           if (movieSection) moviesSlot.appendChild(movieSection);
           const seriesSection = buildTypeSection('Series', series);
           if (seriesSection) seriesSlot.appendChild(seriesSection);
-          status.textContent = items.length || anyResults ? '' : 'No results for “' + term + '”.';
+          status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
         })
         .catch(function (fallbackErr) {
           if (thisRequest !== requestId) return;
@@ -209,18 +214,20 @@ export async function renderSearch(root, params) {
       inFlight.push(controller);
       fetcher(term, controller.signal)
         .then(function (items) {
-          if (thisRequest !== requestId || fellBack) return;
+          if (thisRequest !== requestId) return;
+          if (fellBack && (title === 'Movies' || title === 'Series')) return;
           if (items.length) anyResults = true;
           const section = buildTypeSection(title, items);
           if (section) slot.appendChild(section);
           maybeFinishStatus();
         })
         .catch(function (err) {
-          if (thisRequest !== requestId || fellBack) return;
-          if (err && err.status === 404) {
+          if (thisRequest !== requestId) return;
+          if (err && err.status === 404 && (title === 'Movies' || title === 'Series')) {
             fallBackToCombined(err);
             return;
           }
+          if (fellBack && (title === 'Movies' || title === 'Series')) return;
           console.warn('Jellio: ' + title.toLowerCase() + ' search failed', err);
           const note = document.createElement('p');
           note.className = 'jellio-service-empty jellio-search-status';
@@ -232,6 +239,8 @@ export async function renderSearch(root, params) {
 
     runOne(searchMovies, moviesSlot, 'Movies');
     runOne(searchSeries, seriesSlot, 'Series');
+    runOne(searchBooks, booksSlot, 'Books');
+    runOne(searchAudiobooks, audiobooksSlot, 'Audiobooks');
     searchMangaLibrary(term)
       .then(function (matches) {
         if (thisRequest !== requestId) return;
