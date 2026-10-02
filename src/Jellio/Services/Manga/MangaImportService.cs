@@ -632,6 +632,12 @@ public class MangaImportService(
             prefs.ChapterDescending = (manga.ChapterFlags & 0x1) == 0;
             prefs.ChapterFilter = (manga.ChapterFlags & 0x20) != 0 ? "bookmarked" : (manga.ChapterFlags & 0x2) != 0 ? "unread" : "all";
 
+            // Mihon's excluded scanlators for this manga.
+            if (manga.ExcludedScanlators.Count > 0)
+            {
+                prefs.ExcludedScanlators = manga.ExcludedScanlators.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            }
+
             // Mihon's reading mode (viewer flags, low 3 bits).
             (prefs.ComicLayout, prefs.ComicDirection) = (manga.ViewerFlags & 0x7) switch
             {

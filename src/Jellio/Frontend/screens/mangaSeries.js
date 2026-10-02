@@ -23,7 +23,12 @@ import {
   mergeStreamChapters,
   mangaSeriesTitle,
   mangaSeriesKey,
+  chapterNumberOf,
+  listScanlators,
+  applyScanlatorFilter,
+  withDuplicateReads,
 } from '../components/mangaSeries.js';
+import { openScanlatorFilter } from '../components/scanlatorFilter.js';
 import { buildDownloadButton, downloadBook } from '../components/downloads.js';
 import { findAnyDownload, removeDownload } from '../runtime/offline.js';
 import { loadShelf, onShelfChange, setInLibrary, isInLibrary, saveSeriesPrefs, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
@@ -112,34 +117,49 @@ export function renderMangaSeries(root, params, parentId) {
     return isBookmarked(shelf, item.Id) || (!!item.StreamId && isBookmarked(shelf, item.StreamId));
   }
 
-  function render(group, progress) {
-    const chapters = group.chapters;
+  function render(group, rawProgress) {
+    // This reader's saved scanlator filter for the series: chapters from
+    // hidden groups are left out everywhere below, and (unless turned
+    // off) a chapter number read from one group counts as read for all.
+    const prefs = Object.assign({}, shelf.Series[shelfKey]);
+    const allChapters = group.chapters;
+    const chapters = applyScanlatorFilter(allChapters, prefs.ExcludedScanlators);
+    const duplicatesAsOne = prefs.DuplicatesAsOne !== false;
+    const progress = duplicatesAsOne ? withDuplicateReads(chapters, rawProgress) : rawProgress;
+    const scanlators = listScanlators(allChapters);
 
     // Marks chapters read or unread, here at once and then on the server.
     function setRead(list, read) {
+      // Unreading one copy has to unread the same number from the other
+      // groups too, or it would still read as read through them.
+      let targets = list;
+      if (duplicatesAsOne && !read) {
+        const numbers = new Set(list.map(chapterNumberOf).filter((number) => number >= 0));
+        if (numbers.size) targets = chapters.filter((chapter) => list.indexOf(chapter) !== -1 || numbers.has(chapterNumberOf(chapter)));
+      }
       const ids = [];
-      list.forEach(function (chapter) {
+      targets.forEach(function (chapter) {
         ids.push(chapter.Id);
         if (chapter.StreamId) ids.push(chapter.StreamId);
       });
       const now = new Date().toISOString();
       ids.forEach(function (id) {
         const key = String(id).replace(/-/g, '');
-        if (read) progress[key] = { Locator: 'page:1', Progress: 1, TotalPages: null, UpdatedAt: now };
-        else delete progress[key];
+        if (read) rawProgress[key] = { Locator: 'page:1', Progress: 1, TotalPages: null, UpdatedAt: now };
+        else delete rawProgress[key];
       });
       if (stopShelf) stopShelf();
       keptView = { filter: filter, descending: descending };
       const scrollY = window.scrollY;
       body.textContent = '';
-      render(group, progress);
+      render(group, rawProgress);
       window.scrollTo(0, scrollY);
       markReadingItems(ids, read)
         .then(function () {
           if (read) return null;
           // A chapter marked watched before would still count as read.
           return Promise.all(
-            list.filter((chapter) => chapter.UserData && chapter.UserData.Played).map((chapter) => setPlayed(chapter.Id, false).catch(() => null)),
+            targets.filter((chapter) => chapter.UserData && chapter.UserData.Played).map((chapter) => setPlayed(chapter.Id, false).catch(() => null)),
           );
         })
         .catch(function (err) {
@@ -166,7 +186,6 @@ export function renderMangaSeries(root, params, parentId) {
       openCardOptionsMenu(item, anchor.getBoundingClientRect(), null, { onlyExtra: true, extraOptions: options });
     }
     const resume = resumePoint(chapters, progress);
-    const prefs = Object.assign({}, shelf.Series[shelfKey]);
     const repaint = keptView;
     keptView = null;
     descending = repaint ? repaint.descending : !!prefs.ChapterDescending;
@@ -270,7 +289,10 @@ export function renderMangaSeries(root, params, parentId) {
         if (!window.confirm('Download ' + unsaved.length + ' chapters of “' + group.title + '” to the server?')) return;
         keep.disabled = true;
         try {
-          const result = await saveStreamSeries(group.stream.MangaId);
+          const result = await saveStreamSeries(
+            group.stream.MangaId,
+            unsaved.map((chapter) => chapter.Stream.ChapterId),
+          );
           showToast('Saving ' + ((result && result.Queued) || 0) + ' chapters to the server. They move to the library as they finish.');
         } catch (err) {
           console.warn('Jellio: could not save the series', err);
@@ -433,6 +455,36 @@ export function renderMangaSeries(root, params, parentId) {
       });
       filters.appendChild(chip);
     });
+    // Mihon's scanlator filter, remembered per series.
+    if (scanlators.length > 1) {
+      const shownGroups = scanlators.filter((entry) => chapters.some((chapter) => chapter.Scanlator === entry.name)).length;
+      const filtered = shownGroups < scanlators.length;
+      const groups = el('button', 'jellio-manga-series-chip' + (filtered ? ' jellio-manga-series-chip-active' : ''));
+      groups.type = 'button';
+      groups.textContent = filtered ? 'Scanlators · ' + shownGroups + ' of ' + scanlators.length : 'Scanlators';
+      groups.addEventListener('click', function () {
+        openScanlatorFilter({
+          available: scanlators,
+          excluded: prefs.ExcludedScanlators || [],
+          duplicatesAsOne: duplicatesAsOne,
+          onSave: function (choice) {
+            shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], {
+              ExcludedScanlators: choice.excluded,
+              DuplicatesAsOne: choice.duplicatesAsOne,
+            });
+            if (stopShelf) stopShelf();
+            keptView = { filter: filter, descending: descending };
+            body.textContent = '';
+            render(group, rawProgress);
+            saveSeriesPrefs(shelfKey, { ExcludedScanlators: choice.excluded, DuplicatesAsOne: choice.duplicatesAsOne }).catch(function (err) {
+              console.warn('Jellio: could not save the scanlator filter', err);
+              showToast('Could not save the scanlator filter. Try again.');
+            });
+          },
+        });
+      });
+      filters.appendChild(groups);
+    }
     listTools.appendChild(filters);
     const order = el('button', 'jellio-manga-series-order');
     order.type = 'button';
@@ -466,7 +518,10 @@ export function renderMangaSeries(root, params, parentId) {
         if (item === resume.chapter) row.classList.add('jellio-manga-chapter-next');
         const button = el('button', 'jellio-manga-chapter-button');
         button.type = 'button';
-        button.appendChild(el('span', 'jellio-manga-chapter-name', item.Name));
+        const label = el('span', 'jellio-manga-chapter-label');
+        label.appendChild(el('span', 'jellio-manga-chapter-name', item.Name));
+        if (item.Scanlator && scanlators.length > 1) label.appendChild(el('span', 'jellio-manga-chapter-scanlator', item.Scanlator));
+        button.appendChild(label);
         let status = '';
         if (state.read) status = 'Read';
         else if (state.started) {

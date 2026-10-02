@@ -10186,6 +10186,22 @@
   white-space: nowrap;
 }
 
+.jellio-manga-chapter-label {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jellio-manga-chapter-scanlator {
+  overflow: hidden;
+  color: var(--jellio-text-tertiary);
+  font-size: 0.78em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .jellio-manga-chapter-status {
   flex: 0 0 auto;
   color: var(--jellio-text-secondary);
@@ -11124,4 +11140,45 @@
 
 .jellio-feed-person:hover .jellio-feed-user {
   text-decoration: underline;
+}
+
+/* components/scanlatorFilter.js */
+#jellioScanlatorFilter .jellio-avatar-picker-status {
+  margin: 0.4em 0 0.8em;
+}
+
+.jellio-scanlator-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jellio-scanlator-count {
+  flex: 0 0 auto;
+  color: var(--jellio-text-tertiary);
+  font-size: 0.85em;
+}
+
+.jellio-scanlator-duplicates {
+  margin-top: 1em;
+  align-items: flex-start;
+}
+
+.jellio-scanlator-duplicates > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jellio-scanlator-hint {
+  color: var(--jellio-text-tertiary);
+  font-size: 0.85em;
+}
+
+.jellio-scanlator-actions {
+  justify-content: space-between;
+  gap: 0.6em;
+}
+
+.jellio-scanlator-reset[hidden] {
+  display: none;
 }

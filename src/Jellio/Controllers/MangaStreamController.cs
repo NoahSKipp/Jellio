@@ -69,7 +69,8 @@ public class MangaStreamController(
         var ids = titles.Where(title => mine.Contains(ShelfStore.SeriesShelfKey(title.Title))).Select(title => title.MangaId);
         var library = await stream.GetSeriesAsync(ids, cancellationToken).ConfigureAwait(false);
         var progress = progressStore.GetAll(userId);
-        return Ok(library.Select(series => Summarize(series, progress)).ToList());
+        var prefs = shelfStore.Load(userId).Series;
+        return Ok(library.Select(series => Summarize(series, progress, prefs.GetValueOrDefault(ShelfStore.SeriesShelfKey(series.Title)))).ToList());
     }
 
     // Any series in Suwayomi's library by its shelf key (not only this
@@ -195,21 +196,40 @@ public class MangaStreamController(
         return Ok(new { Queued = queue.Count });
     }
 
-    private static SeriesSummary Summarize(StreamSeries series, Dictionary<string, ReadingProgressRecord> progress)
+    // The counts the shelf shows, under this reader's settings for the
+    // series: chapters from excluded scanlators are left out, and (unless
+    // turned off) a chapter whose number is read from another scanlator
+    // counts as read too, the same as the series page.
+    private static SeriesSummary Summarize(StreamSeries series, Dictionary<string, ReadingProgressRecord> progress, SeriesPrefs? prefs)
     {
-        var chapters = series.Chapters;
+        var excluded = prefs?.ExcludedScanlators;
+        // Hiding every group would leave nothing, so then none are hidden.
+        var shown = excluded is { Count: > 0 }
+            ? series.Chapters.Where(chapter => chapter.Scanlator is null || !excluded.Contains(chapter.Scanlator, StringComparer.OrdinalIgnoreCase)).ToList()
+            : null;
+        IReadOnlyList<StreamChapter> chapters = shown is { Count: > 0 } ? shown : series.Chapters;
+        var duplicatesAsOne = prefs?.DuplicatesAsOne != false;
+        var finishedNumbers = duplicatesAsOne
+            ? chapters
+                .Where(chapter => chapter.Number >= 0 && progress.TryGetValue(chapter.Id, out var done) && done.Progress >= Finished)
+                .Select(chapter => chapter.Number)
+                .ToHashSet()
+            : new HashSet<float>();
+        bool IsFinished(StreamChapter chapter) =>
+            (progress.TryGetValue(chapter.Id, out var record) && record.Progress >= Finished)
+            || (chapter.Number >= 0 && finishedNumbers.Contains(chapter.Number));
+
         var furthestRead = -1;
         var readCount = 0;
         DateTimeOffset? lastRead = null;
         for (var i = 0; i < chapters.Count; i++)
         {
-            if (!progress.TryGetValue(chapters[i].Id, out var record) || record.Progress <= 0)
+            if (progress.TryGetValue(chapters[i].Id, out var record) && record.Progress > 0)
             {
-                continue;
+                lastRead = lastRead is null || record.UpdatedAt > lastRead ? record.UpdatedAt : lastRead;
             }
 
-            lastRead = lastRead is null || record.UpdatedAt > lastRead ? record.UpdatedAt : lastRead;
-            if (record.Progress >= Finished)
+            if (IsFinished(chapters[i]))
             {
                 furthestRead = i;
                 readCount++;
@@ -228,7 +248,7 @@ public class MangaStreamController(
 
         for (var i = furthestRead + 1; i < chapters.Count && resume == -1; i++)
         {
-            if (!progress.TryGetValue(chapters[i].Id, out var record) || record.Progress < Finished)
+            if (!IsFinished(chapters[i]))
             {
                 resume = i;
             }

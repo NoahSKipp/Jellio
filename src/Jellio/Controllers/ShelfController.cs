@@ -31,7 +31,7 @@ public class ShelfController(ShelfStore store) : ControllerBase
 
     public record MembershipBody(List<string>? Keys, List<string>? CategoryIds, List<string>? AddTo, List<string>? RemoveFrom);
 
-    public record SeriesBody(string? Key, string? Note, bool? ChapterDescending, string? ChapterFilter, string? ComicLayout, string? ComicDirection);
+    public record SeriesBody(string? Key, string? Note, bool? ChapterDescending, string? ChapterFilter, string? ComicLayout, string? ComicDirection, List<string>? ExcludedScanlators = null, bool? DuplicatesAsOne = null);
 
     public record BookmarkBody(bool Bookmarked);
 
@@ -224,6 +224,19 @@ public class ShelfController(ShelfStore store) : ControllerBase
             prefs.ChapterFilter = body.ChapterFilter ?? prefs.ChapterFilter;
             prefs.ComicLayout = body.ComicLayout is null ? prefs.ComicLayout : body.ComicLayout.Length == 0 ? null : body.ComicLayout;
             prefs.ComicDirection = body.ComicDirection is null ? prefs.ComicDirection : body.ComicDirection.Length == 0 ? null : body.ComicDirection;
+            if (body.ExcludedScanlators is not null)
+            {
+                var names = body.ExcludedScanlators
+                    .Select(name => (name ?? string.Empty).Trim())
+                    .Where(name => name.Length > 0)
+                    .Select(name => name.Length > ShelfStore.MaxNameLength * 3 ? name[..(ShelfStore.MaxNameLength * 3)] : name)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(200)
+                    .ToList();
+                prefs.ExcludedScanlators = names.Count == 0 ? null : names;
+            }
+
+            prefs.DuplicatesAsOne = body.DuplicatesAsOne ?? prefs.DuplicatesAsOne;
             data.Series[body.Key!] = prefs;
         });
         return Ok(prefs);

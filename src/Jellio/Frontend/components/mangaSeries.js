@@ -128,7 +128,57 @@ export function streamChapterItem(chapter, seriesTitle) {
     ImageTags: {},
     UserData: {},
     Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId, PageCount: chapter.PageCount },
+    ChapterNumber: chapter.Number,
+    Scanlator: chapter.Scanlator || '',
   };
+}
+
+// The chapter number, or -1 when the source gave none.
+export function chapterNumberOf(item) {
+  return typeof item.ChapterNumber === 'number' && item.ChapterNumber >= 0 ? item.ChapterNumber : -1;
+}
+
+// The groups that scanlated a series' chapters, with how many each did.
+export function listScanlators(chapters) {
+  const counts = new Map();
+  chapters.forEach(function (chapter) {
+    if (chapter.Scanlator) counts.set(chapter.Scanlator, (counts.get(chapter.Scanlator) || 0) + 1);
+  });
+  return Array.from(counts, ([name, count]) => ({ name: name, count: count })).sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  );
+}
+
+// Mihon's excluded scanlators: the chapters left once those groups are
+// hidden. Hiding every group would leave nothing to read, so then none
+// are hidden.
+export function applyScanlatorFilter(chapters, excluded) {
+  if (!excluded || !excluded.length) return chapters;
+  const hidden = new Set(excluded.map((name) => name.toLowerCase()));
+  const shown = chapters.filter((chapter) => !chapter.Scanlator || !hidden.has(chapter.Scanlator.toLowerCase()));
+  return shown.length ? shown : chapters;
+}
+
+// The same chapter number from several groups is one chapter: once any
+// copy is read, the others count as read (Mihon's mark duplicate chapters
+// read). Returns progress with those extra reads added, stored progress
+// untouched.
+export function withDuplicateReads(chapters, progress) {
+  const finished = new Map();
+  chapters.forEach(function (chapter) {
+    const number = chapterNumberOf(chapter);
+    if (number < 0) return;
+    const state = chapterState(chapter, progress);
+    if (state.read && !finished.has(number)) finished.set(number, state.record);
+  });
+  if (!finished.size) return progress;
+  const extended = Object.assign({}, progress);
+  chapters.forEach(function (chapter) {
+    const number = chapterNumberOf(chapter);
+    if (number < 0 || !finished.has(number) || chapterState(chapter, progress).read) return;
+    extended[idKey(chapter.Id)] = finished.get(number);
+  });
+  return extended;
 }
 
 function chapterNameKey(name) {
@@ -159,7 +209,7 @@ export function mergeStreamChapters(libraryChapters, streamSeries) {
     }
     if (saved && !used.has(saved)) {
       used.add(saved);
-      return Object.assign({}, saved, { StreamId: chapter.Id });
+      return Object.assign({}, saved, { StreamId: chapter.Id, ChapterNumber: chapter.Number, Scanlator: chapter.Scanlator || '' });
     }
     return streamChapterItem(chapter, streamSeries.Title);
   });
