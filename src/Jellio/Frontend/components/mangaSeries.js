@@ -130,7 +130,59 @@ export function streamChapterItem(chapter, seriesTitle) {
     Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId, PageCount: chapter.PageCount },
     ChapterNumber: chapter.Number,
     Scanlator: chapter.Scanlator || '',
+    SourceOrder: chapter.SourceOrder,
+    IsDownloaded: !!chapter.IsDownloaded,
   };
+}
+
+// A series' chapter settings (Mihon's): its own where it has set them,
+// else the reader's defaults. An older single filter (unread or
+// bookmarked) still counts until the new ones are set.
+export function chapterSettings(own, defaults) {
+  const mine = own || {};
+  const base = defaults || {};
+  const pick = (key) => (mine[key] != null ? mine[key] : base[key] != null ? base[key] : null);
+  const hasNewFilters = ['FilterUnread', 'FilterBookmarked', 'FilterDownloaded'].some((key) => mine[key] != null);
+  const legacy = !hasNewFilters && mine.ChapterFilter ? mine.ChapterFilter : null;
+  return {
+    descending: !!pick('ChapterDescending'),
+    sort: pick('ChapterSort') || 'number',
+    display: pick('ChapterDisplay') || 'title',
+    unread: pick('FilterUnread') || (legacy === 'unread' ? 'include' : null),
+    bookmarked: pick('FilterBookmarked') || (legacy === 'bookmarked' ? 'include' : null),
+    downloaded: pick('FilterDownloaded'),
+  };
+}
+
+// Whether a chapter passes the series' include/exclude filters.
+export function passesChapterFilters(item, settings, read, bookmarked) {
+  const test = (mode, value) => mode == null || (mode === 'include' ? value : !value);
+  const downloaded = !item.Stream || !!item.IsDownloaded;
+  return test(settings.unread, !read) && test(settings.bookmarked, bookmarked) && test(settings.downloaded, downloaded);
+}
+
+// The chapters oldest first by the chosen sort (then reversed for newest
+// first). Source order is the order the source lists them in, oldest
+// first as Suwayomi numbers it.
+export function sortChapters(chapters, settings) {
+  const indexed = chapters.map((chapter, index) => ({ chapter: chapter, index: index }));
+  const number = (item) => (chapterNumberOf(item) < 0 ? Number.MAX_SAFE_INTEGER : chapterNumberOf(item));
+  const date = (item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0);
+  const compare = {
+    number: (a, b) => number(a.chapter) - number(b.chapter) || a.index - b.index,
+    source: (a, b) => (a.chapter.SourceOrder ?? a.index) - (b.chapter.SourceOrder ?? b.index) || a.index - b.index,
+    date: (a, b) => date(a.chapter) - date(b.chapter) || a.index - b.index,
+    title: (a, b) => String(a.chapter.Name || '').localeCompare(String(b.chapter.Name || ''), undefined, { numeric: true, sensitivity: 'base' }) || a.index - b.index,
+  }[settings.sort] || ((a, b) => a.index - b.index);
+  const sorted = indexed.sort(compare).map((entry) => entry.chapter);
+  return settings.descending ? sorted.reverse() : sorted;
+}
+
+// "Chapter 12.5" for the number display, the source's title otherwise.
+export function chapterLabelFor(item, settings) {
+  const number = chapterNumberOf(item);
+  if (settings.display === 'number' && number >= 0) return 'Chapter ' + String(Math.round(number * 1000) / 1000);
+  return item.Name;
 }
 
 // The chapter number, or -1 when the source gave none.
@@ -249,7 +301,13 @@ export function mergeStreamChapters(libraryChapters, streamSeries) {
     }
     if (saved && !used.has(saved)) {
       used.add(saved);
-      return Object.assign({}, saved, { StreamId: chapter.Id, ChapterNumber: chapter.Number, Scanlator: chapter.Scanlator || '' });
+      return Object.assign({}, saved, {
+        StreamId: chapter.Id,
+        ChapterNumber: chapter.Number,
+        Scanlator: chapter.Scanlator || '',
+        SourceOrder: chapter.SourceOrder,
+        IsDownloaded: !!chapter.IsDownloaded,
+      });
     }
     return streamChapterItem(chapter, streamSeries.Title);
   });

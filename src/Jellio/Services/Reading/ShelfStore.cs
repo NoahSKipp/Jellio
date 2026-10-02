@@ -54,6 +54,19 @@ public class SeriesPrefs
     // Whether a chapter counts as read once the same chapter number is
     // read from another scanlator. Null means yes.
     public bool? DuplicatesAsOne { get; set; }
+
+    // Mihon's chapter filters: null (off), "include" or "exclude".
+    public string? FilterDownloaded { get; set; }
+
+    public string? FilterUnread { get; set; }
+
+    public string? FilterBookmarked { get; set; }
+
+    // "source", "number", "date" or "title"; null means number.
+    public string? ChapterSort { get; set; }
+
+    // "title" or "number"; null means title.
+    public string? ChapterDisplay { get; set; }
 }
 
 public class ShelfData
@@ -72,6 +85,10 @@ public class ShelfData
     // Series the reader removed from the library, kept off the shelf even
     // if they have read chapters, until added again.
     public List<string> LibraryRemoved { get; set; } = [];
+
+    // Chapter settings for series that haven't set their own (Mihon's
+    // "set as default").
+    public SeriesPrefs? SeriesDefaults { get; set; }
 }
 
 /// <summary>

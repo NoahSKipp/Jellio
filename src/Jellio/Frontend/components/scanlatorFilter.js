@@ -73,7 +73,7 @@ export function openScanlatorFilter(options) {
   panel.appendChild(note);
 
   const actions = el('div', 'jellio-shelf-categories-actions jellio-scanlator-actions');
-  const reset = el('button', 'jellio-shelf-categories-icon jellio-scanlator-reset', 'Show all');
+  const reset = el('button', 'jellio-chapter-settings-action jellio-scanlator-reset', 'Show all');
   reset.type = 'button';
   reset.addEventListener('click', function () {
     boxes.forEach((entry) => (entry.box.checked = true));

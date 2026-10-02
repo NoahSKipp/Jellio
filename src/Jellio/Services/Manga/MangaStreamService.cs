@@ -12,7 +12,7 @@ namespace Jellio.Services.Manga;
 
 // Id: a stable Guid for the chapter (StreamIds), what reading progress,
 // bookmarks and downloads on the device are keyed by.
-public record StreamChapter(string Id, int ChapterId, int MangaId, string Name, float Number, string? Scanlator, bool IsDownloaded, int PageCount, long UploadDate);
+public record StreamChapter(string Id, int ChapterId, int MangaId, string Name, float Number, string? Scanlator, bool IsDownloaded, int PageCount, long UploadDate, int SourceOrder = 0);
 
 public record StreamSeries(int MangaId, string Title, string? Author, string? Status, string Key, IReadOnlyList<StreamChapter> Chapters);
 
@@ -205,7 +205,8 @@ public class MangaStreamService(SuwayomiClient suwayomi)
                 chapter.Scanlator,
                 chapter.IsDownloaded,
                 chapter.PageCount,
-                chapter.UploadDate))
+                chapter.UploadDate,
+                chapter.SourceOrder))
             .ToList();
         return new StreamSeries(mangaId, title, author, status, ShelfStore.SeriesKey(title), ordered);
     }

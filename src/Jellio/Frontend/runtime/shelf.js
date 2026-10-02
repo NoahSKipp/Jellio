@@ -4,7 +4,7 @@
 // change fires jellio:shelf-changed so open screens can repaint.
 import { getServerAddress, getAuthHeaders } from './auth.js';
 
-const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [], LibraryRemoved: [] };
+const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [], LibraryRemoved: [], SeriesDefaults: null };
 const loaded = new Map();
 
 function idKey(id) {
@@ -103,6 +103,13 @@ export async function saveSeriesPrefs(key, patch) {
   const prefs = await send('PUT', '/series', Object.assign({ Key: key }, patch));
   changed(null);
   return prefs;
+}
+
+// Mihon's "set as default" for chapter settings, and optionally every
+// series on the shelf switched over to it.
+export async function saveSeriesDefaults(settings, applyToLibrary) {
+  await send('PUT', '/series/defaults', Object.assign({}, settings, { ApplyToLibrary: !!applyToLibrary }));
+  changed(null);
 }
 
 // Manga series on the reader's shelf (Mihon's library).
