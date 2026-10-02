@@ -27,11 +27,16 @@ import {
   listScanlators,
   applyScanlatorFilter,
   withDuplicateReads,
+  chapterSettings,
+  passesChapterFilters,
+  sortChapters,
+  chapterLabelFor,
 } from '../components/mangaSeries.js';
 import { openScanlatorFilter } from '../components/scanlatorFilter.js';
+import { openChapterSettings } from '../components/chapterSettings.js';
 import { buildDownloadButton, downloadBook } from '../components/downloads.js';
 import { findAnyDownload, removeDownload } from '../runtime/offline.js';
-import { loadShelf, onShelfChange, setInLibrary, isInLibrary, saveSeriesPrefs, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
+import { loadShelf, onShelfChange, setInLibrary, isInLibrary, saveSeriesPrefs, saveSeriesDefaults, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
 import { openCategoryPicker } from '../components/shelfCategories.js';
 import { showToast } from '../components/toast.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
@@ -44,8 +49,7 @@ function openChapter(item) {
 export function renderMangaSeries(root, params, parentId) {
   const key = params.get('series') || '';
   let cancelled = false;
-  let descending = false;
-  // Kept across a repaint (marking chapters read).
+  // Set across a repaint (marking chapters read) so the page keeps its place.
   let keptView = null;
   let shelf = { Categories: [], Series: {}, Bookmarks: [] };
   const shelfKey = seriesShelfKey(key);
@@ -149,7 +153,7 @@ export function renderMangaSeries(root, params, parentId) {
         else delete rawProgress[key];
       });
       if (stopShelf) stopShelf();
-      keptView = { filter: filter, descending: descending };
+      keptView = { kept: true };
       const scrollY = window.scrollY;
       body.textContent = '';
       render(group, rawProgress);
@@ -188,8 +192,64 @@ export function renderMangaSeries(root, params, parentId) {
     const resume = resumePoint(chapters, progress);
     const repaint = keptView;
     keptView = null;
-    descending = repaint ? repaint.descending : !!prefs.ChapterDescending;
-    let filter = repaint ? repaint.filter : prefs.ChapterFilter || 'all';
+    const cs = chapterSettings(prefs, shelf.SeriesDefaults);
+
+    function rerender() {
+      if (stopShelf) stopShelf();
+      keptView = { kept: true };
+      const scrollY = window.scrollY;
+      body.textContent = '';
+      render(group, rawProgress);
+      window.scrollTo(0, scrollY);
+    }
+
+    // The settings as the server stores them ("" clears one).
+    function settingsForServer(settings) {
+      return {
+        ChapterDescending: settings.descending,
+        ChapterSort: settings.sort,
+        ChapterDisplay: settings.display,
+        FilterUnread: settings.unread || '',
+        FilterBookmarked: settings.bookmarked || '',
+        FilterDownloaded: settings.downloaded || '',
+      };
+    }
+
+    // A change to the chapter settings: shown at once, then remembered.
+    function applySettings(patch) {
+      // From what is saved now, not this render's copy: the dialog stays
+      // open across the repaints its own changes cause.
+      const next = Object.assign({}, chapterSettings(shelf.Series[shelfKey], shelf.SeriesDefaults), patch);
+      const server = settingsForServer(next);
+      server.ChapterFilter = 'all';
+      const local = Object.assign({}, shelf.Series[shelfKey]);
+      Object.keys(server).forEach((key) => (local[key] = server[key] === '' ? null : server[key]));
+      shelf.Series[shelfKey] = local;
+      rerender();
+      saveSeriesPrefs(shelfKey, server).catch(function (err) {
+        console.warn('Jellio: could not save the chapter settings', err);
+        showToast('Could not save the chapter settings. Try again.');
+      });
+    }
+
+    function openScanlators() {
+      openScanlatorFilter({
+        available: scanlators,
+        excluded: prefs.ExcludedScanlators || [],
+        duplicatesAsOne: duplicatesAsOne,
+        onSave: function (choice) {
+          shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], {
+            ExcludedScanlators: choice.excluded,
+            DuplicatesAsOne: choice.duplicatesAsOne,
+          });
+          rerender();
+          saveSeriesPrefs(shelfKey, { ExcludedScanlators: choice.excluded, DuplicatesAsOne: choice.duplicatesAsOne }).catch(function (err) {
+            console.warn('Jellio: could not save the scanlator filter', err);
+            showToast('Could not save the scanlator filter. Try again.');
+          });
+        },
+      });
+    }
 
     const hero = el('section', 'jellio-manga-series-hero');
     const cover = el('div', 'jellio-manga-series-cover');
@@ -446,12 +506,17 @@ export function renderMangaSeries(root, params, parentId) {
       const chip = el('button', 'jellio-manga-series-chip', option.label);
       chip.type = 'button';
       chip.dataset.filter = option.value;
+      const only = (key) => ({ unread: null, bookmarked: null, downloaded: null, [key]: 'include' });
+      const active =
+        option.value === 'all'
+          ? !cs.unread && !cs.bookmarked && !cs.downloaded
+          : option.value === 'unread'
+            ? cs.unread === 'include' && !cs.bookmarked && !cs.downloaded
+            : cs.bookmarked === 'include' && !cs.unread && !cs.downloaded;
+      chip.classList.toggle('jellio-manga-series-chip-active', active);
+      chip.setAttribute('aria-pressed', active ? 'true' : 'false');
       chip.addEventListener('click', function () {
-        filter = option.value;
-        renderList();
-        saveSeriesPrefs(shelfKey, { ChapterFilter: filter }).catch(function (err) {
-          console.warn('Jellio: could not save the chapter filter', err);
-        });
+        applySettings(option.value === 'all' ? only('none') : only(option.value));
       });
       filters.appendChild(chip);
     });
@@ -462,29 +527,47 @@ export function renderMangaSeries(root, params, parentId) {
       const groups = el('button', 'jellio-manga-series-chip' + (filtered ? ' jellio-manga-series-chip-active' : ''));
       groups.type = 'button';
       groups.textContent = filtered ? 'Scanlators · ' + shownGroups + ' of ' + scanlators.length : 'Scanlators';
-      groups.addEventListener('click', function () {
-        openScanlatorFilter({
-          available: scanlators,
-          excluded: prefs.ExcludedScanlators || [],
-          duplicatesAsOne: duplicatesAsOne,
-          onSave: function (choice) {
-            shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], {
-              ExcludedScanlators: choice.excluded,
-              DuplicatesAsOne: choice.duplicatesAsOne,
-            });
-            if (stopShelf) stopShelf();
-            keptView = { filter: filter, descending: descending };
-            body.textContent = '';
-            render(group, rawProgress);
-            saveSeriesPrefs(shelfKey, { ExcludedScanlators: choice.excluded, DuplicatesAsOne: choice.duplicatesAsOne }).catch(function (err) {
-              console.warn('Jellio: could not save the scanlator filter', err);
-              showToast('Could not save the scanlator filter. Try again.');
-            });
-          },
-        });
-      });
+      groups.addEventListener('click', openScanlators);
       filters.appendChild(groups);
     }
+    const sheet = el('button', 'jellio-manga-series-chip');
+    sheet.type = 'button';
+    sheet.appendChild(el('span', 'material-icons tune'));
+    sheet.appendChild(el('span', null, 'Filter & sort'));
+    sheet.addEventListener('click', function () {
+      openChapterSettings({
+        settings: cs,
+        scanlators: scanlators,
+        shownGroups: scanlators.filter((entry) => chapters.some((chapter) => chapter.Scanlator === entry.name)).length,
+        onChange: applySettings,
+        onScanlators: openScanlators,
+        onSetDefault: function (applyToLibrary) {
+          saveSeriesDefaults(settingsForServer(chapterSettings(shelf.Series[shelfKey], shelf.SeriesDefaults)), applyToLibrary)
+            .then(() => showToast(applyToLibrary ? 'Saved as the default, and applied to your shelf.' : 'Saved as the default for new series.'))
+            .catch(function (err) {
+              console.warn('Jellio: could not save the default chapter settings', err);
+              showToast('Could not save the default. Try again.');
+            });
+        },
+        onReset: function () {
+          shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], {
+            ChapterDescending: null,
+            ChapterFilter: null,
+            FilterDownloaded: null,
+            FilterUnread: null,
+            FilterBookmarked: null,
+            ChapterSort: null,
+            ChapterDisplay: null,
+          });
+          rerender();
+          saveSeriesPrefs(shelfKey, { Reset: true }).catch(function (err) {
+            console.warn('Jellio: could not reset the chapter settings', err);
+            showToast('Could not reset. Try again.');
+          });
+        },
+      });
+    });
+    filters.appendChild(sheet);
     listTools.appendChild(filters);
     const order = el('button', 'jellio-manga-series-order');
     order.type = 'button';
@@ -496,21 +579,21 @@ export function renderMangaSeries(root, params, parentId) {
 
     function renderList() {
       order.textContent = '';
-      order.appendChild(el('span', 'material-icons ' + (descending ? 'arrow_downward' : 'arrow_upward')));
-      order.appendChild(el('span', null, descending ? 'Newest first' : 'Oldest first'));
+      order.appendChild(el('span', 'material-icons ' + (cs.descending ? 'arrow_downward' : 'arrow_upward')));
+      order.appendChild(el('span', null, cs.descending ? 'Newest first' : 'Oldest first'));
       list.textContent = '';
-      filters.querySelectorAll('button').forEach(function (chip) {
-        const active = chip.dataset.filter === filter;
-        chip.classList.toggle('jellio-manga-series-chip-active', active);
-        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-      const ordered = (descending ? chapters.slice().reverse() : chapters).filter(function (item) {
-        if (filter === 'unread') return !chapterState(item, progress).read;
-        if (filter === 'bookmarked') return bookmarked(item);
-        return true;
-      });
+      const ordered = sortChapters(chapters, cs).filter((item) =>
+        passesChapterFilters(item, cs, chapterState(item, progress).read, bookmarked(item)),
+      );
       if (!ordered.length) {
-        list.appendChild(el('li', 'jellio-manga-chapter-empty', filter === 'bookmarked' ? 'No bookmarked chapters.' : 'Nothing left to read.'));
+        const filtering = cs.unread || cs.bookmarked || cs.downloaded;
+        list.appendChild(
+          el(
+            'li',
+            'jellio-manga-chapter-empty',
+            !filtering ? 'No chapters.' : cs.bookmarked === 'include' && !cs.unread && !cs.downloaded ? 'No bookmarked chapters.' : cs.unread === 'include' && !cs.bookmarked && !cs.downloaded ? 'Nothing left to read.' : 'No chapters match these filters.',
+          ),
+        );
       }
       ordered.forEach(function (item) {
         const state = chapterState(item, progress);
@@ -519,8 +602,13 @@ export function renderMangaSeries(root, params, parentId) {
         const button = el('button', 'jellio-manga-chapter-button');
         button.type = 'button';
         const label = el('span', 'jellio-manga-chapter-label');
-        label.appendChild(el('span', 'jellio-manga-chapter-name', item.Name));
-        if (item.Scanlator && scanlators.length > 1) label.appendChild(el('span', 'jellio-manga-chapter-scanlator', item.Scanlator));
+        label.appendChild(el('span', 'jellio-manga-chapter-name', chapterLabelFor(item, cs)));
+        const uploaded = item.DateCreated ? new Date(item.DateCreated) : null;
+        const sub = [
+          uploaded && !Number.isNaN(uploaded.getTime()) ? uploaded.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '',
+          item.Scanlator && scanlators.length > 1 ? item.Scanlator : '',
+        ].filter(Boolean);
+        if (sub.length) label.appendChild(el('span', 'jellio-manga-chapter-scanlator', sub.join(' · ')));
         button.appendChild(label);
         let status = '';
         if (state.read) status = 'Read';
@@ -590,11 +678,7 @@ export function renderMangaSeries(root, params, parentId) {
       });
     }
     order.addEventListener('click', function () {
-      descending = !descending;
-      renderList();
-      saveSeriesPrefs(shelfKey, { ChapterDescending: descending }).catch(function (err) {
-        console.warn('Jellio: could not save the chapter order', err);
-      });
+      applySettings({ descending: !cs.descending });
     });
     renderList();
 

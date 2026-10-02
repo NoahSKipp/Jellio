@@ -630,7 +630,12 @@ public class MangaImportService(
             // Mihon's chapter flags: bit 0 ascending, 0x2 unread only,
             // 0x20 bookmarked only.
             prefs.ChapterDescending = (manga.ChapterFlags & 0x1) == 0;
-            prefs.ChapterFilter = (manga.ChapterFlags & 0x20) != 0 ? "bookmarked" : (manga.ChapterFlags & 0x2) != 0 ? "unread" : "all";
+            prefs.ChapterFilter = "all";
+            prefs.FilterUnread = (manga.ChapterFlags & 0x6) switch { 0x2 => "include", 0x4 => "exclude", _ => null };
+            prefs.FilterDownloaded = (manga.ChapterFlags & 0x18) switch { 0x8 => "include", 0x10 => "exclude", _ => null };
+            prefs.FilterBookmarked = (manga.ChapterFlags & 0x60) switch { 0x20 => "include", 0x40 => "exclude", _ => null };
+            prefs.ChapterSort = (manga.ChapterFlags & 0x300) switch { 0x100 => "number", 0x200 => "date", 0x300 => "title", _ => "source" };
+            prefs.ChapterDisplay = (manga.ChapterFlags & 0x100000) != 0 ? "number" : null;
 
             // Mihon's excluded scanlators for this manga.
             if (manga.ExcludedScanlators.Count > 0)
