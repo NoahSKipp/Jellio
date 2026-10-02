@@ -25,6 +25,7 @@ namespace Jellio.Controllers;
 [Authorize]
 public class MangaStreamController(
     MangaStreamService stream,
+    MangaUpdatesService updates,
     SuwayomiClient suwayomi,
     ReadingProgressStore progressStore,
     ShelfStore shelfStore,
@@ -71,6 +72,71 @@ public class MangaStreamController(
         var progress = progressStore.GetAll(userId);
         var prefs = shelfStore.Load(userId).Series;
         return Ok(library.Select(series => Summarize(series, progress, prefs.GetValueOrDefault(ShelfStore.SeriesShelfKey(series.Title)))).ToList());
+    }
+
+    public record UpdateItem(string SeriesKey, string SeriesTitle, int MangaId, StreamChapter Chapter, long SeenAt, bool Read);
+
+    // Chapters that turned up in the last library refreshes, newest
+    // first, for this reader's series (Mihon's Updates).
+    [HttpGet("updates")]
+    public Task<IActionResult> Updates(CancellationToken cancellationToken) => UpdatesResult(cancellationToken);
+
+    [HttpPost("updates/refresh")]
+    public async Task<IActionResult> RefreshUpdates(CancellationToken cancellationToken)
+    {
+        await updates.RefreshAsync(true, cancellationToken).ConfigureAwait(false);
+        return await UpdatesResult(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IActionResult> UpdatesResult(CancellationToken cancellationToken)
+    {
+        var data = updates.Load();
+        if (!SuwayomiClient.IsConfigured || !TryUser(out var userId))
+        {
+            return Ok(new { data.LastRefreshAt, Items = Array.Empty<UpdateItem>() });
+        }
+
+        var titles = await stream.GetTitlesAsync(cancellationToken).ConfigureAwait(false);
+        var mine = shelfStore.Library(userId);
+        var mineByManga = (titles ?? Array.Empty<StreamTitle>()).Where(title => mine.Contains(ShelfStore.SeriesShelfKey(title.Title))).ToDictionary(title => title.MangaId);
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-60).ToUnixTimeMilliseconds();
+        var recent = data.Recent.Where(entry => entry.SeenAt >= cutoff && mineByManga.ContainsKey(entry.MangaId)).Take(300).ToList();
+        var seriesList = await stream.GetSeriesAsync(recent.Select(entry => entry.MangaId), cancellationToken).ConfigureAwait(false);
+        var seriesByManga = seriesList.ToDictionary(series => series.MangaId);
+        var progress = progressStore.GetAll(userId);
+        var prefs = shelfStore.Load(userId).Series;
+
+        var items = new List<UpdateItem>();
+        foreach (var entry in recent)
+        {
+            if (!seriesByManga.TryGetValue(entry.MangaId, out var series))
+            {
+                continue;
+            }
+
+            var chapter = series.Chapters.FirstOrDefault(candidate => candidate.ChapterId == entry.ChapterId);
+            if (chapter is null)
+            {
+                continue;
+            }
+
+            prefs.TryGetValue(ShelfStore.SeriesShelfKey(series.Title), out var seriesPrefs);
+            var excluded = seriesPrefs?.ExcludedScanlators;
+            if (excluded is { Count: > 0 } && chapter.Scanlator is not null && excluded.Contains(chapter.Scanlator, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var read = progress.TryGetValue(chapter.Id, out var record) && record.Progress >= Finished;
+            if (!read && seriesPrefs?.DuplicatesAsOne != false && chapter.Number >= 0)
+            {
+                read = series.Chapters.Any(other => other.Number == chapter.Number && progress.TryGetValue(other.Id, out var done) && done.Progress >= Finished);
+            }
+
+            items.Add(new UpdateItem(series.Key, series.Title, series.MangaId, chapter, entry.SeenAt, read));
+        }
+
+        return Ok(new { data.LastRefreshAt, Items = items });
     }
 
     // Any series in Suwayomi's library by its shelf key (not only this

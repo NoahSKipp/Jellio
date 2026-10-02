@@ -11391,3 +11391,108 @@
   font-size: 0.85rem;
   color: #ff8a80;
 }
+
+.jellio-manga-updates-refresh {
+  margin-left: auto;
+}
+
+.jellio-manga-updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 var(--jellio-gutter, 16px) 32px;
+}
+
+.jellio-manga-updates-day {
+  margin: 18px 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.jellio-manga-update {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+}
+
+.jellio-manga-update:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.jellio-manga-update-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-manga-update-cover {
+  flex: none;
+  width: 48px;
+  height: 68px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jellio-manga-update-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.jellio-manga-update-series,
+.jellio-manga-update-chapter,
+.jellio-manga-update-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-manga-update-series {
+  font-weight: 600;
+}
+
+.jellio-manga-update-meta {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.jellio-manga-update-read .jellio-manga-update-main {
+  opacity: 0.5;
+}
+
+.jellio-manga-update-mark {
+  flex: none;
+  padding: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.jellio-screen-manga-updates .jellio-library-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jellio-screen-manga-updates .jellio-library-title {
+  margin: 0;
+}
+
+.jellio-screen-manga-updates > .jellio-bookshelf-stats {
+  padding: 0 var(--jellio-gutter, 16px);
+}

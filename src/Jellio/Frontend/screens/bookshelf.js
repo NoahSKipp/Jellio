@@ -32,6 +32,7 @@ import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
 import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
+import { renderMangaUpdates } from './mangaUpdates.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildBookRequestPanel } from '../components/bookRequest.js';
@@ -423,6 +424,7 @@ export function renderBookshelf(root, params, parentId) {
   const requestedKind = params.get('bookKind');
   const kind = requestedKind === 'audiobook' || requestedKind === 'manga' ? requestedKind : 'ebook';
   if (kind === 'manga' && params.get('series')) return renderMangaSeries(root, params, parentId);
+  if (kind === 'manga' && params.get('updates')) return renderMangaUpdates(root, params);
   const copy = KINDS[kind];
   setTitle(copy.title + ' - Jellio');
   root.classList.add('jellio-screen-bookshelf');
@@ -585,6 +587,18 @@ export function renderBookshelf(root, params, parentId) {
   const tabs = el('div', 'jellio-shelf-tabs');
   tabs.setAttribute('role', 'tablist');
   root.appendChild(tabs);
+  function updatesButton() {
+    const button = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
+    button.type = 'button';
+    button.appendChild(el('span', 'material-icons new_releases'));
+    button.appendChild(el('span', null, 'Updates'));
+    button.addEventListener('click', function () {
+      const next = new URLSearchParams(params);
+      next.set('updates', '1');
+      navigateTo('#/books?' + next.toString());
+    });
+    return button;
+  }
   getJellioConfig()
     .then(function (config) {
       // Chaptarr and Open Library cover books, not manga.
@@ -623,6 +637,7 @@ export function renderBookshelf(root, params, parentId) {
         });
         wrap.appendChild(open);
         wrap.appendChild(discover);
+        wrap.appendChild(updatesButton());
         requestMount.appendChild(wrap);
       } else if (config && config.BookRequestsEnabled && kind !== 'manga') {
         const panel = buildBookRequestPanel(copy.requestType || kind, {
@@ -635,6 +650,7 @@ export function renderBookshelf(root, params, parentId) {
       } else {
         const wrap = el('section', 'jellio-book-request');
         wrap.appendChild(discover);
+        if (kind === 'manga') wrap.appendChild(updatesButton());
         requestMount.appendChild(wrap);
       }
     })
