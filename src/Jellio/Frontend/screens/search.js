@@ -36,17 +36,48 @@ function getRecentSearches() {
   try {
     const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // Prune invalid entries and fragments saved by previous rapid-typing sessions
+    const cleaned = [];
+    for (const item of parsed) {
+      if (typeof item !== 'string') continue;
+      const trimmed = item.trim();
+      if (trimmed.length < 2) continue;
+      const lower = trimmed.toLowerCase();
+      // Check if we already kept this item or a more specific superset of it
+      const hasSuperset = cleaned.some(function (existing) {
+        const exLower = existing.toLowerCase();
+        return exLower === lower || exLower.startsWith(lower) || exLower.includes(lower);
+      });
+      if (hasSuperset) continue;
+
+      // Also remove any previously added items that are substrings/prefixes of this longer item
+      for (let i = cleaned.length - 1; i >= 0; i--) {
+        const exLower = cleaned[i].toLowerCase();
+        if (lower.startsWith(exLower) || lower.includes(exLower)) {
+          cleaned.splice(i, 1);
+        }
+      }
+      cleaned.push(trimmed);
+    }
+    return cleaned.slice(0, MAX_RECENT_SEARCHES);
   } catch (err) {
     return [];
   }
 }
 
 function saveRecentSearch(term) {
-  const clean = term.trim();
+  const clean = (term || '').trim();
   if (!clean || clean.length < 2) return;
   try {
-    const list = getRecentSearches().filter((item) => item.toLowerCase() !== clean.toLowerCase());
+    const cleanLower = clean.toLowerCase();
+    const list = getRecentSearches().filter(function (item) {
+      const itemLower = item.toLowerCase();
+      if (itemLower === cleanLower) return false;
+      if (cleanLower.startsWith(itemLower) || itemLower.startsWith(cleanLower)) return false;
+      if (cleanLower.includes(itemLower)) return false;
+      return true;
+    });
     list.unshift(clean);
     if (list.length > MAX_RECENT_SEARCHES) list.length = MAX_RECENT_SEARCHES;
     window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(list));
@@ -150,6 +181,7 @@ export async function renderSearch(root, params) {
       chip.appendChild(el('span', null, query));
       chip.addEventListener('click', function () {
         input.value = query;
+        saveRecentSearch(query);
         paintRecentSearches();
         runSearch(query);
       });
@@ -192,6 +224,7 @@ export async function renderSearch(root, params) {
   }
 
   let timer = null;
+  let saveTimer = null;
   let requestId = 0;
   // Gelato's own search proxies straight through to AIOStreams live, one
   // real round trip per addon per request, nothing cached: a reader who
@@ -221,7 +254,6 @@ export async function renderSearch(root, params) {
   // a late-arriving Movies section still renders above Series, not
   // wherever insertion order happened to land it.
   function runSearch(term) {
-    saveRecentSearch(term);
     recentSection.hidden = true;
     reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
     abortInFlight();
@@ -329,8 +361,20 @@ export async function renderSearch(root, params) {
       });
   }
 
+  function commitCurrentSearch() {
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    const term = input.value.trim();
+    if (term.length >= 2) {
+      saveRecentSearch(term);
+    }
+  }
+
   input.addEventListener('input', function () {
     if (timer) window.clearTimeout(timer);
+    if (saveTimer) window.clearTimeout(saveTimer);
     const term = input.value.trim();
     if (!term) {
       reflectStateInAddressBar('#/search');
@@ -344,6 +388,23 @@ export async function renderSearch(root, params) {
     timer = window.setTimeout(function () {
       runSearch(term);
     }, DEBOUNCE_MS);
+    saveTimer = window.setTimeout(function () {
+      saveRecentSearch(term);
+    }, 1500);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      commitCurrentSearch();
+    }
+  });
+
+  input.addEventListener('blur', function () {
+    commitCurrentSearch();
+  });
+
+  results.addEventListener('click', function () {
+    commitCurrentSearch();
   });
 
   // A real back navigation landing back on #/search?q=... (a card's own

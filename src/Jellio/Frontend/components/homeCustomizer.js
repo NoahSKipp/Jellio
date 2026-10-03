@@ -211,10 +211,19 @@ export function applyHomeCustomization(rowsContainer, editMode) {
   // moves wrappers around the DOM a moment from now, so reading live
   // order back off the DOM here would let today's reorder quietly
   // become tomorrow's new "default" the instant a reader hit Reset.
+  // Uses screens/home.js's authoritative dataset.jellioHomeOrder (personal
+  // rows 0..999, catalog/genre/rec rows 1000+) so invalidating and
+  // re-fetching personal rows across playback/reader sessions never causes
+  // naturalOrderCounter drift to push personal rows below recommendation rows.
   const liveKeys = wrappers
     .slice()
     .sort(function (a, b) {
-      return Number(a.dataset.jellioNaturalOrder) - Number(b.dataset.jellioNaturalOrder);
+      const homeA = a.dataset.jellioHomeOrder !== undefined ? Number(a.dataset.jellioHomeOrder) : null;
+      const homeB = b.dataset.jellioHomeOrder !== undefined ? Number(b.dataset.jellioHomeOrder) : null;
+      if (homeA !== null && homeB !== null && !Number.isNaN(homeA) && !Number.isNaN(homeB) && homeA !== homeB) {
+        return homeA - homeB;
+      }
+      return Number(a.dataset.jellioNaturalOrder || 0) - Number(b.dataset.jellioNaturalOrder || 0);
     })
     .map(function (w) {
       return w.dataset.jellioRowKey;
