@@ -2688,6 +2688,78 @@
   padding-top: 0;
 }
 
+.jellio-search-recent {
+  padding: 0 var(--jellio-safe-gutter) 1.5em;
+  max-width: min(100%, 36em);
+}
+
+.jellio-search-recent[hidden] {
+  display: none;
+}
+
+.jellio-search-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75em;
+}
+
+.jellio-search-recent-title {
+  font-size: 0.88em;
+  font-weight: 600;
+  color: var(--jellio-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.jellio-search-recent-clear {
+  border: none;
+  background: transparent;
+  color: var(--jellio-text-tertiary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.82em;
+  cursor: pointer;
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+}
+
+.jellio-search-recent-clear:hover {
+  color: var(--jellio-text-primary);
+  text-decoration: underline;
+}
+
+.jellio-search-recent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.jellio-search-recent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.45em 0.85em;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.05);
+  color: var(--jellio-text-primary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.86em;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.jellio-search-recent-chip:hover,
+.jellio-search-recent-chip:focus-visible {
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.25);
+}
+
+.jellio-search-recent-chip-icon {
+  font-size: 1.1em;
+  color: var(--jellio-text-tertiary);
+}
+
 .jellio-detail-hero {
   position: relative;
   min-height: clamp(380px, 58vw, 640px);
@@ -4543,6 +4615,196 @@
   flex: 0 0 auto;
   color: var(--jellio-text-tertiary);
   font-variant-numeric: tabular-nums;
+}
+
+/* Persistent audiobook mini-player floating dock */
+.jellio-audio-mini-player {
+  position: fixed;
+  bottom: 20px;
+  left: calc(var(--jellio-sidebar-width, 240px) + 24px);
+  right: 24px;
+  max-width: 680px;
+  margin: 0 auto;
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 180ms var(--jellio-ease-out), opacity 180ms ease;
+  user-select: none;
+}
+
+.jellio-root-fullscreen .jellio-audio-mini-player {
+  display: none !important;
+}
+
+.jellio-mini-player-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: rgb(255 255 255 / 0.12);
+  overflow: hidden;
+}
+
+.jellio-mini-player-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--jellio-accent-color);
+  transition: width 200ms linear;
+}
+
+.jellio-mini-player-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem;
+}
+
+.jellio-mini-player-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.jellio-mini-player-cover {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--jellio-card-bg);
+  overflow: hidden;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+.jellio-mini-player-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jellio-mini-player-cover .material-icons {
+  font-size: 24px;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-mini-player-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.jellio-mini-player-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--jellio-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-mini-player-subtitle {
+  font-size: 0.78rem;
+  color: var(--jellio-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-mini-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.jellio-mini-player-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--jellio-text-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 150ms ease, transform 100ms ease;
+}
+
+.jellio-mini-player-btn:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.jellio-mini-player-btn:active {
+  transform: scale(0.92);
+}
+
+.jellio-mini-player-btn .material-icons {
+  font-size: 20px;
+}
+
+.jellio-mini-player-play-btn {
+  width: 38px;
+  height: 38px;
+  background: var(--jellio-accent-color);
+  color: #fff;
+}
+
+.jellio-mini-player-play-btn:hover {
+  background: var(--jellio-accent-color);
+  filter: brightness(1.15);
+}
+
+.jellio-mini-player-play-btn .material-icons {
+  font-size: 22px;
+}
+
+.jellio-mini-player-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.jellio-mini-player-time {
+  font-size: 0.78rem;
+  color: var(--jellio-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.jellio-mini-player-close-btn {
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-mini-player-close-btn:hover {
+  color: var(--jellio-text-primary);
+}
+
+@media (pointer: coarse), (max-width: 47.99em) {
+  .jellio-audio-mini-player {
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+    max-width: calc(100vw - 24px);
+    border-radius: 12px;
+  }
+  .jellio-mini-player-time {
+    display: none;
+  }
 }
 
 .jellio-screen-player {
@@ -10345,6 +10607,113 @@
   padding: 0 var(--jellio-safe-gutter) 4em;
 }
 
+.jellio-downloads-storage {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  padding: 1.25em;
+  margin-bottom: 2em;
+  border-radius: var(--jellio-card-radius);
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.jellio-storage-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.08);
+  gap: 2px;
+}
+
+.jellio-storage-segment {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 300ms var(--jellio-ease-out);
+}
+
+.jellio-storage-segment-video {
+  background: #a855f7;
+}
+
+.jellio-storage-segment-manga {
+  background: #06b6d4;
+}
+
+.jellio-storage-segment-audiobook {
+  background: #14b8a6;
+}
+
+.jellio-storage-segment-book {
+  background: #f59e0b;
+}
+
+.jellio-storage-segment-free {
+  background: rgb(255 255 255 / 0.15);
+}
+
+.jellio-storage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25em;
+  font-size: 0.85em;
+}
+
+.jellio-storage-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.jellio-storage-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.jellio-storage-legend-dot-free {
+  background: rgb(255 255 255 / 0.35);
+}
+
+.jellio-storage-legend-label {
+  color: var(--jellio-text-primary);
+  font-weight: 500;
+}
+
+.jellio-storage-legend-value {
+  color: var(--jellio-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-downloads-quick-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5em;
+  padding-top: 0.85em;
+  border-top: 1px solid rgb(255 255 255 / 0.07);
+}
+
+.jellio-downloads-quick-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 0.88em;
+  color: var(--jellio-text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.jellio-downloads-quick-toggle .material-icons {
+  font-size: 1.2em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-downloads-quick-label {
+  font-weight: 500;
+}
+
 .jellio-downloads-offline {
   display: flex;
   flex-wrap: wrap;
@@ -10849,6 +11218,56 @@
   justify-content: space-between;
   gap: 0.6em;
   margin-bottom: 0.8em;
+}
+
+.jellio-manga-chapter-search {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  padding: 0 0.85em;
+  height: 2.3em;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.jellio-manga-chapter-search:focus-within {
+  border-color: var(--jellio-accent-color);
+  background: rgb(255 255 255 / 0.1);
+}
+
+.jellio-manga-chapter-search-icon {
+  font-size: 1.15em;
+  color: var(--jellio-text-tertiary);
+  margin-right: 0.4em;
+  pointer-events: none;
+}
+
+.jellio-manga-chapter-search-input {
+  border: none;
+  background: transparent;
+  color: var(--jellio-text-primary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  width: 12em;
+  outline: none;
+}
+
+.jellio-manga-chapter-search-input::placeholder {
+  color: var(--jellio-text-tertiary);
+}
+
+@media (max-width: 48em) {
+  .jellio-manga-chapter-search {
+    width: 100%;
+    order: 3;
+    margin-top: 0.25em;
+  }
+  .jellio-manga-chapter-search-input {
+    width: 100%;
+  }
 }
 
 .jellio-manga-chapter-bookmark {

@@ -2,44 +2,43 @@
 // per file and tracks resume position natively per file, so this screen
 // stitches the book's files into one timeline (or uses the optional
 // AudiobookLibrary plugin's own timeline when installed), plays them in
-// sequence through one <audio> element, and reports playback per file
+// sequence through one persistent audio session, and reports playback per file
 // the normal Jellyfin way so resume and played state stay native.
 import {
   getItemDetails,
   getAudiobookTracks,
   audiobookTitle,
   getAudiobookLibraryChapters,
-  buildAudioStreamUrl,
   getImageUrl,
   getBookCoverUrl,
-  reportPlaybackStart,
-  reportPlaybackProgress,
-  reportPlaybackStopped,
   TICKS_PER_SECOND,
-  reportReadingSession,
 } from '../runtime/api.js';
-import { findDownload, removeDownload, isAutoDeleteReadEnabled, getOfflineObjectUrl, getLocalProgress, setLocalProgress } from '../runtime/offline.js';
+import { findDownload, getOfflineObjectUrl, getLocalProgress } from '../runtime/offline.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
 import { el } from '../runtime/dom.js';
+import {
+  startAudioSession,
+  getActiveAudioSession,
+  setAudioSessionListeners,
+  seekBook,
+  togglePlay,
+  jumpChapter,
+  setAudioSpeed,
+  setAudioSleep,
+  getBookTime,
+  chapterIndexAt,
+  formatClock,
+  loadTrack,
+  getDefaultAudiobookSpeed,
+  syncMiniPlayer,
+} from '../components/audioMiniPlayer.js';
 
-const SKIP_SECONDS = 30;
-const PROGRESS_REPORT_MS = 10000;
+const SKIP_SECONDS_BACK = 15;
+const SKIP_SECONDS_FORWARD = 30;
 const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 const SLEEP_OPTIONS = [0, 15, 30, 45, 60, -1]; // minutes, -1 = end of chapter
-// Jumping back to the previous chapter from more than this far into the
-// current one restarts the current chapter instead, like most players.
-const RESTART_CHAPTER_THRESHOLD = 5;
-
-function formatClock(totalSeconds) {
-  const seconds = Math.max(0, Math.floor(totalSeconds || 0));
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const mm = h ? String(m).padStart(2, '0') : String(m);
-  return (h ? h + ':' : '') + mm + ':' + String(s).padStart(2, '0');
-}
 
 function ticksToSeconds(ticks) {
   return (ticks || 0) / TICKS_PER_SECOND;
@@ -60,14 +59,6 @@ function readNumber(key, fallback) {
     return value > 0 ? value : fallback;
   } catch (err) {
     return fallback;
-  }
-}
-
-function writeValue(key, value) {
-  try {
-    window.localStorage.setItem(key, String(value));
-  } catch (err) {
-    // Storage blocked: speed just won't be remembered.
   }
 }
 
@@ -282,9 +273,9 @@ export async function renderListen(root, params) {
 
   const transport = el('div', 'jellio-listen-transport');
   const prevChapterButton = iconButton('skip_previous', 'Previous chapter');
-  const backSkipButton = iconButton('replay_30', 'Back ' + SKIP_SECONDS + ' seconds');
+  const backSkipButton = iconButton('replay_15', 'Back ' + SKIP_SECONDS_BACK + ' seconds');
   const playButton = iconButton('play_arrow', 'Play', 'jellio-listen-play');
-  const forwardSkipButton = iconButton('forward_30', 'Forward ' + SKIP_SECONDS + ' seconds');
+  const forwardSkipButton = iconButton('forward_30', 'Forward ' + SKIP_SECONDS_FORWARD + ' seconds');
   const nextChapterButton = iconButton('skip_next', 'Next chapter');
   [prevChapterButton, backSkipButton, playButton, forwardSkipButton, nextChapterButton].forEach(function (button) {
     transport.appendChild(button);
@@ -309,273 +300,98 @@ export async function renderListen(root, params) {
   const chaptersPanel = el('div', 'jellio-listen-panel jellio-listen-panel-hidden');
   root.appendChild(chaptersPanel);
 
-  const audio = document.createElement('audio');
-  audio.preload = 'auto';
-  root.appendChild(audio);
+  const existingSession = getActiveAudioSession();
+  const isSameBook = existingSession && existingSession.itemId === itemId;
 
-  let trackIndex = -1;
-  let pendingOffset = 0;
-  let pendingPlay = false;
-  let usingFallback = false;
-  let reportedTrackId = null;
-  let progressTimer = null;
-  let sleepMinutes = 0;
-  let sleepDeadline = null;
-  let sleepEndOfChapter = null;
-  let sleepTicker = null;
-  let scrubbing = false;
-  let tornDown = false;
-  let speed = readNumber(speedKey, 1);
-  if (SPEEDS.indexOf(speed) === -1) speed = 1;
-
-  function currentTrack() {
-    return timeline.tracks[trackIndex];
-  }
-
-  function bookTime() {
-    const entry = currentTrack();
-    return entry ? entry.startSec + (audio.currentTime || 0) : 0;
-  }
-
-  function chapterIndexAt(seconds) {
-    let found = 0;
-    timeline.chapters.forEach(function (chapter, index) {
-      if (seconds + 0.25 >= chapter.startSec) found = index;
+  let speed;
+  if (isSameBook) {
+    speed = existingSession.speed;
+  } else {
+    speed = readNumber(speedKey, getDefaultAudiobookSpeed());
+    if (SPEEDS.indexOf(speed) === -1) speed = 1;
+    startAudioSession({
+      itemId: itemId,
+      item: item,
+      bookTitle: bookTitle,
+      author: author,
+      cover: cover,
+      timeline: timeline,
+      localTracks: localTracks,
+      download: download,
+      speed: speed,
+      speedKey: speedKey,
     });
-    return found;
   }
 
-  function positionTicks() {
-    return Math.floor((audio.currentTime || 0) * TICKS_PER_SECOND);
-  }
-
-  function startReport() {
-    const entry = currentTrack();
-    if (!entry) return;
-    reportedTrackId = entry.item.Id;
-    reportPlaybackStart(reportedTrackId, reportedTrackId, positionTicks());
-  }
-
-  function stopReport(finishedTrack) {
-    if (!reportedTrackId) return;
-    const entry = currentTrack();
-    const ticks = finishedTrack && entry ? Math.floor(entry.durationSec * TICKS_PER_SECOND) : positionTicks();
-    reportPlaybackStopped(reportedTrackId, reportedTrackId, ticks);
-    saveLocalPosition();
-    reportedTrackId = null;
-  }
-
-  // A downloaded book remembers its place on this device too, so it
-  // resumes right even before the server hears about it.
-  function saveLocalPosition() {
-    if (!download) return;
-    const entry = currentTrack();
-    if (entry) setLocalProgress(download.Id, { TrackId: entry.item.Id, Offset: Math.max(0, bookTime() - entry.startSec) });
-  }
-
-  function loadTrack(index, offset, autoplay) {
-    const entry = timeline.tracks[index];
-    if (!entry) return;
-    if (index !== trackIndex) stopReport(false);
-    trackIndex = index;
-    pendingOffset = offset || 0;
-    pendingPlay = autoplay;
-    usingFallback = false;
-    audio.src = localTracks[entry.item.Id] || buildAudioStreamUrl(entry.item.Id, false);
-    audio.load();
-  }
-
-  function seekBook(seconds, autoplay) {
-    const target = Math.min(Math.max(0, seconds), Math.max(0, timeline.durationSec - 0.5));
-    let index = timeline.tracks.length - 1;
-    for (let i = 0; i < timeline.tracks.length; i += 1) {
-      const entry = timeline.tracks[i];
-      if (target < entry.startSec + entry.durationSec) {
-        index = i;
-        break;
-      }
-    }
-    const offset = target - timeline.tracks[index].startSec;
-    const play = autoplay === undefined ? !audio.paused : autoplay;
-    if (index === trackIndex && audio.readyState > 0) {
-      audio.currentTime = offset;
-      paintPosition();
-    } else {
-      loadTrack(index, offset, play);
-    }
-  }
+  let scrubbing = false;
 
   function paintPosition() {
-    const now = bookTime();
+    const now = getBookTime();
     if (!scrubbing) scrub.value = String(Math.floor(now));
     elapsedLabel.textContent = formatClock(now);
     remainingLabel.textContent = '-' + formatClock(timeline.durationSec - now);
     const chapter = timeline.chapters[chapterIndexAt(now)];
     chapterLabel.textContent = chapter ? chapter.title : '';
-    if ('mediaSession' in navigator && navigator.mediaSession.setPositionState && timeline.durationSec > 0) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: timeline.durationSec,
-          playbackRate: audio.playbackRate || 1,
-          position: Math.min(now, timeline.durationSec),
-        });
-      } catch (err) {
-        // Some browsers reject a position state mid track change.
-      }
-    }
   }
 
-  function paintPlayState() {
-    const playing = !audio.paused;
+  function paintPlayState(playingState) {
+    const session = getActiveAudioSession();
+    const playing = playingState !== undefined ? playingState : (session && session.audio && !session.audio.paused);
     playButton.textContent = '';
     playButton.appendChild(el('span', 'material-icons ' + (playing ? 'pause' : 'play_arrow')));
     playButton.setAttribute('aria-label', playing ? 'Pause' : 'Play');
     playButton.title = playing ? 'Pause' : 'Play';
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
   }
 
   function paintSpeed() {
+    const session = getActiveAudioSession();
+    const curSpeed = session ? session.speed : speed;
     speedButton.textContent = '';
     speedButton.appendChild(el('span', 'material-icons speed'));
-    speedButton.appendChild(el('span', null, speed + '×'));
-    speedButton.setAttribute('aria-label', 'Playback speed ' + speed + 'x');
+    speedButton.appendChild(el('span', null, curSpeed + '×'));
+    speedButton.setAttribute('aria-label', 'Playback speed ' + curSpeed + 'x');
   }
 
   function paintSleep() {
+    const session = getActiveAudioSession();
     sleepButton.textContent = '';
     sleepButton.appendChild(el('span', 'material-icons bedtime'));
     let label = 'Sleep';
-    if (sleepEndOfChapter !== null) label = 'End of chapter';
-    else if (sleepDeadline) label = formatClock((sleepDeadline - Date.now()) / 1000);
+    if (session) {
+      if (session.sleepEndOfChapter !== null) label = 'End of chapter';
+      else if (session.sleepDeadline) label = formatClock((session.sleepDeadline - Date.now()) / 1000);
+      sleepButton.classList.toggle('jellio-listen-pill-active', session.sleepEndOfChapter !== null || !!session.sleepDeadline);
+    }
     sleepButton.appendChild(el('span', null, label));
-    sleepButton.classList.toggle('jellio-listen-pill-active', sleepEndOfChapter !== null || !!sleepDeadline);
   }
 
-  function togglePlay() {
-    if (audio.paused) {
-      audio.play().catch(function (err) {
-        console.warn('Jellio: audiobook playback did not start', err);
-      });
-    } else {
-      audio.pause();
-    }
+  function cycleSpeed(delta) {
+    const session = getActiveAudioSession();
+    const curSpeed = session ? session.speed : speed;
+    const currentIndex = SPEEDS.indexOf(curSpeed);
+    let nextIndex = (currentIndex === -1 ? 1 : currentIndex) + (delta || 1);
+    if (nextIndex >= SPEEDS.length) nextIndex = 0;
+    if (nextIndex < 0) nextIndex = SPEEDS.length - 1;
+    speed = SPEEDS[nextIndex];
+    setAudioSpeed(speed);
+    paintSpeed();
   }
 
-  function jumpChapter(delta) {
-    const now = bookTime();
-    const current = chapterIndexAt(now);
-    let target = current + delta;
-    if (delta < 0 && now - timeline.chapters[current].startSec > RESTART_CHAPTER_THRESHOLD) target = current;
-    target = Math.min(timeline.chapters.length - 1, Math.max(0, target));
-    seekBook(timeline.chapters[target].startSec);
-  }
-
-  audio.addEventListener('loadedmetadata', function () {
-    if (pendingOffset > 0) {
-      try {
-        audio.currentTime = pendingOffset;
-      } catch (err) {
-        console.warn('Jellio: could not seek audiobook track', err);
-      }
-    }
-    pendingOffset = 0;
-    audio.playbackRate = speed;
-    startReport();
-    paintPosition();
-    if (pendingPlay) {
-      audio.play().catch(function (err) {
-        // Autoplay without a user gesture can be refused; the play button
-        // is right there.
-        console.warn('Jellio: audiobook autoplay was blocked', err);
-      });
-    }
-  });
-
-  audio.addEventListener('error', function () {
-    const entry = currentTrack();
-    if (!entry || usingFallback || tornDown) return;
-    // The browser could not decode the original file: ask Jellyfin for MP3.
-    usingFallback = true;
-    const offset = audio.currentTime || pendingOffset;
-    pendingOffset = offset;
-    audio.src = buildAudioStreamUrl(entry.item.Id, true);
-    audio.load();
-  });
-
-  // Time actually listened this sitting (media time, so 1.5x speed
-  // counts the book's minutes), for the Feed and achievements. Jumps
-  // (seeks, track changes) are ignored rather than counted.
-  let listenedSeconds = 0;
-  let lastListenTime = null;
-  let finishedReported = false;
-  function flushListening() {
-    const finished = !finishedReported && timeline.durationSec > 0 && bookTime() >= timeline.durationSec * 0.98;
-    if (listenedSeconds < 60 && !finished) return;
-    reportReadingSession({
-      ItemId: itemId,
-      Kind: 'audiobook',
-      PagesRead: 0,
-      ListenedSeconds: Math.round(listenedSeconds),
-      Finished: finished,
-    });
-    listenedSeconds = 0;
-    if (finished) {
-      finishedReported = true;
-      if (isAutoDeleteReadEnabled()) {
-        findDownload(itemId)
-          .then((record) => (record ? removeDownload(record.Id) : null))
-          .catch(() => null);
-      }
-    }
-  }
-  function onVisibility() {
-    if (document.visibilityState === 'hidden') flushListening();
-  }
-  document.addEventListener('visibilitychange', onVisibility);
-  audio.addEventListener('seeking', function () {
-    lastListenTime = null;
-  });
-
-  audio.addEventListener('timeupdate', function () {
-    if (!audio.paused && !audio.seeking) {
-      const now = audio.currentTime;
-      if (lastListenTime !== null && now > lastListenTime && now - lastListenTime < 5) listenedSeconds += now - lastListenTime;
-      lastListenTime = now;
-    } else {
-      lastListenTime = null;
-    }
-    paintPosition();
-    if (sleepEndOfChapter !== null && bookTime() >= timeline.chapters[sleepEndOfChapter].endSec - 0.3) {
-      sleepEndOfChapter = null;
-      sleepMinutes = 0;
-      audio.pause();
+  setAudioSessionListeners({
+    onPosition: function () {
+      paintPosition();
+    },
+    onPlayState: function (playing) {
+      paintPlayState(playing);
+    },
+    onSpeed: function (s) {
+      speed = s;
+      paintSpeed();
+    },
+    onSleep: function () {
       paintSleep();
-    }
+    },
   });
-
-  audio.addEventListener('play', paintPlayState);
-  audio.addEventListener('pause', function () {
-    paintPlayState();
-    if (reportedTrackId) reportPlaybackProgress(reportedTrackId, reportedTrackId, positionTicks(), true);
-  });
-
-  audio.addEventListener('ended', function () {
-    lastListenTime = null;
-    stopReport(true);
-    if (trackIndex >= timeline.tracks.length - 1) flushListening();
-    if (trackIndex < timeline.tracks.length - 1) {
-      loadTrack(trackIndex + 1, 0, true);
-    } else {
-      paintPlayState();
-    }
-  });
-
-  progressTimer = window.setInterval(function () {
-    if (reportedTrackId && !audio.paused) {
-      reportPlaybackProgress(reportedTrackId, reportedTrackId, positionTicks(), false);
-      saveLocalPosition();
-    }
-  }, PROGRESS_REPORT_MS);
 
   scrub.addEventListener('input', function () {
     scrubbing = true;
@@ -589,10 +405,10 @@ export async function renderListen(root, params) {
 
   playButton.addEventListener('click', togglePlay);
   backSkipButton.addEventListener('click', function () {
-    seekBook(bookTime() - SKIP_SECONDS);
+    seekBook(getBookTime() - SKIP_SECONDS_BACK);
   });
   forwardSkipButton.addEventListener('click', function () {
-    seekBook(bookTime() + SKIP_SECONDS);
+    seekBook(getBookTime() + SKIP_SECONDS_FORWARD);
   });
   prevChapterButton.addEventListener('click', function () {
     jumpChapter(-1);
@@ -602,45 +418,21 @@ export async function renderListen(root, params) {
   });
 
   speedButton.addEventListener('click', function () {
-    speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
-    audio.playbackRate = speed;
-    writeValue(speedKey, speed);
-    paintSpeed();
+    cycleSpeed(1);
   });
 
-  function clearSleep() {
-    sleepDeadline = null;
-    sleepEndOfChapter = null;
-    if (sleepTicker) {
-      window.clearInterval(sleepTicker);
-      sleepTicker = null;
-    }
-  }
-
   sleepButton.addEventListener('click', function () {
-    const next = SLEEP_OPTIONS[(SLEEP_OPTIONS.indexOf(sleepMinutes) + 1) % SLEEP_OPTIONS.length];
-    sleepMinutes = next;
-    clearSleep();
-    if (next === -1) {
-      sleepEndOfChapter = chapterIndexAt(bookTime());
-    } else if (next > 0) {
-      sleepDeadline = Date.now() + next * 60000;
-      sleepTicker = window.setInterval(function () {
-        if (sleepDeadline && Date.now() >= sleepDeadline) {
-          audio.pause();
-          sleepMinutes = 0;
-          clearSleep();
-        }
-        paintSleep();
-      }, 1000);
-    }
+    const session = getActiveAudioSession();
+    const currentMins = session ? session.sleepMinutes : 0;
+    const next = SLEEP_OPTIONS[(SLEEP_OPTIONS.indexOf(currentMins) + 1) % SLEEP_OPTIONS.length];
+    setAudioSleep(next);
     paintSleep();
   });
 
   function paintChapters() {
     chaptersPanel.textContent = '';
     chaptersPanel.appendChild(el('h2', 'jellio-listen-panel-title', 'Chapters'));
-    const current = chapterIndexAt(bookTime());
+    const current = chapterIndexAt(getBookTime());
     timeline.chapters.forEach(function (chapter, index) {
       const row = el('button', 'jellio-listen-chapter-row' + (index === current ? ' jellio-listen-chapter-row-active' : ''));
       row.type = 'button';
@@ -662,99 +454,64 @@ export async function renderListen(root, params) {
 
   function handleKey(event) {
     if (event.target && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName) && event.target !== scrub) return;
+    const session = getActiveAudioSession();
     if (event.key === ' ' || event.key === 'k') {
       event.preventDefault();
       togglePlay();
     } else if (event.key === 'ArrowLeft') {
-      seekBook(bookTime() - SKIP_SECONDS);
+      event.preventDefault();
+      seekBook(getBookTime() - SKIP_SECONDS_BACK);
     } else if (event.key === 'ArrowRight') {
-      seekBook(bookTime() + SKIP_SECONDS);
+      event.preventDefault();
+      seekBook(getBookTime() + SKIP_SECONDS_FORWARD);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (session && session.audio) session.audio.volume = Math.min(1, (session.audio.volume || 1) + 0.1);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (session && session.audio) session.audio.volume = Math.max(0, (session.audio.volume || 1) - 0.1);
+    } else if (event.key === 'm' || event.key === 'M') {
+      event.preventDefault();
+      if (session && session.audio) session.audio.muted = !session.audio.muted;
+    } else if (event.key === '[') {
+      event.preventDefault();
+      cycleSpeed(-1);
+    } else if (event.key === ']') {
+      event.preventDefault();
+      cycleSpeed(1);
     } else if (event.key === 'Escape') {
       chaptersPanel.classList.add('jellio-listen-panel-hidden');
     }
   }
   document.addEventListener('keydown', handleKey);
 
-  if ('mediaSession' in navigator) {
-    try {
-      navigator.mediaSession.metadata = new window.MediaMetadata({
-        title: bookTitle,
-        artist: author,
-        artwork: cover ? [{ src: cover, sizes: '600x600' }] : [],
-      });
-    } catch (err) {
-      // MediaMetadata missing in older browsers: lock screen just shows less.
-    }
-    const handlers = {
-      play: function () {
-        audio.play();
-      },
-      pause: function () {
-        audio.pause();
-      },
-      seekbackward: function () {
-        seekBook(bookTime() - SKIP_SECONDS);
-      },
-      seekforward: function () {
-        seekBook(bookTime() + SKIP_SECONDS);
-      },
-      previoustrack: function () {
-        jumpChapter(-1);
-      },
-      nexttrack: function () {
-        jumpChapter(1);
-      },
-      seekto: function (details) {
-        if (details && typeof details.seekTime === 'number') seekBook(details.seekTime);
-      },
-    };
-    Object.keys(handlers).forEach(function (action) {
-      try {
-        navigator.mediaSession.setActionHandler(action, handlers[action]);
-      } catch (err) {
-        // Action not supported by this browser.
-      }
-    });
-  }
-
   paintSpeed();
   paintSleep();
   paintPlayState();
+  paintPosition();
 
-  const resume = resumePoint(timeline);
-  const localPosition = download ? await getLocalProgress(download.Id) : null;
-  const localIndex = localPosition ? timeline.tracks.findIndex((entry) => entry.item.Id === localPosition.TrackId) : -1;
-  const serverLatest = Math.max.apply(
-    null,
-    timeline.tracks.map((entry) => Date.parse((entry.item.UserData && entry.item.UserData.LastPlayedDate) || '') || 0),
-  );
-  if (localIndex !== -1 && Date.parse(localPosition.UpdatedAt) > serverLatest) {
-    resume.index = localIndex;
-    resume.offset = localPosition.Offset || 0;
+  if (!isSameBook) {
+    const resume = resumePoint(timeline);
+    const localPosition = download ? await getLocalProgress(download.Id) : null;
+    const localIndex = localPosition ? timeline.tracks.findIndex((entry) => entry.item.Id === localPosition.TrackId) : -1;
+    const serverLatest = Math.max.apply(
+      null,
+      timeline.tracks.map((entry) => Date.parse((entry.item.UserData && entry.item.UserData.LastPlayedDate) || '') || 0),
+    );
+    if (localIndex !== -1 && Date.parse(localPosition.UpdatedAt) > serverLatest) {
+      resume.index = localIndex;
+      resume.offset = localPosition.Offset || 0;
+    }
+    loadTrack(resume.index, resume.offset, false);
   }
-  loadTrack(resume.index, resume.offset, false);
+
+  // Hide mini player while in full listen screen
+  syncMiniPlayer();
 
   return function cleanup() {
-    Object.keys(localTracks).forEach((id) => URL.revokeObjectURL(localTracks[id]));
-    flushListening();
-    document.removeEventListener('visibilitychange', onVisibility);
-    tornDown = true;
-    stopReport(false);
-    window.clearInterval(progressTimer);
-    clearSleep();
+    setAudioSessionListeners(null);
     document.removeEventListener('keydown', handleKey);
-    if ('mediaSession' in navigator) {
-      ['play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'seekto'].forEach(function (action) {
-        try {
-          navigator.mediaSession.setActionHandler(action, null);
-        } catch (err) {
-          // Not supported, nothing to clear.
-        }
-      });
-    }
-    audio.pause();
-    audio.removeAttribute('src');
-    audio.load();
     invalidateHomeSections();
+    syncMiniPlayer();
   };
 }

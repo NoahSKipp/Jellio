@@ -62,16 +62,35 @@ export async function renderPerson(root, params) {
   header.appendChild(info);
   root.appendChild(header);
 
-  const section = el('section', 'jellio-person-filmography');
-  section.appendChild(el('h2', 'jellio-row-title', 'Filmography'));
-  const grid = el('div', 'jellio-library-grid');
-  section.appendChild(grid);
-  root.appendChild(section);
-
   try {
     const items = await filmographyPromise;
-    appendCardsLazily(grid, items, buildCard);
+    const films = items.filter((item) => item.Type === 'Movie' || item.Type === 'Series');
+    const books = items.filter((item) => item.Type === 'Book' || item.Type === 'AudioBook');
+
+    if (!films.length && !books.length) {
+      const empty = el('p', 'jellio-service-empty', 'No works found in your library.');
+      root.appendChild(empty);
+      return;
+    }
+
+    if (films.length) {
+      const filmSection = el('section', 'jellio-person-filmography');
+      filmSection.appendChild(el('h2', 'jellio-row-title', 'Filmography'));
+      const filmGrid = el('div', 'jellio-library-grid');
+      filmSection.appendChild(filmGrid);
+      root.appendChild(filmSection);
+      appendCardsLazily(filmGrid, films, buildCard);
+    }
+
+    if (books.length) {
+      const bookSection = el('section', 'jellio-person-filmography jellio-person-bibliography');
+      bookSection.appendChild(el('h2', 'jellio-row-title', 'Bibliography'));
+      const bookGrid = el('div', 'jellio-library-grid');
+      bookSection.appendChild(bookGrid);
+      root.appendChild(bookSection);
+      appendCardsLazily(bookGrid, books, buildCard);
+    }
   } catch (err) {
-    console.warn('Jellio: could not load filmography', err);
+    console.warn('Jellio: could not load works', err);
   }
 }

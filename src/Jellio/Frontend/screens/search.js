@@ -29,6 +29,39 @@ import { reflectStateInAddressBar, navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
 const DEBOUNCE_MS = 300;
+const RECENT_SEARCHES_KEY = 'jellio_recent_searches';
+const MAX_RECENT_SEARCHES = 8;
+
+function getRecentSearches() {
+  try {
+    const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveRecentSearch(term) {
+  const clean = term.trim();
+  if (!clean || clean.length < 2) return;
+  try {
+    const list = getRecentSearches().filter((item) => item.toLowerCase() !== clean.toLowerCase());
+    list.unshift(clean);
+    if (list.length > MAX_RECENT_SEARCHES) list.length = MAX_RECENT_SEARCHES;
+    window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(list));
+  } catch (err) {
+    // Storage blocked
+  }
+}
+
+function clearRecentSearches() {
+  try {
+    window.localStorage.removeItem(RECENT_SEARCHES_KEY);
+  } catch (err) {
+    // Storage blocked
+  }
+}
 
 // The reader's manga library (series streamed from their sources) by
 // title, found locally from the library list the shelf already loads.
@@ -86,6 +119,44 @@ export async function renderSearch(root, params) {
   input.autofocus = true;
   header.appendChild(input);
   root.appendChild(header);
+
+  const recentSection = el('div', 'jellio-search-recent');
+  root.appendChild(recentSection);
+
+  function paintRecentSearches() {
+    recentSection.textContent = '';
+    const searches = getRecentSearches();
+    if (!searches.length || input.value.trim()) {
+      recentSection.hidden = true;
+      return;
+    }
+    recentSection.hidden = false;
+    const recentHeader = el('div', 'jellio-search-recent-header');
+    recentHeader.appendChild(el('span', 'jellio-search-recent-title', 'Recent Searches'));
+    const clearBtn = el('button', 'jellio-search-recent-clear', 'Clear all');
+    clearBtn.type = 'button';
+    clearBtn.addEventListener('click', function () {
+      clearRecentSearches();
+      paintRecentSearches();
+    });
+    recentHeader.appendChild(clearBtn);
+    recentSection.appendChild(recentHeader);
+
+    const chips = el('div', 'jellio-search-recent-chips');
+    searches.forEach(function (query) {
+      const chip = el('button', 'jellio-search-recent-chip');
+      chip.type = 'button';
+      chip.appendChild(el('span', 'material-icons jellio-search-recent-chip-icon', 'history'));
+      chip.appendChild(el('span', null, query));
+      chip.addEventListener('click', function () {
+        input.value = query;
+        paintRecentSearches();
+        runSearch(query);
+      });
+      chips.appendChild(chip);
+    });
+    recentSection.appendChild(chips);
+  }
 
   // No feedback at all between "typed something" and "cards appeared"
   // used to make a slow or failed request (Gelato resolving a remote
@@ -150,6 +221,8 @@ export async function renderSearch(root, params) {
   // a late-arriving Movies section still renders above Series, not
   // wherever insertion order happened to land it.
   function runSearch(term) {
+    saveRecentSearch(term);
+    recentSection.hidden = true;
     reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
     abortInFlight();
     const thisRequest = ++requestId;
@@ -265,6 +338,7 @@ export async function renderSearch(root, params) {
       abortInFlight();
       results.textContent = '';
       status.textContent = '';
+      paintRecentSearches();
       return;
     }
     timer = window.setTimeout(function () {
@@ -282,6 +356,8 @@ export async function renderSearch(root, params) {
   if (restoredTerm) {
     input.value = restoredTerm;
     runSearch(restoredTerm);
+  } else {
+    paintRecentSearches();
   }
 
   input.focus();
