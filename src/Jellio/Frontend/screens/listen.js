@@ -433,18 +433,67 @@ export async function renderListen(root, params) {
   function paintChapters() {
     chaptersPanel.textContent = '';
     chaptersPanel.appendChild(el('h2', 'jellio-listen-panel-title', 'Chapters'));
-    const current = chapterIndexAt(getBookTime());
-    timeline.chapters.forEach(function (chapter, index) {
-      const row = el('button', 'jellio-listen-chapter-row' + (index === current ? ' jellio-listen-chapter-row-active' : ''));
-      row.type = 'button';
-      row.appendChild(el('span', 'jellio-listen-chapter-name', chapter.title));
-      row.appendChild(el('span', 'jellio-listen-chapter-time', formatClock(chapter.startSec)));
-      row.addEventListener('click', function () {
-        seekBook(chapter.startSec, true);
-        chaptersPanel.classList.add('jellio-listen-panel-hidden');
+
+    let filterText = '';
+    const filterWrap = el('div', 'jellio-listen-chapter-filter-wrap');
+    const input = document.createElement('input');
+    input.type = 'search';
+    input.className = 'jellio-listen-chapter-filter-input';
+    input.placeholder = 'Filter chapters (e.g. 5, Epilogue)…';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    filterWrap.appendChild(input);
+    chaptersPanel.appendChild(filterWrap);
+
+    const list = el('div', 'jellio-listen-chapter-list');
+    chaptersPanel.appendChild(list);
+
+    function renderChapterRows() {
+      list.textContent = '';
+      const query = filterText.trim().toLowerCase();
+      const current = chapterIndexAt(getBookTime());
+      let matchedCount = 0;
+      let activeRow = null;
+
+      timeline.chapters.forEach(function (chapter, index) {
+        const titleStr = (chapter.title || '').toLowerCase();
+        const matches = !query || titleStr.includes(query) || String(index + 1).includes(query);
+        if (!matches) return;
+        matchedCount++;
+
+        const isCurrent = index === current;
+        const row = el('button', 'jellio-listen-chapter-row' + (isCurrent ? ' jellio-listen-chapter-row-active' : ''));
+        row.type = 'button';
+        row.appendChild(el('span', 'jellio-listen-chapter-name', chapter.title));
+        row.appendChild(el('span', 'jellio-listen-chapter-time', formatClock(chapter.startSec)));
+        row.addEventListener('click', function () {
+          seekBook(chapter.startSec, true);
+          chaptersPanel.classList.add('jellio-listen-panel-hidden');
+        });
+        if (isCurrent) activeRow = row;
+        list.appendChild(row);
       });
-      chaptersPanel.appendChild(row);
+
+      if (!matchedCount) {
+        list.appendChild(el('p', 'jellio-listen-empty', 'No matching chapters.'));
+      } else if (activeRow && !query) {
+        window.setTimeout(function () {
+          try {
+            activeRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          } catch (e) {}
+        }, 50);
+      }
+    }
+
+    input.addEventListener('input', function () {
+      filterText = input.value;
+      renderChapterRows();
     });
+
+    renderChapterRows();
+    window.setTimeout(function () {
+      try { input.focus(); } catch (e) {}
+    }, 50);
   }
 
   chaptersButton.addEventListener('click', function () {
