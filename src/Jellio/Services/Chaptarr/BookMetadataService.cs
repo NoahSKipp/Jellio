@@ -349,7 +349,7 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
 
     // An untagged book split into files ("Chapter 1", "Chapter 2"...) is
     // named by its folder instead.
-    private static string AudiobookTitle(BaseItem item)
+    public static string AudiobookTitle(BaseItem item)
     {
         if (!string.IsNullOrWhiteSpace(item.Album))
         {

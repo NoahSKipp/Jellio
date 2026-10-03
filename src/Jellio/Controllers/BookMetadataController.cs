@@ -7,8 +7,11 @@ using System.Threading.Tasks;
 using Jellio.Services.Chaptarr;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Dto;
+using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,7 +26,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/books/item")]
 [Authorize]
-public class BookMetadataController(BookMetadataService metadataService, ChaptarrClient chaptarrClient, ILibraryManager libraryManager, IUserManager userManager) : ControllerBase
+public class BookMetadataController(BookMetadataService metadataService, ChaptarrClient chaptarrClient, ILibraryManager libraryManager, IUserManager userManager, IDtoService dtoService) : ControllerBase
 {
     public record BookMetadataResponse(
         string Title,
@@ -121,6 +124,86 @@ public class BookMetadataController(BookMetadataService metadataService, Chaptar
         }
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Searches audiobooks by book title (Album tag or folder name), author (AlbumArtists/Artists),
+    /// series name, track title, or path. Jellyfin's native /Items?searchTerm only checks Name/Artists
+    /// on AudioBook items, leaving book titles sitting on Album unsearchable.
+    /// </summary>
+    [HttpGet("~/Jellio/audiobooks/search")]
+    public IActionResult SearchAudiobooks([FromQuery] string searchTerm, [FromQuery] int limit = 50)
+    {
+        var user = GetUser();
+        if (user is null)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        var term = searchTerm?.Trim();
+        if (string.IsNullOrEmpty(term))
+        {
+            return Ok(new { Items = Array.Empty<object>() });
+        }
+
+        var allAudioBooks = libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            Recursive = true,
+            IncludeItemTypes = [BaseItemKind.AudioBook],
+        });
+
+        // Group tracks by book (ParentId + Album, same grouping as frontend audiobookGroupKey)
+        var groups = allAudioBooks
+            .OfType<AudioBook>()
+            .GroupBy(item => (item.ParentId, item.Album ?? string.Empty));
+
+        var dtoOptions = new DtoOptions
+        {
+            Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.DateCreated, ItemFields.Genres, ItemFields.Path],
+            EnableUserData = true,
+        };
+
+        var matches = new List<BaseItemDto>();
+        var maxResults = limit <= 0 ? 50 : Math.Min(limit, 100);
+
+        foreach (var group in groups)
+        {
+            var representative = group.FirstOrDefault(item => item.HasImage(MediaBrowser.Model.Entities.ImageType.Primary)) ?? group.First();
+            var title = BookMetadataService.AudiobookTitle(representative);
+            var author = metadataService.KnownAuthor(representative)
+                ?? (representative.AlbumArtists is { Count: > 0 } aa ? aa[0] : null)
+                ?? (representative.Artists is { Count: > 0 } a ? a[0] : null);
+            var series = (representative as IHasSeries)?.SeriesName;
+
+            var matchesTitle = !string.IsNullOrEmpty(title) && title.Contains(term, StringComparison.OrdinalIgnoreCase);
+            var matchesAuthor = (!string.IsNullOrEmpty(author) && author.Contains(term, StringComparison.OrdinalIgnoreCase))
+                || (representative.Artists is not null && representative.Artists.Any(a => !string.IsNullOrEmpty(a) && a.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                || (representative.AlbumArtists is not null && representative.AlbumArtists.Any(a => !string.IsNullOrEmpty(a) && a.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            var matchesSeries = !string.IsNullOrEmpty(series) && series.Contains(term, StringComparison.OrdinalIgnoreCase);
+            var matchesTrack = group.Any(item => !string.IsNullOrEmpty(item.Name) && item.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
+            var matchesPath = !string.IsNullOrEmpty(representative.Path) && representative.Path.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+            if (matchesTitle || matchesAuthor || matchesSeries || matchesTrack || matchesPath)
+            {
+                var dto = dtoService.GetBaseItemDto(representative, dtoOptions, user);
+                dto.Name = title;
+                dto.SortName = title;
+                var totalRunTime = group.Sum(item => item.RunTimeTicks ?? 0L);
+                if (totalRunTime > 0)
+                {
+                    dto.RunTimeTicks = totalRunTime;
+                }
+
+                matches.Add(dto);
+
+                if (matches.Count >= maxResults)
+                {
+                    break;
+                }
+            }
+        }
+
+        return Ok(new { Items = matches });
     }
 
     [HttpGet("{itemId}/metadata")]

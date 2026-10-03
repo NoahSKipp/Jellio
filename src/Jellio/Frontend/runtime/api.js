@@ -1589,16 +1589,23 @@ export function searchAudiobooks(term, signal) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!term) return Promise.resolve([]);
-  const params = new URLSearchParams({
-    searchTerm: term,
-    Recursive: 'true',
-    IncludeItemTypes: 'AudioBook',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
-    Limit: '50',
-  });
-  return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (result) {
-    return collapseAudiobookTracks((result && result.Items) || []);
-  });
+  return getJson('/Jellio/audiobooks/search?searchTerm=' + encodeURIComponent(term), SEARCH_TIMEOUT_MS, signal)
+    .then(function (result) {
+      return (result && result.Items) || [];
+    })
+    .catch(function (err) {
+      console.warn('Jellio: dedicated audiobook search unavailable, falling back to native items search', err);
+      const params = new URLSearchParams({
+        searchTerm: term,
+        Recursive: 'true',
+        IncludeItemTypes: 'AudioBook',
+        Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
+        Limit: '50',
+      });
+      return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (res) {
+        return collapseAudiobookTracks((res && res.Items) || []);
+      });
+    });
 }
 
 // Every watchlisted item, real endpoint (GET /Users/{id}/Items with
