@@ -10,7 +10,6 @@ import {
   getStreamLibrary,
   getStreamSeries,
   findStreamSeries,
-  saveStreamSeries,
   getTrackerStatus,
   getTrackerLink,
   syncTracker,
@@ -60,6 +59,7 @@ export function renderMangaSeries(root, params, parentId) {
   let tracker = null;
   let trackLink = null;
   const shelfKey = seriesShelfKey(key);
+  let activeCollapseActions = null;
   root.classList.add('jellio-screen-bookshelf', 'jellio-screen-manga-series');
 
   const header = el('header', 'jellio-library-header jellio-manga-series-header');
@@ -298,9 +298,9 @@ export function renderMangaSeries(root, params, parentId) {
     bar.appendChild(fill);
     info.appendChild(bar);
 
-    const actions = el('div', 'jellio-manga-series-actions');
+    const actions = el('div', 'jellio-detail-actions jellio-detail-actions-has-more jellio-manga-series-actions');
     const next = resume.chapter || chapters[0];
-    const primary = el('button', 'jellio-manga-series-continue');
+    const primary = el('button', 'jellio-detail-play jellio-manga-series-continue');
     primary.type = 'button';
     primary.appendChild(el('span', 'material-icons ' + (resume.finished ? 'replay' : 'menu_book')));
     const label = resume.finished
@@ -314,24 +314,68 @@ export function renderMangaSeries(root, params, parentId) {
     });
     actions.appendChild(primary);
 
+    const iconActionClass = 'jellio-detail-icon-action jellio-detail-icon-action-collapsible';
+
+    const moreButton = el('button', 'jellio-detail-icon-action jellio-detail-icon-action-more');
+    moreButton.type = 'button';
+    moreButton.setAttribute('aria-label', 'More options');
+    moreButton.title = 'More options';
+    moreButton.appendChild(el('span', 'material-icons more_vert'));
+
+    let actionsExpanded = false;
+    function handleActionsOutsideClick(event) {
+      if (actions.contains(event.target)) return;
+      collapseActions();
+    }
+    function collapseActions() {
+      if (!actionsExpanded) return;
+      actionsExpanded = false;
+      actions.classList.remove('jellio-detail-actions-expanded');
+      moreButton.classList.remove('jellio-detail-icon-action-active');
+      document.removeEventListener('pointerdown', handleActionsOutsideClick, true);
+    }
+    function expandActions() {
+      if (actionsExpanded) return;
+      actionsExpanded = true;
+      actions.classList.add('jellio-detail-actions-expanded');
+      moreButton.classList.add('jellio-detail-icon-action-active');
+      window.setTimeout(function () {
+        document.addEventListener('pointerdown', handleActionsOutsideClick, true);
+      }, 0);
+    }
+    moreButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (actionsExpanded) {
+        collapseActions();
+      } else {
+        expandActions();
+      }
+    });
+    activeCollapseActions = collapseActions;
+
     // Everything not read yet, for reading offline (components/downloads.js).
     const unread = chapters.filter((chapter) => !chapterState(chapter, progress).read);
 
-    const markAll = el('button', 'jellio-manga-series-order');
+    const markAll = el('button', iconActionClass);
     markAll.type = 'button';
+    const markAllTitle = unread.length ? 'Mark all as read' : 'Mark all as unread';
+    markAll.setAttribute('aria-label', markAllTitle);
+    markAll.title = markAllTitle;
     markAll.appendChild(el('span', 'material-icons ' + (unread.length ? 'done_all' : 'remove_done')));
-    markAll.appendChild(el('span', null, unread.length ? 'Mark all as read' : 'Mark all as unread'));
     markAll.addEventListener('click', function () {
+      collapseActions();
       if (unread.length) setRead(unread, true);
       else if (window.confirm('Mark every chapter of “' + group.title + '” as unread?')) setRead(chapters, false);
     });
     actions.appendChild(markAll);
+
     if (unread.length) {
       // Mihon's download menu: the next few unread chapters, or all.
-      const save = el('button', 'jellio-manga-series-order');
+      const save = el('button', iconActionClass);
       save.type = 'button';
+      save.setAttribute('aria-label', 'Download chapters');
+      save.title = 'Download chapters';
       save.appendChild(el('span', 'material-icons download'));
-      save.appendChild(el('span', null, 'Download'));
       const inOrder = unread
         .slice()
         .sort((a, b) => (chapterNumberOf(a) < 0 ? Infinity : chapterNumberOf(a)) - (chapterNumberOf(b) < 0 ? Infinity : chapterNumberOf(b)));
@@ -365,68 +409,17 @@ export function renderMangaSeries(root, params, parentId) {
       actions.appendChild(save);
     }
 
-    // Per-series switches: no new-chapter alerts, and downloads removed
-    // from the device once read.
-    function prefToggle(icon, label, field) {
-      const button = el('button', 'jellio-manga-series-order');
-      button.type = 'button';
-      button.appendChild(el('span', 'material-icons ' + icon));
-      button.appendChild(el('span', null, label));
-      function paint() {
-        const on = !!(shelf.Series[shelfKey] && shelf.Series[shelfKey][field]);
-        button.classList.toggle('jellio-manga-series-chip-active', on);
-        button.setAttribute('aria-pressed', on ? 'true' : 'false');
-      }
-      paint();
-      button.addEventListener('click', function () {
-        const on = !(shelf.Series[shelfKey] && shelf.Series[shelfKey][field]);
-        shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], { [field]: on });
-        paint();
-        saveSeriesPrefs(shelfKey, { [field]: on }).catch(() => showToast('Could not save that. Try again.'));
-      });
-      actions.appendChild(button);
-    }
-    prefToggle('notifications_off', 'Skip updates', 'SkipUpdates');
-    prefToggle('auto_delete', 'Delete after reading', 'DeleteAfterRead');
-
-    // Streamed chapters into the library, to keep on the server.
-    const unsaved = chapters.filter((chapter) => chapter.Stream);
-    if (group.stream && unsaved.length) {
-      const keep = el('button', 'jellio-manga-series-order');
-      keep.type = 'button';
-      keep.appendChild(el('span', 'material-icons cloud_download'));
-      keep.appendChild(el('span', null, 'Save to server (' + unsaved.length + ')'));
-      keep.title = 'Download these chapters into the library, so they don’t depend on the source';
-      keep.addEventListener('click', async function () {
-        if (!window.confirm('Download ' + unsaved.length + ' chapters of “' + group.title + '” to the server?')) return;
-        keep.disabled = true;
-        try {
-          const result = await saveStreamSeries(
-            group.stream.MangaId,
-            unsaved.map((chapter) => chapter.Stream.ChapterId),
-          );
-          showToast('Saving ' + ((result && result.Queued) || 0) + ' chapters to the server. They move to the library as they finish.');
-        } catch (err) {
-          console.warn('Jellio: could not save the series', err);
-          showToast('Could not save this series to the server. Try again in a moment.');
-          keep.disabled = false;
-        }
-      });
-      actions.appendChild(keep);
-    }
-
     // Every downloaded chapter of this series off the device at once.
-    const removeDownloads = el('button', 'jellio-manga-series-order');
+    const removeDownloads = el('button', iconActionClass);
     removeDownloads.type = 'button';
     removeDownloads.hidden = true;
+    removeDownloads.setAttribute('aria-label', 'Remove downloads');
     removeDownloads.appendChild(el('span', 'material-icons delete_sweep'));
-    const removeLabel = el('span');
-    removeDownloads.appendChild(removeLabel);
     let downloaded = [];
     Promise.all(chapters.map((chapter) => findAnyDownload(chapter.Id).catch(() => null))).then(function (found) {
       downloaded = found.filter(Boolean);
       if (cancelled || !downloaded.length) return;
-      removeLabel.textContent = 'Remove downloads (' + downloaded.length + ')';
+      removeDownloads.title = 'Remove downloads (' + downloaded.length + ')';
       removeDownloads.hidden = false;
     });
     removeDownloads.addEventListener('click', async function () {
@@ -440,18 +433,42 @@ export function renderMangaSeries(root, params, parentId) {
     });
     actions.appendChild(removeDownloads);
 
+    // Per-series switch: no new-chapter alerts.
+    const skipUpdatesToggle = el('button', iconActionClass);
+    skipUpdatesToggle.type = 'button';
+    skipUpdatesToggle.setAttribute('aria-label', 'Skip updates');
+    skipUpdatesToggle.appendChild(el('span', 'material-icons notifications_off'));
+    function paintSkipUpdates() {
+      const on = !!(shelf.Series[shelfKey] && shelf.Series[shelfKey].SkipUpdates);
+      skipUpdatesToggle.classList.toggle('jellio-detail-icon-action-active', on);
+      skipUpdatesToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+      skipUpdatesToggle.title = on ? 'Skip new-chapter notifications (on)' : 'Skip new-chapter notifications';
+    }
+    paintSkipUpdates();
+    skipUpdatesToggle.addEventListener('click', function () {
+      const on = !(shelf.Series[shelfKey] && shelf.Series[shelfKey].SkipUpdates);
+      shelf.Series[shelfKey] = Object.assign({}, shelf.Series[shelfKey], { SkipUpdates: on });
+      paintSkipUpdates();
+      saveSeriesPrefs(shelfKey, { SkipUpdates: on })
+        .then(function () {
+          showToast(on ? 'Skipping new-chapter notifications.' : 'Notifications enabled for new chapters.');
+        })
+        .catch(() => showToast('Could not save that. Try again.'));
+    });
+    actions.appendChild(skipUpdatesToggle);
+
     // Mihon's "In library": on this reader's Manga shelf or not.
-    const libraryButton = el('button', 'jellio-manga-series-order');
+    const libraryButton = el('button', iconActionClass);
     libraryButton.type = 'button';
     const libraryIcon = el('span', 'material-icons');
-    const libraryLabel = el('span');
     libraryButton.appendChild(libraryIcon);
-    libraryButton.appendChild(libraryLabel);
     function paintLibrary() {
       const on = isInLibrary(shelf, shelfKey);
       libraryIcon.className = 'material-icons ' + (on ? 'favorite' : 'favorite_border');
-      libraryLabel.textContent = on ? 'In library' : 'Add to library';
+      libraryButton.title = on ? 'In library' : 'Add to library';
+      libraryButton.setAttribute('aria-label', on ? 'In library' : 'Add to library');
       libraryButton.setAttribute('aria-pressed', on ? 'true' : 'false');
+      libraryButton.classList.toggle('jellio-detail-icon-action-active', on);
     }
     paintLibrary();
     libraryButton.addEventListener('click', function () {
@@ -464,18 +481,20 @@ export function renderMangaSeries(root, params, parentId) {
     });
     actions.appendChild(libraryButton);
 
-    const categoriesButton = el('button', 'jellio-manga-series-order');
+    const categoriesButton = el('button', iconActionClass);
     categoriesButton.type = 'button';
+    categoriesButton.setAttribute('aria-label', 'Categories');
     categoriesButton.appendChild(el('span', 'material-icons label'));
-    const categoriesLabel = el('span');
-    categoriesButton.appendChild(categoriesLabel);
     function paintCategories() {
       const names = categoriesOf(shelf, shelfKey).map((category) => category.Name);
-      categoriesLabel.textContent = names.length ? names.join(', ') : 'Categories';
+      categoriesButton.title = names.length ? 'Categories: ' + names.join(', ') : 'Categories';
+      categoriesButton.classList.toggle('jellio-detail-icon-action-active', names.length > 0);
     }
     paintCategories();
     categoriesButton.addEventListener('click', () => openCategoryPicker('manga', [shelfKey], group.title));
     actions.appendChild(categoriesButton);
+
+    actions.appendChild(moreButton);
     info.appendChild(actions);
 
     // Mihon's per-series reading mode; the reader starts in it.
@@ -768,6 +787,7 @@ export function renderMangaSeries(root, params, parentId) {
 
   return function () {
     cancelled = true;
+    if (activeCollapseActions) activeCollapseActions();
     if (stopShelf) stopShelf();
   };
 }

@@ -27,7 +27,7 @@ import {
 } from '../runtime/api.js';
 import { getMangaShelfHash } from '../components/navShared.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
-import { findAnyDownload, removeDownload } from '../runtime/offline.js';
+import { findAnyDownload, removeDownload, isAutoDeleteReadEnabled } from '../runtime/offline.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
@@ -2145,14 +2145,10 @@ export async function renderReader(root, params) {
       setPlayed(itemId, true).catch(function (err) {
         console.warn('Jellio: could not mark book as read', err);
       });
-      // Mihon's delete after reading, for chapters kept on this device.
-      if (isComic && seriesKey) {
-        loadShelf('manga')
-          .then(function (shelfData) {
-            const prefs = shelfData.Series && shelfData.Series[seriesKey];
-            if (!prefs || !prefs.DeleteAfterRead) return null;
-            return findAnyDownload(itemId).then((record) => (record ? removeDownload(record.Id) : null));
-          })
+      // Delete after reading, for chapters and books kept on this device.
+      if (isAutoDeleteReadEnabled()) {
+        findAnyDownload(itemId)
+          .then((record) => (record ? removeDownload(record.Id) : null))
           .catch(() => null);
       }
       // After the debounced save, so the server sees the chapter as read.

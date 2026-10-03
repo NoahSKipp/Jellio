@@ -18,7 +18,7 @@ import {
   TICKS_PER_SECOND,
   reportReadingSession,
 } from '../runtime/api.js';
-import { findDownload, getOfflineObjectUrl, getLocalProgress, setLocalProgress } from '../runtime/offline.js';
+import { findDownload, removeDownload, isAutoDeleteReadEnabled, getOfflineObjectUrl, getLocalProgress, setLocalProgress } from '../runtime/offline.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
@@ -519,7 +519,14 @@ export async function renderListen(root, params) {
       Finished: finished,
     });
     listenedSeconds = 0;
-    if (finished) finishedReported = true;
+    if (finished) {
+      finishedReported = true;
+      if (isAutoDeleteReadEnabled()) {
+        findDownload(itemId)
+          .then((record) => (record ? removeDownload(record.Id) : null))
+          .catch(() => null);
+      }
+    }
   }
   function onVisibility() {
     if (document.visibilityState === 'hidden') flushListening();

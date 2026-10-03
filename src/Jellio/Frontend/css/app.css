@@ -2986,6 +2986,10 @@
   cursor: default;
 }
 
+.jellio-detail-icon-action[hidden] {
+  display: none !important;
+}
+
 .jellio-detail-icon-action-active {
   border-color: var(--jellio-secondary-color);
   color: var(--jellio-secondary-color);
@@ -10095,6 +10099,7 @@
   flex-direction: column;
   gap: 0.5em;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .jellio-manga-series-info .jellio-library-title {
@@ -10115,13 +10120,10 @@
 }
 
 .jellio-manga-series-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5em;
+  max-width: 40em;
   margin-top: 0.4em;
 }
 
-.jellio-manga-series-continue,
 .jellio-manga-series-order {
   display: inline-flex;
   align-items: center;
@@ -10138,9 +10140,7 @@
 }
 
 .jellio-manga-series-continue {
-  border-color: var(--jellio-secondary-color);
-  background: var(--jellio-secondary-color);
-  color: var(--jellio-on-secondary);
+  min-width: 0;
 }
 
 .jellio-manga-series-continue span:last-child {
