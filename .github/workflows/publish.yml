@@ -40,8 +40,8 @@ jobs:
       - name: Upload GitHub release assets (workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          TAG=$(gh release view --json tagName -q .tagName)
-          gh release upload "$TAG" ./* --clobber
+          TAG=$(gh release view -R ${{ github.repository }} --json tagName -q .tagName)
+          gh release upload -R ${{ github.repository }} "$TAG" ./* --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   generate:
