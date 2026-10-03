@@ -1,7 +1,7 @@
 // Shared item card, used by every screen that renders a poster grid or row
 // (home's own rows, the library grid). One definition so a later visual
 // change (a hover state, a progress bar) only has one place to happen.
-import { getImageUrl, getBookCoverUrl, getStreamCoverUrl, TICKS_PER_SECOND, prefetchStreams } from '../runtime/api.js';
+import { getImageUrl, getBookCoverUrl, getStreamCoverUrl, TICKS_PER_SECOND, prefetchStreams, seedItemCache } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   attachCardOptionsTrigger,
@@ -109,6 +109,7 @@ function attachStreamPrefetch(card, item) {
   if (!item.Id) return;
   let timer = null;
   function scheduleFire() {
+    seedItemCache(item);
     if (timer) return;
     timer = window.setTimeout(function () {
       timer = null;
@@ -327,11 +328,13 @@ function buildLandscapeCard(item, options) {
   card.appendChild(imageWrap);
 
   card.addEventListener('click', function () {
+    seedItemCache(item);
     navigateTo('#/item?id=' + item.Id);
   });
   card.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      seedItemCache(item);
       navigateTo('#/item?id=' + item.Id);
     }
   });
@@ -455,11 +458,13 @@ export function buildCard(item, options) {
       ? '#/' + (item.Type === 'AudioBook' ? 'listen' : 'read') + '?id=' + item.Id + (item.Stream && item.Stream.MangaId ? '&manga=' + item.Stream.MangaId : '')
       : '#/item?id=' + item.Id;
   card.addEventListener('click', function () {
+    seedItemCache(item);
     navigateTo(targetHash);
   });
   card.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      seedItemCache(item);
       navigateTo(targetHash);
     }
   });

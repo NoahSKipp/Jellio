@@ -1860,6 +1860,7 @@ export async function renderReader(root, params) {
 
   // The chapters either side of this one (Mihon's next and previous
   // chapter), found once the reader is up.
+  let allChapters = [];
   let chapterNav = { prev: null, next: null, ready: false };
   let paintChapterNav = function () {};
   let chapterCard = null;
@@ -1949,6 +1950,7 @@ export async function renderReader(root, params) {
       if (!mangaId) return;
       const series = await getStreamSeries(mangaId);
       if (!series || !series.Chapters || !series.Chapters.length) return;
+      allChapters = series.Chapters.slice();
       const shelf = await loadShelf('manga').catch(() => null);
       const prefs = (shelf && shelf.Series && shelf.Series[seriesKey]) || {};
       let skipRead = null;
@@ -1984,12 +1986,15 @@ export async function renderReader(root, params) {
   titleBlock.appendChild(chapterLabel);
   topbar.appendChild(titleBlock);
   const tocButton = iconButton('toc', 'Contents');
+  const chaptersButton = iconButton('format_list_bulleted', 'Chapters');
+  chaptersButton.hidden = true;
   const searchButton = iconButton('search', 'Search in book');
   const notesButton = iconButton('sticky_note_2', 'Notes & highlights');
   const bookmarkButton = iconButton('bookmark_border', 'Bookmark this page');
   const settingsButton = iconButton('text_fields', 'Reading settings');
   const fullscreenButton = iconButton('fullscreen', 'Full screen', 'jellio-reader-fullscreen-button');
   topbar.appendChild(tocButton);
+  topbar.appendChild(chaptersButton);
   topbar.appendChild(searchButton);
   topbar.appendChild(notesButton);
   topbar.appendChild(bookmarkButton);
@@ -2026,14 +2031,16 @@ export async function renderReader(root, params) {
   root.appendChild(footer);
 
   const tocPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
+  const chaptersPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   const searchPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   const settingsPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   const notesPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   root.appendChild(tocPanel);
+  root.appendChild(chaptersPanel);
   root.appendChild(searchPanel);
   root.appendChild(settingsPanel);
   root.appendChild(notesPanel);
-  const allPanels = [tocPanel, searchPanel, settingsPanel, notesPanel];
+  const allPanels = [tocPanel, chaptersPanel, searchPanel, settingsPanel, notesPanel];
 
   let latestLocator = saved && saved.Locator ? saved.Locator : '';
   let latestProgress = saved && saved.Progress ? saved.Progress : 0;
@@ -2459,6 +2466,7 @@ export async function renderReader(root, params) {
   // so its scrubber runs that way too.
   if (reader.kind === 'comic') {
     tocButton.hidden = true;
+    chaptersButton.hidden = false;
     searchButton.hidden = true;
     root.classList.add('jellio-reader-comic-mode');
     buildComicTools();
@@ -2642,6 +2650,53 @@ export async function renderReader(root, params) {
         list.textContent = '';
         list.appendChild(el('p', 'jellio-reader-empty', 'Could not read the table of contents.'));
       });
+  }
+
+  function paintChapters() {
+    chaptersPanel.textContent = '';
+    chaptersPanel.appendChild(el('h2', 'jellio-reader-panel-title', 'Chapters'));
+    const list = el('div', 'jellio-reader-toc');
+    chaptersPanel.appendChild(list);
+
+    function renderList() {
+      list.textContent = '';
+      if (!allChapters.length) {
+        list.appendChild(el('p', 'jellio-reader-empty', 'No chapters found.'));
+        return;
+      }
+      let currentBtn = null;
+      allChapters.forEach(function (chap) {
+        const button = el('button', 'jellio-reader-toc-entry', chapterLabelOf(chap));
+        button.type = 'button';
+        const isCurrent =
+          String(chap.Id) === String(itemId) ||
+          (item.Stream && String(chap.Id) === String(item.Stream.ChapterId)) ||
+          chap.Name === item.Name;
+        if (isCurrent) {
+          button.classList.add('jellio-reader-toc-current');
+          currentBtn = button;
+        }
+        button.addEventListener('click', function () {
+          closePanels();
+          openChapter(chap);
+        });
+        list.appendChild(button);
+      });
+      if (currentBtn) {
+        window.setTimeout(function () {
+          try {
+            currentBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          } catch (e) {}
+        }, 50);
+      }
+    }
+
+    if (!allChapters.length) {
+      list.appendChild(el('p', 'jellio-reader-empty', 'Loading chapters…'));
+      loadChapterNav().then(renderList);
+    } else {
+      renderList();
+    }
   }
 
   let searchToken = 0;
@@ -3117,6 +3172,9 @@ export async function renderReader(root, params) {
 
   tocButton.addEventListener('click', function () {
     openPanel(tocPanel, paintToc);
+  });
+  chaptersButton.addEventListener('click', function () {
+    openPanel(chaptersPanel, paintChapters);
   });
   searchButton.addEventListener('click', function () {
     openPanel(searchPanel, paintSearch);

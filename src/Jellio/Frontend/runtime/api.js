@@ -386,6 +386,20 @@ async function downloadedItem(itemId, err) {
   return track || record.Item;
 }
 
+export function seedItemCache(item) {
+  if (!item || !item.Id) return;
+  const key = 'item:' + item.Id;
+  if (!cache.has(key)) {
+    cache.set(key, { promise: Promise.resolve(item), ts: Date.now() });
+  }
+}
+
+export function getCachedItemSync(itemId) {
+  if (!itemId) return null;
+  const hit = cache.get('details:' + itemId) || cache.get('details:' + itemId + ':full') || cache.get('item:' + itemId);
+  return hit ? hit.promise : null;
+}
+
 // A library grid's own getItem call gets whatever fields Jellyfin returns
 // by default, enough for a heading. A detail screen needs real metadata
 // (overview, genres, cast) that only comes back when explicitly asked for,
@@ -394,23 +408,18 @@ async function downloadedItem(itemId, err) {
 // below (same SHORT_CACHE_TTL_MS reasoning applies here too, screens/
 // detail.js and screens/player.js's own episode panel both asking for
 // the exact same item within a real navigation in and back out).
-export function getItemDetails(itemId) {
+export function getItemDetails(itemId, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
+  const opts = options || {};
+  const baseFields = 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers';
+  const fields = opts.includePlaybackFields ? baseFields + ',Trickplay,Chapters' : baseFields;
   const params = new URLSearchParams({
-    // RunTimeTicks/PremiereDate/RemoteTrailers alongside the fields
-    // already asked for: an Episode's own real detail page had nothing
-    // but a bare year/rating/genre line without these, real feedback
-    // live, and RemoteTrailers is screens/detail.js's own real Trailers
-    // row's one data source (TMDb's own metadata provider, already
-    // installed, populates it server side with no extra work here).
-    // Chapters alongside the rest: screens/player.js's own chapter-name
-    // fallback for Skip Intro/Credits needs it on the exact item this
-    // call already fetches for playback, no separate round trip.
-    Fields: 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,Trickplay,Chapters',
+    Fields: fields,
   });
   const path = '/Users/' + userId + '/Items/' + itemId + '?' + params.toString();
-  return cached('details:' + itemId, function () {
+  const cacheKey = 'details:' + itemId + (opts.includePlaybackFields ? ':full' : '');
+  return cached(cacheKey, function () {
     return getJson(path, ITEM_DETAILS_TIMEOUT_MS);
   }, SHORT_CACHE_TTL_MS).catch(function (err) {
     return downloadedItem(itemId, err);

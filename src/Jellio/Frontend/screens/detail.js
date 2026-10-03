@@ -19,6 +19,7 @@ import {
   getBookCoverUrl,
   getAudiobookTracks,
   audiobookTitle,
+  getCachedItemSync,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
@@ -778,6 +779,35 @@ function fetchItemDetailsWithRetry(itemId, onRetrying) {
   return attempt(IMPORT_POLL_MAX_ATTEMPTS);
 }
 
+function renderDetailSkeleton(root, preview) {
+  root.textContent = '';
+  const hero = el('div', 'jellio-detail-hero');
+  const backdropUrl = heroBackdropUrl(preview, preview.Id);
+  if (backdropUrl) {
+    hero.style.backgroundImage = 'url(' + backdropUrl + ')';
+  }
+  const heroContent = el('div', 'jellio-detail-hero-content');
+  const titleText = preview.Type === 'Episode' && preview.SeriesName
+    ? preview.SeriesName + (preview.Name ? ' · ' + preview.Name : '')
+    : preview.Name || '';
+  heroContent.appendChild(el('h1', 'jellio-detail-title', titleText));
+
+  const meta = el('div', 'jellio-detail-meta');
+  if (preview.ProductionYear) meta.appendChild(el('span', null, String(preview.ProductionYear)));
+  if (preview.CommunityRating) meta.appendChild(buildRatingBadge(preview.CommunityRating));
+  heroContent.appendChild(meta);
+
+  if (preview.Overview) {
+    heroContent.appendChild(el('p', 'jellio-detail-overview', preview.Overview));
+  }
+  hero.appendChild(heroContent);
+  root.appendChild(hero);
+
+  const skeletonLoading = el('div', 'jellio-detail-skeleton-loading');
+  skeletonLoading.appendChild(el('div', 'jellio-screen-spinner'));
+  root.appendChild(skeletonLoading);
+}
+
 export async function renderDetail(root, params) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-detail';
@@ -788,12 +818,19 @@ export async function renderDetail(root, params) {
     return;
   }
 
-  // Shown the instant this screen starts fetching, not after: a card's
-  // own click already navigates here synchronously (components/card.js's
-  // own click handler), so the only thing standing between that tap and
-  // something visible was this screen's own await below. On a slow
-  // connection that gap used to just read as the tap doing nothing.
-  renderLoading(root);
+  // If we already know the item from card click or memory cache, render an instant
+  // hero skeleton with title, backdrop, and year so the transition feels instant.
+  const cachedPromise = getCachedItemSync(itemId);
+  let preview = null;
+  if (cachedPromise) {
+    cachedPromise.then(function (val) { preview = val; }).catch(function () {});
+  }
+
+  if (preview && preview.Name) {
+    renderDetailSkeleton(root, preview);
+  } else {
+    renderLoading(root);
+  }
 
   let item;
   let shownImportMessage = false;

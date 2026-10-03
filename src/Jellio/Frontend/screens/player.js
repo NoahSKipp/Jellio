@@ -414,7 +414,7 @@ export async function renderPlayer(root, params) {
 
   let item;
   try {
-    item = await getItemDetails(itemId);
+    item = await getItemDetails(itemId, { includePlaybackFields: true });
   } catch (err) {
     console.warn('Jellio: could not load item for playback', err);
     renderPlaybackError(root, itemId, describeNetworkFailure('this title', err), function () {
@@ -1453,16 +1453,20 @@ export async function renderPlayer(root, params) {
   registerPopover(volumeButton, volumeMenu);
 
   // === Speed popover ===
+  const savedSpeed = parseFloat(window.localStorage.getItem('jellioPlayerSpeed')) || 1;
   const speedMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
   PLAYBACK_SPEEDS.forEach(function (speed) {
     const option = el(
       'button',
-      'jellio-player-popover-option' + (speed === 1 ? ' jellio-player-popover-option-active' : ''),
+      'jellio-player-popover-option' + (speed === savedSpeed ? ' jellio-player-popover-option-active' : ''),
       speed + 'x',
     );
     option.type = 'button';
     option.addEventListener('click', function () {
       video.playbackRate = speed;
+      try {
+        window.localStorage.setItem('jellioPlayerSpeed', String(speed));
+      } catch (err) {}
       speedButton.querySelector('.jellio-player-pill-btn-label').textContent = speed + 'x';
       Array.prototype.forEach.call(speedMenu.children, function (child) {
         child.classList.remove('jellio-player-popover-option-active');
@@ -1472,6 +1476,10 @@ export async function renderPlayer(root, params) {
     });
     speedMenu.appendChild(option);
   });
+  if (savedSpeed !== 1) {
+    video.playbackRate = savedSpeed;
+    speedButton.querySelector('.jellio-player-pill-btn-label').textContent = savedSpeed + 'x';
+  }
   registerPopover(speedButton, speedMenu);
 
   // === Subtitles popover: a language column plus that language's own
@@ -1572,6 +1580,22 @@ export async function renderPlayer(root, params) {
     }
   }
 
+  let subtitleOffsetSec = 0;
+
+  function applyCuesOffset(textTrack, offset) {
+    if (!textTrack || !textTrack.cues) return;
+    const cues = textTrack.cues;
+    for (let i = 0; i < cues.length; i++) {
+      const cue = cues[i];
+      if (cue._origStart === undefined) {
+        cue._origStart = cue.startTime;
+        cue._origEnd = cue.endTime;
+      }
+      cue.startTime = Math.max(0, cue._origStart + offset);
+      cue.endTime = Math.max(0, cue._origEnd + offset);
+    }
+  }
+
   function selectSubtitle(stream, optionButton) {
     if (activeTrack) {
       // Explicit disable ahead of the removal below: real WebKit
@@ -1659,6 +1683,9 @@ export async function renderPlayer(root, params) {
       if (activeTrack !== track) return;
       if (!track.track) return;
       normalizeCuePositions(track.track);
+      if (subtitleOffsetSec !== 0) {
+        applyCuesOffset(track.track, subtitleOffsetSec);
+      }
       track.track.mode = 'showing';
       enforceSubtitleTrackModes();
     });
@@ -1910,7 +1937,89 @@ export async function renderPlayer(root, params) {
     }),
   );
 
+  const syncSection = el('div', 'jellio-player-style-group');
+  syncSection.appendChild(el('div', 'jellio-player-style-group-label', 'Delay / Sync'));
+  const syncRow = el('div', 'jellio-player-subtitle-sync-row');
+  const minusHalf = el('button', 'jellio-player-popover-option', '-0.5s');
+  minusHalf.type = 'button';
+  const minusTenth = el('button', 'jellio-player-popover-option', '-0.1s');
+  minusTenth.type = 'button';
+  const syncDisplay = el('span', 'jellio-player-subtitle-sync-value', '0.0s');
+  const plusTenth = el('button', 'jellio-player-popover-option', '+0.1s');
+  plusTenth.type = 'button';
+  const plusHalf = el('button', 'jellio-player-popover-option', '+0.5s');
+  plusHalf.type = 'button';
+  const resetBtn = el('button', 'jellio-player-popover-option', 'Reset');
+  resetBtn.type = 'button';
+
+  function updateSubtitleOffset(delta, isReset) {
+    if (isReset) {
+      subtitleOffsetSec = 0;
+    } else {
+      subtitleOffsetSec = Math.round((subtitleOffsetSec + delta) * 10) / 10;
+    }
+    syncDisplay.textContent = (subtitleOffsetSec > 0 ? '+' : '') + subtitleOffsetSec.toFixed(1) + 's';
+    if (activeTrack && activeTrack.track) {
+      applyCuesOffset(activeTrack.track, subtitleOffsetSec);
+    }
+    showPlayerToast('Subtitle sync: ' + syncDisplay.textContent);
+  }
+
+  minusHalf.addEventListener('click', function () { updateSubtitleOffset(-0.5); });
+  minusTenth.addEventListener('click', function () { updateSubtitleOffset(-0.1); });
+  plusTenth.addEventListener('click', function () { updateSubtitleOffset(0.1); });
+  plusHalf.addEventListener('click', function () { updateSubtitleOffset(0.5); });
+  resetBtn.addEventListener('click', function () { updateSubtitleOffset(0, true); });
+
+  syncRow.appendChild(minusHalf);
+  syncRow.appendChild(minusTenth);
+  syncRow.appendChild(syncDisplay);
+  syncRow.appendChild(plusTenth);
+  syncRow.appendChild(plusHalf);
+  syncRow.appendChild(resetBtn);
+  syncSection.appendChild(syncRow);
+  styleSection.appendChild(syncSection);
+
   // === Audio track popover ===
+  let audioCtx = null;
+  let sourceNode = null;
+  let compressorNode = null;
+  let dialogueBoostEnabled = false;
+
+  function setDialogueBoost(enabled) {
+    dialogueBoostEnabled = enabled;
+    try {
+      if (!audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) {
+          audioCtx = new AudioCtxClass();
+          sourceNode = audioCtx.createMediaElementSource(video);
+          compressorNode = audioCtx.createDynamicsCompressor();
+          compressorNode.threshold.setValueAtTime(-24, audioCtx.currentTime);
+          compressorNode.knee.setValueAtTime(30, audioCtx.currentTime);
+          compressorNode.ratio.setValueAtTime(12, audioCtx.currentTime);
+          compressorNode.attack.setValueAtTime(0.003, audioCtx.currentTime);
+          compressorNode.release.setValueAtTime(0.25, audioCtx.currentTime);
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      if (sourceNode && compressorNode && audioCtx) {
+        sourceNode.disconnect();
+        compressorNode.disconnect();
+        if (dialogueBoostEnabled) {
+          sourceNode.connect(compressorNode);
+          compressorNode.connect(audioCtx.destination);
+        } else {
+          sourceNode.connect(audioCtx.destination);
+        }
+      }
+    } catch (err) {
+      console.warn('Jellio: dialogue boost error', err);
+    }
+  }
+
   // currentAudioStreamIndex is declared much further up now, right
   // after this title's own first real negotiation resolves a
   // MediaSource: a real preferred-language match found there needs to
@@ -1928,38 +2037,55 @@ export async function renderPlayer(root, params) {
   function rebuildAudioMenu() {
     audioMenu.textContent = '';
     const streams = getAudioStreams(mediaSource);
-    if (streams.length <= 1) {
-      audioButton.disabled = true;
-      return;
-    }
     audioButton.disabled = false;
-    streams.forEach(function (stream) {
-      const isActive =
-        currentAudioStreamIndex == null
-          ? stream.Index === mediaSource.DefaultAudioStreamIndex
-          : stream.Index === currentAudioStreamIndex;
-      const option = el(
-        'button',
-        'jellio-player-popover-option' + (isActive ? ' jellio-player-popover-option-active' : ''),
-        audioStreamLabel(stream),
-      );
-      option.type = 'button';
-      option.addEventListener('click', function () {
-        // Real feedback: switching never seemed to reach the server at
-        // all, confirmed against real Jellyfin logs, on a device with
-        // no devtools available to see why. A visible toast the moment
-        // a tap on a track is actually received, before anything else
-        // runs, turns "does the request even leave the browser" into
-        // something a reader can answer just by watching the screen.
-        showPlayerToast('Switching to ' + audioStreamLabel(stream) + '…');
-        if (isActive) {
-          closePopovers(null);
-          return;
-        }
-        switchAudioTrack(stream);
+    if (streams.length > 0) {
+      streams.forEach(function (stream) {
+        const isActive =
+          currentAudioStreamIndex == null
+            ? stream.Index === mediaSource.DefaultAudioStreamIndex
+            : stream.Index === currentAudioStreamIndex;
+        const option = el(
+          'button',
+          'jellio-player-popover-option' + (isActive ? ' jellio-player-popover-option-active' : ''),
+          audioStreamLabel(stream),
+        );
+        option.type = 'button';
+        option.addEventListener('click', function () {
+          // Real feedback: switching never seemed to reach the server at
+          // all, confirmed against real Jellyfin logs, on a device with
+          // no devtools available to see why. A visible toast the moment
+          // a tap on a track is actually received, before anything else
+          // runs, turns "does the request even leave the browser" into
+          // something a reader can answer just by watching the screen.
+          showPlayerToast('Switching to ' + audioStreamLabel(stream) + '…');
+          if (isActive) {
+            closePopovers(null);
+            return;
+          }
+          switchAudioTrack(stream);
+        });
+        audioMenu.appendChild(option);
       });
-      audioMenu.appendChild(option);
+    }
+
+    const boostOption = el(
+      'button',
+      'jellio-player-popover-option jellio-player-boost-option' + (dialogueBoostEnabled ? ' jellio-player-popover-option-active' : ''),
+      'Dialogue Boost / Night Mode: ' + (dialogueBoostEnabled ? 'On' : 'Off'),
+    );
+    boostOption.type = 'button';
+    boostOption.addEventListener('click', function () {
+      setDialogueBoost(!dialogueBoostEnabled);
+      boostOption.textContent = 'Dialogue Boost / Night Mode: ' + (dialogueBoostEnabled ? 'On' : 'Off');
+      if (dialogueBoostEnabled) {
+        boostOption.classList.add('jellio-player-popover-option-active');
+        showPlayerToast('Dialogue Boost enabled (night mode dynamic compression)');
+      } else {
+        boostOption.classList.remove('jellio-player-popover-option-active');
+        showPlayerToast('Dialogue Boost disabled');
+      }
     });
+    audioMenu.appendChild(boostOption);
   }
   registerPopover(audioButton, audioMenu);
 
@@ -2625,6 +2751,54 @@ export async function renderPlayer(root, params) {
   shell.appendChild(sleepMenu);
   shell.appendChild(sourcePanel);
   shell.appendChild(episodesPanel);
+
+  const rippleLeft = el('div', 'jellio-player-seek-ripple jellio-player-seek-ripple-left');
+  rippleLeft.innerHTML = '<span class="material-icons">replay_10</span><span class="jellio-player-seek-ripple-text">10s</span>';
+  const rippleRight = el('div', 'jellio-player-seek-ripple jellio-player-seek-ripple-right');
+  rippleRight.innerHTML = '<span class="material-icons">forward_10</span><span class="jellio-player-seek-ripple-text">10s</span>';
+  shell.appendChild(rippleLeft);
+  shell.appendChild(rippleRight);
+
+  let lastTapTime = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
+
+  function triggerRipple(rippleEl) {
+    rippleEl.classList.remove('jellio-player-seek-ripple-active');
+    void rippleEl.offsetWidth;
+    rippleEl.classList.add('jellio-player-seek-ripple-active');
+    window.setTimeout(function () {
+      rippleEl.classList.remove('jellio-player-seek-ripple-active');
+    }, 700);
+  }
+
+  shell.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target.closest('button, input, select, textarea, .jellio-player-popover, .jellio-player-sidepanel, .jellio-player-chat-panel, .jellio-player-progress-bar-container, .jellio-player-bar, .jellio-player-pill-center, .jellio-player-pill')) {
+      return;
+    }
+    const now = Date.now();
+    const rect = shell.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const dist = Math.hypot(x - lastTapX, y - lastTapY);
+
+    if (now - lastTapTime < 320 && dist < 60) {
+      lastTapTime = 0;
+      const width = rect.width;
+      if (x < width * 0.4) {
+        triggerRipple(rippleLeft);
+        skipBackButton.click();
+      } else if (x > width * 0.6) {
+        triggerRipple(rippleRight);
+        skipForwardButton.click();
+      }
+    } else {
+      lastTapTime = now;
+      lastTapX = x;
+      lastTapY = y;
+    }
+  });
 
   // === Idle auto hide: mousemove/touch/key wakes the shell back up
   // and resets the timer; a paused video, an open popover/side panel,
@@ -3921,6 +4095,10 @@ export async function renderPlayer(root, params) {
   async function cleanup() {
     if (screenTornDown) return;
     screenTornDown = true;
+    if (audioCtx) {
+      try { audioCtx.close(); } catch (e) {}
+      audioCtx = null;
+    }
     window.clearInterval(logoWatchdog);
     document.removeEventListener('keydown', onPlayerKeydown);
     exitFullscreenOnCleanup();

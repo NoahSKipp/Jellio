@@ -197,6 +197,48 @@ export async function renderSearch(root, params) {
   // nothing whatsoever, reported live as exactly that. This one line
   // is the whole fix: every branch below now leaves it saying
   // something a reader can tell apart from silence.
+  const FILTER_CATEGORIES = [
+    { id: 'all', label: 'All' },
+    { id: 'movies', label: 'Movies' },
+    { id: 'series', label: 'TV Shows' },
+    { id: 'books', label: 'Books' },
+    { id: 'audiobooks', label: 'Audiobooks' },
+    { id: 'manga', label: 'Manga' },
+  ];
+  let activeFilter = 'all';
+  let currentSlots = {};
+
+  function applyCategoryFilter() {
+    if (!currentSlots.moviesSlot) return;
+    currentSlots.moviesSlot.hidden = activeFilter !== 'all' && activeFilter !== 'movies';
+    currentSlots.seriesSlot.hidden = activeFilter !== 'all' && activeFilter !== 'series';
+    currentSlots.booksSlot.hidden = activeFilter !== 'all' && activeFilter !== 'books';
+    currentSlots.audiobooksSlot.hidden = activeFilter !== 'all' && activeFilter !== 'audiobooks';
+    currentSlots.mangaSlot.hidden = activeFilter !== 'all' && activeFilter !== 'manga';
+  }
+
+  const filterBar = el('div', 'jellio-search-filter-bar');
+  filterBar.hidden = true;
+  FILTER_CATEGORIES.forEach(function (cat) {
+    const tab = el(
+      'button',
+      'jellio-search-filter-tab' + (cat.id === activeFilter ? ' jellio-search-filter-tab-active' : ''),
+      cat.label,
+    );
+    tab.type = 'button';
+    tab.addEventListener('click', function () {
+      if (activeFilter === cat.id) return;
+      activeFilter = cat.id;
+      Array.prototype.forEach.call(filterBar.children, function (child) {
+        child.classList.remove('jellio-search-filter-tab-active');
+      });
+      tab.classList.add('jellio-search-filter-tab-active');
+      applyCategoryFilter();
+    });
+    filterBar.appendChild(tab);
+  });
+  root.appendChild(filterBar);
+
   const status = document.createElement('p');
   status.className = 'jellio-service-empty jellio-search-status';
   root.appendChild(status);
@@ -255,6 +297,7 @@ export async function renderSearch(root, params) {
   // wherever insertion order happened to land it.
   function runSearch(term) {
     recentSection.hidden = true;
+    filterBar.hidden = false;
     reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
     abortInFlight();
     const thisRequest = ++requestId;
@@ -271,6 +314,9 @@ export async function renderSearch(root, params) {
     results.appendChild(booksSlot);
     results.appendChild(audiobooksSlot);
     results.appendChild(mangaSlot);
+
+    currentSlots = { moviesSlot: moviesSlot, seriesSlot: seriesSlot, booksSlot: booksSlot, audiobooksSlot: audiobooksSlot, mangaSlot: mangaSlot };
+    applyCategoryFilter();
 
     let settledCount = 0;
     let anyResults = false;
@@ -382,6 +428,7 @@ export async function renderSearch(root, params) {
       abortInFlight();
       results.textContent = '';
       status.textContent = '';
+      filterBar.hidden = true;
       paintRecentSearches();
       return;
     }

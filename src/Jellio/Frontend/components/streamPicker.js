@@ -529,7 +529,7 @@ export async function openStreamPicker(item, options) {
     return;
   }
 
-  if (sources.length === 1) {
+  if (!opts.forceChoice && sources.length === 1) {
     closeStreamPicker();
     navigateTo(playHash(item.Id, sources[0].Id));
     return;
