@@ -8,6 +8,30 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.49.0] - 2026-10-03\n\n### 🚀 Features\n\n- Video player media session and speed stepping, synchronous detail preview, listen drawer filter, and reader shortcuts\n- Persistent subtitle offset, instant search, reader auto-immersive scroll, and audiobook shortcut cheat sheet\n- In-app trailer modal, episode quick-play, reader jump-to-page, paused frame stepping, and stream picker arrow navigation\n",
+        "checksum": "90443b913095ad4aa7df43133bd93f2e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.49.0/jellio_1.49.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-03T22:08:25Z",
+        "version": "1.49.0"
+      },
+      {
+        "changelog": "## [1.48.0] - 2026-10-03\n\n### 🚀 Features\n\n- Chapter drawer filter, active season auto-selection, mini-player scrubbing, and player shortcuts\n",
+        "checksum": "6c306b5f031c4c5cc55939346176bfd7",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.48.0/jellio_1.48.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-03T20:59:49Z",
+        "version": "1.48.0"
+      },
+      {
+        "changelog": "## [1.47.0] - 2026-10-03\n\n### 🚀 Features\n\n- Player subtitle sync, double-tap seek, dialogue boost, instant detail preview, search filters, and chapter drawer\n\n### 🐛 Bug Fixes\n\n- *(ci)* Use GITHUB_TOKEN for release workflow\n",
+        "checksum": "4744b127a6dbfa88a01b7bde177d32cf",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.47.0/jellio_1.47.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-03T20:05:53Z",
+        "version": "1.47.0"
+      },
+      {
         "changelog": "## [1.46.0] - 2026-10-03\n\n### 🚀 Features\n\n- *(audiobook)* Search audiobooks by title, series, and author\n",
         "checksum": "e0b078a9bad6a76eeb4a7c08748c1b0b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.46.0/jellio_1.46.0.0.zip",
@@ -222,30 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T15:37:08Z",
         "version": "1.31.0"
-      },
-      {
-        "changelog": "## [1.30.0] - 2026-09-27\n\n### 🚀 Features\n\n- Import a reader's Mihon library and reading progress through Suwayomi\n- Group manga chapters into series with a chapter list, and name untagged audiobooks by folder\n",
-        "checksum": "e6f8d78e222baf8bcdaef2ffe4f90393",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.30.0/jellio_1.30.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T14:48:29Z",
-        "version": "1.30.0"
-      },
-      {
-        "changelog": "## [1.29.0] - 2026-09-27\n\n### 🚀 Features\n\n- Add a setting to include NSFW-flagged Suwayomi sources in manga searches\n\n### 🐛 Bug Fixes\n\n- Find Chaptarr books to request in either format, and point manga requests at Suwayomi when it isn't set up\n- Tell apart a Suwayomi with no sources from one whose sources were all skipped\n",
-        "checksum": "cac355af6d4837803de1d90198eb3d98",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.29.0/jellio_1.29.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T01:07:02Z",
-        "version": "1.29.0"
-      },
-      {
-        "changelog": "## [1.28.1] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Explain empty Suwayomi manga searches and pick up newly installed sources\n- Send the format's quality profile when a book request adds a new author to Chaptarr\n",
-        "checksum": "976fcc8bd10541e46734e6bdd299ad8f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.28.1/jellio_1.28.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T00:39:44Z",
-        "version": "1.28.1"
       }
     ]
   }
