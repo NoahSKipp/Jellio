@@ -658,6 +658,40 @@ export function renderMangaSeries(root, params, parentId) {
     });
     filters.appendChild(sheet);
     listTools.appendChild(filters);
+
+    let chapterSearchQuery = '';
+    const searchWrap = el('div', 'jellio-manga-chapter-search');
+    const searchIcon = el('span', 'material-icons jellio-manga-chapter-search-icon', 'search');
+    searchWrap.appendChild(searchIcon);
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'search';
+    searchInput.className = 'jellio-manga-chapter-search-input';
+    searchInput.placeholder = 'Jump to ch. # / search…';
+    searchInput.setAttribute('aria-label', 'Filter chapters or jump to chapter');
+    searchInput.value = chapterSearchQuery;
+
+    searchInput.addEventListener('input', function () {
+      chapterSearchQuery = searchInput.value.trim().toLowerCase();
+      renderList();
+    });
+
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        const firstMatch = list.querySelector('.jellio-manga-chapter-button');
+        if (firstMatch) {
+          firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstMatch.focus();
+        }
+      } else if (e.key === 'Escape') {
+        searchInput.value = '';
+        chapterSearchQuery = '';
+        renderList();
+      }
+    });
+    searchWrap.appendChild(searchInput);
+    listTools.appendChild(searchWrap);
+
     const order = el('button', 'jellio-manga-series-order');
     order.type = 'button';
     listTools.appendChild(order);
@@ -671,16 +705,38 @@ export function renderMangaSeries(root, params, parentId) {
       order.appendChild(el('span', 'material-icons ' + (cs.descending ? 'arrow_downward' : 'arrow_upward')));
       order.appendChild(el('span', null, cs.descending ? 'Newest first' : 'Oldest first'));
       list.textContent = '';
-      const ordered = sortChapters(chapters, cs).filter((item) =>
+      let ordered = sortChapters(chapters, cs).filter((item) =>
         passesChapterFilters(item, cs, chapterState(item, progress).read, bookmarked(item)),
       );
+      if (chapterSearchQuery) {
+        ordered = ordered.filter(function (item) {
+          const num = chapterNumberOf(item);
+          const numStr = num >= 0 ? String(num) : '';
+          const name = (item.Name || '').toLowerCase();
+          const label = (chapterLabelFor(item, cs) || '').toLowerCase();
+          return (
+            numStr === chapterSearchQuery ||
+            numStr.startsWith(chapterSearchQuery) ||
+            name.includes(chapterSearchQuery) ||
+            label.includes(chapterSearchQuery)
+          );
+        });
+      }
       if (!ordered.length) {
-        const filtering = cs.unread || cs.bookmarked || cs.downloaded;
+        const filtering = cs.unread || cs.bookmarked || cs.downloaded || chapterSearchQuery;
         list.appendChild(
           el(
             'li',
             'jellio-manga-chapter-empty',
-            !filtering ? 'No chapters.' : cs.bookmarked === 'include' && !cs.unread && !cs.downloaded ? 'No bookmarked chapters.' : cs.unread === 'include' && !cs.bookmarked && !cs.downloaded ? 'Nothing left to read.' : 'No chapters match these filters.',
+            chapterSearchQuery
+              ? 'No chapters matching “' + searchInput.value + '”.'
+              : !filtering
+                ? 'No chapters.'
+                : cs.bookmarked === 'include' && !cs.unread && !cs.downloaded
+                  ? 'No bookmarked chapters.'
+                  : cs.unread === 'include' && !cs.bookmarked && !cs.downloaded
+                    ? 'Nothing left to read.'
+                    : 'No chapters match these filters.',
           ),
         );
       }

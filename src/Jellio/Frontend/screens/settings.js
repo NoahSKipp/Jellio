@@ -50,6 +50,7 @@ import {
   isAutoDeleteReadEnabled,
   setAutoDeleteReadEnabled,
 } from '../runtime/offline.js';
+import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from '../components/audioMiniPlayer.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
 import {
@@ -742,7 +743,7 @@ function buildTranslationCard(translationEnabled) {
 }
 
 function buildReadingOfflineCard() {
-  const { card, body } = buildCard('auto_stories', 'Reading & Offline');
+  const { card, body } = buildCard('auto_stories', 'Reading & Audiobooks');
   body.appendChild(
     buildToggleRow(
       null,
@@ -751,6 +752,28 @@ function buildReadingOfflineCard() {
       isAutoDeleteReadEnabled(),
       function (checked) {
         setAutoDeleteReadEnabled(checked);
+      },
+    ),
+  );
+  const speedOptions = [
+    { value: '0.75', label: '0.75×' },
+    { value: '1', label: '1× (Normal)' },
+    { value: '1.25', label: '1.25×' },
+    { value: '1.5', label: '1.5×' },
+    { value: '1.75', label: '1.75×' },
+    { value: '2', label: '2×' },
+  ];
+  body.appendChild(
+    buildSelectRow(
+      null,
+      'Default audiobook speed',
+      'Preferred playback speed when opening an audiobook.',
+      speedOptions,
+      String(getDefaultAudiobookSpeed()),
+      function (val, select, status) {
+        setDefaultAudiobookSpeed(Number(val));
+        status.textContent = 'Saved.';
+        window.setTimeout(() => { status.textContent = ''; }, 2000);
       },
     ),
   );

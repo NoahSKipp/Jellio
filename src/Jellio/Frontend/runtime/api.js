@@ -3710,11 +3710,11 @@ export function getPersonFilmography(personId, limit) {
   const params = new URLSearchParams({
     personIds: personId,
     Recursive: 'true',
-    IncludeItemTypes: 'Movie,Series',
-    SortBy: 'PremiereDate',
+    IncludeItemTypes: 'Movie,Series,Book,AudioBook',
+    SortBy: 'PremiereDate,SortName',
     SortOrder: 'Descending',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear',
-    Limit: String(limit || 50),
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,Album,Artists,SeriesName',
+    Limit: String(limit || 100),
   });
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {

@@ -46,6 +46,7 @@ import { startGroupWatchInvites } from './components/groupWatchInvites.js';
 import { showSplash, hideSplash, setSplashTotal, reportSplashStep } from './components/splash.js';
 import { showToast } from './components/toast.js';
 import { buildLibraryCoverflow } from './components/libraryCoverflow.js';
+import { syncMiniPlayer } from './components/audioMiniPlayer.js';
 import { onRouteChange, parseRoute, setTitle, navigateTo } from './runtime/router.js';
 
 const ROOT_ID = 'jellioRoot';
@@ -779,6 +780,7 @@ async function runSync() {
     root.classList.toggle('jellio-root-fullscreen', FULLSCREEN_ROUTES.has(route.path));
     mountSeasons(root);
     applyResponsiveNav();
+    syncMiniPlayer();
 
     const sidebarMount = root.querySelector('.jellio-sidebar-mount');
     const mobileNavMount = root.querySelector('.jellio-mobile-nav-mount');

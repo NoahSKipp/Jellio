@@ -11,6 +11,10 @@ import {
   isOffline,
   checkServer,
   timeLeftSeconds,
+  isAutoDeleteWatchedEnabled,
+  setAutoDeleteWatchedEnabled,
+  isAutoDeleteReadEnabled,
+  setAutoDeleteReadEnabled,
 } from '../runtime/offline.js';
 import { formatBytes, formatTimeLeft } from '../components/downloads.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
@@ -220,10 +224,101 @@ export function renderDownloads(root) {
       if (cancelled) return;
       objectUrls.splice(0).forEach((url) => URL.revokeObjectURL(url));
       body.textContent = '';
-      const used = records.reduce((sum, record) => sum + (record.TotalBytes || record.DoneBytes || 0), 0);
+      const byKind = {
+        video: 0,
+        manga: 0,
+        audiobook: 0,
+        book: 0,
+      };
+      records.forEach(function (record) {
+        const bytes = record.TotalBytes || record.DoneBytes || 0;
+        if (byKind[record.Kind] != null) {
+          byKind[record.Kind] += bytes;
+        }
+      });
+      const totalUsed = Object.values(byKind).reduce((a, b) => a + b, 0);
+      const quota = estimate && estimate.quota ? estimate.quota : totalUsed;
+      const free = estimate && estimate.quota ? Math.max(0, estimate.quota - estimate.usage) : 0;
+
       summary.textContent =
-        records.length + (records.length === 1 ? ' download' : ' downloads') + ' · ' + formatBytes(used) +
-        (estimate && estimate.quota ? ' · ' + formatBytes(Math.max(0, estimate.quota - estimate.usage)) + ' free for Jellio on this device' : '');
+        records.length + (records.length === 1 ? ' download' : ' downloads') + ' · ' + formatBytes(totalUsed) +
+        (estimate && estimate.quota ? ' · ' + formatBytes(free) + ' free for Jellio on this device' : '');
+
+      const storageSection = el('div', 'jellio-downloads-storage');
+      const storageBar = el('div', 'jellio-storage-bar');
+      const totalCapacity = Math.max(quota, totalUsed + free, 1);
+      const kinds = [
+        { key: 'video', label: 'Movies & TV', color: '#a855f7', bytes: byKind.video },
+        { key: 'manga', label: 'Manga', color: '#06b6d4', bytes: byKind.manga },
+        { key: 'audiobook', label: 'Audiobooks', color: '#14b8a6', bytes: byKind.audiobook },
+        { key: 'book', label: 'Books', color: '#f59e0b', bytes: byKind.book },
+      ];
+      kinds.forEach(function (k) {
+        if (k.bytes > 0) {
+          const seg = el('div', 'jellio-storage-segment jellio-storage-segment-' + k.key);
+          seg.style.width = ((k.bytes / totalCapacity) * 100) + '%';
+          seg.title = k.label + ': ' + formatBytes(k.bytes);
+          storageBar.appendChild(seg);
+        }
+      });
+      if (free > 0) {
+        const freeSeg = el('div', 'jellio-storage-segment jellio-storage-segment-free');
+        freeSeg.style.width = ((free / totalCapacity) * 100) + '%';
+        freeSeg.title = 'Free storage: ' + formatBytes(free);
+        storageBar.appendChild(freeSeg);
+      }
+      storageSection.appendChild(storageBar);
+
+      const legend = el('div', 'jellio-storage-legend');
+      kinds.forEach(function (k) {
+        if (k.bytes > 0) {
+          const item = el('div', 'jellio-storage-legend-item');
+          const dot = el('span', 'jellio-storage-legend-dot');
+          dot.style.backgroundColor = k.color;
+          item.appendChild(dot);
+          item.appendChild(el('span', 'jellio-storage-legend-label', k.label));
+          item.appendChild(el('span', 'jellio-storage-legend-value', formatBytes(k.bytes)));
+          legend.appendChild(item);
+        }
+      });
+      if (free > 0) {
+        const freeItem = el('div', 'jellio-storage-legend-item');
+        const freeDot = el('span', 'jellio-storage-legend-dot jellio-storage-legend-dot-free');
+        freeItem.appendChild(freeDot);
+        freeItem.appendChild(el('span', 'jellio-storage-legend-label', 'Free'));
+        freeItem.appendChild(el('span', 'jellio-storage-legend-value', formatBytes(free)));
+        legend.appendChild(freeItem);
+      }
+      storageSection.appendChild(legend);
+
+      const quickSettings = el('div', 'jellio-downloads-quick-settings');
+      function buildQuickToggle(icon, title, initialValue, onToggle) {
+        const row = el('label', 'jellio-downloads-quick-toggle');
+        row.appendChild(el('span', 'material-icons ' + icon));
+        row.appendChild(el('span', 'jellio-downloads-quick-label', title));
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className = 'jellio-settings-checkbox';
+        input.checked = initialValue;
+        input.addEventListener('change', function () {
+          onToggle(input.checked);
+        });
+        row.appendChild(input);
+        return row;
+      }
+      quickSettings.appendChild(
+        buildQuickToggle('movie', 'Delete after watching', isAutoDeleteWatchedEnabled(), function (checked) {
+          setAutoDeleteWatchedEnabled(checked);
+        }),
+      );
+      quickSettings.appendChild(
+        buildQuickToggle('auto_stories', 'Delete after reading', isAutoDeleteReadEnabled(), function (checked) {
+          setAutoDeleteReadEnabled(checked);
+        }),
+      );
+      storageSection.appendChild(quickSettings);
+      body.appendChild(storageSection);
+
       if (!records.length) {
         const empty = el('div', 'jellio-bookshelf-empty');
         empty.appendChild(el('span', 'material-icons download_for_offline'));
