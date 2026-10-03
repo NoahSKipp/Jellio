@@ -23,6 +23,32 @@ const SKIP_SECONDS_FORWARD = 30;
 const PROGRESS_REPORT_MS = 10000;
 const RESTART_CHAPTER_THRESHOLD = 5;
 const DEFAULT_SPEED_KEY = 'jellio_audiobook_default_speed';
+const AUDIOBOOK_VOLUME_KEY = 'jellio_audiobook_volume';
+const AUDIOBOOK_MUTED_KEY = 'jellio_audiobook_muted';
+
+export function getSavedAudiobookVolume() {
+  try {
+    const val = window.localStorage.getItem(AUDIOBOOK_VOLUME_KEY);
+    return val !== null ? Math.min(1, Math.max(0, Number(val))) : 1;
+  } catch (err) {
+    return 1;
+  }
+}
+
+export function saveAudiobookVolume(volume, muted) {
+  try {
+    window.localStorage.setItem(AUDIOBOOK_VOLUME_KEY, String(volume));
+    window.localStorage.setItem(AUDIOBOOK_MUTED_KEY, muted ? '1' : '0');
+  } catch (err) {}
+}
+
+export function getSavedAudiobookMuted() {
+  try {
+    return window.localStorage.getItem(AUDIOBOOK_MUTED_KEY) === '1';
+  } catch (err) {
+    return false;
+  }
+}
 
 export function getDefaultAudiobookSpeed() {
   try {
@@ -353,6 +379,16 @@ export function startAudioSession(config) {
   const audio = document.createElement('audio');
   audio.preload = 'auto';
   audio.id = 'jellioPersistentAudio';
+  try {
+    audio.preservesPitch = true;
+    audio.webkitPreservesPitch = true;
+    audio.mozPreservesPitch = true;
+  } catch (err) {}
+  audio.volume = getSavedAudiobookVolume();
+  audio.muted = getSavedAudiobookMuted();
+  audio.addEventListener('volumechange', function () {
+    saveAudiobookVolume(audio.volume, audio.muted);
+  });
   document.body.appendChild(audio);
 
   activeSession = {
@@ -566,6 +602,15 @@ export function syncMiniPlayer() {
   if (!miniPlayerEl) {
     miniPlayerEl = el('div', 'jellio-audio-mini-player');
     const progressBar = el('div', 'jellio-mini-player-progress-bar');
+    progressBar.style.cursor = 'pointer';
+    progressBar.title = 'Scrub position';
+    progressBar.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!activeSession || !activeSession.timeline || !activeSession.timeline.durationSec) return;
+      const rect = progressBar.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      seekBook(ratio * activeSession.timeline.durationSec);
+    });
     const progressFill = el('div', 'jellio-mini-player-progress-fill');
     progressBar.appendChild(progressFill);
     miniPlayerEl.appendChild(progressBar);

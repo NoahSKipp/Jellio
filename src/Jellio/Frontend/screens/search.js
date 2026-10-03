@@ -205,7 +205,14 @@ export async function renderSearch(root, params) {
     { id: 'audiobooks', label: 'Audiobooks' },
     { id: 'manga', label: 'Manga' },
   ];
+  const SEARCH_TAB_STORAGE_KEY = 'jellio_search_category_tab';
   let activeFilter = 'all';
+  try {
+    const savedFilter = sessionStorage.getItem(SEARCH_TAB_STORAGE_KEY);
+    if (savedFilter && FILTER_CATEGORIES.some(function (c) { return c.id === savedFilter; })) {
+      activeFilter = savedFilter;
+    }
+  } catch (e) {}
   let currentSlots = {};
 
   function applyCategoryFilter() {
@@ -229,6 +236,9 @@ export async function renderSearch(root, params) {
     tab.addEventListener('click', function () {
       if (activeFilter === cat.id) return;
       activeFilter = cat.id;
+      try {
+        sessionStorage.setItem(SEARCH_TAB_STORAGE_KEY, cat.id);
+      } catch (e) {}
       Array.prototype.forEach.call(filterBar.children, function (child) {
         child.classList.remove('jellio-search-filter-tab-active');
       });

@@ -3817,6 +3817,29 @@
   font-size: 1em;
 }
 
+.jellio-reader-chapter-filter-wrap {
+  margin-bottom: 0.75em;
+}
+
+.jellio-reader-chapter-filter-input {
+  width: 100%;
+  padding: 0.55em 0.85em;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.05);
+  color: inherit;
+  font-family: var(--jellio-font-family);
+  font-size: 0.88em;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.jellio-reader-chapter-filter-input:focus {
+  border-color: var(--jellio-accent-color, #7c3aed);
+  background: rgb(255 255 255 / 0.08);
+}
+
 .jellio-reader-toc-entry {
   display: block;
   width: 100%;
@@ -5987,6 +6010,106 @@
     min-width: 2.6em;
     padding: 0.6em;
   }
+}
+
+/* Player Keyboard Shortcuts Modal */
+.jellio-player-shortcuts-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+  box-sizing: border-box;
+}
+
+.jellio-player-shortcuts-modal-hidden {
+  display: none;
+}
+
+.jellio-player-shortcuts-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.jellio-player-shortcuts-card {
+  position: relative;
+  width: 100%;
+  max-width: 24em;
+  padding: 1.4em 1.6em;
+  border-radius: var(--jellio-card-radius, 1em);
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.95);
+  border: 1px solid var(--jellio-border-color);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-sizing: border-box;
+  color: var(--jellio-text-color);
+}
+
+.jellio-player-shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.1em;
+}
+
+.jellio-player-shortcuts-title {
+  margin: 0;
+  font-size: 1.15em;
+  font-weight: 600;
+}
+
+.jellio-player-shortcuts-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  color: inherit;
+  font-size: 1.2em;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.jellio-player-shortcuts-close:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.jellio-player-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65em;
+}
+
+.jellio-player-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9em;
+}
+
+.jellio-player-shortcut-badge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  border-radius: 0.4em;
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.85em;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.jellio-player-shortcut-desc {
+  color: var(--jellio-text-muted-color, rgb(255 255 255 / 0.7));
 }
 
 .jellio-nav-avatar-mount {

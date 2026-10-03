@@ -2655,17 +2655,39 @@ export async function renderReader(root, params) {
   function paintChapters() {
     chaptersPanel.textContent = '';
     chaptersPanel.appendChild(el('h2', 'jellio-reader-panel-title', 'Chapters'));
+
+    let filterQuery = '';
+    const filterWrap = el('div', 'jellio-reader-chapter-filter-wrap');
+    const filterInput = document.createElement('input');
+    filterInput.type = 'search';
+    filterInput.className = 'jellio-reader-chapter-filter-input';
+    filterInput.placeholder = 'Filter chapters (e.g. 24, Extra, Epilogue)…';
+    filterInput.autocomplete = 'off';
+    filterInput.spellcheck = false;
+    filterWrap.appendChild(filterInput);
+    chaptersPanel.appendChild(filterWrap);
+
     const list = el('div', 'jellio-reader-toc');
     chaptersPanel.appendChild(list);
 
     function renderList() {
       list.textContent = '';
-      if (!allChapters.length) {
-        list.appendChild(el('p', 'jellio-reader-empty', 'No chapters found.'));
+      const q = filterQuery.trim().toLowerCase();
+      const filtered = q
+        ? allChapters.filter(function (chap) {
+            const label = (chapterLabelOf(chap) || '').toLowerCase();
+            const numStr = chap.Number !== undefined && chap.Number !== null ? String(chap.Number).toLowerCase() : '';
+            const nameStr = chap.Name ? String(chap.Name).toLowerCase() : '';
+            return label.includes(q) || numStr.includes(q) || nameStr.includes(q);
+          })
+        : allChapters;
+
+      if (!filtered.length) {
+        list.appendChild(el('p', 'jellio-reader-empty', q ? 'No matching chapters.' : 'No chapters found.'));
         return;
       }
       let currentBtn = null;
-      allChapters.forEach(function (chap) {
+      filtered.forEach(function (chap) {
         const button = el('button', 'jellio-reader-toc-entry', chapterLabelOf(chap));
         button.type = 'button';
         const isCurrent =
@@ -2682,7 +2704,7 @@ export async function renderReader(root, params) {
         });
         list.appendChild(button);
       });
-      if (currentBtn) {
+      if (currentBtn && !q) {
         window.setTimeout(function () {
           try {
             currentBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -2691,11 +2713,21 @@ export async function renderReader(root, params) {
       }
     }
 
+    filterInput.addEventListener('input', function () {
+      filterQuery = filterInput.value;
+      renderList();
+    });
+
     if (!allChapters.length) {
       list.appendChild(el('p', 'jellio-reader-empty', 'Loading chapters…'));
       loadChapterNav().then(renderList);
     } else {
       renderList();
+      window.setTimeout(function () {
+        try {
+          filterInput.focus();
+        } catch (e) {}
+      }, 50);
     }
   }
 
