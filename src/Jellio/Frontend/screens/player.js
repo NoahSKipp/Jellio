@@ -1623,7 +1623,14 @@ export async function renderPlayer(root, params) {
     }
   }
 
+  const SUB_OFFSET_STORAGE_PREFIX = 'jellio_sub_offset_';
   let subtitleOffsetSec = 0;
+  try {
+    const savedOffset = parseFloat(localStorage.getItem(SUB_OFFSET_STORAGE_PREFIX + itemId));
+    if (Number.isFinite(savedOffset)) {
+      subtitleOffsetSec = Math.round(savedOffset * 10) / 10;
+    }
+  } catch (e) {}
 
   function applyCuesOffset(textTrack, offset) {
     if (!textTrack || !textTrack.cues) return;
@@ -1987,7 +1994,7 @@ export async function renderPlayer(root, params) {
   minusHalf.type = 'button';
   const minusTenth = el('button', 'jellio-player-popover-option', '-0.1s');
   minusTenth.type = 'button';
-  const syncDisplay = el('span', 'jellio-player-subtitle-sync-value', '0.0s');
+  const syncDisplay = el('span', 'jellio-player-subtitle-sync-value', (subtitleOffsetSec > 0 ? '+' : '') + subtitleOffsetSec.toFixed(1) + 's');
   const plusTenth = el('button', 'jellio-player-popover-option', '+0.1s');
   plusTenth.type = 'button';
   const plusHalf = el('button', 'jellio-player-popover-option', '+0.5s');
@@ -2001,6 +2008,13 @@ export async function renderPlayer(root, params) {
     } else {
       subtitleOffsetSec = Math.round((subtitleOffsetSec + delta) * 10) / 10;
     }
+    try {
+      if (subtitleOffsetSec !== 0) {
+        localStorage.setItem(SUB_OFFSET_STORAGE_PREFIX + itemId, String(subtitleOffsetSec));
+      } else {
+        localStorage.removeItem(SUB_OFFSET_STORAGE_PREFIX + itemId);
+      }
+    } catch (e) {}
     syncDisplay.textContent = (subtitleOffsetSec > 0 ? '+' : '') + subtitleOffsetSec.toFixed(1) + 's';
     if (activeTrack && activeTrack.track) {
       applyCuesOffset(activeTrack.track, subtitleOffsetSec);
@@ -2339,8 +2353,9 @@ export async function renderPlayer(root, params) {
     { key: '← / →', desc: 'Seek 10 seconds' },
     { key: '↑ / ↓', desc: 'Volume up / down' },
     { key: 'M', desc: 'Mute / Unmute' },
-    { key: 'F', desc: 'Toggle Fullscreen' },
+    { key: 'F / DblClick', desc: 'Toggle Fullscreen' },
     { key: 'C', desc: 'Subtitles & styling' },
+    { key: 'Z / X', desc: 'Subtitle sync (-0.1s / +0.1s)' },
     { key: '< / >', desc: 'Playback speed' },
     { key: 'S', desc: 'Skip Intro / Credits' },
     { key: '?', desc: 'Toggle cheat sheet' },
@@ -3052,6 +3067,12 @@ export async function renderPlayer(root, params) {
   // actually toggles playback; root's own click listener above already
   // wakes the shell for a tap landing on video, nothing else needed
   // here.
+  root.addEventListener('dblclick', function (event) {
+    if (event.target && event.target.closest && event.target.closest('button, input, select, textarea, .jellio-player-popover, .jellio-player-sidepanel, .jellio-player-shortcuts-modal, .jellio-player-chat-panel')) {
+      return;
+    }
+    if (fullscreenButton) fullscreenButton.click();
+  });
   wakeControls();
 
   // Real gap: root.addEventListener('keydown', wakeControls) above only
@@ -3114,6 +3135,16 @@ export async function renderPlayer(root, params) {
       case 'c':
       case 'C':
         subtitleButton.click();
+        break;
+      case 'z':
+      case 'Z':
+        event.preventDefault();
+        updateSubtitleOffset(-0.1);
+        break;
+      case 'x':
+      case 'X':
+        event.preventDefault();
+        updateSubtitleOffset(0.1);
         break;
       case '>':
         event.preventDefault();

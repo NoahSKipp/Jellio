@@ -20,6 +20,7 @@ import {
   getAudiobookTracks,
   audiobookTitle,
   getCachedItemSync,
+  getReadingProgress,
 } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
@@ -1042,15 +1043,30 @@ export async function renderDetail(root, params) {
   // whichever episode resolveSeriesPlayTarget/resolveSeasonPlayTarget
   // above actually decides is next.
   if (readerKind) {
-    const hasProgress = !!(item.UserData && item.UserData.PlaybackPositionTicks > 0);
+    const hasProgress = !!(
+      item.UserData &&
+      ((item.UserData.PlaybackPositionTicks && item.UserData.PlaybackPositionTicks > 0) ||
+       (item.UserData.PlayedPercentage && item.UserData.PlayedPercentage > 0 && !item.UserData.Played))
+    );
     const readButton = el('button', 'jellio-detail-play');
     readButton.type = 'button';
     readButton.appendChild(el('span', 'material-icons ' + (readerKind === 'read' ? 'menu_book' : 'headphones')));
-    readButton.appendChild(el('span', null, readerKind === 'read' ? 'Read' : hasProgress ? 'Resume' : 'Listen'));
+    const readLabel = el('span', null, hasProgress ? 'Resume' : readerKind === 'read' ? 'Read' : 'Listen');
+    readButton.appendChild(readLabel);
     readButton.addEventListener('click', function () {
       navigateTo('#/' + readerKind + '?id=' + item.Id);
     });
     actions.appendChild(readButton);
+
+    if (readerKind === 'read' && !hasProgress) {
+      getReadingProgress(item.Id)
+        .then(function (progress) {
+          if (progress && progress.Progress > 0 && progress.Progress < 0.98) {
+            readLabel.textContent = 'Resume';
+          }
+        })
+        .catch(function () {});
+    }
   } else if (!needsEpisodeResolution) {
     const playButton = el('button', 'jellio-detail-play');
     playButton.type = 'button';
