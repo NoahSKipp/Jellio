@@ -846,14 +846,21 @@ export async function renderHome(root, params) {
   // Once a build settles, the current rows are authoritative: re-place
   // them in order, and drop personal rows a rebuild no longer produced
   // (a Continue Watching row whose last show was just finished).
-  function settleRows() {
+  function settleRows(settledSections) {
     if (!active) return;
     removeSkeleton();
-    const current = cheapBuilt.concat(expensiveBuilt);
+    const current = Array.isArray(settledSections) && settledSections.length
+      ? settledSections
+      : cheapBuilt.concat(expensiveBuilt);
     current.forEach(placeSection);
     Array.from(rows.children).forEach(function (child) {
       const order = Number(child.dataset.jellioHomeOrder);
-      if (order < EXPENSIVE_ORDER_BASE && current.indexOf(child) === -1) child.remove();
+      if (order < EXPENSIVE_ORDER_BASE) {
+        const inCurrent = current.some(function (sec) {
+          return sec === child || (sec.dataset && child.dataset && sec.dataset.jellioRowKey && sec.dataset.jellioRowKey === child.dataset.jellioRowKey);
+        });
+        if (!inCurrent) child.remove();
+      }
     });
   }
   const subscription = preloadHomeSectionsWithProgress(placeSection);
