@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.43.0] - 2026-10-03\n\n### 🚀 Features\n\n- Global offline auto-delete settings and collapsible manga series actions\n",
+        "checksum": "e91840f0662b9d0294937640fe12694e",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.43.0/jellio_1.43.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-03T00:17:36Z",
+        "version": "1.43.0"
+      },
+      {
         "changelog": "## [1.42.0] - 2026-10-02\n\n### 🚀 Features\n\n- Per-manga scanlator filter like Mihon's\n- Next and previous chapter in the manga reader\n- Mihon's chapter filters, sort and display for each series\n- Reader options like Mihon's for manga pages\n- Updates feed and automatic library refresh for manga\n- AniList tracking for manga series\n- Warn about duplicate series and switch a series to another source\n- New chapter notifications, library filters and display, download controls, more reader settings\n- Carry over download, filter, reader, and tracking controls across libraries\n",
         "checksum": "2a139cd38de873c62c4b4ce7df58a264",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.42.0/jellio_1.42.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-26T14:45:35Z",
         "version": "1.25.0"
-      },
-      {
-        "changelog": "## [1.24.0] - 2026-09-26\n\n### 🚀 Features\n\n- Show pages left on books in progress\n\n### 🐛 Bug Fixes\n\n- Show a book's real author instead of Chaptarr's lowercase sort key\n",
-        "checksum": "6fec6f50a3df09300128a2b97adcb546",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.24.0/jellio_1.24.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-26T13:20:02Z",
-        "version": "1.24.0"
       }
     ]
   }
