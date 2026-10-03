@@ -18,6 +18,7 @@ import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { invalidateHomeSections } from './home.js';
 import { el } from '../runtime/dom.js';
+import { showToast } from '../components/toast.js';
 import {
   startAudioSession,
   getActiveAudioSession,
@@ -466,13 +467,22 @@ export async function renderListen(root, params) {
       seekBook(getBookTime() + SKIP_SECONDS_FORWARD);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      if (session && session.audio) session.audio.volume = Math.min(1, (session.audio.volume || 1) + 0.1);
+      if (session && session.audio) {
+        session.audio.volume = Math.min(1, Math.round(((session.audio.volume || 1) + 0.1) * 10) / 10);
+        showToast('Volume ' + Math.round(session.audio.volume * 100) + '%');
+      }
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
-      if (session && session.audio) session.audio.volume = Math.max(0, (session.audio.volume || 1) - 0.1);
+      if (session && session.audio) {
+        session.audio.volume = Math.max(0, Math.round(((session.audio.volume || 1) - 0.1) * 10) / 10);
+        showToast('Volume ' + Math.round(session.audio.volume * 100) + '%');
+      }
     } else if (event.key === 'm' || event.key === 'M') {
       event.preventDefault();
-      if (session && session.audio) session.audio.muted = !session.audio.muted;
+      if (session && session.audio) {
+        session.audio.muted = !session.audio.muted;
+        showToast(session.audio.muted ? 'Muted' : 'Unmuted');
+      }
     } else if (event.key === '[') {
       event.preventDefault();
       cycleSpeed(-1);

@@ -847,6 +847,20 @@ export async function renderPlayer(root, params) {
   });
   const topbarActions = el('div', 'jellio-player-topbar-actions');
 
+  let openShortcutsModal = function () {};
+  let closeShortcutsModal = function () {};
+  let toggleShortcutsModal = function () {};
+
+  const keyboardButton = el('button', 'jellio-player-back jellio-player-keyboard');
+  keyboardButton.type = 'button';
+  keyboardButton.setAttribute('aria-label', 'Keyboard shortcuts (?)');
+  const keyboardIcon = el('span', 'material-icons keyboard');
+  keyboardIcon.setAttribute('aria-hidden', 'true');
+  keyboardButton.appendChild(keyboardIcon);
+  keyboardButton.addEventListener('click', function () {
+    toggleShortcutsModal();
+  });
+
   // Native browser API, no server involvement at all: video.poster
   // above and video.src set further down are the only real state a PiP
   // window needs, the same element just rendered in a second real OS
@@ -1113,6 +1127,7 @@ export async function renderPlayer(root, params) {
     };
   }
 
+  topbarActions.appendChild(keyboardButton);
   topbarActions.appendChild(backButton);
   topbar.appendChild(topbarActions);
 
@@ -1343,6 +1358,7 @@ export async function renderPlayer(root, params) {
   const episodesButton = buildPillButton('video_library', 'Episodes');
   episodesButton.disabled = true;
   const sleepButton = buildPillButton('bedtime', 'Sleep');
+  const settingsButton = buildPillButton('settings', 'Settings');
 
   pill.appendChild(volumeButton);
   pill.appendChild(speedButton);
@@ -1351,6 +1367,7 @@ export async function renderPlayer(root, params) {
   pill.appendChild(sourceButton);
   pill.appendChild(episodesButton);
   pill.appendChild(sleepButton);
+  pill.appendChild(settingsButton);
 
   // Small popovers (speed/subtitles/audio/sleep) all anchor above the
   // pill and close each other out on open; sourcePanel/episodesPanel
@@ -2239,6 +2256,99 @@ export async function renderPlayer(root, params) {
       // No status yet is not an error worth surfacing here.
     });
 
+  // === Settings popover: Auto-skip Intros toggle and Keyboard Shortcuts modal trigger ===
+  const AUTOSKIP_KEY = 'jellio_player_autoskip';
+  let autoSkipEnabled = false;
+  try {
+    autoSkipEnabled = localStorage.getItem(AUTOSKIP_KEY) === 'true';
+  } catch (e) {}
+
+  const settingsMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
+  const autoSkipOption = el('button', 'jellio-player-popover-option');
+  autoSkipOption.type = 'button';
+  const autoSkipLabel = el('span', '', 'Auto-skip Intros');
+  autoSkipOption.appendChild(autoSkipLabel);
+  function syncAutoSkipUI() {
+    autoSkipOption.classList.toggle('jellio-player-popover-option-active', autoSkipEnabled);
+  }
+  syncAutoSkipUI();
+  autoSkipOption.addEventListener('click', function () {
+    autoSkipEnabled = !autoSkipEnabled;
+    try {
+      localStorage.setItem(AUTOSKIP_KEY, String(autoSkipEnabled));
+    } catch (e) {}
+    syncAutoSkipUI();
+    showPlayerToast(autoSkipEnabled ? 'Auto-skip enabled' : 'Auto-skip disabled');
+  });
+  settingsMenu.appendChild(autoSkipOption);
+
+  const shortcutsOption = el('button', 'jellio-player-popover-option');
+  shortcutsOption.type = 'button';
+  shortcutsOption.appendChild(el('span', '', 'Keyboard Shortcuts'));
+  const shortcutHint = el('span', 'jellio-player-shortcut-badge', '?');
+  shortcutsOption.appendChild(shortcutHint);
+  shortcutsOption.addEventListener('click', function () {
+    closePopovers(null);
+    openShortcutsModal();
+  });
+  settingsMenu.appendChild(shortcutsOption);
+
+  registerPopover(settingsButton, settingsMenu);
+
+  // === Keyboard Shortcuts Modal ===
+  const shortcutsModal = el('div', 'jellio-player-shortcuts-modal jellio-player-shortcuts-modal-hidden');
+  const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
+  const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
+  const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
+  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', 'Keyboard Shortcuts'));
+  const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
+  shortcutsClose.type = 'button';
+  shortcutsClose.setAttribute('aria-label', 'Close keyboard shortcuts');
+  shortcutsHeader.appendChild(shortcutsClose);
+  shortcutsCard.appendChild(shortcutsHeader);
+
+  const shortcutsList = el('div', 'jellio-player-shortcuts-list');
+  const SHORTCUTS = [
+    { key: 'Space / K', desc: 'Play / Pause' },
+    { key: '← / →', desc: 'Seek 10 seconds' },
+    { key: '↑ / ↓', desc: 'Volume up / down' },
+    { key: 'M', desc: 'Mute / Unmute' },
+    { key: 'F', desc: 'Toggle Fullscreen' },
+    { key: 'C', desc: 'Subtitles & styling' },
+    { key: 'S', desc: 'Skip Intro / Credits' },
+    { key: '?', desc: 'Toggle cheat sheet' },
+    { key: 'Esc', desc: 'Close dialog / panel' },
+  ];
+  SHORTCUTS.forEach(function (sc) {
+    const row = el('div', 'jellio-player-shortcut-row');
+    const badge = el('kbd', 'jellio-player-shortcut-badge', sc.key);
+    const desc = el('span', 'jellio-player-shortcut-desc', sc.desc);
+    row.appendChild(badge);
+    row.appendChild(desc);
+    shortcutsList.appendChild(row);
+  });
+  shortcutsCard.appendChild(shortcutsList);
+  shortcutsModal.appendChild(shortcutsBackdrop);
+  shortcutsModal.appendChild(shortcutsCard);
+
+  openShortcutsModal = function () {
+    shortcutsModal.classList.remove('jellio-player-shortcuts-modal-hidden');
+    wakeControls();
+  };
+  closeShortcutsModal = function () {
+    shortcutsModal.classList.add('jellio-player-shortcuts-modal-hidden');
+  };
+  toggleShortcutsModal = function () {
+    if (shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
+      openShortcutsModal();
+    } else {
+      closeShortcutsModal();
+    }
+  };
+
+  shortcutsBackdrop.addEventListener('click', closeShortcutsModal);
+  shortcutsClose.addEventListener('click', closeShortcutsModal);
+
   // === Sources side panel, real cards components/streamPicker.js's
   // own buildSourceCard() already builds for the pre-playback picker,
   // reused here rather than a second, plainer list. ===
@@ -2749,8 +2859,10 @@ export async function renderPlayer(root, params) {
   shell.appendChild(subtitleMenu);
   shell.appendChild(audioMenu);
   shell.appendChild(sleepMenu);
+  shell.appendChild(settingsMenu);
   shell.appendChild(sourcePanel);
   shell.appendChild(episodesPanel);
+  shell.appendChild(shortcutsModal);
 
   const rippleLeft = el('div', 'jellio-player-seek-ripple jellio-player-seek-ripple-left');
   rippleLeft.innerHTML = '<span class="material-icons">replay_10</span><span class="jellio-player-seek-ripple-text">10s</span>';
@@ -2819,6 +2931,7 @@ export async function renderPlayer(root, params) {
   function hideControls() {
     const blocked =
       video.paused ||
+      !shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden') ||
       popovers.some(function (entry) {
         return !entry.menu.classList.contains('jellio-player-popover-hidden');
       }) ||
@@ -2906,7 +3019,25 @@ export async function renderPlayer(root, params) {
       case 'M':
         toggleMute();
         break;
+      case 'c':
+      case 'C':
+        subtitleButton.click();
+        break;
+      case 's':
+      case 'S':
+        if (!skipOverlay.overlay.classList.contains('jellio-player-skip-hidden')) {
+          performSeek(skipTargetSeconds);
+        }
+        break;
+      case '?':
+        event.preventDefault();
+        toggleShortcutsModal();
+        break;
       case 'Escape': {
+        if (!shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
+          closeShortcutsModal();
+          break;
+        }
         // Priority order matches hideControls()'s own real "blocked"
         // check further down this file: a popover sits over a side
         // panel, both sit over the chat panel, closest-to-the-reader
@@ -3771,6 +3902,13 @@ export async function renderPlayer(root, params) {
       dismissedSkipKind = null;
     }
     if (activeSegment && !upNextShown && activeSegment.eyebrow !== dismissedSkipKind) {
+      if (autoSkipEnabled && activeSegment.eyebrow === 'Introduction') {
+        dismissedSkipKind = activeSegment.eyebrow;
+        skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
+        performSeek(activeSegment.target);
+        showPlayerToast('Skipped Intro');
+        return;
+      }
       skipTargetSeconds = activeSegment.target;
       skipOverlay.eyebrowEl.textContent = activeSegment.eyebrow;
       skipOverlay.titleEl.textContent = activeSegment.label;

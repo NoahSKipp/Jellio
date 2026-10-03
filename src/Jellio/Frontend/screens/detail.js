@@ -588,7 +588,7 @@ async function resolveSeasonPlayTarget(item) {
 // place once seasons resolve rather than blocking the rest of the screen
 // on a series with a lot of them. Real endpoints, GET /Shows/{id}/Seasons
 // and GET /Shows/{id}/Episodes, the dedicated show hierarchy API.
-async function buildSeasonsSection(seriesId) {
+async function buildSeasonsSection(seriesId, targetPromise) {
   let seasons;
   try {
     seasons = await getSeasons(seriesId);
@@ -597,6 +597,22 @@ async function buildSeasonsSection(seriesId) {
     return null;
   }
   if (!seasons.length) return null;
+
+  let activeSeasonId = null;
+  if (targetPromise) {
+    try {
+      const target = await targetPromise;
+      if (target && target.episode) {
+        activeSeasonId = target.episode.SeasonId || null;
+        if (!activeSeasonId && typeof target.episode.ParentIndexNumber === 'number') {
+          const match = seasons.find(function (s) {
+            return s.IndexNumber === target.episode.ParentIndexNumber;
+          });
+          if (match) activeSeasonId = match.Id;
+        }
+      }
+    } catch (err) {}
+  }
 
   // Array.prototype.sort is a real stable sort (ES2019+): every real
   // season keeps the order the server itself sent it in, only Specials
@@ -675,14 +691,25 @@ async function buildSeasonsSection(seriesId) {
     tabButton.classList.add('jellio-season-tab-selected');
     tabButton.setAttribute('aria-selected', 'true');
     track.textContent = '';
+    for (let i = 0; i < 4; i++) {
+      const skel = el('div', 'jellio-card jellio-card-skeleton');
+      skel.style.width = '18em';
+      skel.style.aspectRatio = '16 / 9';
+      skel.style.flex = '0 0 auto';
+      track.appendChild(skel);
+    }
     getEpisodes(seriesId, season.Id)
       .then(function (episodes) {
         renderTrack(season, episodes);
       })
       .catch(function (err) {
         console.warn('Jellio: could not load episodes', err);
+        track.textContent = '';
       });
   }
+
+  let selectedTab = null;
+  let selectedSeasonObj = null;
 
   orderedSeasons.forEach(function (season, index) {
     const tab = el('button', 'jellio-season-tab', season.Name || '');
@@ -693,8 +720,29 @@ async function buildSeasonsSection(seriesId) {
       selectSeason(season, tab);
     });
     tabs.appendChild(tab);
-    if (index === 0) selectSeason(season, tab);
+
+    const isMatch = activeSeasonId ? String(season.Id) === String(activeSeasonId) : index === 0;
+    if (isMatch) {
+      selectedTab = tab;
+      selectedSeasonObj = season;
+    }
   });
+
+  if (!selectedSeasonObj && orderedSeasons.length) {
+    selectedSeasonObj = orderedSeasons[0];
+    selectedTab = tabs.children[0];
+  }
+
+  if (selectedSeasonObj && selectedTab) {
+    selectSeason(selectedSeasonObj, selectedTab);
+    if (selectedSeasonObj !== orderedSeasons[0]) {
+      window.setTimeout(function () {
+        try {
+          selectedTab.scrollIntoView({ block: 'nearest', inline: 'center' });
+        } catch (e) {}
+      }, 50);
+    }
+  }
 
   return section;
 }
@@ -977,6 +1025,7 @@ export async function renderDetail(root, params) {
   // above), the same real leading action a movie or an episode already
   // has, so the same real collapsed-behind-More treatment applies here
   // too now, not a second, inconsistent always-expanded row.
+  let seriesTargetPromise = null;
   const isSeries = item.Type === 'Series';
   // Season carries no video of its own either, same as Series - see
   // resolveSeasonPlayTarget's own header for the real bug this avoids.
@@ -1033,6 +1082,7 @@ export async function renderDetail(root, params) {
         return result;
       },
     );
+    if (isSeries) seriesTargetPromise = targetPromise;
 
     playButton.addEventListener('click', function () {
       playButton.disabled = true;
@@ -1395,7 +1445,7 @@ export async function renderDetail(root, params) {
   let cancelled = false;
   let seasonsPromise = null;
   if (item.Type === 'Series') {
-    seasonsPromise = buildSeasonsSection(canonicalId);
+    seasonsPromise = buildSeasonsSection(canonicalId, seriesTargetPromise);
   }
 
   const castRow = buildCastRow(item.People);
