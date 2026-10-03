@@ -202,7 +202,7 @@ export function renderMangaSeries(root, params, parentId) {
       }
       openCardOptionsMenu(item, anchor.getBoundingClientRect(), null, { onlyExtra: true, extraOptions: options });
     }
-    const resume = resumePoint(chapters, progress);
+    const resume = resumePoint(chapters, progress, duplicatesAsOne);
     const repaint = keptView;
     keptView = null;
     const cs = chapterSettings(prefs, shelf.SeriesDefaults);
@@ -284,17 +284,19 @@ export function renderMangaSeries(root, params, parentId) {
     hero.appendChild(cover);
 
     const info = el('div', 'jellio-manga-series-info');
-    info.appendChild(el('h1', 'jellio-library-title', group.title));
+    const totalChapters = duplicatesAsOne
+      ? new Set(chapters.map((c) => (chapterNumberOf(c) >= 0 ? chapterNumberOf(c) : c.Id))).size
+      : chapters.length;
     info.appendChild(
       el(
         'p',
         'jellio-bookshelf-stats',
-        chapters.length + ' chapters' + (resume.readCount ? ' · ' + resume.readCount + ' read' : ''),
+        totalChapters + ' chapters' + (resume.readCount ? ' · ' + resume.readCount + ' read' : ''),
       ),
     );
     const bar = el('div', 'jellio-manga-series-progress');
     const fill = el('div', 'jellio-manga-series-progress-fill');
-    fill.style.width = Math.round((resume.readCount / chapters.length) * 100) + '%';
+    fill.style.width = Math.round((resume.readCount / (totalChapters || 1)) * 100) + '%';
     bar.appendChild(fill);
     info.appendChild(bar);
 

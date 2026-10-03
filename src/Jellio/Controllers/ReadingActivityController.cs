@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Jellio.Services;
 using Jellio.Services.Manga;
+using Jellio.Services.Reading;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
@@ -19,13 +21,13 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/reading/session")]
 [Authorize]
-public class ReadingActivityController(AchievementService achievementService, MangaStreamService streamService, ILibraryManager libraryManager, IUserManager userManager) : ControllerBase
+public class ReadingActivityController(AchievementService achievementService, MangaStreamService streamService, ILibraryManager libraryManager, IUserManager userManager, ShelfStore shelfStore) : ControllerBase
 {
     private const int MaxPagesPerSession = 2000;
     private const int MaxListenSecondsPerSession = 24 * 60 * 60;
 
     // ReadSeconds: active time in the reader (books and manga).
-    public record SessionBody(Guid ItemId, string Kind, int PagesRead, int? CurrentPage, int? PageCount, int ListenedSeconds, bool Finished, int? MangaId = null, int ReadSeconds = 0);
+    public record SessionBody(Guid ItemId, string Kind, int PagesRead, int? CurrentPage, int? PageCount, int ListenedSeconds, bool Finished, int? MangaId = null, int ReadSeconds = 0, float? ChapterNumber = null);
 
     [HttpPost]
     public async Task<IActionResult> Report([FromBody] SessionBody body)
@@ -43,19 +45,30 @@ public class ReadingActivityController(AchievementService achievementService, Ma
         {
             // A chapter read straight from its source.
             var streamPageCount = body.PageCount is > 0 and < 100_000 ? body.PageCount : null;
+            var streamChapterNumber = streamed.Chapter.Number >= 0 ? streamed.Chapter.Number : body.ChapterNumber;
+            var streamSeriesShelfKey = ShelfStore.SeriesShelfKey(streamed.Series.Title);
+            var streamShelf = shelfStore.Load(userId);
+            var streamPrefs = streamShelf.Series.TryGetValue(streamSeriesShelfKey, out var sp) ? sp : null;
+            var streamDuplicatesAsOne = streamPrefs?.DuplicatesAsOne != false;
+
+            var completionKey = streamDuplicatesAsOne && streamChapterNumber.HasValue && streamChapterNumber.Value >= 0
+                ? $"manga:{streamSeriesShelfKey}:{streamChapterNumber.Value}"
+                : body.ItemId.ToString("N");
+
             await achievementService.CreditReadingSessionAsync(
                 userId,
                 body.ItemId,
                 streamed.Chapter.Name,
                 streamed.Series.Title,
-                body.ItemId.ToString("N"),
+                completionKey,
                 new AchievementService.ReadingSession(
                     "manga",
                     Math.Clamp(body.PagesRead, 0, Math.Min(MaxPagesPerSession, streamPageCount ?? MaxPagesPerSession)),
                     body.CurrentPage is > 0 ? Math.Min(body.CurrentPage.Value, streamPageCount ?? body.CurrentPage.Value) : null,
                     streamPageCount,
                     TimeSpan.FromSeconds(Math.Clamp(body.ReadSeconds, 0, MaxListenSecondsPerSession)).Ticks,
-                    body.Finished)).ConfigureAwait(false);
+                    body.Finished),
+                duplicatesAsOne: streamDuplicatesAsOne).ConfigureAwait(false);
             return NoContent();
         }
 
@@ -76,6 +89,22 @@ public class ReadingActivityController(AchievementService achievementService, Ma
             return BadRequest("Kind must be book, manga or audiobook and match the item");
         }
 
+        var seriesName = (item as IHasSeries)?.SeriesName;
+        if (string.IsNullOrWhiteSpace(seriesName) && kind == "manga" && !string.IsNullOrEmpty(item.Path))
+        {
+            seriesName = Path.GetFileName(Path.GetDirectoryName(item.Path));
+        }
+
+        var localChapterNumber = body.ChapterNumber;
+        var duplicatesAsOne = false;
+        if (kind == "manga" && !string.IsNullOrWhiteSpace(seriesName))
+        {
+            var seriesShelfKey = ShelfStore.SeriesShelfKey(seriesName);
+            var shelf = shelfStore.Load(userId);
+            var prefs = shelf.Series.TryGetValue(seriesShelfKey, out var p) ? p : null;
+            duplicatesAsOne = prefs?.DuplicatesAsOne != false;
+        }
+
         var pageCount = body.PageCount is > 0 and < 100_000 ? body.PageCount : null;
         var pagesRead = Math.Clamp(body.PagesRead, 0, Math.Min(MaxPagesPerSession, pageCount ?? MaxPagesPerSession));
         var currentPage = body.CurrentPage is > 0 ? Math.Min(body.CurrentPage.Value, pageCount ?? body.CurrentPage.Value) : (int?)null;
@@ -84,7 +113,9 @@ public class ReadingActivityController(AchievementService achievementService, Ma
         await achievementService.CreditReadingSessionAsync(
             userId,
             item,
-            new AchievementService.ReadingSession(kind!, pagesRead, currentPage, pageCount, listenedTicks, body.Finished)).ConfigureAwait(false);
+            new AchievementService.ReadingSession(kind!, pagesRead, currentPage, pageCount, listenedTicks, body.Finished),
+            duplicatesAsOne: duplicatesAsOne,
+            chapterNumber: localChapterNumber).ConfigureAwait(false);
         return NoContent();
     }
 }

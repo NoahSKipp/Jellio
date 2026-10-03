@@ -78,16 +78,29 @@ export function chapterState(item, progress) {
 // Where to pick a series back up: a chapter left part way through after
 // the furthest one finished, else the first unread chapter after it.
 // lastRead is the latest progress time in the series (0 if never read).
-export function resumePoint(chapters, progress) {
+export function resumePoint(chapters, progress, duplicatesAsOne) {
   let furthestRead = -1;
   let lastRead = 0;
   let readCount = 0;
+  const readNumbers = duplicatesAsOne !== false ? new Set() : null;
   chapters.forEach(function (item, index) {
     const state = chapterState(item, progress);
     if (state.record) lastRead = Math.max(lastRead, Date.parse(state.record.UpdatedAt) || 0);
     if (state.read) {
       furthestRead = index;
-      readCount += 1;
+      if (duplicatesAsOne !== false) {
+        const num = chapterNumberOf(item);
+        if (num >= 0) {
+          if (!readNumbers.has(num)) {
+            readNumbers.add(num);
+            readCount += 1;
+          }
+        } else {
+          readCount += 1;
+        }
+      } else {
+        readCount += 1;
+      }
     }
   });
   let resume = chapters.findIndex(function (item, index) {

@@ -1759,7 +1759,9 @@ async function openStreamChapter(itemId, mangaHint) {
       Name: chapter.Name,
       Type: 'Book',
       SeriesName: chapter.SeriesTitle,
-      Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId },
+      ChapterNumber: chapter.Number,
+      Scanlator: chapter.Scanlator || '',
+      Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId, ChapterNumber: chapter.Number },
     },
     saved,
     { contentType: 'application/vnd.comicbook+zip', stream: { chapterId: chapter.ChapterId, count: count } },
@@ -2089,6 +2091,9 @@ export async function renderReader(root, params) {
       ReadSeconds: readSeconds,
       Finished: finished,
       MangaId: item.Stream ? item.Stream.MangaId : null,
+      ChapterNumber: typeof item.ChapterNumber === 'number' && item.ChapterNumber >= 0
+        ? item.ChapterNumber
+        : (item.Stream && typeof item.Stream.ChapterNumber === 'number' && item.Stream.ChapterNumber >= 0 ? item.Stream.ChapterNumber : null),
     });
     sessionStartPage = sessionMaxPage;
     if (finished) finishedReported = true;
