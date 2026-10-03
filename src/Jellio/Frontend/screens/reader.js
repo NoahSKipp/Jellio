@@ -2042,6 +2042,60 @@ export async function renderReader(root, params) {
   root.appendChild(notesPanel);
   const allPanels = [tocPanel, chaptersPanel, searchPanel, settingsPanel, notesPanel];
 
+  const shortcutsModal = el('div', 'jellio-player-shortcuts-modal jellio-player-shortcuts-modal-hidden');
+  const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
+  const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
+  const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
+  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', 'Reader Shortcuts'));
+  const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
+  shortcutsClose.type = 'button';
+  shortcutsClose.setAttribute('aria-label', 'Close shortcuts cheat sheet');
+  shortcutsHeader.appendChild(shortcutsClose);
+  shortcutsCard.appendChild(shortcutsHeader);
+
+  const shortcutsList = el('div', 'jellio-player-shortcuts-list');
+  const READER_SHORTCUTS = [
+    { key: '→ / Space', desc: 'Next page (or ← in RTL)' },
+    { key: '← / Shift+Space', desc: 'Previous page (or → in RTL)' },
+    { key: '↓ / ↑', desc: 'Next / prev in vertical mode' },
+    { key: '+ / -', desc: 'Zoom in / out' },
+    { key: '0', desc: 'Reset zoom' },
+    { key: 'F', desc: 'Toggle Fullscreen' },
+    { key: '/ or Ctrl+F', desc: 'Search in book' },
+    { key: '?', desc: 'Toggle cheat sheet' },
+    { key: 'Esc', desc: 'Close dialog / panel' },
+  ];
+  READER_SHORTCUTS.forEach(function (sc) {
+    const row = el('div', 'jellio-player-shortcut-row');
+    const badge = el('kbd', 'jellio-player-shortcut-badge', sc.key);
+    const desc = el('span', 'jellio-player-shortcut-desc', sc.desc);
+    row.appendChild(badge);
+    row.appendChild(desc);
+    shortcutsList.appendChild(row);
+  });
+  shortcutsCard.appendChild(shortcutsList);
+  shortcutsModal.appendChild(shortcutsBackdrop);
+  shortcutsModal.appendChild(shortcutsCard);
+  root.appendChild(shortcutsModal);
+
+  function openShortcutsModal() {
+    closePanels();
+    shortcutsModal.classList.remove('jellio-player-shortcuts-modal-hidden');
+  }
+  function closeShortcutsModal() {
+    shortcutsModal.classList.add('jellio-player-shortcuts-modal-hidden');
+  }
+  function toggleShortcutsModal() {
+    if (shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
+      openShortcutsModal();
+    } else {
+      closeShortcutsModal();
+    }
+  }
+
+  shortcutsBackdrop.addEventListener('click', closeShortcutsModal);
+  shortcutsClose.addEventListener('click', closeShortcutsModal);
+
   let latestLocator = saved && saved.Locator ? saved.Locator : '';
   let latestProgress = saved && saved.Progress ? saved.Progress : 0;
   let saveTimer = null;
@@ -2412,7 +2466,14 @@ export async function renderReader(root, params) {
     } else if (event.key === 'ArrowLeft' || event.key === 'PageUp' || (event.key === ' ' && event.shiftKey)) {
       if (event.preventDefault) event.preventDefault();
       reader.prev();
+    } else if (event.key === '?') {
+      if (event.preventDefault) event.preventDefault();
+      toggleShortcutsModal();
     } else if (event.key === 'Escape') {
+      if (!shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
+        closeShortcutsModal();
+        return;
+      }
       if (panelOpen()) closePanels();
       else toggleImmersive(false);
     } else if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -3177,6 +3238,16 @@ export async function renderReader(root, params) {
         optionChips(ON_OFF, settings.keepAwake ? 'on' : 'off', (value) => updateSettings({ keepAwake: value === 'on' })),
       ),
     );
+
+    const shortcutsBtn = el('button', 'jellio-reader-option', 'Keyboard Shortcuts (?)');
+    shortcutsBtn.type = 'button';
+    shortcutsBtn.style.marginTop = '1em';
+    shortcutsBtn.style.width = '100%';
+    shortcutsBtn.addEventListener('click', function () {
+      closePanels();
+      openShortcutsModal();
+    });
+    settingsPanel.appendChild(shortcutsBtn);
   }
 
   function languageSelect(options, value, onChange) {

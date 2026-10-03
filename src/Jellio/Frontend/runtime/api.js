@@ -337,11 +337,18 @@ function cached(key, fetcher, ttlMs) {
   if (cache.size >= CACHE_MAX_ENTRIES) {
     cache.delete(cache.keys().next().value);
   }
-  const promise = fetcher().catch(function (err) {
-    cache.delete(key);
-    throw err;
-  });
-  cache.set(key, { promise: promise, ts: Date.now() });
+  const entry = { promise: null, ts: Date.now(), value: null };
+  const promise = fetcher()
+    .then(function (result) {
+      entry.value = result;
+      return result;
+    })
+    .catch(function (err) {
+      cache.delete(key);
+      throw err;
+    });
+  entry.promise = promise;
+  cache.set(key, entry);
   return promise;
 }
 
@@ -389,15 +396,18 @@ async function downloadedItem(itemId, err) {
 export function seedItemCache(item) {
   if (!item || !item.Id) return;
   const key = 'item:' + item.Id;
-  if (!cache.has(key)) {
-    cache.set(key, { promise: Promise.resolve(item), ts: Date.now() });
+  const existing = cache.get(key);
+  if (!existing) {
+    cache.set(key, { promise: Promise.resolve(item), ts: Date.now(), value: item });
+  } else if (!existing.value) {
+    existing.value = item;
   }
 }
 
 export function getCachedItemSync(itemId) {
   if (!itemId) return null;
   const hit = cache.get('details:' + itemId) || cache.get('details:' + itemId + ':full') || cache.get('item:' + itemId);
-  return hit ? hit.promise : null;
+  return hit ? hit.value : null;
 }
 
 // A library grid's own getItem call gets whatever fields Jellyfin returns

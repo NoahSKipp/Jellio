@@ -868,12 +868,7 @@ export async function renderDetail(root, params) {
 
   // If we already know the item from card click or memory cache, render an instant
   // hero skeleton with title, backdrop, and year so the transition feels instant.
-  const cachedPromise = getCachedItemSync(itemId);
-  let preview = null;
-  if (cachedPromise) {
-    cachedPromise.then(function (val) { preview = val; }).catch(function () {});
-  }
-
+  const preview = getCachedItemSync(itemId);
   if (preview && preview.Name) {
     renderDetailSkeleton(root, preview);
   } else {

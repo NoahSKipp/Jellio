@@ -708,6 +708,9 @@ export async function renderPlayer(root, params) {
   video.className = 'jellio-player-video';
   video.src = streamUrl;
   video.playsInline = true;
+  video.preservesPitch = true;
+  video.webkitPreservesPitch = true;
+  video.mozPreservesPitch = true;
   const savedVolume = loadVolumePreference();
   video.volume = savedVolume.volume;
   video.muted = savedVolume.muted;
@@ -850,6 +853,8 @@ export async function renderPlayer(root, params) {
   let openShortcutsModal = function () {};
   let closeShortcutsModal = function () {};
   let toggleShortcutsModal = function () {};
+  let syncMediaSession = function () {};
+  let syncMediaPosition = function () {};
 
   const keyboardButton = el('button', 'jellio-player-back jellio-player-keyboard');
   keyboardButton.type = 'button';
@@ -1472,6 +1477,36 @@ export async function renderPlayer(root, params) {
   // === Speed popover ===
   const savedSpeed = parseFloat(window.localStorage.getItem('jellioPlayerSpeed')) || 1;
   const speedMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
+
+  function applyPlaybackSpeed(speed) {
+    video.playbackRate = speed;
+    try {
+      window.localStorage.setItem('jellioPlayerSpeed', String(speed));
+    } catch (err) {}
+    const label = speedButton.querySelector('.jellio-player-pill-btn-label');
+    if (label) label.textContent = speed + 'x';
+    Array.prototype.forEach.call(speedMenu.children, function (child) {
+      child.classList.toggle('jellio-player-popover-option-active', child.textContent === speed + 'x');
+    });
+    syncMediaPosition();
+  }
+
+  function stepPlaybackSpeed(direction) {
+    const curSpeed = video.playbackRate || 1;
+    let index = PLAYBACK_SPEEDS.indexOf(curSpeed);
+    if (index === -1) {
+      index = PLAYBACK_SPEEDS.reduce(function (prev, curr, idx) {
+        return Math.abs(curr - curSpeed) < Math.abs(PLAYBACK_SPEEDS[prev] - curSpeed) ? idx : prev;
+      }, 2);
+    }
+    const newIndex = Math.max(0, Math.min(PLAYBACK_SPEEDS.length - 1, index + direction));
+    const newSpeed = PLAYBACK_SPEEDS[newIndex];
+    if (newSpeed !== curSpeed) {
+      applyPlaybackSpeed(newSpeed);
+      showPlayerToast(newSpeed + 'x Speed');
+    }
+  }
+
   PLAYBACK_SPEEDS.forEach(function (speed) {
     const option = el(
       'button',
@@ -1480,22 +1515,13 @@ export async function renderPlayer(root, params) {
     );
     option.type = 'button';
     option.addEventListener('click', function () {
-      video.playbackRate = speed;
-      try {
-        window.localStorage.setItem('jellioPlayerSpeed', String(speed));
-      } catch (err) {}
-      speedButton.querySelector('.jellio-player-pill-btn-label').textContent = speed + 'x';
-      Array.prototype.forEach.call(speedMenu.children, function (child) {
-        child.classList.remove('jellio-player-popover-option-active');
-      });
-      option.classList.add('jellio-player-popover-option-active');
+      applyPlaybackSpeed(speed);
       closePopovers(null);
     });
     speedMenu.appendChild(option);
   });
   if (savedSpeed !== 1) {
-    video.playbackRate = savedSpeed;
-    speedButton.querySelector('.jellio-player-pill-btn-label').textContent = savedSpeed + 'x';
+    applyPlaybackSpeed(savedSpeed);
   }
   registerPopover(speedButton, speedMenu);
 
@@ -2315,6 +2341,7 @@ export async function renderPlayer(root, params) {
     { key: 'M', desc: 'Mute / Unmute' },
     { key: 'F', desc: 'Toggle Fullscreen' },
     { key: 'C', desc: 'Subtitles & styling' },
+    { key: '< / >', desc: 'Playback speed' },
     { key: 'S', desc: 'Skip Intro / Credits' },
     { key: '?', desc: 'Toggle cheat sheet' },
     { key: 'Esc', desc: 'Close dialog / panel' },
@@ -2348,6 +2375,71 @@ export async function renderPlayer(root, params) {
 
   shortcutsBackdrop.addEventListener('click', closeShortcutsModal);
   shortcutsClose.addEventListener('click', closeShortcutsModal);
+
+  // === MediaSession API: OS lock screen, media keys, Bluetooth headset controls ===
+  syncMediaSession = function () {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      const artwork = [];
+      const poster = seriesAwareArtworkUrl(800) || seriesAwareArtworkUrl(1600);
+      if (poster) {
+        artwork.push({ src: poster, sizes: '800x450', type: 'image/jpeg' });
+      }
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: isEpisodeItem ? (item.Name || 'Episode') : (item.Name || 'Video'),
+        artist: isEpisodeItem ? item.SeriesName : '',
+        album: isEpisodeItem && typeof item.ParentIndexNumber === 'number' && typeof item.IndexNumber === 'number'
+          ? ('Season ' + item.ParentIndexNumber + ' · Episode ' + item.IndexNumber)
+          : '',
+        artwork: artwork,
+      });
+
+      navigator.mediaSession.setActionHandler('play', function () {
+        attemptPlay();
+      });
+      navigator.mediaSession.setActionHandler('pause', function () {
+        video.pause();
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', function (details) {
+        const offset = (details && details.seekOffset) || 10;
+        performSeek(Math.max(0, video.currentTime - offset));
+      });
+      navigator.mediaSession.setActionHandler('seekforward', function (details) {
+        const offset = (details && details.seekOffset) || 10;
+        performSeek(Math.min(durationSeconds || video.duration || 0, video.currentTime + offset));
+      });
+      navigator.mediaSession.setActionHandler('seekto', function (details) {
+        if (details && typeof details.seekTime === 'number') {
+          performSeek(details.seekTime);
+        }
+      });
+      navigator.mediaSession.setActionHandler('stop', function () {
+        backButton.click();
+      });
+      if (nextEpisode) {
+        navigator.mediaSession.setActionHandler('nexttrack', function () {
+          navigateTo('#/item?id=' + nextEpisode.Id);
+        });
+      }
+    } catch (e) {
+      console.warn('Jellio: could not initialize MediaSession', e);
+    }
+  };
+
+  syncMediaPosition = function () {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    if (durationSeconds > 0 && !isNaN(video.currentTime)) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: durationSeconds,
+          playbackRate: video.playbackRate || 1,
+          position: Math.min(durationSeconds, Math.max(0, video.currentTime)),
+        });
+      } catch (e) {}
+    }
+  };
+
+  syncMediaSession();
 
   // === Sources side panel, real cards components/streamPicker.js's
   // own buildSourceCard() already builds for the pre-playback picker,
@@ -3022,6 +3114,14 @@ export async function renderPlayer(root, params) {
       case 'c':
       case 'C':
         subtitleButton.click();
+        break;
+      case '>':
+        event.preventDefault();
+        stepPlaybackSpeed(1);
+        break;
+      case '<':
+        event.preventDefault();
+        stepPlaybackSpeed(-1);
         break;
       case 's':
       case 'S':
@@ -3840,6 +3940,7 @@ export async function renderPlayer(root, params) {
       seekBar.value = String((positionSeconds / durationSeconds) * 100);
     }
     currentTimeLabel.textContent = formatTime(positionSeconds);
+    syncMediaPosition();
 
     if (!hasReportedStart) {
       hasReportedStart = true;
@@ -3933,11 +4034,13 @@ export async function renderPlayer(root, params) {
   });
 
   video.addEventListener('play', function () {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     playPauseIcon.className = 'material-icons pause';
     playPauseButton.setAttribute('aria-label', 'Pause');
     pauseOverlay.classList.remove('jellio-player-pause-overlay-visible');
   });
   video.addEventListener('pause', function () {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     playPauseIcon.className = 'material-icons play_arrow';
     playPauseButton.setAttribute('aria-label', 'Play');
     // Ending playback also fires pause, the overlay would just be in the
@@ -4240,6 +4343,15 @@ export async function renderPlayer(root, params) {
     window.clearInterval(logoWatchdog);
     document.removeEventListener('keydown', onPlayerKeydown);
     exitFullscreenOnCleanup();
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = null;
+        ['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'stop', 'nexttrack'].forEach(function (act) {
+          navigator.mediaSession.setActionHandler(act, null);
+        });
+        navigator.mediaSession.playbackState = 'none';
+      } catch (e) {}
+    }
     // Real feedback: this reader closing out of a synced session used
     // to leave the rest of the group's own playback running with
     // nobody actually reporting position for this exact
