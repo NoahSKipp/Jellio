@@ -945,11 +945,20 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     );
     slots.forEach((slot) => observer.observe(slot));
     let ticking = false;
+    let lastScrollTop = stage.scrollTop;
     scrollHandler = function () {
       if (ticking) return;
       ticking = true;
       window.requestAnimationFrame(function () {
         ticking = false;
+        const currentTop = stage.scrollTop;
+        const delta = currentTop - lastScrollTop;
+        if (Math.abs(delta) > 20) {
+          if (handlers && handlers.onScrollDelta) {
+            handlers.onScrollDelta(delta);
+          }
+          lastScrollTop = currentTop;
+        }
         const middle = stage.getBoundingClientRect().top + stage.clientHeight / 2;
         const found = slots.findIndex(function (slot) {
           const rect = slot.getBoundingClientRect();
@@ -2489,7 +2498,24 @@ export async function renderReader(root, params) {
     tapTimer = null;
   }
 
-  const handlers = { onLocation: onLocation, onScrubReady: onScrubReady, onTap: onTap, onKey: handleKey, cancelTap: cancelTap, onEdge: onEdge, onPageMenu: openPageMenu };
+  function onScrollDelta(delta) {
+    if (delta > 25 && !root.classList.contains('jellio-reader-immersive')) {
+      toggleImmersive(true);
+    } else if (delta < -30 && root.classList.contains('jellio-reader-immersive')) {
+      toggleImmersive(false);
+    }
+  }
+
+  const handlers = {
+    onLocation: onLocation,
+    onScrubReady: onScrubReady,
+    onTap: onTap,
+    onKey: handleKey,
+    cancelTap: cancelTap,
+    onEdge: onEdge,
+    onPageMenu: openPageMenu,
+    onScrollDelta: onScrollDelta,
+  };
 
   try {
     reader = isComic

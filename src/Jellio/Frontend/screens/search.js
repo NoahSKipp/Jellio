@@ -452,7 +452,33 @@ export async function renderSearch(root, params) {
 
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      const term = input.value.trim();
+      if (term) {
+        runSearch(term);
+      }
       commitCurrentSearch();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      if (saveTimer) {
+        window.clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      input.value = '';
+      reflectStateInAddressBar('#/search');
+      requestId += 1;
+      abortInFlight();
+      results.textContent = '';
+      status.textContent = '';
+      filterBar.hidden = true;
+      paintRecentSearches();
     }
   });
 

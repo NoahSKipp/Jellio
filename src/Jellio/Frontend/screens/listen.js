@@ -220,6 +220,11 @@ export async function renderListen(root, params) {
     navigateTo('#/item?id=' + itemId);
   });
   topbar.appendChild(backButton);
+  const helpButton = iconButton('help_outline', 'Keyboard Shortcuts (?)');
+  helpButton.addEventListener('click', function () {
+    toggleShortcutsModal();
+  });
+  topbar.appendChild(helpButton);
   root.appendChild(topbar);
 
   const main = el('div', 'jellio-listen-main');
@@ -502,6 +507,59 @@ export async function renderListen(root, params) {
     chaptersPanel.classList.toggle('jellio-listen-panel-hidden', !opening);
   });
 
+  // === Keyboard Shortcuts Modal ===
+  const shortcutsModal = el('div', 'jellio-player-shortcuts-modal jellio-player-shortcuts-modal-hidden');
+  const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
+  const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
+  const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
+  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', 'Keyboard Shortcuts'));
+  const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
+  shortcutsClose.type = 'button';
+  shortcutsClose.setAttribute('aria-label', 'Close keyboard shortcuts');
+  shortcutsHeader.appendChild(shortcutsClose);
+  shortcutsCard.appendChild(shortcutsHeader);
+
+  const shortcutsList = el('div', 'jellio-player-shortcuts-list');
+  const SHORTCUTS = [
+    { key: 'Space / K', desc: 'Play / Pause' },
+    { key: '← / →', desc: 'Seek 10s back / 30s forward' },
+    { key: '↑ / ↓', desc: 'Volume up / down' },
+    { key: 'M', desc: 'Mute / Unmute' },
+    { key: '[ / ]', desc: 'Cycle playback speed' },
+    { key: '?', desc: 'Toggle cheat sheet' },
+    { key: 'Esc', desc: 'Close drawer / modal' },
+  ];
+  SHORTCUTS.forEach(function (sc) {
+    const row = el('div', 'jellio-player-shortcut-row');
+    const badge = el('kbd', 'jellio-player-shortcut-badge', sc.key);
+    const desc = el('span', 'jellio-player-shortcut-desc', sc.desc);
+    row.appendChild(badge);
+    row.appendChild(desc);
+    shortcutsList.appendChild(row);
+  });
+  shortcutsCard.appendChild(shortcutsList);
+  shortcutsModal.appendChild(shortcutsBackdrop);
+  shortcutsModal.appendChild(shortcutsCard);
+  root.appendChild(shortcutsModal);
+
+  function openShortcutsModal() {
+    chaptersPanel.classList.add('jellio-listen-panel-hidden');
+    shortcutsModal.classList.remove('jellio-player-shortcuts-modal-hidden');
+  }
+  function closeShortcutsModal() {
+    shortcutsModal.classList.add('jellio-player-shortcuts-modal-hidden');
+  }
+  function toggleShortcutsModal() {
+    if (shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
+      openShortcutsModal();
+    } else {
+      closeShortcutsModal();
+    }
+  }
+
+  shortcutsBackdrop.addEventListener('click', closeShortcutsModal);
+  shortcutsClose.addEventListener('click', closeShortcutsModal);
+
   function handleKey(event) {
     if (event.target && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName) && event.target !== scrub) return;
     const session = getActiveAudioSession();
@@ -538,8 +596,15 @@ export async function renderListen(root, params) {
     } else if (event.key === ']') {
       event.preventDefault();
       cycleSpeed(1);
+    } else if (event.key === '?') {
+      event.preventDefault();
+      toggleShortcutsModal();
     } else if (event.key === 'Escape') {
-      chaptersPanel.classList.add('jellio-listen-panel-hidden');
+      if (!shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
+        closeShortcutsModal();
+      } else {
+        chaptersPanel.classList.add('jellio-listen-panel-hidden');
+      }
     }
   }
   document.addEventListener('keydown', handleKey);
