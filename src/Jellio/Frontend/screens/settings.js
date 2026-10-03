@@ -44,6 +44,12 @@ import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
 import { UPNEXT_TRIGGER_OPTIONS, getUpNextTriggerSeconds, setUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
+import {
+  isAutoDeleteWatchedEnabled,
+  setAutoDeleteWatchedEnabled,
+  isAutoDeleteReadEnabled,
+  setAutoDeleteReadEnabled,
+} from '../runtime/offline.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
 import {
@@ -330,6 +336,17 @@ function buildPlaybackCard() {
       isRememberStreamEnabled(),
       function (checked) {
         setRememberStreamEnabled(checked);
+      },
+    ),
+  );
+  body.appendChild(
+    buildToggleRow(
+      null,
+      'Delete after watching',
+      'Automatically remove downloaded episodes and movies from this device once finished. Files on the Jellyfin server are never affected.',
+      isAutoDeleteWatchedEnabled(),
+      function (checked) {
+        setAutoDeleteWatchedEnabled(checked);
       },
     ),
   );
@@ -724,8 +741,25 @@ function buildTranslationCard(translationEnabled) {
   return card;
 }
 
+function buildReadingOfflineCard() {
+  const { card, body } = buildCard('auto_stories', 'Reading & Offline');
+  body.appendChild(
+    buildToggleRow(
+      null,
+      'Delete after reading',
+      'Automatically remove downloaded chapters, books, and audiobooks from this device once finished. Files on the Jellyfin server are never affected.',
+      isAutoDeleteReadEnabled(),
+      function (checked) {
+        setAutoDeleteReadEnabled(checked);
+      },
+    ),
+  );
+  return card;
+}
+
 function buildReadingCategory(config) {
   const wrap = el('div', 'jellio-settings-category');
+  wrap.appendChild(buildReadingOfflineCard());
   wrap.appendChild(buildTranslationCard(!!(config && config.TranslationEnabled)));
   if (config && config.MangaRequestsEnabled) wrap.appendChild(buildMihonImportCard());
   return wrap;

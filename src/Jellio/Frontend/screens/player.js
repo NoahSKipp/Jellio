@@ -13,8 +13,7 @@
 // before writing this, see runtime/api.js's own getIntroSkipperSegments)
 // rather than jellyfin-web's own player chrome hooks, unreachable here
 // for the same reason as everything else in this file.
-import { isOffline, findAnyDownload, removeDownload } from '../runtime/offline.js';
-import { loadShelf } from '../runtime/shelf.js';
+import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled } from '../runtime/offline.js';
 import { renderOfflinePlayer } from './offlinePlayer.js';
 import {
   getItemDetails,
@@ -3348,21 +3347,18 @@ export async function renderPlayer(root, params) {
       // there as a real fallback for this exact sitting, same as
       // AchievementService's own above.
     });
+    if (isAutoDeleteWatchedEnabled()) {
+      findAnyDownload(itemId)
+        .then((record) => (record ? removeDownload(record.Id) : null))
+        .catch(() => null);
+    }
     const seriesId = item && item.SeriesId;
     if (seriesId) {
       const key = 's:' + String(seriesId).replace(/-/g, '').toLowerCase();
-      const rawKey = String(seriesId).replace(/-/g, '').toLowerCase();
       const epNum = typeof item.IndexNumber === 'number' ? item.IndexNumber : null;
       if (epNum && epNum > 0) {
         syncTracker(key, null, epNum);
       }
-      loadShelf('manga')
-        .then(function (shelfData) {
-          const prefs = shelfData.Series && (shelfData.Series[key] || shelfData.Series[rawKey] || shelfData.Series[seriesId]);
-          if (!prefs || !prefs.DeleteAfterRead) return null;
-          return findAnyDownload(itemId).then((record) => (record ? removeDownload(record.Id) : null));
-        })
-        .catch(() => null);
     }
   }
   let seeking = false;

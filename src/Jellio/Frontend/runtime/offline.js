@@ -757,3 +757,51 @@ export async function flushSyncQueue() {
     flushing = false;
   }
 }
+
+// Auto-delete settings for completed offline downloads: on by default.
+// Scoped per user when signed in, with device-level fallback.
+const AUTO_DELETE_WATCHED_KEY = 'jellio_auto_delete_watched';
+const AUTO_DELETE_READ_KEY = 'jellio_auto_delete_read';
+
+function getAutoDeletePref(baseKey) {
+  try {
+    const userId = idKey(getCurrentUserId());
+    if (userId) {
+      const userVal = window.localStorage.getItem(baseKey + '_' + userId);
+      if (userVal !== null) return userVal !== '0';
+    }
+    const globalVal = window.localStorage.getItem(baseKey);
+    if (globalVal !== null) return globalVal !== '0';
+    return true;
+  } catch (err) {
+    return true;
+  }
+}
+
+function setAutoDeletePref(baseKey, enabled) {
+  try {
+    const val = enabled ? '1' : '0';
+    const userId = idKey(getCurrentUserId());
+    if (userId) {
+      window.localStorage.setItem(baseKey + '_' + userId, val);
+    }
+    window.localStorage.setItem(baseKey, val);
+  } catch (err) {}
+}
+
+export function isAutoDeleteWatchedEnabled() {
+  return getAutoDeletePref(AUTO_DELETE_WATCHED_KEY);
+}
+
+export function setAutoDeleteWatchedEnabled(enabled) {
+  setAutoDeletePref(AUTO_DELETE_WATCHED_KEY, enabled);
+}
+
+export function isAutoDeleteReadEnabled() {
+  return getAutoDeletePref(AUTO_DELETE_READ_KEY);
+}
+
+export function setAutoDeleteReadEnabled(enabled) {
+  setAutoDeletePref(AUTO_DELETE_READ_KEY, enabled);
+}
+

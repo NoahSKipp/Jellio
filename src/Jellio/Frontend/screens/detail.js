@@ -1205,48 +1205,10 @@ export async function renderDetail(root, params) {
     actions.appendChild(changeStreamButton);
   }
 
-  // Per-title switches: delete downloaded episodes after watching, and mute notifications
-  const seriesOrItemKey = 's:' + String(item.Id).replace(/-/g, '').toLowerCase();
-  const rawKey = String(item.Id).replace(/-/g, '').toLowerCase();
-
-  if (item.Type === 'Series') {
-    const deleteToggle = el('button', iconActionClass);
-    deleteToggle.type = 'button';
-    deleteToggle.setAttribute('aria-label', 'Delete after watching');
-    deleteToggle.title = 'Delete downloaded episodes after watching';
-    deleteToggle.appendChild(el('span', 'material-icons auto_delete'));
-
-    function paintDeleteToggle(on) {
-      deleteToggle.classList.toggle('jellio-detail-icon-action-active', !!on);
-      deleteToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
-    }
-
-    loadShelf('manga')
-      .then(function (shelf) {
-        const prefs = shelf.Series && (shelf.Series[seriesOrItemKey] || shelf.Series[rawKey] || shelf.Series[item.Id]);
-        paintDeleteToggle(prefs && prefs.DeleteAfterRead);
-      })
-      .catch(() => {});
-
-    deleteToggle.addEventListener('click', function (event) {
-      event.stopPropagation();
-      loadShelf('manga').then(function (shelf) {
-        const prefs = shelf.Series && (shelf.Series[seriesOrItemKey] || shelf.Series[rawKey] || shelf.Series[item.Id]);
-        const next = !(prefs && prefs.DeleteAfterRead);
-        saveSeriesPrefs(seriesOrItemKey, { DeleteAfterRead: next })
-          .then(function () {
-            paintDeleteToggle(next);
-            showToast(next ? 'Episodes will be deleted after watching.' : 'Episodes will be kept after watching.');
-          })
-          .catch(function () {
-            showToast('Could not save that setting.');
-          });
-      });
-    });
-    actions.appendChild(deleteToggle);
-  }
-
   if (item.Type === 'Series' || item.Type === 'Movie') {
+    const seriesOrItemKey = 's:' + String(item.Id).replace(/-/g, '').toLowerCase();
+    const rawKey = String(item.Id).replace(/-/g, '').toLowerCase();
+
     const muteToggle = el('button', iconActionClass);
     muteToggle.type = 'button';
     muteToggle.setAttribute('aria-label', 'Mute notifications');
