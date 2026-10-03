@@ -27,6 +27,7 @@ import {
   mangaSeriesTitle,
   mangaSeriesKey,
   streamChapterItem,
+  chapterNumberOf,
 } from '../components/mangaSeries.js';
 import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
@@ -362,7 +363,10 @@ function mangaEntries(items, info, progress, shelf, stream) {
   const entries = grouped.series.map(function (group) {
     const coverItem = group.chapters.find((item) => item.ImageTags && item.ImageTags.Primary) || group.chapters[0];
     const base = describe(coverItem, info, progress);
-    const resume = resumePoint(group.chapters, progress);
+    const key = seriesShelfKey(group.key);
+    const prefs = (shelf.Series || {})[key] || {};
+    const duplicatesAsOne = prefs.DuplicatesAsOne !== false;
+    const resume = resumePoint(group.chapters, progress, duplicatesAsOne);
     const streamed = streamByKey.get(group.key);
     streamByKey.delete(group.key);
     group.stream = streamed || null;
@@ -373,13 +377,14 @@ function mangaEntries(items, info, progress, shelf, stream) {
       const entry = describe(resume.chapter, info, progress);
       continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead, seriesKey: seriesShelfKey(group.key) }));
     }
-    const key = seriesShelfKey(group.key);
-    const prefs = (shelf.Series || {})[key] || {};
     const latest = Math.max(
       streamed ? streamed.LatestUpload || 0 : 0,
       Math.max.apply(null, group.chapters.map((item) => (item.DateCreated ? Date.parse(item.DateCreated) || 0 : 0))),
     );
-    const chapters = Math.max(group.chapters.length, streamed ? streamed.ChapterCount : 0);
+    const groupChapterCount = duplicatesAsOne
+      ? new Set(group.chapters.map((item) => (chapterNumberOf(item) >= 0 ? chapterNumberOf(item) : item.Id))).size
+      : group.chapters.length;
+    const chapters = Math.max(groupChapterCount, streamed ? streamed.ChapterCount : 0);
     const readCount = Math.max(resume.readCount, streamed ? streamed.ReadCount : 0);
     return Object.assign(base, {
       item: Object.assign({}, coverItem, { Name: group.title, SortName: group.title, UserData: null }),

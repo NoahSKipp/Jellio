@@ -276,7 +276,7 @@ public class AchievementService(
     // (or time listened), where they got to, and whether they finished.
     // Client-reported like CreditRealWatchAsync; the controller has
     // already checked the item and clamped the numbers.
-    public Task CreditReadingSessionAsync(Guid userId, BaseItem item, ReadingSession session)
+    public Task CreditReadingSessionAsync(Guid userId, BaseItem item, ReadingSession session, bool duplicatesAsOne = false, float? chapterNumber = null)
     {
         // An audiobook's tracks all belong to one book (its album).
         var bookName = item is AudioBook && !string.IsNullOrWhiteSpace(item.Album) ? item.Album : item.Name;
@@ -290,12 +290,21 @@ public class AchievementService(
             seriesName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(item.Path));
         }
 
-        return CreditReadingSessionAsync(userId, item.Id, bookName, seriesName, completionKey, session);
+        if (session.Kind == "manga" && duplicatesAsOne && !string.IsNullOrWhiteSpace(seriesName))
+        {
+            var num = chapterNumber ?? (item.IndexNumber.HasValue ? (float)item.IndexNumber.Value : (float?)null);
+            if (num.HasValue && num.Value >= 0)
+            {
+                completionKey = $"manga:{seriesName.Trim().ToLowerInvariant()}:{num.Value}";
+            }
+        }
+
+        return CreditReadingSessionAsync(userId, item.Id, bookName, seriesName, completionKey, session, duplicatesAsOne);
     }
 
     // Also for chapters read straight from a source (MangaStreamService),
     // which have no library item.
-    public async Task CreditReadingSessionAsync(Guid userId, Guid itemId, string bookName, string? seriesName, string completionKey, ReadingSession session)
+    public async Task CreditReadingSessionAsync(Guid userId, Guid itemId, string bookName, string? seriesName, string completionKey, ReadingSession session, bool duplicatesAsOne = false)
     {
         var itemType = session.Kind switch
         {
@@ -316,10 +325,20 @@ public class AchievementService(
             var now = DateTime.Now;
             var nowUtc = DateTime.UtcNow;
 
-            stats.PagesRead += session.PagesRead;
-            if (itemType == "Manga")
+            var alreadyFinished = stats.CompletedReadingIds.Contains(completionKey)
+                || stats.CompletedReadingIds.Contains(itemId.ToString("N"));
+
+            // When duplicate chapters are counted as one and this chapter was already completed,
+            // don't count duplicate pages toward reading statistics.
+            var skipDuplicatePages = itemType == "Manga" && duplicatesAsOne && alreadyFinished;
+
+            if (!skipDuplicatePages)
             {
-                stats.MangaPagesRead += session.PagesRead;
+                stats.PagesRead += session.PagesRead;
+                if (itemType == "Manga")
+                {
+                    stats.MangaPagesRead += session.PagesRead;
+                }
             }
 
             // ListenedTicks carries the session's time: listening for an
@@ -337,7 +356,12 @@ public class AchievementService(
                 stats.ReadingTicks += session.ListenedTicks;
             }
 
-            var newlyFinished = session.Finished && stats.CompletedReadingIds.Add(completionKey);
+            if (alreadyFinished && completionKey != itemId.ToString("N"))
+            {
+                stats.CompletedReadingIds.Add(completionKey);
+            }
+
+            var newlyFinished = session.Finished && !alreadyFinished && stats.CompletedReadingIds.Add(completionKey);
             if (newlyFinished)
             {
                 switch (itemType)

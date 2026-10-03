@@ -172,7 +172,7 @@ public class MangaStreamController(
         }
 
         var (chapter, series) = found.Value;
-        return Ok(new { chapter.Id, chapter.ChapterId, chapter.MangaId, chapter.Name, chapter.PageCount, SeriesTitle = series.Title, SeriesKey = series.Key });
+        return Ok(new { chapter.Id, chapter.ChapterId, chapter.MangaId, chapter.Name, chapter.Number, chapter.Scanlator, chapter.PageCount, SeriesTitle = series.Title, SeriesKey = series.Key });
     }
 
     [HttpGet("chapter/{chapterId:int}/pages")]
@@ -325,15 +325,22 @@ public class MangaStreamController(
             }
         }
 
+        var chapterCount = duplicatesAsOne
+            ? chapters.Where(c => c.Number >= 0).Select(c => c.Number).Distinct().Count() + chapters.Count(c => c.Number < 0)
+            : chapters.Count;
+        var uniqueReadCount = duplicatesAsOne
+            ? finishedNumbers.Count + chapters.Where(c => c.Number < 0 && IsFinished(c)).Select(c => c.Id).Distinct().Count()
+            : readCount;
+
         return new SeriesSummary(
             series.MangaId,
             series.Title,
             series.Author,
             series.Status,
             series.Key,
-            chapters.Count,
+            chapterCount,
             chapters.Count(chapter => chapter.IsDownloaded),
-            readCount,
+            uniqueReadCount,
             chapters.Count > 0 ? chapters.Max(chapter => chapter.UploadDate) : 0,
             lastRead,
             resume == -1 ? null : new ChapterRef(chapters[resume].Id, chapters[resume].ChapterId, chapters[resume].Name),
