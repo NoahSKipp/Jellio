@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.46.0] - 2026-10-03\n\n### 🚀 Features\n\n- *(audiobook)* Search audiobooks by title, series, and author\n",
+        "checksum": "e0b078a9bad6a76eeb4a7c08748c1b0b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.46.0/jellio_1.46.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-03T14:37:06Z",
+        "version": "1.46.0"
+      },
+      {
         "changelog": "## [1.45.0] - 2026-10-03\n\n### 🚀 Features\n\n- *(manga)* Deduplicate chapters and pages in reading statistics and shelf counts\n",
         "checksum": "3dc02222ca46ecec260f748739481b10",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.45.0/jellio_1.45.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T00:39:44Z",
         "version": "1.28.1"
-      },
-      {
-        "changelog": "## [1.28.0] - 2026-09-26\n\n### 🚀 Features\n\n- Add Suwayomi as a manga, manhwa and manhua request backend\n- Request manga, manhwa and manhua chapters through Suwayomi from the Manga shelf and Discover\n\n### 🐛 Bug Fixes\n\n- Load Manga Discover covers through the server so blocked AniList images still show\n",
-        "checksum": "0e27ec361ffd1b181853f83e9503774d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.28.0/jellio_1.28.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-26T23:59:47Z",
-        "version": "1.28.0"
       }
     ]
   }
