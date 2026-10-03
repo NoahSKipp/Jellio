@@ -103,7 +103,27 @@ function rememberSourceChoice(itemId, mediaSourceId) {
 }
 
 function handleKeydown(event) {
-  if (event.key === 'Escape') closeStreamPicker();
+  if (event.key === 'Escape') {
+    closeStreamPicker();
+    return;
+  }
+  const overlay = document.getElementById(OVERLAY_ID);
+  if (!overlay) return;
+  const cards = Array.from(overlay.querySelectorAll('.jellio-stream-picker-card'));
+  if (!cards.length) return;
+
+  const activeIndex = cards.indexOf(document.activeElement);
+  if (event.key === 'ArrowDown' || event.key === 'j') {
+    event.preventDefault();
+    const nextIndex = activeIndex === -1 ? 0 : Math.min(cards.length - 1, activeIndex + 1);
+    cards[nextIndex].focus();
+    cards[nextIndex].scrollIntoView({ block: 'nearest' });
+  } else if (event.key === 'ArrowUp' || event.key === 'k') {
+    event.preventDefault();
+    const prevIndex = activeIndex === -1 ? 0 : Math.max(0, activeIndex - 1);
+    cards[prevIndex].focus();
+    cards[prevIndex].scrollIntoView({ block: 'nearest' });
+  }
 }
 
 export function closeStreamPicker() {
@@ -626,6 +646,12 @@ export async function openStreamPicker(item, options) {
         }),
       );
     });
+    const firstCard = list.querySelector('.jellio-stream-picker-card');
+    if (firstCard) {
+      window.setTimeout(function () {
+        try { firstCard.focus(); } catch (e) {}
+      }, 50);
+    }
   }
 
   const filterRow = buildLanguageFilterRow(sources, function (code) {

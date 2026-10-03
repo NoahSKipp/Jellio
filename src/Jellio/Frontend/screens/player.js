@@ -2356,6 +2356,7 @@ export async function renderPlayer(root, params) {
     { key: 'F / DblClick', desc: 'Toggle Fullscreen' },
     { key: 'C', desc: 'Subtitles & styling' },
     { key: 'Z / X', desc: 'Subtitle sync (-0.1s / +0.1s)' },
+    { key: ', / .', desc: 'Frame step (when paused)' },
     { key: '< / >', desc: 'Playback speed' },
     { key: 'S', desc: 'Skip Intro / Credits' },
     { key: '?', desc: 'Toggle cheat sheet' },
@@ -3145,6 +3146,18 @@ export async function renderPlayer(root, params) {
       case 'X':
         event.preventDefault();
         updateSubtitleOffset(0.1);
+        break;
+      case ',':
+        if (video.paused) {
+          event.preventDefault();
+          video.currentTime = Math.max(0, video.currentTime - 0.04);
+        }
+        break;
+      case '.':
+        if (video.paused) {
+          event.preventDefault();
+          video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 0.04);
+        }
         break;
       case '>':
         event.preventDefault();

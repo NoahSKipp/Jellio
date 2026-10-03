@@ -2033,11 +2033,68 @@ export async function renderReader(root, params) {
   scrubber.max = '1';
   scrubber.value = '0';
   scrubber.disabled = true;
-  scrubber.setAttribute('aria-label', 'Position in book');
-  const progressLabel = el('span', 'jellio-reader-progress', '');
+  const progressLabel = el('span', 'jellio-reader-progress' + (isPaged ? ' jellio-reader-progress-clickable' : ''), '');
+  if (isPaged) {
+    progressLabel.title = 'Click to jump to page (G)';
+  }
+  const jumpForm = el('form', 'jellio-reader-jump-form');
+  jumpForm.style.display = 'none';
+  const jumpInput = document.createElement('input');
+  jumpInput.type = 'number';
+  jumpInput.className = 'jellio-reader-jump-input';
+  jumpInput.placeholder = '#';
+  jumpInput.setAttribute('aria-label', 'Jump to page number');
+  const jumpSubmit = el('button', 'jellio-reader-jump-submit', 'Go');
+  jumpSubmit.type = 'submit';
+  jumpForm.appendChild(jumpInput);
+  jumpForm.appendChild(jumpSubmit);
+
   footer.appendChild(scrubber);
   footer.appendChild(progressLabel);
+  footer.appendChild(jumpForm);
   root.appendChild(footer);
+
+  function promptJumpToPage() {
+    if (!isPaged || !reader) return;
+    const max = Number(scrubber.max) || 1;
+    jumpInput.min = '1';
+    jumpInput.max = String(max);
+    jumpInput.value = scrubber.value || '1';
+    progressLabel.style.display = 'none';
+    jumpForm.style.display = 'inline-flex';
+    jumpInput.focus();
+    jumpInput.select();
+  }
+
+  function hideJumpForm() {
+    jumpForm.style.display = 'none';
+    progressLabel.style.display = '';
+  }
+
+  jumpForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const targetPage = parseInt(jumpInput.value, 10);
+    const max = Number(scrubber.max) || 1;
+    if (Number.isFinite(targetPage) && targetPage >= 1 && targetPage <= max) {
+      reader.seek(targetPage);
+    }
+    hideJumpForm();
+  });
+
+  jumpInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      hideJumpForm();
+    }
+  });
+
+  jumpInput.addEventListener('blur', function () {
+    window.setTimeout(hideJumpForm, 150);
+  });
+
+  progressLabel.addEventListener('click', function () {
+    if (isPaged) promptJumpToPage();
+  });
 
   const tocPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
   const chaptersPanel = el('div', 'jellio-reader-panel jellio-reader-panel-hidden');
@@ -2069,6 +2126,7 @@ export async function renderReader(root, params) {
     { key: '↓ / ↑', desc: 'Next / prev in vertical mode' },
     { key: '+ / -', desc: 'Zoom in / out' },
     { key: '0', desc: 'Reset zoom' },
+    { key: 'G', desc: 'Jump to page' },
     { key: 'F', desc: 'Toggle Fullscreen' },
     { key: '/ or Ctrl+F', desc: 'Search in book' },
     { key: '?', desc: 'Toggle cheat sheet' },
@@ -2487,6 +2545,11 @@ export async function renderReader(root, params) {
       else toggleImmersive(false);
     } else if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.metaKey && !event.altKey) {
       toggleFullscreen();
+    } else if ((event.key === 'g' || event.key === 'G') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (isPaged) {
+        if (event.preventDefault) event.preventDefault();
+        promptJumpToPage();
+      }
     } else if (event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key === 'f')) {
       if (event.preventDefault) event.preventDefault();
       openPanel(searchPanel, paintSearch);
