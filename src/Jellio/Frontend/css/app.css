@@ -10391,7 +10391,9 @@
   align-items: center;
   gap: 0.4em;
   max-width: 100%;
-  padding: 0.6em 1.1em;
+  height: 2.3em;
+  box-sizing: border-box;
+  padding: 0 1.1em;
   border: 1px solid var(--jellio-border-color);
   border-radius: 999px;
   background: transparent;
@@ -11220,6 +11222,13 @@
   margin-bottom: 0.8em;
 }
 
+.jellio-manga-series-tools-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin-left: auto;
+}
+
 .jellio-manga-chapter-search {
   display: inline-flex;
   align-items: center;
@@ -11260,13 +11269,22 @@
 }
 
 @media (max-width: 48em) {
-  .jellio-manga-chapter-search {
+  .jellio-manga-series-tools-right {
     width: 100%;
-    order: 3;
-    margin-top: 0.25em;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+  .jellio-manga-chapter-search {
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .jellio-manga-chapter-search-input {
     width: 100%;
+    min-width: 0;
+  }
+  .jellio-manga-series-order {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 }
 
