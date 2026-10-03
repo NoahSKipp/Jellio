@@ -37,14 +37,16 @@ public class AniListClient(IHttpClientFactory httpClientFactory, ILogger<AniList
     private const int MaxCacheEntries = 400;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(6);
 
-    private const string Query = @"query ($page: Int, $perPage: Int, $sort: [MediaSort], $genre: String, $country: CountryCode, $search: String) {
+    private const string Query = @"query ($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $genre: String, $country: CountryCode, $search: String) {
   Page(page: $page, perPage: $perPage) {
-    media(type: MANGA, format_in: [MANGA], isAdult: false, sort: $sort, genre: $genre, countryOfOrigin: $country, search: $search) {
+    media(type: $type, isAdult: false, sort: $sort, genre: $genre, countryOfOrigin: $country, search: $search) {
       id
       title { english romaji userPreferred }
       coverImage { large }
       startDate { year }
       countryOfOrigin
+      episodes
+      chapters
       volumes
       status
       genres
@@ -56,13 +58,14 @@ public class AniListClient(IHttpClientFactory httpClientFactory, ILogger<AniList
     private readonly ConcurrentDictionary<string, (DateTime At, IReadOnlyList<MangaSeries> Series)> _cache = new(StringComparer.Ordinal);
 
     // sort: TRENDING_DESC, POPULARITY_DESC or SCORE_DESC; country: JP
-    // (manga), KR (manhwa), CN (manhua) or null for all.
-    public async Task<IReadOnlyList<MangaSeries>?> BrowseAsync(string sort, string? genre, string? country, string? search, int page, CancellationToken cancellationToken)
+    // (manga), KR (manhwa), CN (manhua) or null for all; type: MANGA or ANIME.
+    public async Task<IReadOnlyList<MangaSeries>?> BrowseAsync(string sort, string? genre, string? country, string? search, int page, CancellationToken cancellationToken, string type = "MANGA")
     {
         var variables = new JsonObject
         {
             ["page"] = page + 1,
             ["perPage"] = PageSize,
+            ["type"] = type,
             ["sort"] = new JsonArray(search is null ? sort : "SEARCH_MATCH"),
         };
         if (genre is not null)

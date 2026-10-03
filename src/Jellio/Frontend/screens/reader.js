@@ -160,6 +160,9 @@ const DEFAULT_SETTINGS = {
   pdfZoom: 100,
   pdfTint: false,
   targetLang: null,
+  brightness: 100,
+  keepAwake: false,
+  showPageNumber: true,
   comicLayout: 'single',
   comicFit: 'height',
   comicDirection: 'rtl',
@@ -195,6 +198,9 @@ function loadSettings() {
       pdfZoom: Math.min(300, Math.max(50, Number(saved.pdfZoom) || DEFAULT_SETTINGS.pdfZoom)),
       pdfTint: saved.pdfTint === true,
       targetLang: LANGUAGES.indexOf(saved.targetLang) !== -1 ? saved.targetLang : defaultTargetLanguage(),
+      brightness: Math.min(100, Math.max(30, Number(saved.brightness) || DEFAULT_SETTINGS.brightness)),
+      keepAwake: saved.keepAwake === true,
+      showPageNumber: saved.showPageNumber !== false,
       comicLayout: pick(COMIC_LAYOUTS, saved.comicLayout, DEFAULT_SETTINGS.comicLayout),
       comicFit: pick(COMIC_FITS, saved.comicFit, DEFAULT_SETTINGS.comicFit),
       comicDirection: pick(COMIC_DIRECTIONS, saved.comicDirection, DEFAULT_SETTINGS.comicDirection),
@@ -2256,7 +2262,14 @@ export async function renderReader(root, params) {
 
   // Brightness and the colour filter dress the page, not the chrome.
   function applyComicLook() {
-    if (!isComic) return;
+    if (!isComic) {
+      const parts = [];
+      if (settings.brightness < 100) parts.push('brightness(' + settings.brightness / 100 + ')');
+      stage.style.filter = parts.join(' ');
+      root.classList.toggle('jellio-reader-hide-pill', !settings.showPageNumber);
+      holdAwake(settings.keepAwake);
+      return;
+    }
     const parts = [];
     if (settings.comicBrightness < 100) parts.push('brightness(' + settings.comicBrightness / 100 + ')');
     if (COMIC_FILTER_CSS[settings.comicFilter]) parts.push(COMIC_FILTER_CSS[settings.comicFilter]);
@@ -2286,9 +2299,11 @@ export async function renderReader(root, params) {
       })
       .catch(() => null);
   }
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && settings.comicKeepAwake && isComic) holdAwake(true);
-  });
+  function onWakeVisibility() {
+    const keep = isComic ? settings.comicKeepAwake : settings.keepAwake;
+    if (document.visibilityState === 'visible' && keep) holdAwake(true);
+  }
+  document.addEventListener('visibilitychange', onWakeVisibility);
 
   let pageMenu = null;
   function closePageMenu() {
@@ -2450,6 +2465,8 @@ export async function renderReader(root, params) {
     loadChapterNav();
     // Mihon style: just the page, menus over it on a tap in the middle.
     root.classList.add('jellio-reader-immersive');
+  } else {
+    applyComicLook();
   }
   function paintDirection() {
     const rtl = !!(reader.isRtl && reader.isRtl());
@@ -3046,6 +3063,32 @@ export async function renderReader(root, params) {
       languageRow.appendChild(labelled('Translate into', target));
     }
     settingsPanel.appendChild(settingGroup('Language', languageRow));
+
+    const brightness = el('input', 'jellio-reader-range');
+    brightness.type = 'range';
+    brightness.min = '30';
+    brightness.max = '100';
+    brightness.step = '5';
+    brightness.value = String(settings.brightness);
+    brightness.setAttribute('aria-label', 'Brightness');
+    brightness.addEventListener('input', function () {
+      settings.brightness = Number(brightness.value);
+      persistSettings();
+      applyComicLook();
+    });
+    settingsPanel.appendChild(settingGroup('Brightness', brightness));
+    settingsPanel.appendChild(
+      settingGroup(
+        'Show page number',
+        optionChips(ON_OFF, settings.showPageNumber ? 'on' : 'off', (value) => updateSettings({ showPageNumber: value === 'on' })),
+      ),
+    );
+    settingsPanel.appendChild(
+      settingGroup(
+        'Keep screen on',
+        optionChips(ON_OFF, settings.keepAwake ? 'on' : 'off', (value) => updateSettings({ keepAwake: value === 'on' })),
+      ),
+    );
   }
 
   function languageSelect(options, value, onChange) {
@@ -3099,6 +3142,7 @@ export async function renderReader(root, params) {
     window.clearInterval(nowReadingTimer);
     clearNowReading(itemId);
     document.removeEventListener('visibilitychange', onVisibility);
+    document.removeEventListener('visibilitychange', onWakeVisibility);
     if (study) study.destroy();
     searchToken++;
     document.removeEventListener('keydown', handleKey);

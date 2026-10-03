@@ -43,9 +43,10 @@ function button(label, className, onClick) {
   return b;
 }
 
-// options: { key: series shelf key, mangaId, title, onChange(link|null) }
+// options: { key: series shelf key, mangaId, episode, mediaType, title, onChange(link|null) }
 export function openTrackerDialog(options) {
   close();
+  const isAnime = options.mediaType === 'ANIME';
   const overlay = el('div', 'jellio-avatar-picker-overlay');
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
@@ -77,7 +78,13 @@ export function openTrackerDialog(options) {
   function connectView(status) {
     body.textContent = '';
     body.appendChild(
-      el('p', 'jellio-avatar-picker-status', 'Link your AniList account to keep the chapters you read in step with your list.'),
+      el(
+        'p',
+        'jellio-avatar-picker-status',
+        isAnime
+          ? 'Link your AniList account to keep the episodes you watch in step with your list.'
+          : 'Link your AniList account to keep the chapters you read in step with your list.',
+      ),
     );
     const authorize =
       'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(status.ClientId) + '&response_type=token';
@@ -125,7 +132,7 @@ export function openTrackerDialog(options) {
       results.textContent = '';
       if (!input.value.trim()) return;
       results.appendChild(el('p', 'jellio-avatar-picker-status', 'Searching…'));
-      searchTracker(input.value.trim())
+      searchTracker(input.value.trim(), options.mediaType || 'MANGA')
         .then(function (found) {
           if (mine !== token) return;
           results.textContent = '';
@@ -147,7 +154,7 @@ export function openTrackerDialog(options) {
               setTrackerLink(options.key, media)
                 .then(function () {
                   if (options.onChange) options.onChange({ MediaId: media.Id, Title: media.Title });
-                  return syncTracker(options.key, options.mangaId);
+                  return syncTracker(options.key, options.mangaId, options.episode);
                 })
                 .then(load)
                 .catch(() => showToast('Couldn’t link that series'));
@@ -175,7 +182,7 @@ export function openTrackerDialog(options) {
     body.textContent = '';
     body.appendChild(el('p', 'jellio-avatar-picker-status', 'Signed in as ' + (status.UserName || 'AniList') + '.'));
     const title = el('a', 'jellio-tracker-linked-title', link.Title || 'AniList entry');
-    title.href = 'https://anilist.co/manga/' + link.MediaId;
+    title.href = (isAnime ? 'https://anilist.co/anime/' : 'https://anilist.co/manga/') + link.MediaId;
     title.target = '_blank';
     title.rel = 'noopener noreferrer';
     body.appendChild(title);
@@ -191,7 +198,17 @@ export function openTrackerDialog(options) {
       none.textContent = 'Not on your list';
       none.disabled = true;
       select.appendChild(none);
-      STATUSES.forEach(function (option) {
+      const statuses = isAnime
+        ? [
+            { value: 'CURRENT', label: 'Watching' },
+            { value: 'PLANNING', label: 'Plan to watch' },
+            { value: 'COMPLETED', label: 'Completed' },
+            { value: 'PAUSED', label: 'On hold' },
+            { value: 'DROPPED', label: 'Dropped' },
+            { value: 'REPEATING', label: 'Rewatching' },
+          ]
+        : STATUSES;
+      statuses.forEach(function (option) {
         const o = document.createElement('option');
         o.value = option.value;
         o.textContent = option.label;
@@ -219,15 +236,16 @@ export function openTrackerDialog(options) {
       scoreLabel.appendChild(score);
       body.appendChild(scoreLabel);
 
+      const countLabel = isAnime ? 'Episodes watched' : 'Chapters read';
       body.appendChild(
-        el('p', 'jellio-avatar-picker-status', 'Chapters read on AniList: ' + entry.Progress + (entry.Total ? ' of ' + entry.Total : '') + '.'),
+        el('p', 'jellio-avatar-picker-status', countLabel + ' on AniList: ' + entry.Progress + (entry.Total ? ' of ' + entry.Total : '') + '.'),
       );
     }
 
     const actions = el('div', 'jellio-shelf-categories-actions');
     actions.appendChild(
       button('Sync now', 'jellio-chapter-settings-action', function () {
-        syncTracker(options.key, options.mangaId).then(function (result) {
+        syncTracker(options.key, options.mangaId, options.episode).then(function (result) {
           showToast(result && result.Synced ? 'AniList is up to date.' : 'Nothing new to send.');
           load();
         });

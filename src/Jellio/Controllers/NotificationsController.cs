@@ -10,6 +10,8 @@ using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using Jellio.Services.Reading;
+
 namespace Jellio.Controllers;
 
 /// <summary>
@@ -32,7 +34,8 @@ public class NotificationsController(
     NotificationStore store,
     ILibraryManager libraryManager,
     IUserManager userManager,
-    CalendarService calendarService
+    CalendarService calendarService,
+    ShelfStore shelfStore
 ) : ControllerBase
 {
     public record BroadcastRequest(string? Message);
@@ -89,6 +92,19 @@ public class NotificationsController(
                 if (entry.Date.Date != today)
                 {
                     continue;
+                }
+
+                // Check if user has muted notifications (SkipUpdates) for this show or movie
+                var itemKey = entry.ItemId.ToString("N").ToLowerInvariant();
+                var shelfData = shelfStore.Load(userId);
+                if (shelfData.Series.TryGetValue("s:" + itemKey, out var prefs) ||
+                    shelfData.Series.TryGetValue(itemKey, out prefs) ||
+                    shelfData.Series.TryGetValue(entry.ItemId.ToString(), out prefs))
+                {
+                    if (prefs.SkipUpdates == true)
+                    {
+                        continue;
+                    }
                 }
 
                 var id = entry.ItemId + ":" + entry.Date.ToString("yyyy-MM-dd");

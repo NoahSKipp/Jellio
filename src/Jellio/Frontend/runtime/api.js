@@ -776,8 +776,9 @@ export function disconnectTracker() {
   return deleteJson('/Jellio/tracker/anilist');
 }
 
-export function searchTracker(query) {
-  return getJson('/Jellio/tracker/anilist/search?q=' + encodeURIComponent(query), 20000);
+export function searchTracker(query, type) {
+  const t = type ? '&type=' + encodeURIComponent(type) : '';
+  return getJson('/Jellio/tracker/anilist/search?q=' + encodeURIComponent(query) + t, 20000);
 }
 
 export function getTrackerLink(key) {
@@ -796,8 +797,8 @@ export function setTrackerEntry(key, patch) {
   return putJson('/Jellio/tracker/anilist/entry', Object.assign({ Key: key }, patch));
 }
 
-export function syncTracker(key, mangaId) {
-  return postJson('/Jellio/tracker/anilist/sync', { Key: key, MangaId: mangaId }).catch(function () {
+export function syncTracker(key, mangaId, episode) {
+  return postJson('/Jellio/tracker/anilist/sync', { Key: key, MangaId: mangaId, Episode: episode }).catch(function () {
     return null;
   });
 }
@@ -1565,6 +1566,39 @@ export function searchMovies(term, signal) {
 
 export function searchSeries(term, signal) {
   return searchByType(term, 'series', signal);
+}
+
+export function searchBooks(term, signal) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  if (!term) return Promise.resolve([]);
+  const params = new URLSearchParams({
+    searchTerm: term,
+    Recursive: 'true',
+    IncludeItemTypes: 'Book',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
+    Limit: '50',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (result) {
+    const items = (result && result.Items) || [];
+    return items.filter((item) => !isComicItem(item));
+  });
+}
+
+export function searchAudiobooks(term, signal) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  if (!term) return Promise.resolve([]);
+  const params = new URLSearchParams({
+    searchTerm: term,
+    Recursive: 'true',
+    IncludeItemTypes: 'AudioBook',
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
+    Limit: '50',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (result) {
+    return collapseAudiobookTracks((result && result.Items) || []);
+  });
 }
 
 // Every watchlisted item, real endpoint (GET /Users/{id}/Items with

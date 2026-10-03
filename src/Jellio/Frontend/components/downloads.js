@@ -551,17 +551,13 @@ function openEpisodesMenu(item, anchor, busyButton) {
     }
   }
 
-  const choices =
-    item.Type === 'Season'
-      ? [
-          { label: 'Unwatched episodes', pick: unwatched },
-          { label: 'Whole season', pick: (list) => list },
-        ]
-      : [
-          { label: 'Next 5 unwatched', pick: (list) => unwatched(list).slice(0, 5) },
-          { label: 'All unwatched', pick: unwatched },
-          { label: 'Whole series', pick: (list) => list },
-        ];
+  const choices = [
+    { label: 'Next episode', pick: (list) => unwatched(list).slice(0, 1) },
+    { label: 'Next 5 episodes', pick: (list) => unwatched(list).slice(0, 5) },
+    { label: 'Next 10 episodes', pick: (list) => unwatched(list).slice(0, 10) },
+    { label: 'All unwatched', pick: unwatched },
+    { label: item.Type === 'Season' ? 'Whole season' : 'Whole series', pick: (list) => list },
+  ];
   openMenu(
     anchor,
     choices.map((choice) => ({
