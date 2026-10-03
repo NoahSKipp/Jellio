@@ -690,11 +690,14 @@ export function renderMangaSeries(root, params, parentId) {
       }
     });
     searchWrap.appendChild(searchInput);
-    listTools.appendChild(searchWrap);
+
+    const toolsRight = el('div', 'jellio-manga-series-tools-right');
+    toolsRight.appendChild(searchWrap);
 
     const order = el('button', 'jellio-manga-series-order');
     order.type = 'button';
-    listTools.appendChild(order);
+    toolsRight.appendChild(order);
+    listTools.appendChild(toolsRight);
     body.appendChild(listTools);
 
     const list = el('ol', 'jellio-manga-chapter-list');
