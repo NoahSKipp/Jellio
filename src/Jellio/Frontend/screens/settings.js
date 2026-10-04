@@ -43,6 +43,7 @@ import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
+import { isAutoPipEnabled, setAutoPipEnabled } from '../runtime/pipSettings.js';
 import { UPNEXT_TRIGGER_OPTIONS, getUpNextTriggerSeconds, setUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
 import {
   isAutoDeleteWatchedEnabled,
@@ -351,6 +352,19 @@ function buildPlaybackCard() {
       },
     ),
   );
+  if (document.pictureInPictureEnabled) {
+    body.appendChild(
+      buildToggleRow(
+        null,
+        'Picture in picture when leaving the tab',
+        'Keep the video playing in a small window when you switch to another tab or window while watching. It returns to the player when you come back.',
+        isAutoPipEnabled(),
+        function (checked) {
+          setAutoPipEnabled(checked);
+        },
+      ),
+    );
+  }
   body.appendChild(
     buildSelectRow(
       null,

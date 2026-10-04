@@ -13,6 +13,7 @@
 // before writing this, see runtime/api.js's own getIntroSkipperSegments)
 // rather than jellyfin-web's own player chrome hooks, unreachable here
 // for the same reason as everything else in this file.
+import { isAutoPipEnabled } from '../runtime/pipSettings.js';
 import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled } from '../runtime/offline.js';
 import { renderOfflinePlayer } from './offlinePlayer.js';
 import {
@@ -897,6 +898,59 @@ export async function renderPlayer(root, params) {
     });
     topbarActions.appendChild(pipButton);
   }
+
+  // Leaving the tab while playing moves the video into picture in
+  // picture (a browser only allows that from a media session handler or
+  // a user action, so both are tried), and coming back moves it home.
+  // Either way, a picture that froze while away is nudged back to life.
+  let frozenCheck = null;
+  function checkForFrozenPicture() {
+    window.clearTimeout(frozenCheck);
+    if (video.paused || video.ended || document.pictureInPictureElement === video || typeof video.getVideoPlaybackQuality !== 'function') return;
+    const before = video.getVideoPlaybackQuality().totalVideoFrames;
+    const timeBefore = video.currentTime;
+    frozenCheck = window.setTimeout(function () {
+      if (video.paused || video.seeking || video.currentTime - timeBefore < 0.5) return;
+      const drawn = video.getVideoPlaybackQuality().totalVideoFrames - before;
+      if (drawn >= 5) return;
+      // The clock is running but no frames are drawn: make the browser
+      // repaint the video, then reload at this spot if that was not enough.
+      video.style.visibility = 'hidden';
+      void video.offsetHeight;
+      video.style.visibility = '';
+      const framesNow = video.getVideoPlaybackQuality().totalVideoFrames;
+      frozenCheck = window.setTimeout(function () {
+        if (video.paused || video.getVideoPlaybackQuality().totalVideoFrames - framesNow >= 5) return;
+        seekToAbsoluteSeconds(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0));
+      }, 900);
+    }, 900);
+  }
+
+  function enterPipForTabLeave() {
+    if (!document.pictureInPictureEnabled || !isAutoPipEnabled()) return Promise.resolve();
+    if (video.paused || video.ended || video.disablePictureInPicture || document.pictureInPictureElement) return Promise.resolve();
+    return video.requestPictureInPicture().catch(function () {});
+  }
+
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.setActionHandler('enterpictureinpicture', function () {
+        enterPipForTabLeave();
+      });
+    } catch (err) {
+      // Not every browser knows this action.
+    }
+  }
+  document.addEventListener('visibilitychange', onTabVisibility);
+  function onTabVisibility() {
+    if (document.visibilityState === 'hidden') {
+      enterPipForTabLeave();
+      return;
+    }
+    if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});
+    checkForFrozenPicture();
+  }
+  video.addEventListener('leavepictureinpicture', checkForFrozenPicture);
 
   // Absolute OS level fullscreen for the whole player shell, video
   // plus every real control this runtime draws on top of it, real
@@ -4378,6 +4432,9 @@ export async function renderPlayer(root, params) {
   // load rather than duplicating what it already does, and needs to
   // reach it from earlier in this same function body.
   async function cleanup() {
+    document.removeEventListener('visibilitychange', onTabVisibility);
+    window.clearTimeout(frozenCheck);
+    if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});
     if (screenTornDown) return;
     screenTornDown = true;
     if (audioCtx) {
@@ -4394,6 +4451,9 @@ export async function renderPlayer(root, params) {
           navigator.mediaSession.setActionHandler(act, null);
         });
         navigator.mediaSession.playbackState = 'none';
+      } catch (e) {}
+      try {
+        navigator.mediaSession.setActionHandler('enterpictureinpicture', null);
       } catch (e) {}
     }
     // Real feedback: this reader closing out of a synced session used
