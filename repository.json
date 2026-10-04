@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.50.0] - 2026-10-04\n\n### 🚀 Features\n\n- Pinch to zoom in books and PDFs on touch screens\n",
+        "checksum": "ac76452ee66ecad537a6595ca3f3b276",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.50.0/jellio_1.50.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-04T19:18:18Z",
+        "version": "1.50.0"
+      },
+      {
         "changelog": "## [1.49.1] - 2026-10-04\n\n### ⚙️ Miscellaneous Tasks\n\n- Support workflow_dispatch in publish workflow\n- Pass repo flag to gh commands in publish workflow\n",
         "checksum": "b241e98e6530bf32b3da7bc57b018254",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.49.1/jellio_1.49.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T19:22:16Z",
         "version": "1.33.0"
-      },
-      {
-        "changelog": "## [1.32.0] - 2026-09-27\n\n### 🚀 Features\n\n- Give Settings a Reading section with translation and dictionary defaults\n",
-        "checksum": "de0adbbcfdc6a1aee228927b8db3312f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.32.0/jellio_1.32.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T15:43:43Z",
-        "version": "1.32.0"
       }
     ]
   }
