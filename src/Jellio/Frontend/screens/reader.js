@@ -262,6 +262,40 @@ function epubOverrideCss(settings) {
   return rules.join('\n');
 }
 
+function touchDistance(touches) {
+  return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY) || 1;
+}
+
+// Two-finger pinch on an element: onMove(ratio) while it runs (return
+// false to leave the page's own pinch alone), onEnd(ratio) when it ends.
+function watchPinch(target, onMove, onEnd) {
+  let pinch = null;
+  target.addEventListener(
+    'touchstart',
+    function (event) {
+      if (event.touches.length === 2) pinch = { distance: touchDistance(event.touches), ratio: 1 };
+      else pinch = null;
+    },
+    { passive: true },
+  );
+  target.addEventListener(
+    'touchmove',
+    function (event) {
+      if (!pinch || event.touches.length !== 2) return;
+      event.preventDefault();
+      pinch.ratio = touchDistance(event.touches) / pinch.distance;
+      if (onMove) onMove(pinch.ratio);
+    },
+    { passive: false },
+  );
+  target.addEventListener('touchend', function (event) {
+    if (!pinch || event.touches.length >= 2) return;
+    const ratio = pinch.ratio;
+    pinch = null;
+    onEnd(ratio);
+  });
+}
+
 function applyEpubCss(contents, settings) {
   const doc = contents && contents.document;
   if (!doc || !doc.head) return;
@@ -359,6 +393,13 @@ async function openEpub(stage, buffer, savedLocator, settings, handlers) {
     rendition.themes.fontSize(settings.fontSize + '%');
     rendition.hooks.content.register(function (contents) {
       applyEpubCss(contents, settings);
+      // Pinching the text changes its size.
+      if (contents.document && handlers.onZoom) {
+        watchPinch(contents.document, null, function (ratio) {
+          if (Math.abs(ratio - 1) < 0.08) return;
+          handlers.onZoom({ fontSize: Math.min(200, Math.max(70, Math.round((settings.fontSize * ratio) / 10) * 10)) });
+        });
+      }
     });
     rendition.on('relocated', report);
     rendition.on('keyup', handlers.onKey);
@@ -1577,7 +1618,27 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
 
   // Taps on the page image turn pages like an EPUB's; the text layer sits
   // on top, so a tap that ends in a selection is left alone.
+  // Pinch to zoom the page (shown live, applied when the fingers lift),
+  // and a double tap to zoom in or back out.
+  watchPinch(
+    stage,
+    function (ratio) {
+      pageWrap.style.transformOrigin = 'center top';
+      pageWrap.style.transform = 'scale(' + Math.min(3, Math.max(0.5, ratio)) + ')';
+    },
+    function (ratio) {
+      pageWrap.style.transform = '';
+      if (Math.abs(ratio - 1) < 0.05) return;
+      handlers.onZoom({ pdfZoom: Math.min(300, Math.max(50, Math.round((current.pdfZoom * ratio) / 5) * 5)) });
+    },
+  );
+
   stage.addEventListener('click', function (event) {
+    if (event.detail > 1 && event.pointerType !== 'mouse') {
+      handlers.onTap(event.clientX, true, event.detail, () => false);
+      handlers.onZoom({ pdfZoom: current.pdfZoom > 100 ? 100 : 200 });
+      return;
+    }
     const hit = highlightAt(event.clientX, event.clientY);
     const selection = window.getSelection();
     if (hit && highlightClickCallback && !(selection && String(selection).trim())) {
@@ -2578,6 +2639,7 @@ export async function renderReader(root, params) {
     onEdge: onEdge,
     onPageMenu: openPageMenu,
     onScrollDelta: onScrollDelta,
+    onZoom: (patch) => updateSettings(patch),
   };
 
   try {
