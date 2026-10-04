@@ -168,6 +168,66 @@ function extractYouTubeId(url) {
   return match ? match[1] : null;
 }
 
+const TRAILER_MODAL_ID = 'jellioTrailerModal';
+
+function closeTrailerModal() {
+  const existing = document.getElementById(TRAILER_MODAL_ID);
+  if (existing) existing.remove();
+  document.removeEventListener('keydown', handleTrailerKeydown);
+}
+
+function handleTrailerKeydown(event) {
+  if (event.key === 'Escape') closeTrailerModal();
+}
+
+function openTrailerModal(trailer, youTubeId) {
+  closeTrailerModal();
+  const overlay = el('div', 'jellio-trailer-modal');
+  overlay.id = TRAILER_MODAL_ID;
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', trailer.Name || 'Trailer');
+
+  const backdrop = el('div', 'jellio-trailer-modal-backdrop');
+  backdrop.addEventListener('click', closeTrailerModal);
+  overlay.appendChild(backdrop);
+
+  const card = el('div', 'jellio-trailer-modal-card');
+  const header = el('div', 'jellio-trailer-modal-header');
+  header.appendChild(el('h3', 'jellio-trailer-modal-title', trailer.Name || 'Trailer'));
+
+  const actions = el('div', 'jellio-trailer-modal-actions');
+  const externalLink = el('a', 'jellio-trailer-modal-ext-link');
+  externalLink.href = trailer.Url;
+  externalLink.target = '_blank';
+  externalLink.rel = 'noopener noreferrer';
+  externalLink.title = 'Watch on YouTube';
+  externalLink.appendChild(el('span', 'material-icons open_in_new'));
+  actions.appendChild(externalLink);
+
+  const closeButton = el('button', 'jellio-trailer-modal-close', '×');
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Close trailer');
+  closeButton.addEventListener('click', closeTrailerModal);
+  actions.appendChild(closeButton);
+
+  header.appendChild(actions);
+  card.appendChild(header);
+
+  const playerWrap = el('div', 'jellio-trailer-modal-player');
+  const iframe = document.createElement('iframe');
+  iframe.className = 'jellio-trailer-modal-iframe';
+  iframe.src = 'https://www.youtube-nocookie.com/embed/' + youTubeId + '?autoplay=1&rel=0';
+  iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+  iframe.setAttribute('allowfullscreen', 'true');
+  playerWrap.appendChild(iframe);
+  card.appendChild(playerWrap);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  document.addEventListener('keydown', handleTrailerKeydown);
+}
+
 function buildTrailersRow(trailers) {
   const usable = (trailers || []).filter(function (trailer) {
     return trailer && trailer.Url;
@@ -197,6 +257,11 @@ function buildTrailersRow(trailers) {
         img.remove();
       });
       thumb.appendChild(img);
+
+      card.addEventListener('click', function (e) {
+        e.preventDefault();
+        openTrailerModal(trailer, youTubeId);
+      });
     }
     thumb.appendChild(el('span', 'material-icons jellio-trailer-play play_circle_filled'));
     card.appendChild(thumb);
@@ -472,6 +537,18 @@ function buildEpisodeCard(episode, context) {
     thumb.appendChild(el('span', 'jellio-episode-badge', 'E' + episode.IndexNumber));
   }
   paintEpisodeWatched(thumb, episode);
+
+  const quickPlay = el('button', 'jellio-episode-quick-play');
+  quickPlay.type = 'button';
+  quickPlay.setAttribute('aria-label', 'Play episode ' + (episode.IndexNumber != null ? episode.IndexNumber : episode.Name || ''));
+  quickPlay.title = 'Play episode';
+  quickPlay.appendChild(el('span', 'material-icons play_arrow'));
+  quickPlay.addEventListener('click', function (e) {
+    e.stopPropagation();
+    openStreamPicker(episode);
+  });
+  thumb.appendChild(quickPlay);
+
   card.appendChild(thumb);
   card.appendChild(el('div', 'jellio-episode-title', episode.Name || ''));
   if (episode.Overview) {
@@ -1492,5 +1569,6 @@ export async function renderDetail(root, params) {
     // node and its document listeners can sit alive well past this
     // screen's own real lifetime.
     closeEpisodeMenu();
+    closeTrailerModal();
   };
 }

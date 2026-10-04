@@ -3375,6 +3375,101 @@
   white-space: nowrap;
 }
 
+.jellio-trailer-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+}
+
+.jellio-trailer-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.jellio-trailer-modal-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 900px;
+  background: #111420;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.jellio-trailer-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85em 1.25em;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jellio-trailer-modal-title {
+  margin: 0;
+  font-size: 1.05em;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-trailer-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.jellio-trailer-modal-ext-link,
+.jellio-trailer-modal-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0.35em;
+  border-radius: 6px;
+  font-size: 1.25em;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.jellio-trailer-modal-ext-link:hover,
+.jellio-trailer-modal-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.jellio-trailer-modal-player {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  background: #000;
+}
+
+.jellio-trailer-modal-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 /* components/scrollArrows.js's own attachScrollArrows() anchors its
    prev/next buttons against this, same real position: relative shape
    components/row.js's own .jellio-row-track-wrap already is. */
@@ -3516,6 +3611,46 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.jellio-episode-quick-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  width: 2.75em;
+  height: 2.75em;
+  border-radius: 50%;
+  background: rgba(18, 22, 34, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.15s ease;
+  z-index: 2;
+}
+
+.jellio-episode-quick-play span {
+  font-size: 1.6em;
+  margin-left: 2px;
+}
+
+.jellio-episode-card:hover .jellio-episode-quick-play,
+.jellio-episode-card:focus-within .jellio-episode-quick-play {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.jellio-episode-quick-play:hover {
+  background: var(--jellio-accent, #6366f1);
+  transform: translate(-50%, -50%) scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Real, reproducible layout bug, confirmed live: the mobile media
@@ -3776,6 +3911,52 @@
   flex: 0 0 auto;
   opacity: 0.7;
   font-variant-numeric: tabular-nums;
+}
+
+.jellio-reader-progress-clickable {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.jellio-reader-progress-clickable:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.jellio-reader-jump-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  flex: 0 0 auto;
+}
+
+.jellio-reader-jump-input {
+  width: 4.5em;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 0.85em;
+  text-align: center;
+}
+
+.jellio-reader-jump-input:focus {
+  outline: none;
+  border-color: var(--jellio-accent, #6366f1);
+}
+
+.jellio-reader-jump-submit {
+  padding: 0.2em 0.55em;
+  border-radius: 4px;
+  border: none;
+  background: var(--jellio-accent, #6366f1);
+  color: #fff;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .jellio-reader-topbar,
