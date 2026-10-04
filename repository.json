@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.51.0] - 2026-10-04\n\n### 🚀 Features\n\n- Picture in picture when leaving the tab, with a setting, and recover a frozen picture\n",
+        "checksum": "c059a13e6a4ca91333cc1d161ad1bb94",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.51.0/jellio_1.51.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-04T19:26:46Z",
+        "version": "1.51.0"
+      },
+      {
         "changelog": "## [1.50.0] - 2026-10-04\n\n### 🚀 Features\n\n- Pinch to zoom in books and PDFs on touch screens\n",
         "checksum": "ac76452ee66ecad537a6595ca3f3b276",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.50.0/jellio_1.50.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T20:18:53Z",
         "version": "1.33.1"
-      },
-      {
-        "changelog": "## [1.33.0] - 2026-09-27\n\n### 🚀 Features\n\n- Download books, manga, audiobooks and videos for offline use\n",
-        "checksum": "4fc9ebfef21e8db8a7964022eed0c02c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.0/jellio_1.33.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T19:22:16Z",
-        "version": "1.33.0"
       }
     ]
   }
