@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.53.0] - 2026-10-05\n\n### 🚀 Features\n\n- Add cast button and smart tv streaming support in player\n",
+        "checksum": "c4c693f6977b03928d6e16d270efdd06",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.53.0/jellio_1.53.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-05T09:45:56Z",
+        "version": "1.53.0"
+      },
+      {
         "changelog": "## [1.52.1] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Center the loading spinner on a title page\n",
         "checksum": "9182a33712d6da661c38e161ffd2b95f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.52.1/jellio_1.52.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T23:07:38Z",
         "version": "1.33.4"
-      },
-      {
-        "changelog": "## [1.33.3] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Download videos through playback negotiation, in the user's audio language, with retries\n",
-        "checksum": "f6213de45066c624cd83fa5690f13530",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.3/jellio_1.33.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T22:05:51Z",
-        "version": "1.33.3"
       }
     ]
   }
