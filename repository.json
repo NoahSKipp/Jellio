@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.52.0] - 2026-10-05\n\n### 🚀 Features\n\n- Share button that copies a link to a title\n- Share links from cards, manga series and manga chapters too\n",
+        "checksum": "28dbc92d031b95088b42f752c5637894",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.52.0/jellio_1.52.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-05T08:27:53Z",
+        "version": "1.52.0"
+      },
+      {
         "changelog": "## [1.51.0] - 2026-10-04\n\n### 🚀 Features\n\n- Picture in picture when leaving the tab, with a setting, and recover a frozen picture\n",
         "checksum": "c059a13e6a4ca91333cc1d161ad1bb94",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.51.0/jellio_1.51.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T21:40:35Z",
         "version": "1.33.2"
-      },
-      {
-        "changelog": "## [1.33.1] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Open downloaded manga and books offline\n",
-        "checksum": "46ea256caba87cb3f00c5931fc9f43d1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.1/jellio_1.33.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T20:18:53Z",
-        "version": "1.33.1"
       }
     ]
   }
