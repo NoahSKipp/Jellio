@@ -2740,14 +2740,17 @@ export async function renderPlayer(root, params) {
 
           const info = el('div', 'jellio-player-cast-device-info');
           info.appendChild(el('div', 'jellio-player-cast-device-name', 'Google Cast / Chromecast'));
-          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Chromecast, Android TV, or Google TV'));
+          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Opens browser menu to connect to Chromecast or Google TV'));
           gcastBtn.appendChild(info);
 
           gcastBtn.addEventListener('click', async function () {
             try {
-              video.pause();
               castMenu.classList.add('jellio-player-popover-hidden');
-              if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
+              if (window.cast && window.cast.framework) {
+                const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
+                await castToGoogleCast(streamUrl, item, currentSec);
+              } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
+                video.pause();
                 await promptRemotePlayback(video);
               } else {
                 const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
@@ -2755,8 +2758,17 @@ export async function renderPlayer(root, params) {
               }
               showPlayerToast('Streaming via Google Cast');
             } catch (err) {
+              if (
+                err &&
+                (err.name === 'AbortError' ||
+                 err.name === 'NotAllowedError' ||
+                 (err.message && (err.message.includes('dismissed') || err.message.includes('cancel') || err.message.includes('not selected'))))
+              ) {
+                // User simply dismissed or closed the browser's native Cast dialog
+                return;
+              }
               console.warn('Jellio: Google Cast failed', err);
-              showPlayerToast('Cast cancelled or failed');
+              showPlayerToast('Cast could not connect: ' + (err && err.message ? err.message : 'no device selected'));
             }
           });
           castBody.appendChild(gcastBtn);
@@ -2773,7 +2785,7 @@ export async function renderPlayer(root, params) {
 
           const info = el('div', 'jellio-player-cast-device-info');
           info.appendChild(el('div', 'jellio-player-cast-device-name', 'Apple AirPlay'));
-          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Apple TV or AirPlay 2 Smart TV'));
+          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Opens AirPlay menu to stream to Apple TV or AirPlay 2 Smart TV'));
           airplayBtn.appendChild(info);
 
           airplayBtn.addEventListener('click', function () {
