@@ -2454,8 +2454,30 @@ export async function renderPlayer(root, params) {
       castBody.appendChild(activeBox);
     }
 
+    const loadingBox = el('div', 'jellio-player-cast-loading');
+    const loadingSpinner = el('div', 'jellio-player-cast-loading-spinner');
+    const spinIcon = el('span', 'material-icons', 'sync');
+    spinIcon.setAttribute('aria-hidden', 'true');
+    loadingSpinner.appendChild(spinIcon);
+    loadingBox.appendChild(loadingSpinner);
+
+    const loadingText = el('div', 'jellio-player-cast-loading-text');
+    loadingText.appendChild(el('div', 'jellio-player-cast-loading-title', 'Looking for devices...'));
+    loadingText.appendChild(el('div', 'jellio-player-cast-loading-sub', 'Scanning your network for available Smart TVs'));
+    loadingBox.appendChild(loadingText);
+    castBody.appendChild(loadingBox);
+
+    if (!castMenu.classList.contains('jellio-player-popover-hidden')) {
+      positionPopover(castButton, castMenu);
+    }
+
     try {
-      const targets = await getAvailableCastTargets();
+      const [targets] = await Promise.all([
+        getAvailableCastTargets(),
+        new Promise(function (resolve) { setTimeout(resolve, 350); }),
+      ]);
+      loadingBox.remove();
+
       const tvTargets = targets.filter(function (t) { return t.isTv; });
       const otherTargets = targets.filter(function (t) { return !t.isTv; });
 
@@ -2473,80 +2495,103 @@ export async function renderPlayer(root, params) {
         });
       }
 
-      // Wireless display & AirPlay section
-      let hasWireless = false;
-      const wirelessTitle = el('div', 'jellio-player-cast-section-title', 'Wireless Display & Streaming');
+      const googleCastAvailable = isGoogleCastSupported();
+      const airplayAvailable = isAirPlaySupported(video);
+      const hasWireless = googleCastAvailable || airplayAvailable;
 
-      if (isGoogleCastSupported()) {
-        hasWireless = true;
+      if (targets.length === 0) {
+        const emptyBox = el('div', 'jellio-player-cast-empty');
+        const emptyIconWrap = el('div', 'jellio-player-cast-empty-icon');
+        const emptyIcon = el('span', 'material-icons', 'tv_off');
+        emptyIcon.setAttribute('aria-hidden', 'true');
+        emptyIconWrap.appendChild(emptyIcon);
+        emptyBox.appendChild(emptyIconWrap);
+
+        const emptyTitle = el('div', 'jellio-player-cast-empty-title', 'No available devices found');
+        emptyBox.appendChild(emptyTitle);
+
+        const emptySub = el('div', 'jellio-player-cast-empty-sub', hasWireless
+          ? 'No Smart TVs or Jellyfin apps were detected on your local network. You can still stream via the wireless options below.'
+          : 'Make sure your Smart TV or Chromecast is turned on and connected to the same Wi-Fi network.');
+        emptyBox.appendChild(emptySub);
+        castBody.appendChild(emptyBox);
+      }
+
+      // Wireless display & AirPlay section
+      if (hasWireless) {
+        const wirelessTitle = el('div', 'jellio-player-cast-section-title', 'Wireless Display & Streaming');
         castBody.appendChild(wirelessTitle);
 
-        const gcastBtn = el('button', 'jellio-player-cast-device-btn');
-        gcastBtn.type = 'button';
-        const iconWrap = el('div', 'jellio-player-cast-device-icon');
-        const icon = el('span', 'material-icons cast');
-        icon.setAttribute('aria-hidden', 'true');
-        iconWrap.appendChild(icon);
-        gcastBtn.appendChild(iconWrap);
+        if (googleCastAvailable) {
+          const gcastBtn = el('button', 'jellio-player-cast-device-btn');
+          gcastBtn.type = 'button';
+          const iconWrap = el('div', 'jellio-player-cast-device-icon');
+          const icon = el('span', 'material-icons cast');
+          icon.setAttribute('aria-hidden', 'true');
+          iconWrap.appendChild(icon);
+          gcastBtn.appendChild(iconWrap);
 
-        const info = el('div', 'jellio-player-cast-device-info');
-        info.appendChild(el('div', 'jellio-player-cast-device-name', 'Google Cast / Chromecast'));
-        info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Chromecast, Android TV, or Google TV'));
-        gcastBtn.appendChild(info);
+          const info = el('div', 'jellio-player-cast-device-info');
+          info.appendChild(el('div', 'jellio-player-cast-device-name', 'Google Cast / Chromecast'));
+          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Chromecast, Android TV, or Google TV'));
+          gcastBtn.appendChild(info);
 
-        gcastBtn.addEventListener('click', async function () {
-          try {
-            video.pause();
-            castMenu.classList.add('jellio-player-popover-hidden');
-            if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
-              await promptRemotePlayback(video);
-            } else {
-              const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
-              await castToGoogleCast(streamUrl, item, currentSec);
+          gcastBtn.addEventListener('click', async function () {
+            try {
+              video.pause();
+              castMenu.classList.add('jellio-player-popover-hidden');
+              if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
+                await promptRemotePlayback(video);
+              } else {
+                const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
+                await castToGoogleCast(streamUrl, item, currentSec);
+              }
+              showPlayerToast('Streaming via Google Cast');
+            } catch (err) {
+              console.warn('Jellio: Google Cast failed', err);
+              showPlayerToast('Cast cancelled or failed');
             }
-            showPlayerToast('Streaming via Google Cast');
-          } catch (err) {
-            console.warn('Jellio: Google Cast failed', err);
-            showPlayerToast('Cast cancelled or failed');
-          }
-        });
-        castBody.appendChild(gcastBtn);
-      }
+          });
+          castBody.appendChild(gcastBtn);
+        }
 
-      if (isAirPlaySupported(video)) {
-        if (!hasWireless) castBody.appendChild(wirelessTitle);
-        hasWireless = true;
+        if (airplayAvailable) {
+          const airplayBtn = el('button', 'jellio-player-cast-device-btn');
+          airplayBtn.type = 'button';
+          const iconWrap = el('div', 'jellio-player-cast-device-icon');
+          const icon = el('span', 'material-icons airplay');
+          icon.setAttribute('aria-hidden', 'true');
+          iconWrap.appendChild(icon);
+          airplayBtn.appendChild(iconWrap);
 
-        const airplayBtn = el('button', 'jellio-player-cast-device-btn');
-        airplayBtn.type = 'button';
-        const iconWrap = el('div', 'jellio-player-cast-device-icon');
-        const icon = el('span', 'material-icons airplay');
-        icon.setAttribute('aria-hidden', 'true');
-        iconWrap.appendChild(icon);
-        airplayBtn.appendChild(iconWrap);
+          const info = el('div', 'jellio-player-cast-device-info');
+          info.appendChild(el('div', 'jellio-player-cast-device-name', 'Apple AirPlay'));
+          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Apple TV or AirPlay 2 Smart TV'));
+          airplayBtn.appendChild(info);
 
-        const info = el('div', 'jellio-player-cast-device-info');
-        info.appendChild(el('div', 'jellio-player-cast-device-name', 'Apple AirPlay'));
-        info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Apple TV or AirPlay 2 Smart TV'));
-        airplayBtn.appendChild(info);
-
-        airplayBtn.addEventListener('click', function () {
-          castMenu.classList.add('jellio-player-popover-hidden');
-          try {
-            promptAirPlay(video);
-          } catch (err) {
-            showPlayerToast('AirPlay not available');
-          }
-        });
-        castBody.appendChild(airplayBtn);
-      }
-
-      if (targets.length === 0 && !hasWireless) {
-        const empty = el('div', 'jellio-player-cast-empty', 'No Smart TVs or Cast devices found on the network. Open the Jellyfin app on your TV or connect a Chromecast.');
-        castBody.appendChild(empty);
+          airplayBtn.addEventListener('click', function () {
+            castMenu.classList.add('jellio-player-popover-hidden');
+            try {
+              promptAirPlay(video);
+            } catch (err) {
+              showPlayerToast('AirPlay not available');
+            }
+          });
+          castBody.appendChild(airplayBtn);
+        }
       }
     } catch (err) {
       console.warn('Jellio: error populating cast menu', err);
+      loadingBox.remove();
+      const errBox = el('div', 'jellio-player-cast-empty');
+      const errIconWrap = el('div', 'jellio-player-cast-empty-icon');
+      const errIcon = el('span', 'material-icons', 'error_outline');
+      errIcon.setAttribute('aria-hidden', 'true');
+      errIconWrap.appendChild(errIcon);
+      errBox.appendChild(errIconWrap);
+      errBox.appendChild(el('div', 'jellio-player-cast-empty-title', 'Could not search for devices'));
+      errBox.appendChild(el('div', 'jellio-player-cast-empty-sub', 'Check your connection to the Jellyfin server and try again.'));
+      castBody.appendChild(errBox);
     } finally {
       isScanningCast = false;
       castRefreshBtn.classList.remove('spinning');
