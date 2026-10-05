@@ -33,8 +33,12 @@ import { el } from '../runtime/dom.js';
 // listens for, in case the hash was already #/home and never changed
 // (the common case on first load, before any route has a real value
 // yet, when a bare hash assignment of the same string is a no-op).
+// A shared link opened while signed out: remembered here so signing in
+// lands on that title instead of Home.
+const landingHash = /^#\/(item|books|read|listen)\b/.test(window.location.hash) ? window.location.hash : null;
+
 function completeSignIn() {
-  navigateTo('#/home');
+  navigateTo(landingHash || '#/home');
   document.dispatchEvent(new CustomEvent('jellio:session-captured'));
 }
 
