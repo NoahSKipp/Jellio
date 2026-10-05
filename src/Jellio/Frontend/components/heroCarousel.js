@@ -11,6 +11,7 @@
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { formatRuntime } from '../runtime/format.js';
+import { toggleWatchlist } from './cardOptionsMenu.js';
 import { el } from '../runtime/dom.js';
 
 const ROTATE_MS = 9000;
@@ -63,8 +64,29 @@ export function buildHeroCarousel(options) {
   const overview = el('p', 'jellio-hero-overview');
   const actions = el('div', 'jellio-hero-actions');
 
-  const infoButton = el('button', 'jellio-hero-action', 'View Details');
+  const playButton = el('button', 'jellio-hero-action jellio-hero-action-play');
+  playButton.type = 'button';
+  const playIcon = el('span', 'material-icons play_arrow');
+  playIcon.setAttribute('aria-hidden', 'true');
+  playButton.appendChild(playIcon);
+  playButton.appendChild(el('span', null, 'Play'));
+  actions.appendChild(playButton);
+
+  const watchlistButton = el('button', 'jellio-hero-action jellio-hero-action-watchlist');
+  watchlistButton.type = 'button';
+  const watchIcon = el('span', 'material-icons bookmark_add');
+  watchIcon.setAttribute('aria-hidden', 'true');
+  watchlistButton.appendChild(watchIcon);
+  const watchLabel = el('span', null, 'Watchlist');
+  watchlistButton.appendChild(watchLabel);
+  actions.appendChild(watchlistButton);
+
+  const infoButton = el('button', 'jellio-hero-action jellio-hero-action-info');
   infoButton.type = 'button';
+  const infoIcon = el('span', 'material-icons info_outline');
+  infoIcon.setAttribute('aria-hidden', 'true');
+  infoButton.appendChild(infoIcon);
+  infoButton.appendChild(el('span', null, 'Details'));
   actions.appendChild(infoButton);
 
   content.appendChild(logo);
@@ -124,6 +146,14 @@ export function buildHeroCarousel(options) {
     meta.textContent = metaLine(item);
     overview.textContent = item.Overview || '';
 
+    function syncWatchlistUI() {
+      const isWatchlisted = Boolean(item.UserData && item.UserData.IsFavorite);
+      watchIcon.className = 'material-icons ' + (isWatchlisted ? 'bookmark_added' : 'bookmark_add');
+      watchLabel.textContent = isWatchlisted ? 'Saved' : 'Watchlist';
+      watchlistButton.classList.toggle('jellio-hero-action-active', isWatchlisted);
+    }
+    syncWatchlistUI();
+
     dots.textContent = '';
     items.forEach(function (candidate, i) {
       const dot = el('span', 'jellio-hero-dot' + (i === index ? ' jellio-hero-dot-active' : ''));
@@ -135,6 +165,23 @@ export function buildHeroCarousel(options) {
     });
   }
 
+  playButton.addEventListener('click', function () {
+    if (!items.length) return;
+    navigateTo('#/item?id=' + items[index].Id);
+  });
+  watchlistButton.addEventListener('click', function () {
+    if (!items.length) return;
+    const current = items[index];
+    watchlistButton.disabled = true;
+    toggleWatchlist(current)
+      .then(function () {
+        render();
+      })
+      .catch(function () {})
+      .finally(function () {
+        watchlistButton.disabled = false;
+      });
+  });
   infoButton.addEventListener('click', function () {
     if (!items.length) return;
     navigateTo('#/item?id=' + items[index].Id);

@@ -83,19 +83,46 @@ const ITEM_DETAILS_TIMEOUT_MS = 30000;
 // browser's own 6-connection ceiling rather than at it, leaving real
 // headroom for whatever image tags the same screen is also loading
 // through that same shared per-origin pool.
-const MAX_CONCURRENT_REQUESTS = 4;
-// Priority requests (the reader's own Continue Watching/Reading and Up
-// Next, see getPriorityJson) jump the queue and may use two extra
-// slots, so slow catalog or calendar lookups already in flight can
-// never hold them back. 4 + 2 is exactly a browser's six connections
-// per host over HTTP/1.1: any more and a priority request would just
-// queue inside the browser instead of here.
-const PRIORITY_EXTRA_SLOTS = 2;
+const BASE_CONCURRENT_REQUESTS = 4;
+const BASE_PRIORITY_EXTRA_SLOTS = 2;
+const MULTIPLEXED_CONCURRENT_REQUESTS = 12;
+const MULTIPLEXED_PRIORITY_EXTRA_SLOTS = 4;
+
+let isMultiplexedProtocol = false;
+function detectMultiplexing() {
+  if (typeof window === 'undefined' || !window.performance || typeof window.performance.getEntriesByType !== 'function') return;
+  const entries = window.performance.getEntriesByType('resource');
+  const serverAddress = getServerAddress() || '';
+  const serverHost = serverAddress.replace(/^https?:\/\//, '').split('/')[0];
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (serverHost && entry.name && entry.name.includes(serverHost) && entry.nextHopProtocol) {
+      const proto = entry.nextHopProtocol.toLowerCase();
+      if (proto.startsWith('h2') || proto.startsWith('h3') || proto.includes('http/2') || proto.includes('http/3')) {
+        isMultiplexedProtocol = true;
+        return;
+      }
+    }
+  }
+}
+
 let activeRequestCount = 0;
 const queuedRequestStarts = [];
 
+function checkMultiplexUpgrade() {
+  if (isMultiplexedProtocol) return;
+  detectMultiplexing();
+  if (isMultiplexedProtocol) {
+    while (queuedRequestStarts.length > 0 && activeRequestCount < slotLimit(queuedRequestStarts[0].priority)) {
+      queuedRequestStarts.shift().start();
+    }
+  }
+}
+
 function slotLimit(priority) {
-  return MAX_CONCURRENT_REQUESTS + (priority ? PRIORITY_EXTRA_SLOTS : 0);
+  const base = isMultiplexedProtocol ? MULTIPLEXED_CONCURRENT_REQUESTS : BASE_CONCURRENT_REQUESTS;
+  const extra = isMultiplexedProtocol ? MULTIPLEXED_PRIORITY_EXTRA_SLOTS : BASE_PRIORITY_EXTRA_SLOTS;
+  return base + (priority ? extra : 0);
 }
 
 function acquireRequestSlot(priority) {
@@ -205,6 +232,7 @@ async function requestJson(url, options, path, timeoutMs, externalSignal, priori
     return response;
   } finally {
     releaseRequestSlot();
+    checkMultiplexUpgrade();
   }
 }
 
@@ -422,7 +450,7 @@ export function getItemDetails(itemId, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const opts = options || {};
-  const baseFields = 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers';
+  const baseFields = 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,MediaStreams';
   const fields = opts.includePlaybackFields ? baseFields + ',Trickplay,Chapters' : baseFields;
   const params = new URLSearchParams({
     Fields: fields,

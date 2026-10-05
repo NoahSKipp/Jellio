@@ -259,7 +259,12 @@ export function setAudioSleep(minutes) {
     window.clearInterval(activeSession.sleepTicker);
     activeSession.sleepTicker = null;
   }
+  if (activeSession.savedVolume != null && activeSession.audio) {
+    activeSession.audio.volume = activeSession.savedVolume;
+    activeSession.savedVolume = null;
+  }
   activeSession.sleepMinutes = minutes;
+  const FADE_WINDOW_MS = 15000;
   if (minutes === -1) {
     activeSession.sleepEndOfChapter = chapterIndexAt(getBookTime());
     activeSession.sleepDeadline = null;
@@ -268,9 +273,20 @@ export function setAudioSleep(minutes) {
     activeSession.sleepEndOfChapter = null;
     activeSession.sleepTicker = window.setInterval(function () {
       if (!activeSession || !activeSession.sleepDeadline) return;
-      if (Date.now() >= activeSession.sleepDeadline) {
+      const remainingMs = activeSession.sleepDeadline - Date.now();
+      if (remainingMs <= 0) {
+        const audio = activeSession.audio;
+        const origVol = activeSession.savedVolume != null ? activeSession.savedVolume : (audio ? audio.volume : 1);
         setAudioSleep(0);
-        if (activeSession && activeSession.audio) activeSession.audio.pause();
+        if (audio) {
+          audio.pause();
+          audio.volume = origVol;
+        }
+      } else if (remainingMs <= FADE_WINDOW_MS && activeSession.audio) {
+        if (activeSession.savedVolume == null) activeSession.savedVolume = activeSession.audio.volume;
+        const factor = Math.max(0, remainingMs / FADE_WINDOW_MS);
+        activeSession.audio.volume = activeSession.savedVolume * factor;
+        notifySleep();
       } else {
         notifySleep();
       }
@@ -466,9 +482,19 @@ export function startAudioSession(config) {
     }
     notifyPosition();
     updateMediaSessionState();
-    if (activeSession.sleepEndOfChapter !== null && getBookTime() >= activeSession.timeline.chapters[activeSession.sleepEndOfChapter].endSec - 0.3) {
-      setAudioSleep(0);
-      audio.pause();
+    if (activeSession.sleepEndOfChapter !== null && activeSession.timeline && activeSession.timeline.chapters && activeSession.timeline.chapters[activeSession.sleepEndOfChapter]) {
+      const endSec = activeSession.timeline.chapters[activeSession.sleepEndOfChapter].endSec;
+      const timeLeft = endSec - getBookTime();
+      if (timeLeft <= 0.3) {
+        const origVol = activeSession.savedVolume != null ? activeSession.savedVolume : audio.volume;
+        setAudioSleep(0);
+        audio.pause();
+        audio.volume = origVol;
+      } else if (timeLeft <= 15) {
+        if (activeSession.savedVolume == null) activeSession.savedVolume = audio.volume;
+        const factor = Math.max(0, timeLeft / 15);
+        audio.volume = activeSession.savedVolume * factor;
+      }
     }
   });
 
