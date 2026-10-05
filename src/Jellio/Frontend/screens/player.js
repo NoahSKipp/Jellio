@@ -1455,10 +1455,6 @@ export async function renderPlayer(root, params) {
   const settingsButton = buildPillButton('settings', 'Settings');
   settingsButton.classList.add('jellio-player-pill-settings');
 
-  castButton.addEventListener('click', function () {
-    toggleCastMenu();
-  });
-
   pill.appendChild(volumeButton);
   pill.appendChild(speedButton);
   pill.appendChild(subtitleButton);
@@ -1499,6 +1495,8 @@ export async function renderPlayer(root, params) {
     const shellRect = shell.getBoundingClientRect();
     const buttonRect = button.getBoundingClientRect();
     const margin = 16;
+    menu.style.top = '';
+    menu.style.bottom = '';
     menu.style.right = 'auto';
     const menuWidth = menu.offsetWidth;
     const center = buttonRect.left - shellRect.left + buttonRect.width / 2;
@@ -2545,6 +2543,9 @@ export async function renderPlayer(root, params) {
     } finally {
       isScanningCast = false;
       castRefreshBtn.classList.remove('spinning');
+      if (!castMenu.classList.contains('jellio-player-popover-hidden')) {
+        positionPopover(castButton, castMenu);
+      }
     }
   }
 
@@ -2587,7 +2588,9 @@ export async function renderPlayer(root, params) {
 
   registerPopover(castButton, castMenu);
   castButton.addEventListener('click', function () {
-    refreshCastMenu();
+    if (!castMenu.classList.contains('jellio-player-popover-hidden')) {
+      refreshCastMenu();
+    }
   });
   castRefreshBtn.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -2595,15 +2598,7 @@ export async function renderPlayer(root, params) {
   });
 
   toggleCastMenu = function () {
-    closePopovers(castMenu);
-    const nowHidden = castMenu.classList.toggle('jellio-player-popover-hidden');
-    castButton.setAttribute('aria-expanded', String(!nowHidden));
-    if (!nowHidden) {
-      castMenu.style.top = 'auto';
-      positionPopover(castButton, castMenu);
-      refreshCastMenu();
-    }
-    wakeControls();
+    castButton.click();
   };
 
   // === In-player floating Cast Banner ===
