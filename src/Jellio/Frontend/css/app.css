@@ -5880,6 +5880,20 @@
   flex: 0 0 auto;
 }
 
+.jellio-player-settings-sleep {
+  display: none !important;
+}
+
+.jellio-player-settings-sleep-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.jellio-player-settings-sleep-label .material-icons {
+  font-size: 1.2em;
+}
+
 /* screens/player.js's own volumeMenu: a mute toggle beside a real
    horizontal slider rather than the flat option-list shape every other
    small popover here uses, the one real popover whose own content
@@ -6556,6 +6570,10 @@
 
   .jellio-player-pill-sleep {
     display: none !important;
+  }
+
+  .jellio-player-settings-sleep {
+    display: flex !important;
   }
 
   .jellio-player-pill-btn:disabled {
