@@ -6,6 +6,7 @@
 // plus a bare <video> element, see screens/player.js's own header for
 // why that needed no access to jellyfin-web's own playbackManager at
 // all, when there is not).
+import { shareItem } from '../runtime/shareLink.js';
 import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
 import {
   getItemDetails,
@@ -1240,6 +1241,24 @@ export async function renderDetail(root, params) {
       });
   });
   actions.appendChild(watchedButton);
+
+  // A link to this title for anyone else with an account on the server.
+  const shareButton = el('button', iconActionClass);
+  shareButton.type = 'button';
+  shareButton.setAttribute('aria-label', 'Copy a link to share');
+  shareButton.title = 'Copy a link to share';
+  shareButton.appendChild(el('span', 'material-icons share'));
+  shareButton.addEventListener('click', function (event) {
+    event.stopPropagation();
+    shareItem(item)
+      .then(function (result) {
+        if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+      })
+      .catch(function () {
+        showToast('Could not copy the link.');
+      });
+  });
+  actions.appendChild(shareButton);
 
   // Keep it on this device for offline (components/downloads.js): books,
   // manga, audiobooks, films and episodes.
