@@ -28,26 +28,76 @@ export function buildHashUrl(hash) {
   return window.location.origin + window.location.pathname + hash;
 }
 
+export function shareItemLabel(item) {
+  if (!item) return '';
+  if (item.Type === 'Episode') {
+    const series = item.SeriesName || '';
+    const hasSeason = item.ParentIndexNumber != null && item.ParentIndexNumber !== '';
+    const hasEpisode = item.IndexNumber != null && item.IndexNumber !== '';
+    if (series && hasSeason && hasEpisode) {
+      const seasonPart = Number(item.ParentIndexNumber) === 0 ? 'Specials' : 'Season ' + item.ParentIndexNumber;
+      return series + ' - ' + seasonPart + ' Episode ' + item.IndexNumber;
+    }
+    if (series && hasEpisode) {
+      return series + ' - Episode ' + item.IndexNumber;
+    }
+    if (series && item.Name) {
+      return series + ' - ' + item.Name;
+    }
+    if (hasSeason && hasEpisode) {
+      const seasonPart = Number(item.ParentIndexNumber) === 0 ? 'Specials' : 'Season ' + item.ParentIndexNumber;
+      return seasonPart + ' Episode ' + item.IndexNumber;
+    }
+    return item.Name || series || 'Episode';
+  }
+  if (item.Type === 'Season') {
+    const series = item.SeriesName || '';
+    const hasSeason = item.IndexNumber != null && item.IndexNumber !== '';
+    if (series && hasSeason) {
+      const seasonPart = Number(item.IndexNumber) === 0 ? 'Specials' : 'Season ' + item.IndexNumber;
+      return series + ' - ' + seasonPart;
+    }
+    return item.Name || (series ? series + ' Season' : 'Season');
+  }
+  return item.Name || '';
+}
+
+export function formatShareText(label, url) {
+  if (label) {
+    return 'Look at ' + label + ' on Jellyfin - ' + url;
+  }
+  return url;
+}
+
 // Copies the link (and offers the phone's share sheet where there is one).
 // Resolves to 'shared', 'copied' or 'cancelled'.
 export function shareItem(item) {
-  const title = item.Type === 'Episode' && item.SeriesName ? item.SeriesName + ' · ' + item.Name : item.Name || 'Jellio';
-  return shareUrl(title, buildShareUrl(item));
+  const label = shareItemLabel(item);
+  const url = buildShareUrl(item);
+  const text = formatShareText(label, url);
+  return shareUrl(label, url, text);
 }
 
 export function shareHash(title, hash) {
-  return shareUrl(title, buildHashUrl(hash));
+  const url = buildHashUrl(hash);
+  const text = formatShareText(title, url);
+  return shareUrl(title, url, text);
 }
 
-async function shareUrl(title, url) {
+async function shareUrl(title, url, text) {
+  const shareText = text || formatShareText(title, url);
   if (navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
     try {
-      await navigator.share({ title: title, url: url });
+      await navigator.share({
+        title: title || 'Jellio',
+        text: 'Look at ' + (title || 'this') + ' on Jellyfin',
+        url: url,
+      });
       return 'shared';
     } catch (err) {
       if (err && err.name === 'AbortError') return 'cancelled';
     }
   }
-  await copyText(url);
+  await copyText(shareText);
   return 'copied';
 }

@@ -15,21 +15,23 @@ import { el } from '../runtime/dom.js';
 const SKELETON_ROW_CARDS = 6;
 const SKELETON_ROW_COUNT = 4;
 
-function buildSkeletonRow() {
+export function buildSkeletonRow(cardsCount) {
   const row = el('div', 'jellio-home-skeleton-row');
   row.appendChild(el('div', 'jellio-home-skeleton-row-title jellio-shimmer'));
   const track = el('div', 'jellio-home-skeleton-row-track');
-  for (let i = 0; i < SKELETON_ROW_CARDS; i++) {
+  const count = typeof cardsCount === 'number' ? cardsCount : SKELETON_ROW_CARDS;
+  for (let i = 0; i < count; i++) {
     track.appendChild(el('div', 'jellio-home-skeleton-card jellio-shimmer'));
   }
   row.appendChild(track);
   return row;
 }
 
-export function buildHomeSkeleton() {
+export function buildHomeSkeleton(rowCount, cardsCount) {
   const wrap = el('div', 'jellio-home-skeleton');
-  for (let i = 0; i < SKELETON_ROW_COUNT; i++) {
-    wrap.appendChild(buildSkeletonRow());
+  const count = typeof rowCount === 'number' ? rowCount : SKELETON_ROW_COUNT;
+  for (let i = 0; i < count; i++) {
+    wrap.appendChild(buildSkeletonRow(cardsCount));
   }
   return wrap;
 }

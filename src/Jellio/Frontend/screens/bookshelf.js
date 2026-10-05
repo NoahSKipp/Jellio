@@ -18,7 +18,12 @@ import {
   getStreamSeries,
   markReadingItems,
   setPlayed,
+  searchBooksToRequest,
+  requestBook,
+  searchMangaSources,
+  requestMangaSeries,
 } from '../runtime/api.js';
+import { getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { showToast } from '../components/toast.js';
 import {
   groupMangaSeries,
@@ -162,6 +167,34 @@ function authorKey(name) {
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+function normalizeTitle(title) {
+  return String(title || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[,:;(\[].*$/, '')
+    .replace(/\s+vol(ume)?\.?\s*\d+.*$/, '')
+    .replace(/^(the|a|an)\s+/, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function coverSrc(url) {
+  if (!url) return '';
+  if (url.indexOf('/Jellio/') !== 0) return url;
+  return getServerAddress() + url + '&ApiKey=' + encodeURIComponent(getAccessToken() || '');
+}
+
+function thumbnailSrc(path) {
+  if (!path) return '';
+  if (path.indexOf('http') === 0) return path;
+  return getServerAddress() + path + '?ApiKey=' + encodeURIComponent(getAccessToken() || '');
+}
+
+function mangaStatusLabel(status) {
+  return { ONGOING: 'Ongoing', COMPLETED: 'Completed', PUBLISHING_FINISHED: 'Finished', ON_HIATUS: 'On hiatus', CANCELLED: 'Cancelled' }[status] || '';
 }
 
 // One card's worth of what the shelf knows about a book, Jellyfin's own
@@ -588,8 +621,8 @@ export function renderBookshelf(root, params, parentId) {
   searchWrap.appendChild(el('span', 'material-icons search'));
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Filter ' + copy.many + ' by title, author or series';
-  searchInput.setAttribute('aria-label', 'Filter ' + copy.many);
+  searchInput.placeholder = 'Search ' + copy.many + ' and sources…';
+  searchInput.setAttribute('aria-label', 'Search ' + copy.many);
   searchWrap.appendChild(searchInput);
   toolbar.appendChild(searchWrap);
 
@@ -633,8 +666,6 @@ export function renderBookshelf(root, params, parentId) {
   toolbar.appendChild(vocabButton);
   root.appendChild(toolbar);
 
-  // Only offered once an admin has wired up Chaptarr, and scoped to this
-  // shelf's format.
   const requestMount = el('div', 'jellio-book-request-mount');
   root.appendChild(requestMount);
 
@@ -656,7 +687,6 @@ export function renderBookshelf(root, params, parentId) {
   }
   getJellioConfig()
     .then(function (config) {
-      // Chaptarr and Open Library cover books, not manga.
       if (cancelled) return;
       const discover = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
       discover.type = 'button';
@@ -671,43 +701,10 @@ export function renderBookshelf(root, params, parentId) {
             (params.get('mangaLibrary') === '1' ? '&mangaLibrary=1' : ''),
         );
       });
-      if (kind === 'manga' && config && (config.BookRequestsEnabled || config.MangaRequestsEnabled)) {
-        // Chapters from Suwayomi and/or volumes from Chaptarr, in one sheet.
-        const wrap = el('section', 'jellio-book-request');
-        const open = el('button', 'jellio-book-request-toggle');
-        open.type = 'button';
-        open.appendChild(el('span', 'material-icons add'));
-        open.appendChild(el('span', null, copy.requestLabel));
-        open.addEventListener('click', function () {
-          if (closeMangaSheet) closeMangaSheet();
-          closeMangaSheet = openMangaRequestSheet(root, {
-            suwayomi: !!config.MangaRequestsEnabled,
-            chaptarr: !!config.BookRequestsEnabled,
-            openSeries: function (key) {
-              const next = new URLSearchParams(params);
-              next.set('series', key);
-              navigateTo('#/books?' + next.toString());
-            },
-          });
-        });
-        wrap.appendChild(open);
-        wrap.appendChild(discover);
-        wrap.appendChild(updatesButton());
-        requestMount.appendChild(wrap);
-      } else if (config && config.BookRequestsEnabled && kind !== 'manga') {
-        const panel = buildBookRequestPanel(copy.requestType || kind, {
-          label: copy.requestLabel,
-          placeholder: copy.requestPlaceholder,
-          ebookLabel: copy.requestButton,
-        });
-        panel.querySelector('.jellio-book-request-toggle').after(discover);
-        requestMount.appendChild(panel);
-      } else {
-        const wrap = el('section', 'jellio-book-request');
-        wrap.appendChild(discover);
-        if (kind === 'manga') wrap.appendChild(updatesButton());
-        requestMount.appendChild(wrap);
-      }
+      const wrap = el('section', 'jellio-book-request');
+      wrap.appendChild(discover);
+      if (kind === 'manga') wrap.appendChild(updatesButton());
+      requestMount.appendChild(wrap);
     })
     .catch(function () {});
 
@@ -736,6 +733,18 @@ export function renderBookshelf(root, params, parentId) {
   const grid = el('div', 'jellio-library-grid jellio-bookshelf-grid');
   gridSection.appendChild(grid);
   root.appendChild(gridSection);
+
+  const sourcesSection = el('section', 'jellio-bookshelf-sources');
+  sourcesSection.hidden = true;
+  const sourcesHeader = el('div', 'jellio-bookshelf-all-header');
+  const sourcesTitle = el('h2', 'jellio-row-title', 'From sources');
+  sourcesHeader.appendChild(sourcesTitle);
+  sourcesSection.appendChild(sourcesHeader);
+  const sourcesStatus = el('p', 'jellio-book-request-status');
+  sourcesSection.appendChild(sourcesStatus);
+  const sourcesResults = el('div', 'jellio-bookshelf-sources-results');
+  sourcesSection.appendChild(sourcesResults);
+  root.appendChild(sourcesSection);
 
   function currentCategory() {
     return activeCategory ? shelf.Categories.find((category) => category.Id === activeCategory) || null : null;
@@ -826,24 +835,28 @@ export function renderBookshelf(root, params, parentId) {
     grid.classList.toggle('jellio-bookshelf-grid-compact', libraryViewState.display === 'compact');
     grid.classList.toggle('jellio-bookshelf-grid-cover', libraryViewState.display === 'cover');
     grid.textContent = '';
+    const cardOpts = filterText ? Object.assign({ openReader: true }, shelfCardOptions) : shelfCardOptions;
     matches.forEach(function (entry) {
-      grid.appendChild(bookCard(entry, shelfCardOptions));
+      grid.appendChild(bookCard(entry, cardOpts));
     });
 
     const selected = selectedAuthor && entries.find((entry) => entry.authorKey === selectedAuthor);
     if (selected) gridTitle.textContent = 'By ' + selected.author;
-    else if (query) gridTitle.textContent = matches.length + ' ' + (matches.length === 1 ? copy.one : copy.many) + ' found';
+    else if (query) gridTitle.textContent = 'In your library (' + matches.length + ')';
     else if (category) gridTitle.textContent = category.Name;
     else gridTitle.textContent = kind === 'manga' ? 'Library' : 'All ' + copy.many;
 
-    if (!matches.length && category && !query && !selectedAuthor) {
+    if (!matches.length && query) {
+      grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'No ' + copy.many + ' in your library match “' + filterText + '”.'));
+    } else if (!matches.length && category && !query && !selectedAuthor) {
       grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing in ' + category.Name + ' yet. Right click (or hold) a cover and choose Categories to add it.'));
     } else if (!matches.length && entries.length) {
       grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing on this shelf matches.'));
     }
 
     rows.hidden = isFiltering();
-    authorsSection.hidden = !!category || !authorsSection.childElementCount;
+    authorsSection.hidden = !!category || !authorsSection.childElementCount || !!filterText;
+    tabs.hidden = !!filterText;
     clearFilter.hidden = !(filterText || selectedAuthor);
     authorsSection.querySelectorAll('.jellio-bookshelf-author-chip').forEach(function (chip) {
       chip.classList.toggle('jellio-bookshelf-author-chip-active', chip.dataset.author === selectedAuthor);
@@ -950,9 +963,309 @@ export function renderBookshelf(root, params, parentId) {
     rows.appendChild(empty);
   }
 
+  let searchTimer = null;
+  let sourceSearchToken = 0;
+
+  function triggerSourceSearch() {
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    const query = filterText.trim();
+    if (!query || query.length < 2) {
+      sourcesSection.hidden = true;
+      sourcesResults.textContent = '';
+      sourcesStatus.textContent = '';
+      return;
+    }
+    sourcesSection.hidden = false;
+    sourcesStatus.textContent = 'Searching sources…';
+    sourcesResults.textContent = '';
+    searchTimer = setTimeout(function () {
+      executeSourceSearch(query);
+    }, 350);
+  }
+
+  function executeSourceSearch(query) {
+    const thisToken = ++sourceSearchToken;
+    if (kind === 'manga') {
+      searchMangaSources(query)
+        .then(function (response) {
+          if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
+          renderMangaSources(response, query);
+        })
+        .catch(function (err) {
+          if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
+          console.warn('Jellio: manga sources search failed', err);
+          sourcesStatus.textContent = 'Could not search manga sources.';
+        });
+    } else {
+      searchBooksToRequest(query, kind)
+        .then(function (results) {
+          if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
+          renderBookSources(results || [], query);
+        })
+        .catch(function (err) {
+          if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
+          console.warn('Jellio: books sources search failed', err);
+          sourcesStatus.textContent = 'Could not search sources.';
+        });
+    }
+  }
+
+  function renderMangaSources(response, query) {
+    sourcesResults.textContent = '';
+    const sources = (response && response.Sources) || [];
+    let totalResults = 0;
+    sources.forEach(function (s) {
+      if (s.Results) totalResults += s.Results.length;
+    });
+
+    if (!totalResults) {
+      sourcesStatus.textContent = 'No manga found on sources for “' + query + '”.';
+      return;
+    }
+    sourcesStatus.textContent = '';
+    sources.forEach(function (source) {
+      if (!source.Results || !source.Results.length) return;
+      const group = el('section', 'jellio-manga-source');
+      const title = el('div', 'jellio-manga-source-name');
+      title.appendChild(el('span', null, source.SourceName));
+      if (source.Lang && source.Lang !== 'all') {
+        title.appendChild(el('span', 'jellio-manga-source-lang', source.Lang.toUpperCase()));
+      }
+      group.appendChild(title);
+
+      source.Results.forEach(function (manga) {
+        group.appendChild(buildMangaSourceRow(manga));
+      });
+      sourcesResults.appendChild(group);
+    });
+  }
+
+  function buildMangaSourceRow(manga) {
+    const row = el('div', 'jellio-book-request-result');
+    const cover = el('div', 'jellio-book-request-cover');
+    const img = document.createElement('img');
+    img.src = thumbnailSrc(manga.ThumbnailUrl);
+    img.alt = '';
+    img.loading = 'lazy';
+    img.addEventListener('error', function () {
+      img.replaceWith(el('span', 'material-icons collections_bookmark'));
+    });
+    cover.appendChild(img);
+    row.appendChild(cover);
+
+    const info = el('div', 'jellio-book-request-info');
+    info.appendChild(el('div', 'jellio-book-request-title', manga.Title));
+    const byline = [manga.Author, mangaStatusLabel(manga.Status)].filter(Boolean).join(' · ');
+    if (byline) info.appendChild(el('div', 'jellio-book-request-byline', byline));
+
+    const actions = el('div', 'jellio-book-request-actions');
+
+    const normManga = normalizeTitle(manga.Title);
+    const inStream = loadedItems && loadedItems.stream && loadedItems.stream.find(function (s) {
+      return s.MangaId === manga.MangaId || normalizeTitle(s.Title) === normManga;
+    });
+    const inEntries = entries.find(function (e) {
+      return normalizeTitle(e.item.Name) === normManga;
+    });
+    const isInLibrary = manga.InLibrary || !!inStream || !!inEntries;
+
+    function openSeriesAction(key) {
+      const next = new URLSearchParams(params);
+      next.set('series', key);
+      navigateTo('#/books?' + next.toString());
+    }
+
+    if (isInLibrary) {
+      const button = el('button', 'jellio-book-request-action jellio-book-request-action-read');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons menu_book'));
+      button.appendChild(el('span', null, 'Read'));
+      button.addEventListener('click', function () {
+        const key = inStream ? inStream.Key : mangaSeriesKey(manga.Title);
+        openSeriesAction(key);
+      });
+      actions.appendChild(button);
+    } else {
+      const button = el('button', 'jellio-book-request-action');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons library_add'));
+      const text = el('span', null, 'Add to library');
+      button.appendChild(text);
+
+      button.addEventListener('click', function () {
+        button.disabled = true;
+        text.textContent = 'Adding…';
+        requestMangaSeries(manga.MangaId, manga.Title, true)
+          .then(function (res) {
+            if (res && res.Status === 'duplicate') {
+              showToast('“' + manga.Title + '” is already in your library.');
+              button.disabled = false;
+              text.textContent = 'Read';
+              button.classList.add('jellio-book-request-action-read');
+              const icon = button.querySelector('.material-icons');
+              if (icon) icon.textContent = 'menu_book';
+              button.onclick = function () {
+                openSeriesAction(res.Existing ? res.Existing.Key : mangaSeriesKey(manga.Title));
+              };
+              return;
+            }
+            if (!res || (res.Status !== 'added' && res.Status !== 'exists')) {
+              text.textContent = (res && res.Message) || 'Failed to add';
+              button.disabled = false;
+              button.classList.add('jellio-book-request-action-error');
+              return;
+            }
+            invalidateStreamLibrary();
+            showToast('Added “' + manga.Title + '” to library');
+            text.textContent = 'Read';
+            button.disabled = false;
+            button.classList.add('jellio-book-request-action-read');
+            const icon = button.querySelector('.material-icons');
+            if (icon) icon.textContent = 'menu_book';
+            button.onclick = function () {
+              openSeriesAction(mangaSeriesKey(manga.Title));
+            };
+            getStreamLibrary().then(function (stream) {
+              if (loadedItems) loadedItems.stream = stream;
+            }).catch(function () {});
+          })
+          .catch(function () {
+            text.textContent = 'Failed to add';
+            button.disabled = false;
+            button.classList.add('jellio-book-request-action-error');
+          });
+      });
+      actions.appendChild(button);
+    }
+
+    info.appendChild(actions);
+    row.appendChild(info);
+    return row;
+  }
+
+  function renderBookSources(results, query) {
+    sourcesResults.textContent = '';
+    if (!results || !results.length) {
+      sourcesStatus.textContent = 'No ' + copy.many + ' found on sources for “' + query + '”.';
+      return;
+    }
+    sourcesStatus.textContent = '';
+    const container = el('div', 'jellio-book-request-results');
+    results.forEach(function (result) {
+      if (result && result.WorkId) {
+        container.appendChild(buildBookSourceRow(result));
+      }
+    });
+    sourcesResults.appendChild(container);
+  }
+
+  function buildBookSourceRow(result) {
+    const isAudiobook = kind === 'audiobook';
+    const row = el('div', 'jellio-book-request-result');
+    const cover = el('div', 'jellio-book-request-cover');
+    if (result.CoverUrl) {
+      const img = document.createElement('img');
+      img.src = coverSrc(result.CoverUrl);
+      img.alt = '';
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', function () {
+        img.replaceWith(el('span', 'material-icons ' + (isAudiobook ? 'headphones' : 'menu_book')));
+      });
+      cover.appendChild(img);
+    } else {
+      cover.appendChild(el('span', 'material-icons ' + (isAudiobook ? 'headphones' : 'menu_book')));
+    }
+    row.appendChild(cover);
+
+    const info = el('div', 'jellio-book-request-info');
+    info.appendChild(el('div', 'jellio-book-request-title', result.Title || 'Untitled'));
+    const byline = [result.Author, result.Year].filter(Boolean).join(' · ');
+    if (byline) info.appendChild(el('div', 'jellio-book-request-byline', byline));
+    if (result.SeriesTitle) info.appendChild(el('div', 'jellio-book-request-byline', result.SeriesTitle));
+
+    const actions = el('div', 'jellio-book-request-actions');
+
+    const inLib = entries.find(function (e) {
+      return normalizeTitle(e.item.Name) === normalizeTitle(result.Title);
+    });
+    const hasFormat = isAudiobook ? result.HasAudiobook : result.HasEbook;
+    const isInLibrary = !!inLib || !!hasFormat;
+
+    if (isInLibrary) {
+      const button = el('button', 'jellio-book-request-action jellio-book-request-action-read');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons ' + (isAudiobook ? 'headphones' : 'menu_book')));
+      button.appendChild(el('span', null, isAudiobook ? 'Listen' : 'Read'));
+      button.addEventListener('click', function () {
+        if (inLib) {
+          navigateTo('#/' + (isAudiobook ? 'listen' : 'read') + '?id=' + inLib.item.Id);
+        } else {
+          showToast('Already tracked in your library / Chaptarr');
+        }
+      });
+      actions.appendChild(button);
+    } else {
+      const button = el('button', 'jellio-book-request-action');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons library_add'));
+      const text = el('span', null, 'Add to library');
+      button.appendChild(text);
+
+      button.addEventListener('click', function () {
+        button.disabled = true;
+        text.textContent = 'Adding…';
+        requestBook(result, kind)
+          .then(function (response) {
+            const status = response && response.Status;
+            if (status === 'added' || status === 'pending' || status === 'exists') {
+              showToast('Added “' + result.Title + '” to library');
+              text.textContent = 'Added ✓';
+              button.classList.add('jellio-book-request-action-done');
+              if (response.Message) button.title = response.Message;
+              return;
+            }
+            text.textContent = (response && response.Message) || 'Failed to add';
+            button.disabled = false;
+            button.classList.add('jellio-book-request-action-error');
+          })
+          .catch(function (err) {
+            console.warn('Jellio: book request failed', err);
+            text.textContent = 'Failed to add';
+            button.disabled = false;
+            button.classList.add('jellio-book-request-action-error');
+          });
+      });
+      actions.appendChild(button);
+    }
+
+    info.appendChild(actions);
+    row.appendChild(info);
+    return row;
+  }
+
   searchInput.addEventListener('input', function () {
     filterText = searchInput.value.trim();
     renderGrid();
+    triggerSourceSearch();
+  });
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      filterText = '';
+      selectedAuthor = '';
+      searchInput.value = '';
+      if (searchTimer) {
+        clearTimeout(searchTimer);
+        searchTimer = null;
+      }
+      sourcesSection.hidden = true;
+      sourcesResults.textContent = '';
+      sourcesStatus.textContent = '';
+      renderGrid();
+    }
   });
   sortSelect.addEventListener('change', function () {
     const option = SORTS.find((entry) => entry.value === sortSelect.value);
@@ -967,6 +1280,13 @@ export function renderBookshelf(root, params, parentId) {
     filterText = '';
     selectedAuthor = '';
     searchInput.value = '';
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    sourcesSection.hidden = true;
+    sourcesResults.textContent = '';
+    sourcesStatus.textContent = '';
     renderGrid();
   });
 
@@ -1064,6 +1384,7 @@ export function renderBookshelf(root, params, parentId) {
 
   return function () {
     cancelled = true;
+    if (searchTimer) clearTimeout(searchTimer);
     stopShelf();
     if (closeMangaSheet) closeMangaSheet();
   };
