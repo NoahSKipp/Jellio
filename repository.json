@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.54.0] - 2026-10-05\n\n### 🚀 Features\n\n- In-library source search, skeleton loading, and formatted share text\n",
+        "checksum": "c21d4e8d56bea28d1f8db1a5dd662249",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.54.0/jellio_1.54.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-05T10:47:09Z",
+        "version": "1.54.0"
+      },
+      {
         "changelog": "## [1.53.0] - 2026-10-05\n\n### 🚀 Features\n\n- Add cast button and smart tv streaming support in player\n",
         "checksum": "c4c693f6977b03928d6e16d270efdd06",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.53.0/jellio_1.53.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T23:40:13Z",
         "version": "1.33.5"
-      },
-      {
-        "changelog": "## [1.33.4] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Let video downloads get a conversion from Jellyfin, and stop waiting on a stalled one\n",
-        "checksum": "237f4269bc6932b9cdbcc79357017466",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.4/jellio_1.33.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T23:07:38Z",
-        "version": "1.33.4"
       }
     ]
   }
