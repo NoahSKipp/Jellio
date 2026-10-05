@@ -1656,8 +1656,21 @@
 
 .jellio-bookshelf-rows[hidden],
 .jellio-bookshelf-authors[hidden],
-.jellio-bookshelf-all[hidden] {
+.jellio-bookshelf-all[hidden],
+.jellio-bookshelf-sources[hidden] {
   display: none;
+}
+
+.jellio-bookshelf-sources {
+  padding: 0 0 clamp(24px, 3vw, 40px);
+}
+
+.jellio-bookshelf-sources-results {
+  padding: 0 var(--jellio-safe-gutter);
+}
+
+.jellio-bookshelf-sources .jellio-book-request-status {
+  padding: 0 var(--jellio-safe-gutter);
 }
 
 .jellio-bookshelf-authors {
@@ -2641,6 +2654,18 @@
 
 .jellio-book-request-action-error {
   border-color: #c0392b;
+}
+
+.jellio-book-request-action-read {
+  background: var(--jellio-accent, #6366f1);
+  color: #fff;
+  border-color: transparent;
+}
+
+.jellio-book-request-action-read:hover:not(:disabled),
+.jellio-book-request-action-read:focus-visible {
+  background: var(--jellio-accent-hover, #4f46e5);
+  color: #fff;
 }
 
 .jellio-library-grid {
@@ -8744,6 +8769,13 @@
     transparent 60%
   );
   animation: jellio-shimmer-sweep 1200ms linear infinite;
+}
+
+.jellio-hero-loading .jellio-hero-content,
+.jellio-hero-loading .jellio-hero-nav,
+.jellio-hero-loading .jellio-hero-dots {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .jellio-hero-backdrop-layer {

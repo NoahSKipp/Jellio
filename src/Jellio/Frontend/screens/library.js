@@ -203,6 +203,15 @@ export async function renderLibrary(root, params) {
   const rows = el('div', 'jellio-rows');
   root.appendChild(rows);
 
+  const skeleton = buildHomeSkeleton(4);
+  rows.appendChild(skeleton);
+  let skeletonRemoved = false;
+  function removeSkeleton() {
+    if (skeletonRemoved) return;
+    skeletonRemoved = true;
+    if (skeleton.parentNode) skeleton.parentNode.removeChild(skeleton);
+  }
+
   // Real feedback pointed at Harbor's own Shows tab, a mood-led line
   // above its carousel that changes with the reader's own time of day:
   // only the Shows library carries one, Movies has no equivalent real
@@ -330,16 +339,21 @@ export async function renderLibrary(root, params) {
             const row = buildRow(genres[index], items, null, function () {
               return getGenreItems(parentId, itemType, genres[index], ROW_LIST_LIMIT);
             });
-            if (row) rows.appendChild(row);
+            if (row) rows.insertBefore(row, skeleton.parentNode === rows ? skeleton : null);
           }
         });
+        removeSkeleton();
       });
     })
     .catch(function (err) {
       console.warn('Jellio: could not load genre rows', err);
+      removeSkeleton();
     });
 
-  return destroy;
+  return function () {
+    removeSkeleton();
+    destroy();
+  };
 }
 
 const MAX_ANIME_ROWS = 8;

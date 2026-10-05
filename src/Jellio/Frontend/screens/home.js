@@ -412,8 +412,12 @@ async function renderWatchlist(root, activeList) {
   const isGroup = activeList === 'group' && isGrouplistEnabled();
   const emptyMessage = isGroup ? 'Nothing on your Grouplist yet.' : 'Nothing on your watchlist yet.';
 
+  const skeleton = buildHomeSkeleton(3);
+  root.appendChild(skeleton);
+
   try {
     const items = await (isGroup ? getGrouplistItems() : getWatchlistItems());
+    skeleton.remove();
     const movies = items.filter(function (item) {
       return item.Type === 'Movie';
     });
@@ -430,6 +434,7 @@ async function renderWatchlist(root, activeList) {
       root.appendChild(el('p', 'jellio-service-empty', emptyMessage));
     }
   } catch (err) {
+    skeleton.remove();
     console.warn('Jellio: could not load ' + (isGroup ? 'grouplist' : 'watchlist'), err);
   }
 }
@@ -779,16 +784,13 @@ export async function renderHome(root, params) {
   const rows = el('div', 'jellio-rows');
   root.appendChild(rows);
 
-  // Nuvio's own real shimmer skeleton (components/homeSkeleton.js's
-  // own buildHomeSkeleton(), matching that same real reference before
-  // writing this) stands in for these rows the instant this screen
-  // starts building them, removed the moment the first real one
-  // actually lands. Only ever visible at all on the same cache miss
-  // preloadHomeSectionsWithProgress()'s own real progress callback
-  // below already only fires on: the common already-preloaded path
-  // never sees it, since sections has usually already arrived by the
-  // time this reaches removeChild().
-  const skeleton = buildHomeSkeleton();
+  // Shimmer skeleton (components/homeSkeleton.js's own buildHomeSkeleton())
+  // stands in for rows while this screen loads them. Rather than removing the
+  // entire skeleton the instant the first row lands (which left an empty void
+  // below while expensive catalog/genre/recommendation rows were still fetching),
+  // skeleton rows stay at the bottom of the container and are reduced
+  // progressively, finally removed once all sections have settled.
+  const skeleton = buildHomeSkeleton(4);
   rows.appendChild(skeleton);
   let skeletonRemoved = false;
   function removeSkeleton() {
@@ -829,7 +831,6 @@ export async function renderHome(root, params) {
   let active = true;
   function placeSection(section) {
     if (!active) return;
-    removeSkeleton();
     // A rebuilt row replaces the one already showing under the same key.
     const key = section.dataset.jellioRowKey;
     if (key) {
@@ -838,10 +839,21 @@ export async function renderHome(root, params) {
     }
     const order = Number(section.dataset.jellioHomeOrder || 0);
     const after = Array.from(rows.children).find(function (child) {
-      return child !== section && Number(child.dataset.jellioHomeOrder || 0) > order;
+      return child !== section && child !== skeleton && Number(child.dataset.jellioHomeOrder || 0) > order;
     });
-    rows.insertBefore(section, after || null);
+    const insertTarget = after || (skeleton.parentNode === rows ? skeleton : null);
+    rows.insertBefore(section, insertTarget);
     applyHomeCustomization(rows, editMode);
+
+    // As real rows arrive, reduce placeholder rows but keep at least 2
+    // while sections are still loading, so the reader sees shimmering
+    // skeletons indicating more rows below rather than a blank void.
+    if (!skeletonRemoved && skeleton.parentNode === rows) {
+      const placeholders = skeleton.querySelectorAll('.jellio-home-skeleton-row');
+      if (placeholders.length > 2) {
+        placeholders[placeholders.length - 1].remove();
+      }
+    }
   }
   // Once a build settles, the current rows are authoritative: re-place
   // them in order, and drop personal rows a rebuild no longer produced
@@ -854,6 +866,7 @@ export async function renderHome(root, params) {
       : cheapBuilt.concat(expensiveBuilt);
     current.forEach(placeSection);
     Array.from(rows.children).forEach(function (child) {
+      if (child === skeleton) return;
       const order = Number(child.dataset.jellioHomeOrder);
       if (order < EXPENSIVE_ORDER_BASE) {
         const inCurrent = current.some(function (sec) {
@@ -864,7 +877,10 @@ export async function renderHome(root, params) {
     });
   }
   const subscription = preloadHomeSectionsWithProgress(placeSection);
-  subscription.promise.then(settleRows);
+  subscription.promise.then(settleRows).catch(function (err) {
+    console.warn('Jellio: home sections promise failed', err);
+    removeSkeleton();
+  });
 
   // invalidateHomeSections() above already re-derives Continue Watching
   // fresh on the NEXT visit to this screen; this covers the one real
@@ -895,6 +911,7 @@ export async function renderHome(root, params) {
 
   return function cleanup() {
     active = false;
+    removeSkeleton();
     subscription.unsubscribe();
     window.clearTimeout(userDataRefreshTimer);
     unsubscribeUserData();

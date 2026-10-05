@@ -6,6 +6,7 @@
 import { getCollections, getCollectionItems, collectionKind, getImageUrl } from '../runtime/api.js';
 import { groupByService, logoUrl, rowTitle } from '../components/services.js';
 import { buildCard } from '../components/card.js';
+import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { navigateTo } from '../runtime/router.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -203,7 +204,11 @@ export async function renderService(root, params) {
     return;
   }
 
-  renderLoading(root);
+  root.appendChild(buildHeader(service, null));
+  const skeletonMount = el('div', 'jellio-rows');
+  const skeleton = buildHomeSkeleton(4);
+  skeletonMount.appendChild(skeleton);
+  root.appendChild(skeletonMount);
 
   // Not awaited: app.js's own sync() queue only starts the next real
   // navigation once this function's own returned promise resolves, and
