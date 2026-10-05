@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.54.2] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Resolve cast button double toggle preventing popover from opening\n",
+        "checksum": "c062c3da62c7377721017659224622f3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.54.2/jellio_1.54.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-05T15:32:03Z",
+        "version": "1.54.2"
+      },
+      {
         "changelog": "## [1.54.1] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Keep skeleton beneath loaded rows, remove duplicate cast, declutter mobile player and media actions\n",
         "checksum": "097cb85c8866d3d55d5067bdf3ce226d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.54.1/jellio_1.54.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-28T11:44:43Z",
         "version": "1.35.0"
-      },
-      {
-        "changelog": "## [1.34.0] - 2026-09-28\n\n### 🚀 Features\n\n- Download episodes and seasons from a show's episode list, and fold Download into More\n\n### ⚡ Performance\n\n- Repackage compatible 1080p videos for download instead of re-encoding them\n- Download original video files in parallel parts when the server allows it\n",
-        "checksum": "5edd724d63625f974bf4f9d6d0967b50",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.34.0/jellio_1.34.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-28T10:55:34Z",
-        "version": "1.34.0"
       }
     ]
   }
