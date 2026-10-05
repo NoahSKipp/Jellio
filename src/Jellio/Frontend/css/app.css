@@ -12616,3 +12616,10 @@
   font-size: 0.85rem;
   opacity: 0.65;
 }
+
+.jellio-detail-skeleton-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(40px, 10vh, 100px) 0;
+}
