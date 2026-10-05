@@ -1188,6 +1188,9 @@ export async function renderDetail(root, params) {
     });
   }
 
+  const actionsIcons = el('div', 'jellio-detail-actions-icons');
+  actions.appendChild(actionsIcons);
+
   const watchlistButton = el('button', iconActionClass);
   watchlistButton.type = 'button';
   function paintWatchlist() {
@@ -1215,7 +1218,7 @@ export async function renderDetail(root, params) {
         watchlistButton.disabled = false;
       });
   });
-  actions.appendChild(watchlistButton);
+  actionsIcons.appendChild(watchlistButton);
 
   const watchedButton = el('button', iconActionClass);
   watchedButton.type = 'button';
@@ -1240,7 +1243,7 @@ export async function renderDetail(root, params) {
         watchedButton.disabled = false;
       });
   });
-  actions.appendChild(watchedButton);
+  actionsIcons.appendChild(watchedButton);
 
   // A link to this title for anyone else with an account on the server.
   const shareButton = el('button', iconActionClass);
@@ -1258,7 +1261,7 @@ export async function renderDetail(root, params) {
         showToast('Could not copy the link.');
       });
   });
-  actions.appendChild(shareButton);
+  actionsIcons.appendChild(shareButton);
 
   // Keep it on this device for offline (components/downloads.js): books,
   // manga, audiobooks, films and episodes.
@@ -1267,7 +1270,7 @@ export async function renderDetail(root, params) {
   const downloadButton =
     buildDownloadButton(item, { className: iconActionClass, compact: true }) ||
     buildEpisodesDownloadButton(item, { className: iconActionClass });
-  if (downloadButton) actions.appendChild(downloadButton);
+  if (downloadButton) actionsIcons.appendChild(downloadButton);
 
   // Real Jellyfin's own native like/dislike (UserData.Likes, POST/DELETE
   // /Users/{id}/Items/{id}/Rating), not a second real system this
@@ -1353,7 +1356,7 @@ export async function renderDetail(root, params) {
         thumbsUpButton.disabled = false;
       });
   });
-  actions.appendChild(thumbsUpButton);
+  actionsIcons.appendChild(thumbsUpButton);
 
   thumbsDownButton.addEventListener('click', function (event) {
     event.stopPropagation();
@@ -1374,7 +1377,7 @@ export async function renderDetail(root, params) {
         thumbsDownButton.disabled = false;
       });
   });
-  actions.appendChild(thumbsDownButton);
+  actionsIcons.appendChild(thumbsDownButton);
 
   // Play alone already reopens components/streamPicker.js's own picker
   // whenever there is real more than one source and "remember my
@@ -1396,7 +1399,7 @@ export async function renderDetail(root, params) {
       event.stopPropagation();
       openStreamPicker(item, { forceChoice: true });
     });
-    actions.appendChild(changeStreamButton);
+    actionsIcons.appendChild(changeStreamButton);
   }
 
   if (item.Type === 'Series' || item.Type === 'Movie') {
@@ -1436,7 +1439,7 @@ export async function renderDetail(root, params) {
           });
       });
     });
-    actions.appendChild(muteToggle);
+    actionsIcons.appendChild(muteToggle);
   }
 
   const isAnimeSeries =
@@ -1459,7 +1462,7 @@ export async function renderDetail(root, params) {
         onChange: function () {},
       });
     });
-    actions.appendChild(trackerButton);
+    actionsIcons.appendChild(trackerButton);
   }
 
   // Real feedback: Watchlist, Mark Watched and Change Stream used to
@@ -1529,7 +1532,7 @@ export async function renderDetail(root, params) {
       expandActions();
     }
   });
-  actions.appendChild(moreButton);
+  actionsIcons.appendChild(moreButton);
 
   heroContent.appendChild(actions);
 

@@ -919,17 +919,6 @@ export async function renderPlayer(root, params) {
     topbarActions.appendChild(pipButton);
   }
 
-  const castTopButton = el('button', 'jellio-player-back jellio-player-cast');
-  castTopButton.type = 'button';
-  castTopButton.setAttribute('aria-label', 'Cast to Smart TV / device');
-  const castTopIcon = el('span', 'material-icons cast');
-  castTopIcon.setAttribute('aria-hidden', 'true');
-  castTopButton.appendChild(castTopIcon);
-  castTopButton.addEventListener('click', function () {
-    toggleCastMenu(castTopButton);
-  });
-  topbarActions.appendChild(castTopButton);
-
   // Leaving the tab while playing moves the video into picture in
   // picture (a browser only allows that from a media session handler or
   // a user action, so both are tried), and coming back moves it home.
@@ -1446,16 +1435,29 @@ export async function renderPlayer(root, params) {
   }
 
   const volumeButton = buildPillButton('volume_up', 'Volume');
+  volumeButton.classList.add('jellio-player-pill-volume');
   const speedButton = buildPillButton('speed', '1x');
+  speedButton.classList.add('jellio-player-pill-speed');
   const subtitleButton = buildPillButton('subtitles', 'Subtitles');
+  subtitleButton.classList.add('jellio-player-pill-subtitles');
   const audioButton = buildPillButton('graphic_eq', 'Audio');
+  audioButton.classList.add('jellio-player-pill-audio');
   const sourceButton = buildPillButton('swap_horiz', 'Sources');
+  sourceButton.classList.add('jellio-player-pill-sources');
   sourceButton.disabled = true;
   const episodesButton = buildPillButton('video_library', 'Episodes');
+  episodesButton.classList.add('jellio-player-pill-episodes');
   episodesButton.disabled = true;
   const sleepButton = buildPillButton('bedtime', 'Sleep');
+  sleepButton.classList.add('jellio-player-pill-sleep');
   const castButton = buildPillButton('cast', 'Cast');
+  castButton.classList.add('jellio-player-pill-cast');
   const settingsButton = buildPillButton('settings', 'Settings');
+  settingsButton.classList.add('jellio-player-pill-settings');
+
+  castButton.addEventListener('click', function () {
+    toggleCastMenu();
+  });
 
   pill.appendChild(volumeButton);
   pill.appendChild(speedButton);
@@ -2592,23 +2594,13 @@ export async function renderPlayer(root, params) {
     refreshCastMenu();
   });
 
-  toggleCastMenu = function (originBtn) {
+  toggleCastMenu = function () {
     closePopovers(castMenu);
     const nowHidden = castMenu.classList.toggle('jellio-player-popover-hidden');
-    if (originBtn) originBtn.setAttribute('aria-expanded', String(!nowHidden));
     castButton.setAttribute('aria-expanded', String(!nowHidden));
     if (!nowHidden) {
-      if (originBtn && originBtn === castTopButton) {
-        const shellRect = shell.getBoundingClientRect();
-        const btnRect = castTopButton.getBoundingClientRect();
-        castMenu.style.top = (btnRect.bottom - shellRect.top + 8) + 'px';
-        castMenu.style.bottom = 'auto';
-        castMenu.style.left = 'auto';
-        castMenu.style.right = Math.max(16, shellRect.right - btnRect.right) + 'px';
-      } else {
-        castMenu.style.top = 'auto';
-        positionPopover(castButton, castMenu);
-      }
+      castMenu.style.top = 'auto';
+      positionPopover(castButton, castMenu);
       refreshCastMenu();
     }
     wakeControls();
@@ -2670,10 +2662,8 @@ export async function renderPlayer(root, params) {
 
   const unsubscribeCast = addCastListener(function (castState) {
     const isCasting = Boolean(castState);
-    castTopButton.classList.toggle('jellio-player-cast-active', isCasting);
     castButton.classList.toggle('jellio-player-pill-btn-active', isCasting);
     const iconName = isCasting ? 'cast_connected' : 'cast';
-    castTopIcon.className = 'material-icons ' + iconName;
     const pillIcon = castButton.querySelector('.material-icons');
     if (pillIcon) pillIcon.className = 'material-icons ' + iconName;
 
@@ -2724,7 +2714,23 @@ export async function renderPlayer(root, params) {
   });
   settingsMenu.appendChild(autoSkipOption);
 
-  const shortcutsOption = el('button', 'jellio-player-popover-option');
+  const sleepOption = el('button', 'jellio-player-popover-option');
+  sleepOption.type = 'button';
+  const sleepOptionIcon = el('span', 'material-icons bedtime');
+  sleepOptionIcon.setAttribute('aria-hidden', 'true');
+  sleepOption.appendChild(sleepOptionIcon);
+  sleepOption.appendChild(el('span', '', 'Sleep Timer'));
+  sleepOption.addEventListener('click', function () {
+    closePopovers(sleepMenu);
+    const nowHidden = sleepMenu.classList.toggle('jellio-player-popover-hidden');
+    settingsButton.setAttribute('aria-expanded', 'false');
+    sleepButton.setAttribute('aria-expanded', String(!nowHidden));
+    if (!nowHidden) positionPopover(settingsButton, sleepMenu);
+    wakeControls();
+  });
+  settingsMenu.appendChild(sleepOption);
+
+  const shortcutsOption = el('button', 'jellio-player-popover-option jellio-player-popover-shortcuts-option');
   shortcutsOption.type = 'button';
   shortcutsOption.appendChild(el('span', '', 'Keyboard Shortcuts'));
   const shortcutHint = el('span', 'jellio-player-shortcut-badge', '?');
@@ -3523,7 +3529,7 @@ export async function renderPlayer(root, params) {
     if (screenTornDown || isTypingTarget(event.target)) return;
     if (event.altKey && (event.key === 'c' || event.key === 'C')) {
       event.preventDefault();
-      toggleCastMenu(castTopButton);
+      toggleCastMenu();
       return;
     }
     if (event.ctrlKey || event.altKey || event.metaKey) return;

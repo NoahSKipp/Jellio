@@ -3029,6 +3029,12 @@
   width: 100%;
 }
 
+.jellio-detail-actions-icons {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
 /* Only a Play/Change Stream/More row (a Movie or Episode, never a
    Series, screens/detail.js's own real isSeries check) ever carries
    this modifier. More's own real 2.8em width plus the same real 0.6em
@@ -3251,17 +3257,49 @@
 
   .jellio-detail-actions-expanded .jellio-detail-play {
     flex: 1 1 100%;
+    width: 100%;
   }
 
   .jellio-detail-actions-expanded.jellio-detail-actions-has-more {
     padding-right: 0;
   }
 
+  .jellio-detail-actions-icons {
+    display: flex;
+    align-items: center;
+  }
+
+  .jellio-detail-actions-expanded .jellio-detail-actions-icons {
+    flex: 1 1 100%;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .jellio-detail-actions-expanded .jellio-detail-actions-icons::-webkit-scrollbar {
+    display: none;
+  }
+
+  .jellio-detail-actions-expanded .jellio-detail-icon-action-collapsible {
+    width: clamp(2.3em, 7.5vw, 2.7em);
+    height: clamp(2.3em, 7.5vw, 2.7em);
+    margin-left: clamp(0.25em, 1.2vw, 0.45em);
+    flex: 0 0 auto;
+  }
+
   .jellio-detail-actions-expanded .jellio-detail-icon-action-more {
+    width: clamp(2.3em, 7.5vw, 2.7em);
+    height: clamp(2.3em, 7.5vw, 2.7em);
+    margin-left: clamp(0.25em, 1.2vw, 0.45em);
     position: static;
     top: auto;
     right: auto;
     transform: none;
+    flex: 0 0 auto;
   }
 
   .jellio-detail-actions-expanded .jellio-detail-icon-action-more:hover {
@@ -5992,8 +6030,9 @@
 
 /* Cast to Smart TV popover & floating control banner */
 .jellio-player-cast-popover {
-  min-width: 20em;
-  max-width: min(92vw, 26em);
+  min-width: 16em;
+  max-width: min(calc(100vw - 32px), 24em);
+  box-sizing: border-box;
   padding: 0.6em;
   gap: 0.4em;
 }
@@ -6499,6 +6538,10 @@
 }
 
 @media (max-width: 47.99em) {
+  .jellio-player-keyboard {
+    display: none !important;
+  }
+
   .jellio-player-center-controls {
     gap: clamp(20px, 12vw, 40px);
   }
@@ -6507,13 +6550,37 @@
     width: 100vw;
   }
 
+  .jellio-player-pill-volume {
+    display: none !important;
+  }
+
+  .jellio-player-pill-sleep {
+    display: none !important;
+  }
+
+  .jellio-player-pill-btn:disabled {
+    display: none !important;
+  }
+
   .jellio-player-pill-btn-label {
     display: none;
   }
 
+  .jellio-player-pill {
+    gap: 0.25em;
+    padding: 0.35em 0.6em;
+    max-width: calc(100vw - 24px);
+  }
+
   .jellio-player-pill-btn {
-    min-width: 2.6em;
-    padding: 0.6em;
+    min-width: 2.3em;
+    padding: 0.5em 0.4em;
+  }
+}
+
+@media (pointer: coarse) {
+  .jellio-player-keyboard {
+    display: none !important;
   }
 }
 

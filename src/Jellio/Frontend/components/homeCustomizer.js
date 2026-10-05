@@ -234,10 +234,20 @@ export function applyHomeCustomization(rowsContainer, editMode) {
   const customization = getHomeCustomization();
   const order = effectiveOrder(liveKeys, customization);
 
+  const skeleton = rowsContainer.querySelector(':scope > .jellio-home-skeleton');
   order.forEach(function (key) {
     const wrapper = byKey.get(key);
-    if (wrapper) rowsContainer.appendChild(wrapper);
+    if (wrapper) {
+      if (skeleton && skeleton.parentNode === rowsContainer) {
+        rowsContainer.insertBefore(wrapper, skeleton);
+      } else {
+        rowsContainer.appendChild(wrapper);
+      }
+    }
   });
+  if (skeleton && skeleton.parentNode === rowsContainer) {
+    rowsContainer.appendChild(skeleton);
+  }
 
   function onChange(mutate) {
     const current = getHomeCustomization();
