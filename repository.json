@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.52.1] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Center the loading spinner on a title page\n",
+        "checksum": "9182a33712d6da661c38e161ffd2b95f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.52.1/jellio_1.52.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-05T08:44:47Z",
+        "version": "1.52.1"
+      },
+      {
         "changelog": "## [1.52.0] - 2026-10-05\n\n### 🚀 Features\n\n- Share button that copies a link to a title\n- Share links from cards, manga series and manga chapters too\n",
         "checksum": "28dbc92d031b95088b42f752c5637894",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.52.0/jellio_1.52.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-27T22:05:51Z",
         "version": "1.33.3"
-      },
-      {
-        "changelog": "## [1.33.2] - 2026-09-27\n\n### 🐛 Bug Fixes\n\n- Say why the reader couldn't open a book\n- Show the download menu, and download whole seasons from series pages\n",
-        "checksum": "3a34036c9b1353084aa4079cf701c572",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.33.2/jellio_1.33.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-27T21:40:35Z",
-        "version": "1.33.2"
       }
     ]
   }
