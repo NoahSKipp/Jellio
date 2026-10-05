@@ -17,6 +17,22 @@ import { isAutoPipEnabled } from '../runtime/pipSettings.js';
 import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled } from '../runtime/offline.js';
 import { renderOfflinePlayer } from './offlinePlayer.js';
 import {
+  initGoogleCast,
+  getAvailableCastTargets,
+  castToJellyfinSession,
+  castToGoogleCast,
+  promptRemotePlayback,
+  promptAirPlay,
+  sendRemotePlayPause,
+  sendRemoteSeek,
+  sendRemoteVolume,
+  disconnectCast,
+  getActiveCast,
+  addCastListener,
+  isGoogleCastSupported,
+  isAirPlaySupported,
+} from '../runtime/cast.js';
+import {
   getItemDetails,
   getPlaybackInfo,
   getMediaSources,
@@ -712,6 +728,9 @@ export async function renderPlayer(root, params) {
   video.preservesPitch = true;
   video.webkitPreservesPitch = true;
   video.mozPreservesPitch = true;
+  video.setAttribute('x-webkit-airplay', 'allow');
+  video.setAttribute('airplay', 'allow');
+  initGoogleCast().catch(function () {});
   const savedVolume = loadVolumePreference();
   video.volume = savedVolume.volume;
   video.muted = savedVolume.muted;
@@ -854,6 +873,7 @@ export async function renderPlayer(root, params) {
   let openShortcutsModal = function () {};
   let closeShortcutsModal = function () {};
   let toggleShortcutsModal = function () {};
+  let toggleCastMenu = function () {};
   let syncMediaSession = function () {};
   let syncMediaPosition = function () {};
 
@@ -898,6 +918,17 @@ export async function renderPlayer(root, params) {
     });
     topbarActions.appendChild(pipButton);
   }
+
+  const castTopButton = el('button', 'jellio-player-back jellio-player-cast');
+  castTopButton.type = 'button';
+  castTopButton.setAttribute('aria-label', 'Cast to Smart TV / device');
+  const castTopIcon = el('span', 'material-icons cast');
+  castTopIcon.setAttribute('aria-hidden', 'true');
+  castTopButton.appendChild(castTopIcon);
+  castTopButton.addEventListener('click', function () {
+    toggleCastMenu(castTopButton);
+  });
+  topbarActions.appendChild(castTopButton);
 
   // Leaving the tab while playing moves the video into picture in
   // picture (a browser only allows that from a media session handler or
@@ -1207,6 +1238,12 @@ export async function renderPlayer(root, params) {
   playPauseIcon.setAttribute('aria-hidden', 'true');
   playPauseButton.appendChild(playPauseIcon);
   playPauseButton.addEventListener('click', function () {
+    if (getActiveCast()) {
+      sendRemotePlayPause(getActiveCast().isPaused).catch(function (err) {
+        console.warn('Jellio: could not send Cast play/pause', err);
+      });
+      return;
+    }
     // In an active real SyncPlay group, a plain local play()/pause()
     // here would only ever move this one reader's own player: real
     // SyncPlay instead has every group member, initiator included,
@@ -1417,6 +1454,7 @@ export async function renderPlayer(root, params) {
   const episodesButton = buildPillButton('video_library', 'Episodes');
   episodesButton.disabled = true;
   const sleepButton = buildPillButton('bedtime', 'Sleep');
+  const castButton = buildPillButton('cast', 'Cast');
   const settingsButton = buildPillButton('settings', 'Settings');
 
   pill.appendChild(volumeButton);
@@ -1426,6 +1464,7 @@ export async function renderPlayer(root, params) {
   pill.appendChild(sourceButton);
   pill.appendChild(episodesButton);
   pill.appendChild(sleepButton);
+  pill.appendChild(castButton);
   pill.appendChild(settingsButton);
 
   // Small popovers (speed/subtitles/audio/sleep) all anchor above the
@@ -2350,6 +2389,315 @@ export async function renderPlayer(root, params) {
       // No status yet is not an error worth surfacing here.
     });
 
+  // === Cast to Smart TV popover ===
+  const castMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden jellio-player-cast-popover');
+  const castHeader = el('div', 'jellio-player-cast-header');
+  const castTitle = el('div', 'jellio-player-cast-title');
+  const castTitleIcon = el('span', 'material-icons cast');
+  castTitleIcon.setAttribute('aria-hidden', 'true');
+  castTitle.appendChild(castTitleIcon);
+  castTitle.appendChild(el('span', null, 'Cast to TV / Device'));
+  castHeader.appendChild(castTitle);
+
+  const castRefreshBtn = el('button', 'jellio-player-cast-refresh');
+  castRefreshBtn.type = 'button';
+  castRefreshBtn.setAttribute('aria-label', 'Refresh available devices');
+  const castRefreshIcon = el('span', 'material-icons refresh');
+  castRefreshIcon.setAttribute('aria-hidden', 'true');
+  castRefreshBtn.appendChild(castRefreshIcon);
+  castHeader.appendChild(castRefreshBtn);
+  castMenu.appendChild(castHeader);
+
+  const castBody = el('div', 'jellio-player-cast-body');
+  castMenu.appendChild(castBody);
+
+  let isScanningCast = false;
+  async function refreshCastMenu() {
+    if (isScanningCast) return;
+    isScanningCast = true;
+    castRefreshBtn.classList.add('spinning');
+    castBody.innerHTML = '';
+
+    const currentCast = getActiveCast();
+    if (currentCast) {
+      const activeBox = el('div', 'jellio-player-cast-active-box');
+      const activeRow = el('div', 'jellio-player-cast-active-row');
+      const info = el('div', 'jellio-player-cast-device-info');
+      info.appendChild(el('div', 'jellio-player-cast-device-name', currentCast.name || 'Connected TV'));
+      info.appendChild(el('div', 'jellio-player-cast-device-sub', currentCast.type === 'jellyfin' ? (currentCast.client || 'Jellyfin Client') : 'Wireless Stream'));
+      activeRow.appendChild(info);
+
+      const disconnectBtn = el('button', 'jellio-player-cast-disconnect-btn');
+      disconnectBtn.type = 'button';
+      const disIcon = el('span', 'material-icons cast_connected');
+      disIcon.setAttribute('aria-hidden', 'true');
+      disconnectBtn.appendChild(disIcon);
+      disconnectBtn.appendChild(el('span', null, 'Disconnect'));
+      disconnectBtn.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        const res = await disconnectCast();
+        if (res && res.resumePositionTicks != null) {
+          seekToAbsoluteSeconds(res.resumePositionTicks / TICKS_PER_SECOND);
+          video.play().catch(function () {});
+        }
+        refreshCastMenu();
+      });
+      activeRow.appendChild(disconnectBtn);
+      activeBox.appendChild(activeRow);
+      castBody.appendChild(activeBox);
+    }
+
+    try {
+      const targets = await getAvailableCastTargets();
+      const tvTargets = targets.filter(function (t) { return t.isTv; });
+      const otherTargets = targets.filter(function (t) { return !t.isTv; });
+
+      if (tvTargets.length > 0) {
+        castBody.appendChild(el('div', 'jellio-player-cast-section-title', 'Smart TVs'));
+        tvTargets.forEach(function (target) {
+          castBody.appendChild(buildCastDeviceButton(target, 'tv'));
+        });
+      }
+
+      if (otherTargets.length > 0) {
+        castBody.appendChild(el('div', 'jellio-player-cast-section-title', 'Other Jellyfin Clients'));
+        otherTargets.forEach(function (target) {
+          castBody.appendChild(buildCastDeviceButton(target, 'devices'));
+        });
+      }
+
+      // Wireless display & AirPlay section
+      let hasWireless = false;
+      const wirelessTitle = el('div', 'jellio-player-cast-section-title', 'Wireless Display & Streaming');
+
+      if (isGoogleCastSupported()) {
+        hasWireless = true;
+        castBody.appendChild(wirelessTitle);
+
+        const gcastBtn = el('button', 'jellio-player-cast-device-btn');
+        gcastBtn.type = 'button';
+        const iconWrap = el('div', 'jellio-player-cast-device-icon');
+        const icon = el('span', 'material-icons cast');
+        icon.setAttribute('aria-hidden', 'true');
+        iconWrap.appendChild(icon);
+        gcastBtn.appendChild(iconWrap);
+
+        const info = el('div', 'jellio-player-cast-device-info');
+        info.appendChild(el('div', 'jellio-player-cast-device-name', 'Google Cast / Chromecast'));
+        info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Chromecast, Android TV, or Google TV'));
+        gcastBtn.appendChild(info);
+
+        gcastBtn.addEventListener('click', async function () {
+          try {
+            video.pause();
+            castMenu.classList.add('jellio-player-popover-hidden');
+            if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
+              await promptRemotePlayback(video);
+            } else {
+              const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
+              await castToGoogleCast(streamUrl, item, currentSec);
+            }
+            showPlayerToast('Streaming via Google Cast');
+          } catch (err) {
+            console.warn('Jellio: Google Cast failed', err);
+            showPlayerToast('Cast cancelled or failed');
+          }
+        });
+        castBody.appendChild(gcastBtn);
+      }
+
+      if (isAirPlaySupported(video)) {
+        if (!hasWireless) castBody.appendChild(wirelessTitle);
+        hasWireless = true;
+
+        const airplayBtn = el('button', 'jellio-player-cast-device-btn');
+        airplayBtn.type = 'button';
+        const iconWrap = el('div', 'jellio-player-cast-device-icon');
+        const icon = el('span', 'material-icons airplay');
+        icon.setAttribute('aria-hidden', 'true');
+        iconWrap.appendChild(icon);
+        airplayBtn.appendChild(iconWrap);
+
+        const info = el('div', 'jellio-player-cast-device-info');
+        info.appendChild(el('div', 'jellio-player-cast-device-name', 'Apple AirPlay'));
+        info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Stream to Apple TV or AirPlay 2 Smart TV'));
+        airplayBtn.appendChild(info);
+
+        airplayBtn.addEventListener('click', function () {
+          castMenu.classList.add('jellio-player-popover-hidden');
+          try {
+            promptAirPlay(video);
+          } catch (err) {
+            showPlayerToast('AirPlay not available');
+          }
+        });
+        castBody.appendChild(airplayBtn);
+      }
+
+      if (targets.length === 0 && !hasWireless) {
+        const empty = el('div', 'jellio-player-cast-empty', 'No Smart TVs or Cast devices found on the network. Open the Jellyfin app on your TV or connect a Chromecast.');
+        castBody.appendChild(empty);
+      }
+    } catch (err) {
+      console.warn('Jellio: error populating cast menu', err);
+    } finally {
+      isScanningCast = false;
+      castRefreshBtn.classList.remove('spinning');
+    }
+  }
+
+  function buildCastDeviceButton(target, defaultIconName) {
+    const btn = el('button', 'jellio-player-cast-device-btn');
+    btn.type = 'button';
+
+    const iconWrap = el('div', 'jellio-player-cast-device-icon');
+    const icon = el('span', 'material-icons ' + defaultIconName);
+    icon.setAttribute('aria-hidden', 'true');
+    iconWrap.appendChild(icon);
+    btn.appendChild(iconWrap);
+
+    const info = el('div', 'jellio-player-cast-device-info');
+    info.appendChild(el('div', 'jellio-player-cast-device-name', target.name));
+    const subText = target.nowPlaying ? ('Playing: ' + target.nowPlaying) : (target.client || 'Ready to stream');
+    info.appendChild(el('div', 'jellio-player-cast-device-sub', subText));
+    btn.appendChild(info);
+
+    if (target.isTv) {
+      btn.appendChild(el('span', 'jellio-player-cast-device-badge', 'Smart TV'));
+    }
+
+    btn.addEventListener('click', async function () {
+      try {
+        const currentTicks = Math.round((streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0)) * TICKS_PER_SECOND);
+        video.pause();
+        castMenu.classList.add('jellio-player-popover-hidden');
+        showPlayerToast('Streaming to ' + target.name + '...');
+        await castToJellyfinSession(target, itemId, currentTicks, mediaSource, currentAudioStreamIndex, currentSubtitleStreamIndex);
+        showPlayerToast('Casting on ' + target.name);
+      } catch (err) {
+        console.warn('Jellio: failed to cast to ' + target.name, err);
+        showPlayerToast('Could not cast to ' + target.name);
+      }
+    });
+
+    return btn;
+  }
+
+  registerPopover(castButton, castMenu);
+  castButton.addEventListener('click', function () {
+    refreshCastMenu();
+  });
+  castRefreshBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    refreshCastMenu();
+  });
+
+  toggleCastMenu = function (originBtn) {
+    closePopovers(castMenu);
+    const nowHidden = castMenu.classList.toggle('jellio-player-popover-hidden');
+    if (originBtn) originBtn.setAttribute('aria-expanded', String(!nowHidden));
+    castButton.setAttribute('aria-expanded', String(!nowHidden));
+    if (!nowHidden) {
+      if (originBtn && originBtn === castTopButton) {
+        const shellRect = shell.getBoundingClientRect();
+        const btnRect = castTopButton.getBoundingClientRect();
+        castMenu.style.top = (btnRect.bottom - shellRect.top + 8) + 'px';
+        castMenu.style.bottom = 'auto';
+        castMenu.style.left = 'auto';
+        castMenu.style.right = Math.max(16, shellRect.right - btnRect.right) + 'px';
+      } else {
+        castMenu.style.top = 'auto';
+        positionPopover(castButton, castMenu);
+      }
+      refreshCastMenu();
+    }
+    wakeControls();
+  };
+
+  // === In-player floating Cast Banner ===
+  const castBanner = el('div', 'jellio-player-cast-banner');
+  castBanner.style.display = 'none';
+
+  const castBannerIcon = el('span', 'material-icons cast_connected jellio-player-cast-banner-icon');
+  castBannerIcon.setAttribute('aria-hidden', 'true');
+  const castBannerText = el('span', 'jellio-player-cast-banner-text', 'Streaming to Smart TV');
+
+  const castBannerControls = el('div', 'jellio-player-cast-banner-controls');
+  const bannerSkipBack = el('button', 'jellio-player-cast-banner-btn');
+  bannerSkipBack.type = 'button';
+  bannerSkipBack.setAttribute('aria-label', 'Skip back 10 seconds');
+  bannerSkipBack.appendChild(el('span', 'material-icons replay_10'));
+  bannerSkipBack.addEventListener('click', function () {
+    skipBackButton.click();
+  });
+
+  const bannerPlayPause = el('button', 'jellio-player-cast-banner-btn');
+  bannerPlayPause.type = 'button';
+  bannerPlayPause.setAttribute('aria-label', 'Play or pause on TV');
+  const bannerPlayPauseIcon = el('span', 'material-icons pause');
+  bannerPlayPause.appendChild(bannerPlayPauseIcon);
+  bannerPlayPause.addEventListener('click', function () {
+    playPauseButton.click();
+  });
+
+  const bannerSkipForward = el('button', 'jellio-player-cast-banner-btn');
+  bannerSkipForward.type = 'button';
+  bannerSkipForward.setAttribute('aria-label', 'Skip forward 30 seconds');
+  bannerSkipForward.appendChild(el('span', 'material-icons forward_30'));
+  bannerSkipForward.addEventListener('click', function () {
+    skipForwardButton.click();
+  });
+
+  const bannerDisconnect = el('button', 'jellio-player-cast-banner-disconnect', 'Resume Here');
+  bannerDisconnect.type = 'button';
+  bannerDisconnect.setAttribute('aria-label', 'Stop casting and resume locally');
+  bannerDisconnect.addEventListener('click', async function () {
+    const res = await disconnectCast();
+    if (res && res.resumePositionTicks != null) {
+      seekToAbsoluteSeconds(res.resumePositionTicks / TICKS_PER_SECOND);
+      video.play().catch(function () {});
+    }
+  });
+
+  castBannerControls.appendChild(bannerSkipBack);
+  castBannerControls.appendChild(bannerPlayPause);
+  castBannerControls.appendChild(bannerSkipForward);
+  castBannerControls.appendChild(bannerDisconnect);
+
+  castBanner.appendChild(castBannerIcon);
+  castBanner.appendChild(castBannerText);
+  castBanner.appendChild(castBannerControls);
+
+  const unsubscribeCast = addCastListener(function (castState) {
+    const isCasting = Boolean(castState);
+    castTopButton.classList.toggle('jellio-player-cast-active', isCasting);
+    castButton.classList.toggle('jellio-player-pill-btn-active', isCasting);
+    const iconName = isCasting ? 'cast_connected' : 'cast';
+    castTopIcon.className = 'material-icons ' + iconName;
+    const pillIcon = castButton.querySelector('.material-icons');
+    if (pillIcon) pillIcon.className = 'material-icons ' + iconName;
+
+    if (isCasting) {
+      castBanner.style.display = 'flex';
+      castBannerText.textContent = 'Streaming to ' + (castState.name || 'Smart TV');
+      bannerPlayPauseIcon.textContent = castState.isPaused ? 'play_arrow' : 'pause';
+      playPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
+      playPauseButton.setAttribute('aria-label', castState.isPaused ? 'Play' : 'Pause');
+
+      if (castState.positionTicks != null && !seeking) {
+        const sec = castState.positionTicks / TICKS_PER_SECOND;
+        currentTimeLabel.textContent = formatTime(sec);
+        if (durationSeconds > 0) {
+          seekBar.value = String(Math.min(100, Math.max(0, (sec / durationSeconds) * 100)));
+        }
+      }
+    } else {
+      castBanner.style.display = 'none';
+      playPauseIcon.className = 'material-icons ' + (video.paused ? 'play_arrow' : 'pause');
+      playPauseButton.setAttribute('aria-label', video.paused ? 'Play' : 'Pause');
+    }
+  });
+
   // === Settings popover: Auto-skip Intros toggle and Keyboard Shortcuts modal trigger ===
   const AUTOSKIP_KEY = 'jellio_player_autoskip';
   let autoSkipEnabled = false;
@@ -2413,6 +2761,7 @@ export async function renderPlayer(root, params) {
     { key: ', / .', desc: 'Frame step (when paused)' },
     { key: '< / >', desc: 'Playback speed' },
     { key: 'S', desc: 'Skip Intro / Credits' },
+    { key: 'Alt + C', desc: 'Cast to Smart TV / device' },
     { key: '?', desc: 'Toggle cheat sheet' },
     { key: 'Esc', desc: 'Close dialog / panel' },
   ];
@@ -2914,6 +3263,12 @@ export async function renderPlayer(root, params) {
   // onSyncCommand handler receives back is the one real thing that
   // actually moves this player, same as it would for any other member.
   function performSeek(targetSeconds) {
+    if (getActiveCast()) {
+      sendRemoteSeek(Math.round(targetSeconds * TICKS_PER_SECOND)).catch(function (err) {
+        console.warn('Jellio: could not send Cast seek', err);
+      });
+      return;
+    }
     if (syncPlaylistItemId) {
       requestSyncSeek(Math.round(targetSeconds * TICKS_PER_SECOND)).catch(function (err) {
         console.warn('Jellio: could not send Group Watch seek', err);
@@ -3021,10 +3376,12 @@ export async function renderPlayer(root, params) {
   shell.appendChild(subtitleMenu);
   shell.appendChild(audioMenu);
   shell.appendChild(sleepMenu);
+  shell.appendChild(castMenu);
   shell.appendChild(settingsMenu);
   shell.appendChild(sourcePanel);
   shell.appendChild(episodesPanel);
   shell.appendChild(shortcutsModal);
+  shell.appendChild(castBanner);
 
   const rippleLeft = el('div', 'jellio-player-seek-ripple jellio-player-seek-ripple-left');
   rippleLeft.innerHTML = '<span class="material-icons">replay_10</span><span class="jellio-player-seek-ripple-text">10s</span>';
@@ -3144,6 +3501,14 @@ export async function renderPlayer(root, params) {
     return tag === 'INPUT' || tag === 'TEXTAREA' || !!target.isContentEditable;
   }
   function adjustVolume(delta) {
+    if (getActiveCast()) {
+      const newVol = Math.min(100, Math.max(0, Math.round(video.volume * 100 + delta * 100)));
+      video.volume = newVol / 100;
+      sendRemoteVolume(newVol).catch(function () {});
+      syncVolumeUI();
+      showPlayerToast('TV Volume ' + newVol + '%');
+      return;
+    }
     video.muted = false;
     video.volume = Math.min(1, Math.max(0, video.volume + delta));
     syncVolumeUI();
@@ -3155,7 +3520,13 @@ export async function renderPlayer(root, params) {
     showPlayerToast(video.muted ? 'Muted' : 'Unmuted');
   }
   function onPlayerKeydown(event) {
-    if (screenTornDown || isTypingTarget(event.target) || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (screenTornDown || isTypingTarget(event.target)) return;
+    if (event.altKey && (event.key === 'c' || event.key === 'C')) {
+      event.preventDefault();
+      toggleCastMenu(castTopButton);
+      return;
+    }
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
     switch (event.key) {
       case ' ':
       case 'Spacebar':
@@ -4432,6 +4803,8 @@ export async function renderPlayer(root, params) {
   // load rather than duplicating what it already does, and needs to
   // reach it from earlier in this same function body.
   async function cleanup() {
+    if (unsubscribeCast) unsubscribeCast();
+    if (getActiveCast()) disconnectCast().catch(function () {});
     document.removeEventListener('visibilitychange', onTabVisibility);
     window.clearTimeout(frozenCheck);
     if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});

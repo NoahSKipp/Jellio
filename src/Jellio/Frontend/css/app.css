@@ -5475,6 +5475,11 @@
   color: #000;
 }
 
+.jellio-player-cast-active {
+  background: var(--jellio-secondary-color) !important;
+  color: #000 !important;
+}
+
 .jellio-player-chat-toggle[aria-expanded="true"] {
   background: var(--jellio-secondary-color);
   color: #000;
@@ -5958,6 +5963,268 @@
   margin-top: 0.5em;
   border-top: 1px solid var(--jellio-border-color);
   padding-top: 0.6em;
+}
+
+/* Cast to Smart TV popover & floating control banner */
+.jellio-player-cast-popover {
+  min-width: 20em;
+  max-width: min(92vw, 26em);
+  padding: 0.6em;
+  gap: 0.4em;
+}
+
+.jellio-player-cast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4em 0.6em 0.5em;
+  border-bottom: 1px solid var(--jellio-border-color);
+}
+
+.jellio-player-cast-title {
+  font-weight: 700;
+  font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.jellio-player-cast-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+  transition: transform 0.3s ease, background 0.15s ease;
+}
+
+.jellio-player-cast-refresh:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.jellio-player-cast-refresh.spinning .material-icons {
+  animation: jellio-cast-spin 0.8s linear infinite;
+}
+
+@keyframes jellio-cast-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.jellio-player-cast-section-title {
+  font-size: 0.72em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--jellio-text-secondary);
+  padding: 0.5em 0.6em 0.2em;
+}
+
+.jellio-player-cast-device-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.65em 0.8em;
+  border: 0;
+  border-radius: 0.5em;
+  background: transparent;
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
+}
+
+.jellio-player-cast-device-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jellio-player-cast-device-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2em;
+  height: 2.2em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--jellio-secondary-color);
+  flex: 0 0 auto;
+}
+
+.jellio-player-cast-device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.jellio-player-cast-device-name {
+  font-weight: 600;
+  font-size: 0.88em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-player-cast-device-sub {
+  font-size: 0.75em;
+  color: var(--jellio-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-player-cast-device-badge {
+  font-size: 0.7em;
+  padding: 0.2em 0.5em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--jellio-text-secondary);
+  flex: 0 0 auto;
+}
+
+.jellio-player-cast-active-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  padding: 0.8em;
+  border-radius: 0.6em;
+  background: rgba(var(--jellio-secondary-color-rgb, 229, 9, 20), 0.12);
+  border: 1px solid rgba(var(--jellio-secondary-color-rgb, 229, 9, 20), 0.35);
+  margin-bottom: 0.3em;
+}
+
+.jellio-player-cast-active-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+}
+
+.jellio-player-cast-disconnect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0.45em 0.9em;
+  border: 0;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: #000;
+  font-weight: 600;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.jellio-player-cast-disconnect-btn:hover {
+  opacity: 0.9;
+}
+
+.jellio-player-cast-empty {
+  font-size: 0.8em;
+  color: var(--jellio-text-secondary);
+  padding: 0.6em 0.8em;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* In-player floating Cast banner */
+.jellio-player-cast-banner {
+  position: absolute;
+  top: 5.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 0.5em 1.2em;
+  border-radius: 999px;
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.92);
+  border: 1px solid var(--jellio-border-color);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  box-shadow: 0 0.8em 2em rgba(0, 0, 0, 0.6);
+  z-index: 6;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  animation: jellio-cast-banner-in 0.25s ease-out;
+}
+
+@keyframes jellio-cast-banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.jellio-player-cast-banner-icon {
+  color: var(--jellio-secondary-color);
+  display: flex;
+  align-items: center;
+}
+
+.jellio-player-cast-banner-text {
+  font-size: 0.88em;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-player-cast-banner-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.jellio-player-cast-banner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background 0.15s ease;
+}
+
+.jellio-player-cast-banner-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.jellio-player-cast-banner-disconnect {
+  padding: 0.35em 0.8em;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--jellio-text-color);
+  font-size: 0.78em;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.jellio-player-cast-banner-disconnect:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .jellio-player-seek-ripple {
