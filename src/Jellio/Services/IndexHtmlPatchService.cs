@@ -164,6 +164,7 @@ public class IndexHtmlPatchService(
     [
         "runtime/auth.js",
         "runtime/api.js",
+        "runtime/cast.js",
         "runtime/router.js",
         "runtime/recommend.js",
         "screens/login.js",
@@ -244,6 +245,7 @@ public class IndexHtmlPatchService(
             + "<script>\n"
             + EarlySessionCaptureScript
             + "</script>\n"
+            + "<script src=\"https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1\"></script>\n"
             // css/app.css's own --jellio-font-family names Inter first,
             // real feedback was that the sidebar (and everything else)
             // never actually looked like it, every device this renders on
