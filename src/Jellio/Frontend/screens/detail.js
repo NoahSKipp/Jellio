@@ -127,6 +127,78 @@ function bookFacts(meta) {
     .join(' · ');
 }
 
+function buildMediaTechBadges(item) {
+  if (!item) return null;
+  const streams = item.MediaStreams || (item.MediaSources && item.MediaSources[0] && item.MediaSources[0].MediaStreams) || [];
+  if (!streams.length) return null;
+
+  const videoStream = streams.find(function (s) { return s.Type === 'Video'; });
+  const audioStream = streams.find(function (s) { return s.Type === 'Audio' && s.IsDefault; }) || streams.find(function (s) { return s.Type === 'Audio'; });
+
+  const badges = [];
+
+  if (videoStream) {
+    const width = videoStream.Width || 0;
+    const height = videoStream.Height || 0;
+    if (width >= 3600 || height >= 2000) {
+      badges.push({ text: '4K UHD', type: 'res' });
+    } else if (width >= 1800 || height >= 900) {
+      badges.push({ text: '1080p', type: 'res' });
+    } else if (width >= 1200 || height >= 700) {
+      badges.push({ text: '720p', type: 'res' });
+    }
+
+    const range = (videoStream.VideoRange || '').toUpperCase();
+    const rangeType = (videoStream.VideoRangeType || '').toUpperCase();
+    const dispTitle = (videoStream.DisplayTitle || '').toUpperCase();
+    if (rangeType.includes('DOVI') || range.includes('DOVI') || dispTitle.includes('VISION')) {
+      badges.push({ text: 'Dolby Vision', type: 'hdr' });
+    } else if (rangeType.includes('HDR10+') || range.includes('HDR10+')) {
+      badges.push({ text: 'HDR10+', type: 'hdr' });
+    } else if (range.includes('HDR') || rangeType.includes('HDR')) {
+      badges.push({ text: 'HDR10', type: 'hdr' });
+    }
+
+    const codec = (videoStream.Codec || '').toUpperCase();
+    if (codec === 'HEVC' || codec === 'H265') {
+      badges.push({ text: 'HEVC', type: 'codec' });
+    } else if (codec === 'AV1') {
+      badges.push({ text: 'AV1', type: 'codec' });
+    }
+  }
+
+  if (audioStream) {
+    const title = ((audioStream.Title || '') + ' ' + (audioStream.DisplayTitle || '') + ' ' + (audioStream.Profile || '')).toUpperCase();
+    const audioCodec = (audioStream.Codec || '').toUpperCase();
+    const channels = audioStream.Channels || 0;
+
+    if (title.includes('ATMOS')) {
+      badges.push({ text: 'Dolby Atmos', type: 'audio' });
+    } else if (title.includes('DTS:X') || title.includes('DTS-X')) {
+      badges.push({ text: 'DTS:X', type: 'audio' });
+    } else if (title.includes('TRUEHD') || audioCodec === 'TRUEHD') {
+      badges.push({ text: 'Dolby TrueHD', type: 'audio' });
+    } else if (title.includes('DTS-HD') || audioCodec.includes('DTS')) {
+      badges.push({ text: 'DTS-HD', type: 'audio' });
+    } else if (channels >= 8) {
+      badges.push({ text: '7.1', type: 'audio' });
+    } else if (channels >= 6) {
+      badges.push({ text: '5.1', type: 'audio' });
+    } else if (channels === 2) {
+      badges.push({ text: 'Stereo', type: 'audio' });
+    }
+  }
+
+  if (!badges.length) return null;
+
+  const wrap = el('div', 'jellio-detail-tech-badges');
+  badges.forEach(function (b) {
+    const badge = el('span', 'jellio-detail-tech-badge jellio-detail-tech-badge-' + b.type, b.text);
+    wrap.appendChild(badge);
+  });
+  return wrap;
+}
+
 function heroBackdropUrl(item, id) {
   if (item.BackdropImageTags && item.BackdropImageTags[0]) {
     return getImageUrl(id, 'Backdrop', { tag: item.BackdropImageTags[0], maxWidth: 1920 });
@@ -1074,6 +1146,9 @@ export async function renderDetail(root, params) {
   if (item.OfficialRating) meta.appendChild(el('span', null, item.OfficialRating));
   if (item.CommunityRating) meta.appendChild(buildRatingBadge(item.CommunityRating));
   heroContent.appendChild(meta);
+
+  const techBadges = buildMediaTechBadges(item);
+  if (techBadges) heroContent.appendChild(techBadges);
 
   if (item.Genres && item.Genres.length) {
     const genres = el('div', 'jellio-detail-genres', item.Genres.join(', '));

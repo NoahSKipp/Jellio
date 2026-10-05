@@ -292,16 +292,23 @@ function buildLandscapeCard(item, options) {
   card.setAttribute('aria-label', isEpisode ? item.SeriesName + ' - ' + episodeSubtitle(item) : item.Name || '');
 
   const imageWrap = el('div', 'jellio-card-landscape-image-wrap');
-  const imageUrl = landscapeImageUrl(item);
+  function appendLandscapePlaceholder() {
+    const placeholder = el('div', 'jellio-card-landscape-image jellio-card-image-empty');
+    imageWrap.insertBefore(placeholder, imageWrap.firstChild);
+  }
   if (imageUrl) {
     const img = document.createElement('img');
     img.className = 'jellio-card-landscape-image';
     img.src = imageUrl;
     img.alt = '';
     img.loading = 'lazy';
+    img.addEventListener('error', function () {
+      img.remove();
+      appendLandscapePlaceholder();
+    });
     imageWrap.appendChild(img);
   } else {
-    imageWrap.appendChild(el('div', 'jellio-card-landscape-image jellio-card-image-empty'));
+    appendLandscapePlaceholder();
   }
 
   imageWrap.appendChild(el('div', 'jellio-card-landscape-scrim'));
