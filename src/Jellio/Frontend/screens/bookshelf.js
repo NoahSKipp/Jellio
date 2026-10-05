@@ -34,6 +34,7 @@ import { openCategoryPicker, openCategoryManager } from '../components/shelfCate
 import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { renderMangaUpdates } from './mangaUpdates.js';
+import { shareHash } from '../runtime/shareLink.js';
 import { loadLibraryView, openLibraryView, passesLibraryFilters, activeFilterCount } from '../components/libraryView.js';
 import { listDownloads } from '../runtime/offline.js';
 import { buildRow } from '../components/row.js';
@@ -314,12 +315,23 @@ function seriesCard(entry, cardOptions) {
       open();
     }
   });
-  if (cardOptions && cardOptions.extraOptions) {
-    attachCardOptionsTrigger(card, entry.item, null, {
-      onlyExtra: true,
-      extraOptions: cardOptions.extraOptions(entry.item, entry),
-    });
-  }
+  const shareOption = {
+    label: 'Share link',
+    icon: 'share',
+    onClick: function () {
+      const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      params.set('series', group.key);
+      shareHash(group.title, '#/books?' + params.toString())
+        .then((result) => {
+          if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+        })
+        .catch(() => showToast('Could not copy the link.'));
+    },
+  };
+  attachCardOptionsTrigger(card, entry.item, null, {
+    onlyExtra: true,
+    extraOptions: ((cardOptions && cardOptions.extraOptions ? cardOptions.extraOptions(entry.item, entry) : []) || []).concat([shareOption]),
+  });
   return card;
 }
 

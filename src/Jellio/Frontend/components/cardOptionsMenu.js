@@ -17,6 +17,7 @@ import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '..
 import { isAdminSync } from '../runtime/adminStatus.js';
 import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from './toast.js';
+import { shareItem } from '../runtime/shareLink.js';
 import { canDownload, promptDownload } from './downloads.js';
 import { el } from '../runtime/dom.js';
 
@@ -195,6 +196,18 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
   (extraOptions || []).forEach(function (option) {
     menu.appendChild(buildOption(option.label, option.icon, option.onClick));
   });
+
+  if (!opts.onlyExtra && item && item.Id) {
+    menu.appendChild(
+      buildOption('Share link', 'share', function () {
+        shareItem(item)
+          .then((result) => {
+            if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+          })
+          .catch(() => showToast('Could not copy the link.'));
+      }),
+    );
+  }
 
   if (opts.onlyExtra) {
     // Nothing item-specific applies.

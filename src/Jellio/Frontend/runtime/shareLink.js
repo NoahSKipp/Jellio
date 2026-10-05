@@ -23,11 +23,23 @@ async function copyText(text) {
   if (!ok) throw new Error('copy failed');
 }
 
+// A link to any page of this app by its hash route.
+export function buildHashUrl(hash) {
+  return window.location.origin + window.location.pathname + hash;
+}
+
 // Copies the link (and offers the phone's share sheet where there is one).
 // Resolves to 'shared', 'copied' or 'cancelled'.
-export async function shareItem(item) {
-  const url = buildShareUrl(item);
+export function shareItem(item) {
   const title = item.Type === 'Episode' && item.SeriesName ? item.SeriesName + ' · ' + item.Name : item.Name || 'Jellio';
+  return shareUrl(title, buildShareUrl(item));
+}
+
+export function shareHash(title, hash) {
+  return shareUrl(title, buildHashUrl(hash));
+}
+
+async function shareUrl(title, url) {
   if (navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
     try {
       await navigator.share({ title: title, url: url });
