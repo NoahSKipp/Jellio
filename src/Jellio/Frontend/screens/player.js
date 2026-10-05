@@ -2341,13 +2341,20 @@ export async function renderPlayer(root, params) {
   // never both armed at once (each option below clears the other
   // mode's own state before arming its own).
   let sleepTimerEpisodesRemaining = null;
+  let sleepOption = null;
+  function syncSleepActive(isActive) {
+    sleepButton.classList.toggle('jellio-player-pill-btn-active', Boolean(isActive));
+    if (sleepOption) {
+      sleepOption.classList.toggle('jellio-player-popover-option-active', Boolean(isActive));
+    }
+  }
   const sleepMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
   const cancelOption = el('button', 'jellio-player-popover-option', 'Cancel timer');
   cancelOption.type = 'button';
   cancelOption.addEventListener('click', function () {
     sleepTimerEpisodesRemaining = null;
     cancelSleepTimer().then(function () {
-      sleepButton.classList.remove('jellio-player-pill-btn-active');
+      syncSleepActive(false);
       closePopovers(null);
     });
   });
@@ -2359,7 +2366,7 @@ export async function renderPlayer(root, params) {
     option.addEventListener('click', function () {
       sleepTimerEpisodesRemaining = null;
       startSleepTimer(minutes).then(function () {
-        sleepButton.classList.add('jellio-player-pill-btn-active');
+        syncSleepActive(true);
         closePopovers(null);
       });
     });
@@ -2374,7 +2381,7 @@ export async function renderPlayer(root, params) {
         // Nothing was running server side, nothing to react to.
       });
       sleepTimerEpisodesRemaining = count;
-      sleepButton.classList.add('jellio-player-pill-btn-active');
+      syncSleepActive(true);
       closePopovers(null);
     });
     sleepMenu.appendChild(option);
@@ -2383,7 +2390,7 @@ export async function renderPlayer(root, params) {
 
   getSleepTimerStatus()
     .then(function (status) {
-      if (status && status.Active) sleepButton.classList.add('jellio-player-pill-btn-active');
+      if (status && status.Active) syncSleepActive(true);
     })
     .catch(function () {
       // No status yet is not an error worth surfacing here.
@@ -2709,18 +2716,24 @@ export async function renderPlayer(root, params) {
   });
   settingsMenu.appendChild(autoSkipOption);
 
-  const sleepOption = el('button', 'jellio-player-popover-option');
+  sleepOption = el('button', 'jellio-player-popover-option jellio-player-settings-sleep');
   sleepOption.type = 'button';
+  const sleepOptionLabel = el('span', 'jellio-player-settings-sleep-label');
   const sleepOptionIcon = el('span', 'material-icons bedtime');
   sleepOptionIcon.setAttribute('aria-hidden', 'true');
-  sleepOption.appendChild(sleepOptionIcon);
-  sleepOption.appendChild(el('span', '', 'Sleep Timer'));
+  sleepOptionLabel.appendChild(sleepOptionIcon);
+  sleepOptionLabel.appendChild(el('span', '', 'Sleep Timer'));
+  sleepOption.appendChild(sleepOptionLabel);
   sleepOption.addEventListener('click', function () {
     closePopovers(sleepMenu);
     const nowHidden = sleepMenu.classList.toggle('jellio-player-popover-hidden');
     settingsButton.setAttribute('aria-expanded', 'false');
     sleepButton.setAttribute('aria-expanded', String(!nowHidden));
-    if (!nowHidden) positionPopover(settingsButton, sleepMenu);
+    if (!nowHidden) {
+      sleepMenu.style.top = '';
+      sleepMenu.style.bottom = '';
+      positionPopover(settingsButton, sleepMenu);
+    }
     wakeControls();
   });
   settingsMenu.appendChild(sleepOption);
@@ -4452,7 +4465,7 @@ export async function renderPlayer(root, params) {
         sleepTimerEpisodesRemaining -= 1;
         if (sleepTimerEpisodesRemaining <= 0) {
           sleepTimerEpisodesRemaining = null;
-          sleepButton.classList.remove('jellio-player-pill-btn-active');
+          syncSleepActive(false);
           dismissUpNext();
         } else {
           showUpNext();
