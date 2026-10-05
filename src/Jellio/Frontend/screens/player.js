@@ -76,7 +76,7 @@ import {
   prefetchStreams,
   syncTracker,
 } from '../runtime/api.js';
-import { getUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
+import { getUpNextTriggerSeconds, getUpNextCountdownSeconds, setUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
@@ -291,6 +291,213 @@ function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   overlay.appendChild(body);
 
   return { overlay: overlay, playButton: playButton };
+}
+
+function buildEndScreenModal(options) {
+  const item = options.item;
+  const nextEpisode = options.nextEpisode;
+  const onPlayNext = options.onPlayNext;
+  const onReplay = options.onReplay;
+  const onClose = options.onClose;
+  const onBack = options.onBack;
+  let countdownSecs = options.initialCountdown;
+
+  const overlay = el('div', 'jellio-player-endscreen');
+  const backdrop = el('div', 'jellio-player-endscreen-backdrop');
+  backdrop.addEventListener('click', onClose);
+  overlay.appendChild(backdrop);
+
+  const card = el('div', 'jellio-player-endscreen-card');
+
+  const closeButton = el('button', 'jellio-player-endscreen-close');
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Close end screen');
+  const closeIcon = el('span', 'material-icons', 'close');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeButton.appendChild(closeIcon);
+  closeButton.addEventListener('click', onClose);
+  card.appendChild(closeButton);
+
+  const header = el('div', 'jellio-player-endscreen-header');
+  const badge = el('div', 'jellio-player-endscreen-badge');
+  const badgeIcon = el('span', 'material-icons', nextEpisode ? 'skip_next' : 'check_circle');
+  badgeIcon.setAttribute('aria-hidden', 'true');
+  badge.appendChild(badgeIcon);
+  badge.appendChild(el('span', '', nextEpisode ? 'Up Next' : 'Completed'));
+  header.appendChild(badge);
+
+  const seriesTitle = (nextEpisode && (nextEpisode.SeriesName || item.SeriesName)) || (item.Type === 'Episode' ? item.SeriesName : null);
+  if (seriesTitle) {
+    header.appendChild(el('div', 'jellio-player-endscreen-series', seriesTitle));
+  }
+  card.appendChild(header);
+
+  const content = el('div', 'jellio-player-endscreen-content');
+
+  const targetItem = nextEpisode || item;
+  const thumbTag = (targetItem.ImageTags && (targetItem.ImageTags.Primary || targetItem.ImageTags.Thumb)) ||
+                   targetItem.ParentThumbImageTag ||
+                   (targetItem.BackdropImageTags && targetItem.BackdropImageTags[0]);
+
+  const thumb = el('div', 'jellio-player-endscreen-thumb');
+  if (thumbTag) {
+    const imgType = (targetItem.ImageTags && targetItem.ImageTags.Primary) ? 'Primary' :
+                    (targetItem.BackdropImageTags && targetItem.BackdropImageTags[0]) ? 'Backdrop' : 'Thumb';
+    thumb.style.backgroundImage = 'url(' + getImageUrl(targetItem.Id, imgType, { tag: thumbTag, maxWidth: 640 }) + ')';
+  }
+
+  if (targetItem.RunTimeTicks) {
+    const mins = Math.round(targetItem.RunTimeTicks / (TICKS_PER_SECOND * 60));
+    if (mins > 0) {
+      thumb.appendChild(el('span', 'jellio-player-endscreen-duration', mins + ' min'));
+    }
+  }
+  content.appendChild(thumb);
+
+  const info = el('div', 'jellio-player-endscreen-info');
+  if (nextEpisode) {
+    const epLabel = (nextEpisode.ParentIndexNumber != null && nextEpisode.IndexNumber != null)
+      ? 'Season ' + nextEpisode.ParentIndexNumber + ' · Episode ' + nextEpisode.IndexNumber
+      : '';
+    if (epLabel) {
+      info.appendChild(el('div', 'jellio-player-endscreen-sub', epLabel));
+    }
+    info.appendChild(el('h2', 'jellio-player-endscreen-title', nextEpisode.Name || 'Next Episode'));
+    if (nextEpisode.Overview) {
+      info.appendChild(el('p', 'jellio-player-endscreen-overview', nextEpisode.Overview));
+    }
+  } else {
+    info.appendChild(el('h2', 'jellio-player-endscreen-title', item.Name || 'Completed'));
+    const sub = item.Type === 'Episode'
+      ? (item.SeriesName ? item.SeriesName + ' · Season Finale' : 'Season Finale')
+      : (item.ProductionYear ? String(item.ProductionYear) : 'Feature Film');
+    info.appendChild(el('div', 'jellio-player-endscreen-sub', sub));
+    if (item.Overview) {
+      info.appendChild(el('p', 'jellio-player-endscreen-overview', item.Overview));
+    }
+  }
+  content.appendChild(info);
+  card.appendChild(content);
+
+  const actions = el('div', 'jellio-player-endscreen-actions');
+  let primaryBtn = null;
+  let countdownTimer = null;
+
+  if (nextEpisode) {
+    primaryBtn = el('button', 'jellio-player-endscreen-btn jellio-player-endscreen-btn-primary');
+    primaryBtn.type = 'button';
+    const playIcon = el('span', 'material-icons', 'play_arrow');
+    playIcon.setAttribute('aria-hidden', 'true');
+    primaryBtn.appendChild(playIcon);
+    const playText = el('span', 'jellio-player-endscreen-btn-text', 'Play Next Episode');
+    primaryBtn.appendChild(playText);
+
+    function updateBtnCountdown() {
+      if (countdownSecs > 0) {
+        playText.textContent = 'Play Next Episode (' + countdownSecs + ')';
+      } else {
+        playText.textContent = 'Play Next Episode';
+      }
+    }
+
+    if (countdownSecs > 0) {
+      updateBtnCountdown();
+      countdownTimer = window.setInterval(function () {
+        countdownSecs -= 1;
+        updateBtnCountdown();
+        if (countdownSecs <= 0) {
+          if (countdownTimer) {
+            window.clearInterval(countdownTimer);
+            countdownTimer = null;
+          }
+          onPlayNext();
+        }
+      }, 1000);
+    }
+
+    primaryBtn.addEventListener('click', function () {
+      if (countdownTimer) {
+        window.clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      onPlayNext();
+    });
+    actions.appendChild(primaryBtn);
+
+    const replayBtn = el('button', 'jellio-player-endscreen-btn jellio-player-endscreen-btn-secondary');
+    replayBtn.type = 'button';
+    const replayIcon = el('span', 'material-icons', 'replay');
+    replayIcon.setAttribute('aria-hidden', 'true');
+    replayBtn.appendChild(replayIcon);
+    replayBtn.appendChild(el('span', '', 'Replay'));
+    replayBtn.addEventListener('click', function () {
+      if (countdownTimer) {
+        window.clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      onReplay();
+    });
+    actions.appendChild(replayBtn);
+
+    const backBtn = el('button', 'jellio-player-endscreen-btn jellio-player-endscreen-btn-ghost');
+    backBtn.type = 'button';
+    const backIcon = el('span', 'material-icons', item.SeriesId ? 'arrow_back' : 'home');
+    backIcon.setAttribute('aria-hidden', 'true');
+    backBtn.appendChild(backIcon);
+    backBtn.appendChild(el('span', '', item.SeriesId ? 'Back to Show' : 'Back to Home'));
+    backBtn.addEventListener('click', function () {
+      if (countdownTimer) {
+        window.clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      onBack();
+    });
+    actions.appendChild(backBtn);
+  } else {
+    primaryBtn = el('button', 'jellio-player-endscreen-btn jellio-player-endscreen-btn-primary');
+    primaryBtn.type = 'button';
+    const replayIcon = el('span', 'material-icons', 'replay');
+    replayIcon.setAttribute('aria-hidden', 'true');
+    primaryBtn.appendChild(replayIcon);
+    primaryBtn.appendChild(el('span', '', 'Replay'));
+    primaryBtn.addEventListener('click', onReplay);
+    actions.appendChild(primaryBtn);
+
+    const backBtn = el('button', 'jellio-player-endscreen-btn jellio-player-endscreen-btn-secondary');
+    backBtn.type = 'button';
+    const backIcon = el('span', 'material-icons', item.SeriesId ? 'arrow_back' : 'home');
+    backIcon.setAttribute('aria-hidden', 'true');
+    backBtn.appendChild(backIcon);
+    backBtn.appendChild(el('span', '', item.SeriesId ? 'Back to Show' : 'Back to Home'));
+    backBtn.addEventListener('click', onBack);
+    actions.appendChild(backBtn);
+  }
+
+  card.appendChild(actions);
+  overlay.appendChild(card);
+
+  card.addEventListener('click', function (e) {
+    if (primaryBtn && !primaryBtn.contains(e.target) && countdownTimer) {
+      window.clearInterval(countdownTimer);
+      countdownTimer = null;
+      const playText = primaryBtn.querySelector('.jellio-player-endscreen-btn-text');
+      if (playText) playText.textContent = 'Play Next Episode';
+    }
+  });
+
+  function cleanup() {
+    if (countdownTimer) {
+      window.clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    overlay.remove();
+  }
+
+  return {
+    overlay: overlay,
+    primaryBtn: primaryBtn,
+    cleanup: cleanup,
+  };
 }
 
 // A real choice instead of always just seeking straight to the saved
@@ -2780,8 +2987,34 @@ export async function renderPlayer(root, params) {
       positionPopover(settingsButton, sleepMenu);
     }
     wakeControls();
-  });
   settingsMenu.appendChild(sleepOption);
+
+  const upNextOption = el('button', 'jellio-player-popover-option jellio-player-settings-upnext');
+  upNextOption.type = 'button';
+  const upNextOptionLabel = el('span', 'jellio-player-settings-upnext-label');
+  const upNextIcon = el('span', 'material-icons', 'timer');
+  upNextIcon.setAttribute('aria-hidden', 'true');
+  upNextOptionLabel.appendChild(upNextIcon);
+  upNextOptionLabel.appendChild(el('span', '', 'Up Next Timer'));
+  upNextOption.appendChild(upNextOptionLabel);
+
+  function getUpNextShortLabel(secs) {
+    return secs === 0 ? 'Off' : secs + 's';
+  }
+
+  const upNextVal = el('span', 'jellio-player-popover-badge', getUpNextShortLabel(getUpNextCountdownSeconds()));
+  upNextOption.appendChild(upNextVal);
+
+  upNextOption.addEventListener('click', function () {
+    const cycle = [15, 30, 60, 0, 10];
+    const current = getUpNextCountdownSeconds();
+    const nextIdx = (cycle.indexOf(current) + 1) % cycle.length;
+    const nextSecs = cycle[nextIdx];
+    setUpNextCountdownSeconds(nextSecs);
+    upNextVal.textContent = getUpNextShortLabel(nextSecs);
+    showPlayerToast(nextSecs === 0 ? 'Up Next timer: Off' : 'Up Next timer: ' + nextSecs + 's');
+  });
+  settingsMenu.appendChild(upNextOption);
 
   const shortcutsOption = el('button', 'jellio-player-popover-option jellio-player-popover-shortcuts-option');
   shortcutsOption.type = 'button';
@@ -3580,6 +3813,22 @@ export async function renderPlayer(root, params) {
   }
   function onPlayerKeydown(event) {
     if (screenTornDown || isTypingTarget(event.target)) return;
+    if (endScreenModalInstance) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        endScreenModalInstance.cleanup();
+        endScreenModalInstance = null;
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (endScreenModalInstance.primaryBtn) {
+          endScreenModalInstance.primaryBtn.click();
+        }
+        return;
+      }
+      return;
+    }
     if (event.altKey && (event.key === 'c' || event.key === 'C')) {
       event.preventDefault();
       toggleCastMenu();
@@ -3853,7 +4102,10 @@ export async function renderPlayer(root, params) {
     if (credits && credits.End > 0 && credits.Start >= 0) {
       return currentTime >= credits.Start;
     }
-    return duration - currentTime <= getUpNextTriggerSeconds();
+    // Dynamic logic: on media where we do not have a timestamp for credits,
+    // do not show the premature floating Up Next overlay during playback.
+    // The post-play end-screen modal will appear when the episode finishes.
+    return false;
   }
 
   // Which segment kind ('Introduction' or 'Credits') the reader has
@@ -4060,7 +4312,9 @@ export async function renderPlayer(root, params) {
   let upNextShown = false;
   let upNextDismissed = false;
   let upNextCountdownInterval = null;
-  let upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
+  let upNextCountdownRemaining = getUpNextCountdownSeconds();
+  let isNavigatingNext = false;
+  let endScreenModalInstance = null;
 
   // Real bug, found live: this used to navigate straight to the next
   // episode's own #/play route with no mediaSourceId at all, so the
@@ -4093,9 +4347,15 @@ export async function renderPlayer(root, params) {
   }
 
   async function playNextEpisode() {
+    if (isNavigatingNext) return;
+    isNavigatingNext = true;
     if (upNextCountdownInterval) {
       window.clearInterval(upNextCountdownInterval);
       upNextCountdownInterval = null;
+    }
+    if (endScreenModalInstance) {
+      endScreenModalInstance.cleanup();
+      endScreenModalInstance = null;
     }
     const target = nextEpisode;
     if (!target) return;
@@ -4118,8 +4378,107 @@ export async function renderPlayer(root, params) {
     navigateTo(playHash(target.Id, mediaSourceId));
   }
 
+  function replayCurrentItem() {
+    if (endScreenModalInstance) {
+      endScreenModalInstance.cleanup();
+      endScreenModalInstance = null;
+    }
+    hasReportedStart = false;
+    if (streamOffsetTicks > 0 || needsStartOffset) {
+      getPlaybackInfo(itemId, 0, mediaSource ? mediaSource.Id : null, currentAudioStreamIndex)
+        .then(function (info) {
+          const negotiated = info && info.MediaSources && info.MediaSources[0];
+          if (negotiated) {
+            mediaSource = negotiated;
+            playSessionId = info.PlaySessionId;
+            streamOffsetTicks = 0;
+            needsStartOffset = false;
+            pendingNativeSeekSeconds = null;
+            video.src = buildStreamUrl(itemId, mediaSource, 0, {
+              audioStreamIndex: currentAudioStreamIndex,
+              forceTranscode: true,
+              playSessionId: playSessionId,
+            });
+            video.load();
+            showLoadingLogo();
+            waitForPlayableBuffer(attemptPlay);
+            return;
+          }
+          performSeek(0);
+          attemptPlay();
+        })
+        .catch(function () {
+          performSeek(0);
+          attemptPlay();
+        });
+    } else {
+      performSeek(0);
+      attemptPlay();
+    }
+  }
+
+  function showEndScreenModal() {
+    if (endScreenModalInstance || isNavigatingNext) return;
+    hideUpNext();
+
+    const countdownSetting = getUpNextCountdownSeconds();
+    const shouldCountdown = !upNextDismissed && countdownSetting > 0;
+    const initialCountdown = shouldCountdown
+      ? (upNextShown && upNextCountdownRemaining > 0 ? upNextCountdownRemaining : countdownSetting)
+      : null;
+
+    endScreenModalInstance = buildEndScreenModal({
+      item: item,
+      nextEpisode: nextEpisode,
+      onPlayNext: function () {
+        if (endScreenModalInstance) {
+          endScreenModalInstance.cleanup();
+          endScreenModalInstance = null;
+        }
+        playNextEpisode();
+      },
+      onReplay: function () {
+        if (endScreenModalInstance) {
+          endScreenModalInstance.cleanup();
+          endScreenModalInstance = null;
+        }
+        replayCurrentItem();
+      },
+      onClose: function () {
+        if (endScreenModalInstance) {
+          endScreenModalInstance.cleanup();
+          endScreenModalInstance = null;
+        }
+      },
+      onBack: function () {
+        if (endScreenModalInstance) {
+          endScreenModalInstance.cleanup();
+          endScreenModalInstance = null;
+        }
+        if (item.SeriesId) {
+          navigateTo('#/item?id=' + item.SeriesId);
+        } else {
+          navigateTo('#/home');
+        }
+      },
+      initialCountdown: initialCountdown,
+    });
+
+    root.appendChild(endScreenModalInstance.overlay);
+    if (endScreenModalInstance.primaryBtn) {
+      endScreenModalInstance.primaryBtn.focus();
+    }
+    wakeControls();
+  }
+
   function updateUpNextCountdown() {
-    if (upNextPlayButton) upNextPlayButton.textContent = 'Play now (' + upNextCountdownRemaining + ')';
+    if (upNextPlayButton) {
+      if (upNextCountdownRemaining > 0) {
+        upNextPlayButton.textContent = 'Play now (' + upNextCountdownRemaining + ')';
+      } else {
+        upNextPlayButton.textContent = 'Play now';
+      }
+    }
   }
 
   function showUpNext() {
@@ -4148,13 +4507,23 @@ export async function renderPlayer(root, params) {
     // over that, only ever called from inside that same handler.
     reportRealDurationIfUseful(currentPositionTicks() / TICKS_PER_SECOND);
     upNextOverlay.classList.remove('jellio-player-upnext-hidden');
-    upNextCountdownRemaining = UPNEXT_COUNTDOWN_SECONDS;
-    updateUpNextCountdown();
-    upNextCountdownInterval = window.setInterval(function () {
-      upNextCountdownRemaining -= 1;
+    const countdownSecs = getUpNextCountdownSeconds();
+    if (countdownSecs > 0) {
+      upNextCountdownRemaining = countdownSecs;
       updateUpNextCountdown();
-      if (upNextCountdownRemaining <= 0) playNextEpisode();
-    }, 1000);
+      upNextCountdownInterval = window.setInterval(function () {
+        upNextCountdownRemaining -= 1;
+        updateUpNextCountdown();
+        if (upNextCountdownRemaining <= 0) {
+          window.clearInterval(upNextCountdownInterval);
+          upNextCountdownInterval = null;
+          playNextEpisode();
+        }
+      }, 1000);
+    } else {
+      upNextCountdownRemaining = 0;
+      updateUpNextCountdown();
+    }
   }
 
   function hideUpNext() {
@@ -4459,6 +4828,7 @@ export async function renderPlayer(root, params) {
     // video.duration at all.
     reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0), true);
     markRealWatchComplete();
+    showEndScreenModal();
   });
 
   video.addEventListener('timeupdate', function () {
@@ -4926,6 +5296,10 @@ export async function renderPlayer(root, params) {
     }
     window.clearInterval(progressInterval);
     if (upNextCountdownInterval) window.clearInterval(upNextCountdownInterval);
+    if (endScreenModalInstance) {
+      endScreenModalInstance.cleanup();
+      endScreenModalInstance = null;
+    }
     // Real bug, audit-found: hideControls() below reschedules itself
     // via idleTimer for as long as it finds itself "blocked" (video.paused
     // among other things), and video.paused reads permanently true from
