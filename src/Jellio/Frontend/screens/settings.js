@@ -44,7 +44,14 @@ import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
 import { isAutoPipEnabled, setAutoPipEnabled } from '../runtime/pipSettings.js';
-import { UPNEXT_TRIGGER_OPTIONS, getUpNextTriggerSeconds, setUpNextTriggerSeconds } from '../runtime/upNextSettings.js';
+import {
+  UPNEXT_COUNTDOWN_OPTIONS,
+  getUpNextCountdownSeconds,
+  setUpNextCountdownSeconds,
+  UPNEXT_TRIGGER_OPTIONS,
+  getUpNextTriggerSeconds,
+  setUpNextTriggerSeconds,
+} from '../runtime/upNextSettings.js';
 import {
   isAutoDeleteWatchedEnabled,
   setAutoDeleteWatchedEnabled,
@@ -368,12 +375,12 @@ function buildPlaybackCard() {
   body.appendChild(
     buildSelectRow(
       null,
-      'Next episode timing',
-      'When the Up Next card appears near the end of an episode. Only used when this episode has no Intro Skipper credits data to time it off instead.',
-      UPNEXT_TRIGGER_OPTIONS,
-      String(getUpNextTriggerSeconds()),
+      'Up Next countdown timer',
+      'How long the Up Next card counts down before automatically playing the next episode when credits begin. Choose Off to disable automatic transition.',
+      UPNEXT_COUNTDOWN_OPTIONS,
+      String(getUpNextCountdownSeconds()),
       function (value, select, status) {
-        setUpNextTriggerSeconds(Number(value));
+        setUpNextCountdownSeconds(Number(value));
         status.textContent = 'Saved, takes effect on the next episode.';
       },
     ),
