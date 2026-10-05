@@ -17,6 +17,7 @@ import {
   setPlayed,
 } from '../runtime/api.js';
 import { openCardOptionsMenu } from '../components/cardOptionsMenu.js';
+import { shareHash } from '../runtime/shareLink.js';
 import {
   groupMangaSeries,
   chapterState,
@@ -185,6 +186,14 @@ export function renderMangaSeries(root, params, parentId) {
         });
     }
 
+    function copyShare(title, hash) {
+      shareHash(title, hash)
+        .then((result) => {
+          if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+        })
+        .catch(() => showToast('Could not copy the link.'));
+    }
+
     // Right-click or long-press on a chapter, Mihon style.
     function openChapterMenu(item, anchor) {
       const read = chapterState(item, progress).read;
@@ -200,6 +209,12 @@ export function renderMangaSeries(root, params, parentId) {
       if (before.length) {
         options.push({ label: 'Mark previous as read', icon: 'done_all', onClick: () => setRead(before, true) });
       }
+      options.push({
+        label: 'Share link',
+        icon: 'share',
+        onClick: () =>
+          copyShare(group.title + ' · ' + item.Name, '#/read?id=' + item.Id + (item.Stream && item.Stream.MangaId ? '&manga=' + item.Stream.MangaId : '')),
+      });
       openCardOptionsMenu(item, anchor.getBoundingClientRect(), null, { onlyExtra: true, extraOptions: options });
     }
     const resume = resumePoint(chapters, progress, duplicatesAsOne);
@@ -495,6 +510,14 @@ export function renderMangaSeries(root, params, parentId) {
     paintCategories();
     categoriesButton.addEventListener('click', () => openCategoryPicker('manga', [shelfKey], group.title));
     actions.appendChild(categoriesButton);
+
+    const shareButton = el('button', iconActionClass);
+    shareButton.type = 'button';
+    shareButton.setAttribute('aria-label', 'Copy a link to share');
+    shareButton.title = 'Copy a link to share';
+    shareButton.appendChild(el('span', 'material-icons share'));
+    shareButton.addEventListener('click', () => copyShare(group.title, window.location.hash));
+    actions.appendChild(shareButton);
 
     actions.appendChild(moreButton);
     info.appendChild(actions);
