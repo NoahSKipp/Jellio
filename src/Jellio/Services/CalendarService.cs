@@ -7,9 +7,12 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
+using Jellyfin.Database.Implementations.Entities;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
@@ -40,12 +43,124 @@ public record WatchlistCalendarItem(Guid ItemId, string Name, string Type, DateT
 /// does not change minute to minute, and a plugin restart just means
 /// the next real request pays for a fresh lookup, not a lost one.
 /// </summary>
-public class CalendarService(IHttpClientFactory httpClientFactory, ILogger<CalendarService> logger)
+public class CalendarService(
+    IHttpClientFactory httpClientFactory,
+    ILibraryManager libraryManager,
+    IUserDataManager userDataManager,
+    ILogger<CalendarService> logger
+)
 {
     private const string BaseUrl = "https://api.themoviedb.org/3";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(6);
 
     private readonly ConcurrentDictionary<string, (DateTime CachedAt, CalendarEntry? Entry)> _cache = new();
+
+    /// <summary>
+    /// Returns all library items that should be monitored for upcoming releases or air dates:
+    /// 1. Items on the user's Watchlist (IsFavorite = true) - both movies and series.
+    /// 2. Currently watched / continuing TV shows:
+    ///    - Continuing/airing series where user has watched episodes, even if all currently
+    ///      available local episodes are watched (userData.Played = true).
+    ///    - In-progress series where unplayed episodes remain and the user has actively watched recently.
+    /// </summary>
+    public IReadOnlyList<BaseItem> GetMonitoredItems(User user)
+    {
+        var monitored = new Dictionary<Guid, BaseItem>();
+
+        // 1. Explicit watchlist (favorites)
+        var watchlist = libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            IsFavorite = true,
+            IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
+        });
+
+        foreach (var item in watchlist)
+        {
+            monitored[item.Id] = item;
+        }
+
+        // 2. Currently watched & ongoing/airing series
+        var allSeries = libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            IncludeItemTypes = [BaseItemKind.Series],
+        });
+
+        var now = DateTime.UtcNow;
+        var inProgressCutoff = now.AddDays(-180); // 6 months active window for in-progress series
+        var continuingCutoff = now.AddDays(-365); // 1 year active window for caught-up continuing series
+
+        foreach (var item in allSeries)
+        {
+            if (monitored.ContainsKey(item.Id))
+            {
+                continue;
+            }
+
+            if (item is not Series series)
+            {
+                continue;
+            }
+
+            var userData = userDataManager.GetUserData(user, series);
+            if (userData == null)
+            {
+                continue;
+            }
+
+            var hasWatched = userData.Played || userData.PlayCount > 0 || userData.LastPlayedDate.HasValue || userData.PlaybackPositionTicks > 0;
+            if (!hasWatched)
+            {
+                continue;
+            }
+
+            // Definitively ended series that the user already completed
+            if (series.Status == MediaBrowser.Model.Entities.SeriesStatus.Ended && userData.Played)
+            {
+                continue;
+            }
+
+            // Continuing / actively airing shows:
+            // Even if the user finished all currently available episodes (userData.Played == true),
+            // the show is still airing new episodes. Respect continuing status and keep monitoring.
+            if (series.Status == MediaBrowser.Model.Entities.SeriesStatus.Continuing)
+            {
+                if (!userData.LastPlayedDate.HasValue || userData.LastPlayedDate.Value >= continuingCutoff)
+                {
+                    monitored[series.Id] = series;
+                    continue;
+                }
+            }
+            else if (series.Status != MediaBrowser.Model.Entities.SeriesStatus.Ended && userData.Played)
+            {
+                // Unspecified status but completed recently (within 90 days): monitor in case next season airs
+                if (userData.LastPlayedDate.HasValue && userData.LastPlayedDate.Value >= now.AddDays(-90))
+                {
+                    monitored[series.Id] = series;
+                    continue;
+                }
+            }
+
+            // In-progress shows (unplayed episodes still remain in library)
+            if (!userData.Played)
+            {
+                // In-progress episode currently paused
+                if (userData.PlaybackPositionTicks > 0)
+                {
+                    monitored[series.Id] = series;
+                    continue;
+                }
+
+                // Or played recently (or play count > 0 with no timestamp)
+                if (!userData.LastPlayedDate.HasValue || userData.LastPlayedDate.Value >= inProgressCutoff)
+                {
+                    monitored[series.Id] = series;
+                    continue;
+                }
+            }
+        }
+
+        return monitored.Values.ToList();
+    }
 
     // Moved verbatim from Controllers/CalendarController.cs's own
     // former Get(): a concurrency cap rather than a bare Task.WhenAll,

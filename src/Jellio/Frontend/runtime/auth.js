@@ -20,7 +20,10 @@ const NATIVE_CREDENTIALS_KEY = 'jellyfin_credentials';
 
 const CLIENT_NAME = 'Jellio';
 const CLIENT_VERSION = '0.1.0';
-const DEVICE_NAME = 'Browser';
+
+function getDeviceName() {
+  return (typeof window !== 'undefined' && window.jellioNative && window.jellioNative.deviceName) || 'Browser';
+}
 
 function readJson(key) {
   try {
@@ -191,7 +194,7 @@ function syncNativeApiClientState(accessToken, user) {
       window.ApiClient.setAuthenticationInfo(accessToken, user.Id);
       window.ApiClient._deviceId = getDeviceId();
       window.ApiClient._appName = CLIENT_NAME;
-      window.ApiClient._deviceName = DEVICE_NAME;
+      window.ApiClient._deviceName = getDeviceName();
       window.ApiClient._appVersion = CLIENT_VERSION;
     }
   } catch (err) {
@@ -265,7 +268,7 @@ export function forgetRememberedUser(userId) {
 function buildAuthHeaderForToken(token) {
   const parts = [
     'Client="' + CLIENT_NAME + '"',
-    'Device="' + DEVICE_NAME + '"',
+    'Device="' + getDeviceName() + '"',
     'DeviceId="' + getDeviceId() + '"',
     'Version="' + CLIENT_VERSION + '"',
   ];
@@ -355,7 +358,7 @@ export function buildAuthHeader() {
   const token = getAccessToken();
   const parts = [
     'Client="' + CLIENT_NAME + '"',
-    'Device="' + DEVICE_NAME + '"',
+    'Device="' + getDeviceName() + '"',
     'DeviceId="' + getDeviceId() + '"',
     'Version="' + CLIENT_VERSION + '"',
   ];

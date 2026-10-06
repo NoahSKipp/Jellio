@@ -27,7 +27,6 @@ namespace Jellio.Controllers;
 [Route("Jellio/calendar")]
 [Authorize]
 public class CalendarController(
-    ILibraryManager libraryManager,
     IUserManager userManager,
     CalendarService calendarService
 ) : ControllerBase
@@ -53,13 +52,8 @@ public class CalendarController(
             return BadRequest("Invalid user session");
         }
 
-        var watchlist = libraryManager.GetItemList(new InternalItemsQuery(user)
-        {
-            IsFavorite = true,
-            IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
-        });
-
-        var results = await calendarService.GetWatchlistCalendarAsync(watchlist, accessToken).ConfigureAwait(false);
+        var monitored = calendarService.GetMonitoredItems(user);
+        var results = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken).ConfigureAwait(false);
         return Ok(results);
     }
 
