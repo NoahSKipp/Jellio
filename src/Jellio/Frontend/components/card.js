@@ -292,6 +292,7 @@ function buildLandscapeCard(item, options) {
   card.setAttribute('aria-label', isEpisode ? item.SeriesName + ' - ' + episodeSubtitle(item) : item.Name || '');
 
   const imageWrap = el('div', 'jellio-card-landscape-image-wrap');
+  const imageUrl = landscapeImageUrl(item);
   function appendLandscapePlaceholder() {
     const placeholder = el('div', 'jellio-card-landscape-image jellio-card-image-empty');
     imageWrap.insertBefore(placeholder, imageWrap.firstChild);
