@@ -341,6 +341,16 @@ public class IndexHtmlPatchService(
     return originalLog.apply(console, arguments);
   };
 })();
+(function () {
+  window['__onGCastApiAvailable'] = function (isAvailable) {
+    window.__jellioGCastAvailable = Boolean(isAvailable);
+    if (typeof window.__jellioOnGCastApiAvailable === 'function') {
+      try {
+        window.__jellioOnGCastApiAvailable(isAvailable);
+      } catch (e) {}
+    }
+  };
+})();
 ";
 
     private bool TryRead(string path, out string? content)
