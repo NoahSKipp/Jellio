@@ -2999,6 +2999,7 @@ export async function renderPlayer(root, params) {
       positionPopover(settingsButton, sleepMenu);
     }
     wakeControls();
+  });
   settingsMenu.appendChild(sleepOption);
 
   const upNextOption = el('button', 'jellio-player-popover-option jellio-player-settings-upnext');
