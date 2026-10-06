@@ -10764,18 +10764,53 @@
   text-shadow: 0 0 6px color-mix(in srgb, var(--jellio-season-accent) 55%, transparent);
 }
 
-/* Halloween: brightness(0) turns the bat glyph into a flat black
-   silhouette, drop-shadow is the only real colour left on it, drifting
-   diagonally rather than straight down. Mixed near/far in
-   components/seasons.js (a couple large, fast and more opaque; the
-   rest small, slow and faint) so it reads as a few close overhead
-   rather than a uniform swarm. */
+/* Halloween creatures are inline SVG silhouettes (components/seasons.js),
+   drifting diagonally rather than straight down; the wings flap by
+   squashing each wing around its root. Mixed near and far so a few read
+   as close overhead rather than a uniform swarm. */
 .jellio-season-bat {
   position: absolute;
   top: -8%;
-  font-size: 1em;
-  filter: brightness(0) drop-shadow(0 0 6px var(--jellio-season-accent));
+  line-height: 0;
+  filter: drop-shadow(0 0 5px var(--jellio-season-accent));
   animation: jellio-season-bat-drift linear infinite;
+}
+
+.jellio-season-bat svg,
+.jellio-season-ghost svg,
+.jellio-season-spider b svg,
+.jellio-season-pumpkin svg,
+.jellio-season-skull svg,
+.jellio-season-witch svg,
+.jellio-season-cobweb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.jellio-season-wing-r,
+.jellio-season-wing-l {
+  transform-box: fill-box;
+  animation: jellio-season-flap var(--jellio-season-flap, 0.32s) ease-in-out infinite;
+}
+
+.jellio-season-wing-r {
+  transform-origin: 0% 70%;
+}
+
+.jellio-season-wing-l {
+  transform-origin: 100% 70%;
+}
+
+@keyframes jellio-season-flap {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+
+  50% {
+    transform: scaleY(0.38);
+  }
 }
 
 @keyframes jellio-season-bat-drift {
@@ -10785,6 +10820,442 @@
 
   to {
     transform: translate(var(--jellio-season-dx, -45vw), 108vh);
+  }
+}
+
+.jellio-season-moon {
+  position: absolute;
+  top: 4%;
+  right: 7%;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #ffb88a 0%, #e0562c 38%, #7a1c10 72%, #3a0c0a 100%);
+  box-shadow: 0 0 60px 18px rgb(224 86 44 / 0.35), 0 0 160px 60px rgb(122 15 26 / 0.35);
+  opacity: 0.8;
+  animation: jellio-season-moon-pulse 9s ease-in-out infinite;
+}
+
+.jellio-season-moon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 62% 30%, rgb(60 8 6 / 0.45) 0 9%, transparent 10%),
+    radial-gradient(circle at 36% 58%, rgb(60 8 6 / 0.38) 0 12%, transparent 13%),
+    radial-gradient(circle at 70% 66%, rgb(60 8 6 / 0.32) 0 7%, transparent 8%),
+    radial-gradient(circle at 24% 28%, rgb(60 8 6 / 0.3) 0 6%, transparent 7%);
+}
+
+.jellio-season-moon::after {
+  content: "";
+  position: absolute;
+  left: -40%;
+  right: -40%;
+  top: 54%;
+  height: 14%;
+  border-radius: 50%;
+  background: rgb(12 8 18 / 0.85);
+  filter: blur(6px);
+  animation: jellio-season-cloud 26s ease-in-out infinite alternate;
+}
+
+@keyframes jellio-season-moon-pulse {
+  0%, 100% {
+    opacity: 0.72;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes jellio-season-cloud {
+  from {
+    transform: translateX(-14%);
+  }
+
+  to {
+    transform: translateX(14%);
+  }
+}
+
+.jellio-season-witch {
+  position: absolute;
+  top: 14%;
+  left: -10%;
+  width: 96px;
+  height: 48px;
+  line-height: 0;
+  opacity: 0;
+  filter: drop-shadow(0 0 8px var(--jellio-season-accent));
+  animation: jellio-season-witch 38s linear infinite;
+}
+
+@keyframes jellio-season-witch {
+  0%, 62% {
+    transform: translate(0, 0) rotate(-8deg);
+    opacity: 0;
+  }
+
+  64% {
+    opacity: 0.85;
+  }
+
+  80% {
+    transform: translate(60vw, -6vh) rotate(-4deg);
+  }
+
+  97% {
+    opacity: 0.85;
+  }
+
+  100% {
+    transform: translate(125vw, 4vh) rotate(-8deg);
+    opacity: 0;
+  }
+}
+
+.jellio-season-ghost {
+  position: absolute;
+  bottom: -12%;
+  width: var(--jellio-season-size, 46px);
+  height: calc(var(--jellio-season-size, 46px) * 1.2);
+  line-height: 0;
+  opacity: 0;
+  filter: drop-shadow(0 0 14px rgb(190 170 255 / 0.8));
+  animation: jellio-season-ghost-rise 24s linear infinite;
+}
+
+@keyframes jellio-season-ghost-rise {
+  0% {
+    transform: translate(0, 0) rotate(-6deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: var(--jellio-season-opacity, 0.3);
+  }
+
+  25% {
+    transform: translate(34px, -28vh) rotate(5deg);
+  }
+
+  50% {
+    transform: translate(-30px, -56vh) rotate(-5deg);
+  }
+
+  75% {
+    transform: translate(30px, -84vh) rotate(5deg);
+    opacity: var(--jellio-season-opacity, 0.3);
+  }
+
+  100% {
+    transform: translate(-10px, -112vh) rotate(-4deg);
+    opacity: 0;
+  }
+}
+
+.jellio-season-spider {
+  position: absolute;
+  top: 0;
+  width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: jellio-season-spider-drop 18s ease-in-out infinite;
+}
+
+.jellio-season-spider i {
+  display: block;
+  width: 1px;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: linear-gradient(#ffffff55, #ffffff99);
+}
+
+.jellio-season-spider b {
+  display: block;
+  width: var(--jellio-season-size, 30px);
+  height: calc(var(--jellio-season-size, 30px) * 0.85);
+  line-height: 0;
+  filter: drop-shadow(0 0 5px #b8a6ff);
+  transform: translateY(-3px);
+}
+
+.jellio-season-legs {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: jellio-season-scuttle 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes jellio-season-scuttle {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0.88);
+  }
+}
+
+@keyframes jellio-season-spider-drop {
+  0%, 8% {
+    height: 0;
+  }
+
+  28% {
+    height: var(--jellio-season-drop, 30vh);
+  }
+
+  34% {
+    height: calc(var(--jellio-season-drop, 30vh) - 30px);
+  }
+
+  40%, 62% {
+    height: var(--jellio-season-drop, 30vh);
+  }
+
+  80%, 100% {
+    height: 0;
+  }
+}
+
+.jellio-season-pumpkin {
+  position: absolute;
+  bottom: 2%;
+  width: var(--jellio-season-size, 64px);
+  height: calc(var(--jellio-season-size, 64px) * 0.9);
+  line-height: 0;
+}
+
+.jellio-season-pumpkin::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 140 30 / 0.55) 0%, rgb(255 117 24 / 0.18) 40%, transparent 68%);
+  animation: jellio-season-candle 3.4s ease-in-out infinite;
+}
+
+.jellio-season-pumpkin span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: jellio-season-candle-body 3.4s ease-in-out infinite;
+}
+
+.jellio-season-face {
+  animation: jellio-season-face-light 3.4s ease-in-out infinite;
+}
+
+@keyframes jellio-season-candle {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  20% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  41% {
+    opacity: 0.7;
+    transform: scale(0.96);
+  }
+
+  63% {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+
+  80% {
+    opacity: 0.78;
+  }
+}
+
+@keyframes jellio-season-candle-body {
+  0%, 100% {
+    filter: saturate(1.25) brightness(0.9);
+  }
+
+  20% {
+    filter: saturate(1.4) brightness(1.1);
+  }
+
+  41% {
+    filter: saturate(1.2) brightness(0.75);
+  }
+
+  80% {
+    filter: saturate(1.3) brightness(0.85);
+  }
+}
+
+@keyframes jellio-season-face-light {
+  0%, 100% {
+    opacity: 0.85;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  41% {
+    opacity: 0.55;
+  }
+
+  63% {
+    opacity: 0.95;
+  }
+
+  80% {
+    opacity: 0.65;
+  }
+}
+
+.jellio-season-cobweb {
+  position: absolute;
+  top: 0;
+  width: 170px;
+  height: 170px;
+  line-height: 0;
+  opacity: 0.55;
+}
+
+.jellio-season-cobweb-left {
+  left: 0;
+}
+
+.jellio-season-cobweb-right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+@media (max-width: 700px) {
+  .jellio-season-cobweb {
+    width: 110px;
+    height: 110px;
+  }
+
+  .jellio-season-moon {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+.jellio-season-ember {
+  position: absolute;
+  bottom: -2%;
+  width: var(--jellio-season-size, 3px);
+  height: var(--jellio-season-size, 3px);
+  border-radius: 50%;
+  background: #ffb066;
+  box-shadow: 0 0 8px 2px rgb(255 140 40 / 0.7);
+  opacity: 0;
+  animation: jellio-season-ember-rise 10s linear infinite;
+}
+
+@keyframes jellio-season-ember-rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate(var(--jellio-season-sway, 30px), -105vh);
+    opacity: 0;
+  }
+}
+
+.jellio-season-skull {
+  position: absolute;
+  width: var(--jellio-season-size, 26px);
+  height: calc(var(--jellio-season-size, 26px) * 1.17);
+  line-height: 0;
+  opacity: 0;
+  filter: drop-shadow(0 0 8px rgb(200 255 200 / 0.5));
+  animation: jellio-season-skull-float 26s ease-in-out infinite;
+}
+
+@keyframes jellio-season-skull-float {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(0) rotate(-8deg);
+  }
+
+  20%, 70% {
+    opacity: 0.22;
+  }
+
+  50% {
+    transform: translateY(-34px) rotate(8deg);
+  }
+}
+
+/* Lightning is the one Halloween layer above the page: a click through
+   overlay inside the app root, hidden with the rest during fullscreen
+   playback. */
+.jellio-season-sky {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.jellio-root-fullscreen .jellio-season-sky {
+  display: none;
+}
+
+.jellio-season-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(90% 70% at var(--jellio-season-flash-x, 60%) 0%, #f3ecff 0%, #b79bff 38%, #4b2a9a 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.jellio-season-flash-on {
+  opacity: var(--jellio-season-flash-opacity, 0.5);
+}
+
+.jellio-season-bolt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.jellio-season-rumble {
+  animation: jellio-season-rumble 0.35s linear 1;
+}
+
+@keyframes jellio-season-rumble {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+
+  20% {
+    transform: translate(-2px, 1px);
+  }
+
+  40% {
+    transform: translate(2px, -1px);
+  }
+
+  60% {
+    transform: translate(-1px, -1px);
+  }
+
+  80% {
+    transform: translate(1px, 1px);
   }
 }
 
@@ -10858,8 +11329,8 @@
   width: 0.4em;
   height: 0.4em;
   border-radius: 50%;
-  background: var(--jellio-season-accent);
-  box-shadow: 0 0 8px 2px var(--jellio-season-accent);
+  background: var(--jellio-season-eye, var(--jellio-season-accent));
+  box-shadow: 0 0 8px 2px var(--jellio-season-eye, var(--jellio-season-accent));
 }
 
 @keyframes jellio-season-blink {
