@@ -32,7 +32,6 @@ namespace Jellio.Controllers;
 [Authorize]
 public class NotificationsController(
     NotificationStore store,
-    ILibraryManager libraryManager,
     IUserManager userManager,
     CalendarService calendarService,
     ShelfStore shelfStore
@@ -62,13 +61,8 @@ public class NotificationsController(
         List<WatchlistCalendarItem>? entries = null;
         if (user != null)
         {
-            var watchlist = libraryManager.GetItemList(new InternalItemsQuery(user)
-            {
-                IsFavorite = true,
-                IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
-            });
-
-            entries = await calendarService.GetWatchlistCalendarAsync(watchlist, accessToken!).ConfigureAwait(false);
+            var monitored = calendarService.GetMonitoredItems(user);
+            entries = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken!).ConfigureAwait(false);
         }
 
         var notifications = store.Update(userId, notifications =>

@@ -1489,14 +1489,14 @@ export async function renderDetail(root, params) {
     actionsIcons.appendChild(changeStreamButton);
   }
 
-  if (item.Type === 'Series' || item.Type === 'Movie') {
+  if (item.Type === 'Series') {
     const seriesOrItemKey = 's:' + String(item.Id).replace(/-/g, '').toLowerCase();
     const rawKey = String(item.Id).replace(/-/g, '').toLowerCase();
 
     const muteToggle = el('button', iconActionClass);
     muteToggle.type = 'button';
     muteToggle.setAttribute('aria-label', 'Mute notifications');
-    muteToggle.title = 'Skip new-release notifications for this title';
+    muteToggle.title = 'Skip new-episode notifications for this show';
     muteToggle.appendChild(el('span', 'material-icons notifications_off'));
 
     function paintMuteToggle(on) {
