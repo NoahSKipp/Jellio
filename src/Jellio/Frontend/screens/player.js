@@ -76,7 +76,7 @@ import {
   prefetchStreams,
   syncTracker,
 } from '../runtime/api.js';
-import { getUpNextTriggerSeconds, getUpNextCountdownSeconds, setUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
+import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
@@ -1087,15 +1087,6 @@ export async function renderPlayer(root, params) {
   let syncMediaSession = function () {};
   let syncMediaPosition = function () {};
 
-  const keyboardButton = el('button', 'jellio-player-back jellio-player-keyboard');
-  keyboardButton.type = 'button';
-  keyboardButton.setAttribute('aria-label', 'Keyboard shortcuts (?)');
-  const keyboardIcon = el('span', 'material-icons keyboard');
-  keyboardIcon.setAttribute('aria-hidden', 'true');
-  keyboardButton.appendChild(keyboardIcon);
-  keyboardButton.addEventListener('click', function () {
-    toggleShortcutsModal();
-  });
 
   // Native browser API, no server involvement at all: video.poster
   // above and video.src set further down are the only real state a PiP
@@ -1416,7 +1407,6 @@ export async function renderPlayer(root, params) {
     };
   }
 
-  topbarActions.appendChild(keyboardButton);
   topbarActions.appendChild(backButton);
   topbar.appendChild(topbarActions);
 
@@ -3011,33 +3001,6 @@ export async function renderPlayer(root, params) {
     wakeControls();
   });
   settingsMenu.appendChild(sleepOption);
-
-  const upNextOption = el('button', 'jellio-player-popover-option jellio-player-settings-upnext');
-  upNextOption.type = 'button';
-  const upNextOptionLabel = el('span', 'jellio-player-settings-upnext-label');
-  const upNextIcon = el('span', 'material-icons', 'timer');
-  upNextIcon.setAttribute('aria-hidden', 'true');
-  upNextOptionLabel.appendChild(upNextIcon);
-  upNextOptionLabel.appendChild(el('span', '', 'Up Next Timer'));
-  upNextOption.appendChild(upNextOptionLabel);
-
-  function getUpNextShortLabel(secs) {
-    return secs === 0 ? 'Off' : secs + 's';
-  }
-
-  const upNextVal = el('span', 'jellio-player-popover-badge', getUpNextShortLabel(getUpNextCountdownSeconds()));
-  upNextOption.appendChild(upNextVal);
-
-  upNextOption.addEventListener('click', function () {
-    const cycle = [15, 30, 60, 0, 10];
-    const current = getUpNextCountdownSeconds();
-    const nextIdx = (cycle.indexOf(current) + 1) % cycle.length;
-    const nextSecs = cycle[nextIdx];
-    setUpNextCountdownSeconds(nextSecs);
-    upNextVal.textContent = getUpNextShortLabel(nextSecs);
-    showPlayerToast(nextSecs === 0 ? 'Up Next timer: Off' : 'Up Next timer: ' + nextSecs + 's');
-  });
-  settingsMenu.appendChild(upNextOption);
 
   const shortcutsOption = el('button', 'jellio-player-popover-option jellio-player-popover-shortcuts-option');
   shortcutsOption.type = 'button';
