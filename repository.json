@@ -8,6 +8,30 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.60.3] - 2026-10-06\n\n### 🐛 Bug Fixes\n\n- *(player)* Properly teardown wheel, dblclick, and wake listeners on cleanup\n\n### 🚜 Refactor\n\n- *(player)* Remove up next timer from player popover and remove redundant topbar keyboard button\n",
+        "checksum": "b2276e2c2e7a101d27fc0d7ad664b286",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.60.3/jellio_1.60.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-06T23:24:22Z",
+        "version": "1.60.3"
+      },
+      {
+        "changelog": "## [1.60.2] - 2026-10-06\n\n### 🐛 Bug Fixes\n\n- *(cast)* Fix google cast sdk initialization and remote playback in chrome android pwa\n",
+        "checksum": "",
+        "sourceUrl": "",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-06T20:09:49Z",
+        "version": "1.60.2"
+      },
+      {
+        "changelog": "## [1.60.1] - 2026-10-06\n\n### 🐛 Bug Fixes\n\n- *(reader)* Fix manga pinch-zoom page jumping and pdf zoom left-side cutoff\n",
+        "checksum": "",
+        "sourceUrl": "",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-06T18:08:36Z",
+        "version": "1.60.1"
+      },
+      {
         "changelog": "## [1.60.0] - 2026-10-06\n\n### 🚀 Features\n\n- Richer Christmas and New Year effects\n",
         "checksum": "484691ad1e9ea7b61f77aefcec12a174",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.60.0/jellio_1.60.0.0.zip",
@@ -222,30 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-02T16:51:26Z",
         "version": "1.41.1"
-      },
-      {
-        "changelog": "## [1.41.0] - 2026-10-02\n\n### 🚀 Features\n\n- Smaller video downloads with Low, High and Higher and a time-left estimate\n- Limit server conversions to two and use HEVC in the Mac app\n- Ask the player's engine what it can direct play\n",
-        "checksum": "350be22101f4a398d7b843d9e06375d8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.41.0/jellio_1.41.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-02T13:07:35Z",
-        "version": "1.41.0"
-      },
-      {
-        "changelog": "## [1.40.2] - 2026-10-01\n\n### 🐛 Bug Fixes\n\n- Clear the loading logo on a timer too, not only on media events\n- Also clear the loading logo when the video is drawing frames\n",
-        "checksum": "132cd248a7a85cf255abeec9209cd901",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.40.2/jellio_1.40.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-01T23:23:21Z",
-        "version": "1.40.2"
-      },
-      {
-        "changelog": "## [1.40.1] - 2026-10-01\n\n### 🐛 Bug Fixes\n\n- Load every module under the plugin version so updates aren't stale\n",
-        "checksum": "373aa86d910173cb36af2381c94e3908",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.40.1/jellio_1.40.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-01T17:07:17Z",
-        "version": "1.40.1"
       }
     ]
   }
