@@ -885,12 +885,15 @@ function isGlobalShortcutTypingTarget(target) {
   return tag === 'INPUT' || tag === 'TEXTAREA' || !!target.isContentEditable;
 }
 document.addEventListener('keydown', function (event) {
-  if (event.key !== '/' || event.ctrlKey || event.altKey || event.metaKey) return;
+  const isSlash = event.key === '/' && !event.ctrlKey && !event.altKey && !event.metaKey;
+  const isCmdK = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+  if (!isSlash && !isCmdK) return;
   if (!isAuthenticated() || isGlobalShortcutTypingTarget(event.target)) return;
   event.preventDefault();
   const existingInput = document.querySelector('.jellio-search-input');
   if (existingInput) {
     existingInput.focus();
+    if (typeof existingInput.select === 'function') existingInput.select();
   } else {
     navigateTo('#/search');
   }

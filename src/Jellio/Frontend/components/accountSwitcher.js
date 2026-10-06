@@ -83,6 +83,15 @@ function switchToUser(button, promiseFactory, status) {
     });
 }
 
+const STAGGER_STEP_MS = 50;
+const STAGGER_MAX = 10;
+
+function applyStagger(wrap, index) {
+  if (typeof index === 'number') {
+    wrap.style.setProperty('--jellio-stagger-delay', Math.min(index, STAGGER_MAX) * STAGGER_STEP_MS + 'ms');
+  }
+}
+
 // quick marks a tile whose own onClick actually completes the switch
 // right here (a remembered token, or a real passwordless public user):
 // real feedback asked for a way to tell those apart from a tile that
@@ -90,8 +99,9 @@ function switchToUser(button, promiseFactory, status) {
 // full real sign-in screen underneath (a public user Jellyfin itself
 // says needs a real password, this file's own openAccountSwitcher()
 // already treats differently, just invisibly until now).
-function buildProfileTile(userId, name, imageTag, onClick, quick, online) {
+function buildProfileTile(userId, name, imageTag, onClick, quick, online, index) {
   const wrap = el('div', 'jellio-login-profile');
+  applyStagger(wrap, index);
   const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
 
   const avatar = document.createElement('button');
@@ -156,8 +166,9 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online) {
   return wrap;
 }
 
-function buildAddTile() {
+function buildAddTile(index) {
   const wrap = el('div', 'jellio-login-profile');
+  applyStagger(wrap, index);
   const avatarWrap = el('div', 'jellio-login-profile-avatar-wrap');
 
   const avatar = document.createElement('button');
@@ -284,6 +295,7 @@ export async function openAccountSwitcher() {
   // the rest of this overlay over.
   const onlineIds = new Set(onlineIdsResult.status === 'fulfilled' ? onlineIdsResult.value : []);
 
+  let tileIndex = 0;
   Object.keys(remembered).forEach(function (userId) {
     if (userId === currentId) return;
     const entry = remembered[userId];
@@ -303,6 +315,7 @@ export async function openAccountSwitcher() {
         },
         true,
         onlineIds.has(userId),
+        tileIndex++,
       ),
     );
   });
@@ -334,11 +347,12 @@ export async function openAccountSwitcher() {
           },
           !hasPassword,
           onlineIds.has(user.Id),
+          tileIndex++,
         ),
       );
     });
 
-  grid.appendChild(buildAddTile());
+  grid.appendChild(buildAddTile(tileIndex));
 
   const first = grid.querySelector('button');
   if (first) first.focus();

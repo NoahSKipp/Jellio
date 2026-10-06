@@ -9446,16 +9446,47 @@
 }
 
 .jellio-hero-dot {
-  width: 0.5em;
-  height: 0.5em;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.35);
+  position: relative;
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.3);
   cursor: pointer;
-  transition: background-color 180ms ease;
+  overflow: hidden;
+  transition: width 240ms var(--jellio-ease-out), background-color 200ms ease;
 }
 
 .jellio-hero-dot-active {
+  width: 1.8em;
+  background: rgb(255 255 255 / 0.25);
+}
+
+.jellio-hero-dot-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: 999px;
   background: var(--jellio-secondary-color);
+  transform-origin: left center;
+  animation: jellio-hero-progress 9000ms linear forwards;
+}
+
+.jellio-hero:hover .jellio-hero-dot-active::after,
+.jellio-hero:focus-within .jellio-hero-dot-active::after {
+  animation-play-state: paused;
+}
+
+@keyframes jellio-hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
 }
 
 .jellio-person-header {
@@ -9809,29 +9840,39 @@
 }
 
 @keyframes jellio-login-profile-enter {
-  from {
+  0% {
     opacity: 0;
-    transform: scale(0.72);
+    transform: scale(0.35);
   }
 
-  to {
+  62% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  82% {
+    transform: scale(0.96);
+  }
+
+  100% {
     opacity: 1;
     transform: scale(1);
   }
 }
 
-/* --jellio-stagger-delay is set per tile by screens/login.js's own
-   applyStagger(), reading order (left to right, top to bottom), so
-   each profile appears and scales up a beat after the one before it
-   rather than the whole row landing at once, real feedback asked for
-   directly against Nuvio's own "one after another" profile picker. */
+/* --jellio-stagger-delay is set per tile by screens/login.js and
+   components/accountSwitcher.js applyStagger(), reading order (left to right,
+   top to bottom), so each profile pops out with a springy overshoot a beat after
+   the one before it rather than the whole row landing flat at once, matching
+   Nuvio's playful "one after another" pop out. */
 .jellio-login-profile {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: clamp(96px, 9vw, 148px);
-  animation: jellio-login-profile-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: jellio-login-profile-enter 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: var(--jellio-stagger-delay, 0ms);
+  transform-origin: center center;
 }
 
 .jellio-login-profile-avatar-wrap {
@@ -9853,14 +9894,20 @@
   background-repeat: no-repeat;
   color: var(--jellio-text-secondary);
   cursor: pointer;
-  transition: transform 180ms var(--jellio-ease-out), box-shadow 180ms var(--jellio-ease-out);
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms var(--jellio-ease-out);
 }
 
 .jellio-login-profile-avatar:hover,
 .jellio-login-profile-avatar:focus-visible {
-  transform: scale(1.06);
-  box-shadow: 0 0 0 3px rgb(var(--jellio-focus-color-rgb, 255 255 255) / 0.9);
+  transform: scale(1.08) translateY(-4px);
+  box-shadow: 0 12px 28px -6px rgb(var(--jellio-focus-color-rgb, 255 255 255) / 0.35),
+              0 0 0 3px rgb(var(--jellio-focus-color-rgb, 255 255 255) / 0.9);
   outline: none;
+}
+
+.jellio-login-profile-avatar:active {
+  transform: scale(0.94) translateY(0);
+  transition: transform 80ms ease-out;
 }
 
 .jellio-login-profile-avatar:disabled {
@@ -9897,6 +9944,23 @@
   color: var(--jellio-text-color);
 }
 
+@keyframes jellio-profile-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.28);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Marks a tile whose avatar click actually signs in right here, no
    password screen behind it, per accountSwitcher.js's own buildProfileTile. */
 .jellio-account-switcher-quick-badge {
@@ -9914,6 +9978,8 @@
   font-size: 0.9em;
   box-shadow: 0 0 0 2px var(--jellio-bg-color);
   pointer-events: none;
+  animation: jellio-profile-badge-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--jellio-stagger-delay, 0ms) + 140ms);
 }
 
 /* Top right, the quick badge above mirrored to bottom right's opposite
@@ -9930,6 +9996,8 @@
   background: #3ecf5e;
   box-shadow: 0 0 0 2px var(--jellio-bg-color);
   pointer-events: none;
+  animation: jellio-profile-badge-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--jellio-stagger-delay, 0ms) + 140ms);
 }
 
 .jellio-account-switcher-quick-label {
@@ -11137,6 +11205,250 @@
 
 .jellio-profile-body {
   padding-top: clamp(20px, 2.5vw, 36px);
+}
+
+/* Profile top-level nav tabs */
+.jellio-profile-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--jellio-safe-gutter);
+  margin-bottom: clamp(20px, 2.5vw, 32px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.jellio-profile-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.jellio-profile-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.88em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.jellio-profile-nav-tab:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--jellio-text-color);
+  border-color: rgb(255 255 255 / 0.18);
+}
+
+.jellio-profile-nav-tab-active {
+  background: var(--jellio-trending-color, #7053ff);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.25);
+}
+
+.jellio-profile-nav-tab-active:hover {
+  background: var(--jellio-trending-color, #7053ff);
+  color: #fff;
+  opacity: 0.95;
+}
+
+/* Two-item menu button toggle (Lifetime Stats vs Monthly Stats) */
+.jellio-profile-stats-toggle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 var(--jellio-safe-gutter);
+  margin-bottom: clamp(20px, 2.5vw, 32px);
+}
+
+.jellio-profile-stats-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: rgb(255 255 255 / 0.06);
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--jellio-border-color);
+}
+
+.jellio-profile-stats-toggle-btn {
+  border: 0;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.88em;
+  font-weight: 600;
+  padding: 7px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.jellio-profile-stats-toggle-btn:hover {
+  color: var(--jellio-text-color);
+}
+
+.jellio-profile-stats-toggle-btn-active {
+  background: rgb(255 255 255 / 0.15);
+  color: var(--jellio-text-color);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+/* Monthly date navigation */
+.jellio-profile-month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgb(255 255 255 / 0.05);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--jellio-border-color);
+}
+
+.jellio-profile-month-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jellio-profile-month-btn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--jellio-text-color);
+}
+
+.jellio-profile-month-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.jellio-profile-month-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.88em;
+  color: var(--jellio-text-color);
+  padding: 0 6px;
+}
+
+.jellio-profile-month-label .material-icons {
+  font-size: 1.15em;
+  color: var(--jellio-trending-color);
+}
+
+.jellio-profile-month-jump {
+  border: 1px solid var(--jellio-border-color);
+  background: transparent;
+  color: var(--jellio-trending-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.78em;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.jellio-profile-month-jump:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+/* Monthly spotlight card */
+.jellio-profile-spotlight {
+  padding: 0 var(--jellio-safe-gutter);
+  margin-bottom: clamp(16px, 2.5vw, 28px);
+}
+
+.jellio-profile-spotlight-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-radius: var(--jellio-card-radius);
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.02));
+  border: 1px solid color-mix(in srgb, var(--jellio-trending-color) 35%, var(--jellio-border-color));
+}
+
+.jellio-profile-spotlight-icon {
+  font-size: 2em;
+  color: var(--jellio-trending-color);
+}
+
+.jellio-profile-spotlight-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jellio-profile-spotlight-eyebrow {
+  font-size: 0.74em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-profile-spotlight-title {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: var(--jellio-text-color);
+}
+
+.jellio-profile-spotlight-sub {
+  font-size: 0.84em;
+  color: var(--jellio-text-secondary);
+}
+
+/* Profile filter chips (for Badges and Activity) */
+.jellio-profile-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 var(--jellio-safe-gutter);
+  margin-bottom: 18px;
+}
+
+.jellio-profile-filter-chip {
+  padding: 4px 14px;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.8em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jellio-profile-filter-chip:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--jellio-text-color);
+}
+
+.jellio-profile-filter-chip-active {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--jellio-text-color);
+  border-color: var(--jellio-trending-color);
+  font-weight: 700;
 }
 
 .jellio-profile-stats {

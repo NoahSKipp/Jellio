@@ -1942,21 +1942,38 @@ export function prefetchStreams(itemId) {
   });
 }
 
-// The item's own full list of real alternate sources (every stream
-// Gelato resolved for it, not just the one PlaybackInfo negotiates),
-// confirmed against DtoService.cs before writing this: MediaSources on
-// a fetched item DTO only populates when ItemFields.MediaSources is
-// explicitly requested, backed by the same GetStaticMediaSources() a
-// stream switcher needs to list from, distinct from
-// GetPlaybackMediaSources (what getPlaybackInfo above negotiates),
-// which always narrows to one.
-export function getMediaSources(itemId) {
+// In-memory cache for resolved MediaSources (TTL: 5 minutes).
+// Eliminates repetitive 1.5-3s round trips to Jellyfin/Gelato
+// resolvers when navigating between detail, stream picker, and player.
+const mediaSourcesCache = new Map();
+const MEDIA_SOURCES_TTL_MS = 5 * 60 * 1000;
+
+export function invalidateMediaSourcesCache(itemId) {
+  if (itemId) {
+    mediaSourcesCache.delete(String(itemId));
+  } else {
+    mediaSourcesCache.clear();
+  }
+}
+
+export function getMediaSources(itemId, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
+  const idStr = String(itemId);
+  const now = Date.now();
+  if (!options?.forceFresh && mediaSourcesCache.has(idStr)) {
+    const entry = mediaSourcesCache.get(idStr);
+    if (now - entry.time < MEDIA_SOURCES_TTL_MS) {
+      return Promise.resolve(entry.sources);
+    }
+    mediaSourcesCache.delete(idStr);
+  }
   const params = new URLSearchParams({ Fields: 'MediaSources' });
   return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString()).then(
     function (result) {
-      return (result && result.MediaSources) || [];
+      const sources = (result && result.MediaSources) || [];
+      mediaSourcesCache.set(idStr, { time: now, sources: sources });
+      return sources;
     },
   );
 }

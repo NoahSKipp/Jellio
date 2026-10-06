@@ -176,6 +176,10 @@ export function buildHeroCarousel(options) {
     toggleWatchlist(current)
       .then(function () {
         render();
+        watchlistButton.classList.remove('jellio-card-action-pop');
+        requestAnimationFrame(function () {
+          watchlistButton.classList.add('jellio-card-action-pop');
+        });
       })
       .catch(function () {})
       .finally(function () {
@@ -202,6 +206,31 @@ export function buildHeroCarousel(options) {
   root.addEventListener('mouseleave', function () {
     hovered = false;
   });
+  root.addEventListener('focusin', function () {
+    hovered = true;
+  });
+  root.addEventListener('focusout', function () {
+    hovered = false;
+  });
+
+  let touchStartX = 0;
+  root.addEventListener('touchstart', function (e) {
+    if (e.touches && e.touches[0]) touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  root.addEventListener('touchend', function (e) {
+    if (!items.length) return;
+    if (e.changedTouches && e.changedTouches[0]) {
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(diffX) > 48) {
+        if (diffX < 0) {
+          index = (index + 1) % items.length;
+        } else {
+          index = (index - 1 + items.length) % items.length;
+        }
+        render();
+      }
+    }
+  }, { passive: true });
 
   getHeroCandidates(CANDIDATE_LIMIT, options)
     .then(function (result) {

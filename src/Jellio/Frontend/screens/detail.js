@@ -1284,7 +1284,13 @@ export async function renderDetail(root, params) {
     }
     watchlistButton.disabled = true;
     toggleWatchlist(item)
-      .then(paintWatchlist)
+      .then(function () {
+        paintWatchlist();
+        watchlistButton.classList.remove('jellio-card-action-pop');
+        requestAnimationFrame(function () {
+          watchlistButton.classList.add('jellio-card-action-pop');
+        });
+      })
       .catch(function (err) {
         console.warn('Jellio: could not update watchlist state', err);
         showToast('Could not update your watchlist. Try again.');
@@ -1309,7 +1315,13 @@ export async function renderDetail(root, params) {
     event.stopPropagation();
     watchedButton.disabled = true;
     toggleWatched(item, {})
-      .then(paintWatched)
+      .then(function () {
+        paintWatched();
+        watchedButton.classList.remove('jellio-card-action-pop');
+        requestAnimationFrame(function () {
+          watchedButton.classList.add('jellio-card-action-pop');
+        });
+      })
       .catch(function (err) {
         console.warn('Jellio: could not update watched state', err);
         showToast('Could not update watched state. Try again.');
