@@ -61,6 +61,25 @@ export function attachScrollArrows(trackWrap, track) {
   trackWrap.appendChild(prevArrow);
   trackWrap.appendChild(nextArrow);
 
+  // Desktop mouse wheel translation: on mice without a tilt wheel,
+  // scrolling vertically over a horizontal track translates deltaY into
+  // horizontal scroll whenever the track has room to scroll in that direction,
+  // without blocking vertical page scroll once an edge is reached.
+  track.addEventListener(
+    'wheel',
+    function (event) {
+      if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+        const canScrollLeft = track.scrollLeft > 0 && event.deltaY < 0;
+        const canScrollRight = track.scrollLeft < track.scrollWidth - track.clientWidth - 1 && event.deltaY > 0;
+        if (canScrollLeft || canScrollRight) {
+          event.preventDefault();
+          track.scrollLeft += event.deltaY;
+        }
+      }
+    },
+    { passive: false },
+  );
+
   let scrollListenerAttached = false;
 
   // Only worth wiring the scroll listener up at all once there is

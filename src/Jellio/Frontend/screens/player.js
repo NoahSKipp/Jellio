@@ -2415,7 +2415,7 @@ export async function renderPlayer(root, params) {
           // runs, turns "does the request even leave the browser" into
           // something a reader can answer just by watching the screen.
           showPlayerToast('Switching to ' + audioStreamLabel(stream) + '…');
-          if (isActive) {
+          if (isActive && currentAudioStreamIndex != null) {
             closePopovers(null);
             return;
           }
@@ -3056,8 +3056,8 @@ export async function renderPlayer(root, params) {
   const shortcutsList = el('div', 'jellio-player-shortcuts-list');
   const SHORTCUTS = [
     { key: 'Space / K', desc: 'Play / Pause' },
-    { key: '← / →', desc: 'Seek 10 seconds' },
-    { key: '↑ / ↓', desc: 'Volume up / down' },
+    { key: '← / → / J / L', desc: 'Seek 10 seconds' },
+    { key: '↑ / ↓ / Wheel', desc: 'Volume up / down' },
     { key: 'M', desc: 'Mute / Unmute' },
     { key: 'F / DblClick', desc: 'Toggle Fullscreen' },
     { key: 'C', desc: 'Subtitles & styling' },
@@ -3583,9 +3583,11 @@ export async function renderPlayer(root, params) {
   }
 
   skipBackButton.addEventListener('click', function () {
+    if (typeof triggerRipple === 'function' && typeof rippleLeft !== 'undefined') triggerRipple(rippleLeft);
     performSeek(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) - 10);
   });
   skipForwardButton.addEventListener('click', function () {
+    if (typeof triggerRipple === 'function' && typeof rippleRight !== 'undefined') triggerRipple(rippleRight);
     performSeek(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) + 10);
   });
 
@@ -3599,6 +3601,17 @@ export async function renderPlayer(root, params) {
     switchingSource = true;
     const resumeTicks = currentPositionTicks();
     const wasPlaying = !video.paused;
+    const previousAudioLanguage = activeAudioLanguageCode();
+    let previousSubtitleLanguage = null;
+    if (mediaSource && activeSubtitleStreamIndex != null) {
+      const subStreams = (mediaSource.MediaStreams || []).filter(function (s) {
+        return s.Type === 'Subtitle';
+      });
+      const activeSub = subStreams.find(function (s) {
+        return s.Index === activeSubtitleStreamIndex;
+      });
+      previousSubtitleLanguage = activeSub && activeSub.Language ? activeSub.Language.toLowerCase() : null;
+    }
     reportPlaybackStopped(itemId, mediaSource.Id, resumeTicks);
     try {
       const info = await getPlaybackInfo(itemId, resumeTicks, source.Id);
@@ -3619,15 +3632,47 @@ export async function renderPlayer(root, params) {
       }
       hasReportedStart = false;
       currentAudioStreamIndex = null;
-      // A different source's own real subtitle track list has no
-      // guaranteed relationship to the index that used to be active on
-      // the one this just replaced.
       activeSubtitleStreamIndex = null;
+
+      // Real bug fix: when switching streams, if the previous stream had an active
+      // audio language (e.g. English, German, Japanese) and the new stream also carries
+      // multiple audio tracks including that language, match and renegotiate with that
+      // explicit track index rather than falling back to stream 0. Otherwise, the UI
+      // shows that language as active while the browser video actually starts playing
+      // whatever default track 0 is in the raw file.
+      if (previousAudioLanguage && getAudioStreams(mediaSource).length > 1) {
+        const matchedAudioIndex = matchAudioStreamIndex(mediaSource, previousAudioLanguage);
+        if (matchedAudioIndex != null) {
+          try {
+            const rematched = await getPlaybackInfo(itemId, resumeTicks, source.Id, matchedAudioIndex);
+            const rematchedSource = rematched && rematched.MediaSources && rematched.MediaSources[0];
+            if (rematchedSource) {
+              mediaSource = rematchedSource;
+              playSessionId = rematched.PlaySessionId;
+              currentAudioStreamIndex = matchedAudioIndex;
+            }
+          } catch (e) {
+            console.warn('Jellio: could not rematch audio track on stream switch', e);
+          }
+        }
+      }
+
+      // Preserve active subtitle language across stream switch if available
+      if (previousSubtitleLanguage) {
+        const matchedSub = matchSubtitleStream(mediaSource, previousSubtitleLanguage);
+        if (matchedSub) {
+          activeSubtitleStreamIndex = matchedSub.Index;
+          attachSubtitleTrack(matchedSub, 0);
+        }
+      }
+
       // Same real reason seekToAbsoluteSeconds forces a transcode for
       // any resumeTicks > 0: a Static direct play request's own
       // StartTimeTicks only actually seeks on a source that honours
       // HTTP Range, never guaranteed against a live Gelato proxy.
-      const sourceForceTranscode = resumeTicks > 0;
+      // currentAudioStreamIndex != null forces transcode so Jellyfin
+      // actually muxes the chosen audio track in.
+      const sourceForceTranscode = resumeTicks > 0 || currentAudioStreamIndex != null;
       streamIsTranscoded = sourceForceTranscode || !canBrowserDirectPlay(mediaSource);
       // Same real willUseHls() check every other reload in this file
       // now makes: its own master playlist request never actually
@@ -3640,6 +3685,7 @@ export async function renderPlayer(root, params) {
       streamOffsetTicks = needsStartOffset ? resumeTicks : 0;
       pendingNativeSeekSeconds = resumeTicks > 0 && !needsStartOffset ? resumeTicks / TICKS_PER_SECOND : null;
       video.src = buildStreamUrl(itemId, mediaSource, resumeTicks, {
+        audioStreamIndex: currentAudioStreamIndex,
         forceTranscode: sourceForceTranscode,
         playSessionId: playSessionId,
       });
@@ -3789,6 +3835,14 @@ export async function renderPlayer(root, params) {
     }
     if (fullscreenButton) fullscreenButton.click();
   });
+  root.addEventListener('wheel', function (event) {
+    if (event.target && event.target.closest && event.target.closest('.jellio-player-popover, .jellio-player-sidepanel, .jellio-player-shortcuts-modal, .jellio-player-chat-panel')) {
+      return;
+    }
+    event.preventDefault();
+    wakeControls();
+    adjustVolume(event.deltaY < 0 ? 0.05 : -0.05);
+  }, { passive: false });
   wakeControls();
 
   // Real gap: root.addEventListener('keydown', wakeControls) above only
@@ -3851,14 +3905,19 @@ export async function renderPlayer(root, params) {
       case ' ':
       case 'Spacebar':
       case 'k':
+      case 'K':
         event.preventDefault();
         playPauseButton.click();
         break;
       case 'ArrowLeft':
+      case 'j':
+      case 'J':
         event.preventDefault();
         skipBackButton.click();
         break;
       case 'ArrowRight':
+      case 'l':
+      case 'L':
         event.preventDefault();
         skipForwardButton.click();
         break;
@@ -4358,6 +4417,49 @@ export async function renderPlayer(root, params) {
     return active && active.Language ? active.Language.toLowerCase() : null;
   }
 
+  let preloadedNextMediaSourceId = null;
+  let preloadedNextVideoEl = null;
+  let hasInitiatedNextPreload = false;
+
+  function preloadNextEpisodeStream() {
+    if (hasInitiatedNextPreload || !nextEpisode || screenTornDown) return;
+    hasInitiatedNextPreload = true;
+    const target = nextEpisode;
+    const languageCode = activeAudioLanguageCode();
+    getMediaSources(target.Id)
+      .then(async function (sources) {
+        if (screenTornDown || !sources || !sources.length) return;
+        let matched = null;
+        if (languageCode) {
+          matched = sources.find(function (source) {
+            return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
+          });
+        }
+        const source = matched || sources[0];
+        if (source) {
+          preloadedNextMediaSourceId = source.Id;
+          try {
+            const info = await getPlaybackInfo(target.Id, 0, source.Id);
+            if (!screenTornDown && info && info.MediaSources && info.MediaSources[0]) {
+              const nextSource = info.MediaSources[0];
+              if (!preloadedNextVideoEl) {
+                preloadedNextVideoEl = document.createElement('video');
+                preloadedNextVideoEl.preload = 'auto';
+                preloadedNextVideoEl.muted = true;
+                preloadedNextVideoEl.playsInline = true;
+                preloadedNextVideoEl.src = buildStreamUrl(target.Id, nextSource, 0, {
+                  playSessionId: info.PlaySessionId,
+                });
+              }
+            }
+          } catch (e) {
+            // Silently ignore preload network failures
+          }
+        }
+      })
+      .catch(function () {});
+  }
+
   async function playNextEpisode() {
     if (isNavigatingNext) return;
     isNavigatingNext = true;
@@ -4373,18 +4475,28 @@ export async function renderPlayer(root, params) {
     if (!target) return;
     nextEpisode = null;
 
-    const languageCode = activeAudioLanguageCode();
-    let mediaSourceId;
-    if (languageCode) {
-      try {
-        const sources = await getMediaSources(target.Id);
-        const matched = sources.find(function (source) {
-          return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
-        });
-        if (matched) mediaSourceId = matched.Id;
-      } catch (err) {
-        console.warn('Jellio: could not check next episode sources for a matching audio language', err);
+    let mediaSourceId = preloadedNextMediaSourceId;
+    if (!mediaSourceId) {
+      const languageCode = activeAudioLanguageCode();
+      if (languageCode) {
+        try {
+          const sources = await getMediaSources(target.Id);
+          const matched = sources.find(function (source) {
+            return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
+          });
+          if (matched) mediaSourceId = matched.Id;
+        } catch (err) {
+          console.warn('Jellio: could not check next episode sources for a matching audio language', err);
+        }
       }
+    }
+
+    if (preloadedNextVideoEl) {
+      try {
+        preloadedNextVideoEl.src = '';
+        preloadedNextVideoEl.load();
+      } catch (e) {}
+      preloadedNextVideoEl = null;
     }
 
     navigateTo(playHash(target.Id, mediaSourceId));
@@ -4496,6 +4608,7 @@ export async function renderPlayer(root, params) {
   function showUpNext() {
     if (upNextShown || upNextDismissed || !upNextOverlay) return;
     upNextShown = true;
+    preloadNextEpisodeStream();
     // Real bug, found live: playNextEpisode() just navigates straight
     // to the next episode's own #/play route, and the countdown below
     // can fire that same navigation on its own, so 'ended' above never
@@ -4881,6 +4994,10 @@ export async function renderPlayer(root, params) {
       markRealWatchComplete();
     }
 
+    if (nextEpisode && !hasInitiatedNextPreload && durationSeconds > 60 && positionSeconds >= durationSeconds - 55) {
+      preloadNextEpisodeStream();
+    }
+
     // !upNextShown alongside !upNextDismissed below (shouldShowUpNextNow
     // stays true for as long as both keep failing, called again on
     // every one of these timeupdate ticks): the episode sleep timer's
@@ -5251,6 +5368,13 @@ export async function renderPlayer(root, params) {
     if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});
     if (screenTornDown) return;
     screenTornDown = true;
+    if (preloadedNextVideoEl) {
+      try {
+        preloadedNextVideoEl.src = '';
+        preloadedNextVideoEl.load();
+      } catch (e) {}
+      preloadedNextVideoEl = null;
+    }
     if (audioCtx) {
       try { audioCtx.close(); } catch (e) {}
       audioCtx = null;

@@ -261,34 +261,75 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
   const unlockedCount = badges.filter(function (b) { return b.Unlocked; }).length;
   section.appendChild(el('h2', 'jellio-row-title', 'Badges (' + unlockedCount + '/' + badges.length + ')'));
+
+  let filter = 'all';
+  const filterBar = el('div', 'jellio-profile-filter-bar');
+  const filters = [
+    { key: 'all', label: 'All (' + badges.length + ')' },
+    { key: 'unlocked', label: 'Unlocked (' + unlockedCount + ')' },
+    { key: 'locked', label: 'Locked (' + (badges.length - unlockedCount) + ')' },
+  ];
+
   const grid = el('div', 'jellio-profile-badges');
-  badges.forEach(function (badge) {
-    const tile = el('article', 'jellio-profile-badge');
-    tile.dataset.rarity = badge.Rarity.toLowerCase();
-    tile.dataset.unlocked = String(badge.Unlocked);
-    const icon = el('span', 'material-icons jellio-profile-badge-icon', badge.Unlocked ? 'military_tech' : 'lock');
-    tile.appendChild(icon);
-    tile.appendChild(el('span', 'jellio-profile-badge-name', badge.Name));
-    tile.title = badge.Description;
-    if (isAdmin && badge.Unlocked) {
-      const lockButton = el('button', 'jellio-profile-admin-lock', 'Lock again');
-      lockButton.type = 'button';
-      lockButton.addEventListener('click', function (event) {
-        event.stopPropagation();
-        if (!window.confirm('Lock "' + badge.Name + '" again?')) return;
-        lockButton.disabled = true;
-        lockBadgeForUser(userId, badge.Id)
-          .then(onChanged)
-          .catch(function (err) {
-            console.warn('Jellio: could not lock badge', err);
-            lockButton.disabled = false;
-          });
-      });
-      tile.appendChild(lockButton);
+
+  function renderGrid() {
+    grid.textContent = '';
+    const filtered = badges.filter(function (badge) {
+      if (filter === 'unlocked') return badge.Unlocked;
+      if (filter === 'locked') return !badge.Unlocked;
+      return true;
+    });
+
+    if (!filtered.length) {
+      grid.appendChild(el('p', 'jellio-profile-empty', 'No badges in this category.'));
+      return;
     }
-    grid.appendChild(tile);
+
+    filtered.forEach(function (badge) {
+      const tile = el('article', 'jellio-profile-badge');
+      tile.dataset.rarity = badge.Rarity.toLowerCase();
+      tile.dataset.unlocked = String(badge.Unlocked);
+      const icon = el('span', 'material-icons jellio-profile-badge-icon', badge.Unlocked ? 'military_tech' : 'lock');
+      tile.appendChild(icon);
+      tile.appendChild(el('span', 'jellio-profile-badge-name', badge.Name));
+      tile.title = badge.Description;
+      if (isAdmin && badge.Unlocked) {
+        const lockButton = el('button', 'jellio-profile-admin-lock', 'Lock again');
+        lockButton.type = 'button';
+        lockButton.addEventListener('click', function (event) {
+          event.stopPropagation();
+          if (!window.confirm('Lock "' + badge.Name + '" again?')) return;
+          lockButton.disabled = true;
+          lockBadgeForUser(userId, badge.Id)
+            .then(onChanged)
+            .catch(function (err) {
+              console.warn('Jellio: could not lock badge', err);
+              lockButton.disabled = false;
+            });
+        });
+        tile.appendChild(lockButton);
+      }
+      grid.appendChild(tile);
+    });
+  }
+
+  filters.forEach(function (f) {
+    const chip = el('button', 'jellio-profile-filter-chip' + (f.key === filter ? ' jellio-profile-filter-chip-active' : ''), f.label);
+    chip.type = 'button';
+    chip.addEventListener('click', function () {
+      filter = f.key;
+      Array.prototype.forEach.call(filterBar.children, function (c) {
+        c.classList.remove('jellio-profile-filter-chip-active');
+      });
+      chip.classList.add('jellio-profile-filter-chip-active');
+      renderGrid();
+    });
+    filterBar.appendChild(chip);
   });
+
+  section.appendChild(filterBar);
   section.appendChild(grid);
+  renderGrid();
   return section;
 }
 
@@ -299,30 +340,310 @@ function buildActivitySection(entries, canRemove, userId, onChanged) {
     section.appendChild(el('p', 'jellio-profile-empty', 'Nothing watched yet.'));
     return section;
   }
+
+  let filter = 'all';
+  const filterBar = el('div', 'jellio-profile-filter-bar');
+  const filters = [
+    { key: 'all', label: 'All (' + entries.length + ')' },
+    { key: 'video', label: 'Movies & Episodes' },
+    { key: 'reading', label: 'Books & Manga' },
+    { key: 'audio', label: 'Audiobooks' },
+  ];
+
   const list = el('ul', 'jellio-profile-activity');
-  entries.forEach(function (entry) {
-    const item = el('li', 'jellio-profile-activity-item');
-    item.appendChild(describeActivity(entry));
-    item.appendChild(el('span', 'jellio-profile-activity-time', formatRelativeTime(entry.CompletedAtUtc)));
-    if (canRemove) {
-      const deleteButton = el('button', 'jellio-profile-admin-delete', 'Remove');
-      deleteButton.type = 'button';
-      deleteButton.addEventListener('click', function () {
-        if (!window.confirm('Remove this entry from the profile and the feed? Stats and badges stay as they are.')) return;
-        deleteButton.disabled = true;
-        deleteActivityEntry(userId, entry.ItemId, entry.CompletedAtUtc)
-          .then(onChanged)
-          .catch(function (err) {
-            console.warn('Jellio: could not delete activity entry', err);
-            deleteButton.disabled = false;
-          });
-      });
-      item.appendChild(deleteButton);
+
+  function renderList() {
+    list.textContent = '';
+    const filtered = entries.filter(function (entry) {
+      if (filter === 'video') return entry.ItemType === 'Movie' || entry.ItemType === 'Episode';
+      if (filter === 'reading') return entry.ItemType === 'Book' || entry.ItemType === 'Manga';
+      if (filter === 'audio') return entry.ItemType === 'AudioBook';
+      return true;
+    });
+
+    if (!filtered.length) {
+      list.appendChild(el('li', 'jellio-profile-empty', 'No activity matching this filter.'));
+      return;
     }
-    list.appendChild(item);
+
+    filtered.forEach(function (entry) {
+      const item = el('li', 'jellio-profile-activity-item');
+      item.appendChild(describeActivity(entry));
+      item.appendChild(el('span', 'jellio-profile-activity-time', formatRelativeTime(entry.CompletedAtUtc)));
+      if (canRemove) {
+        const deleteButton = el('button', 'jellio-profile-admin-delete', 'Remove');
+        deleteButton.type = 'button';
+        deleteButton.addEventListener('click', function () {
+          if (!window.confirm('Remove this entry from the profile and the feed? Stats and badges stay as they are.')) return;
+          deleteButton.disabled = true;
+          deleteActivityEntry(userId, entry.ItemId, entry.CompletedAtUtc)
+            .then(onChanged)
+            .catch(function (err) {
+              console.warn('Jellio: could not delete activity entry', err);
+              deleteButton.disabled = false;
+            });
+        });
+        item.appendChild(deleteButton);
+      }
+      list.appendChild(item);
+    });
+  }
+
+  filters.forEach(function (f) {
+    const chip = el('button', 'jellio-profile-filter-chip' + (f.key === filter ? ' jellio-profile-filter-chip-active' : ''), f.label);
+    chip.type = 'button';
+    chip.addEventListener('click', function () {
+      filter = f.key;
+      Array.prototype.forEach.call(filterBar.children, function (c) {
+        c.classList.remove('jellio-profile-filter-chip-active');
+      });
+      chip.classList.add('jellio-profile-filter-chip-active');
+      renderList();
+    });
+    filterBar.appendChild(chip);
   });
+
+  section.appendChild(filterBar);
   section.appendChild(list);
+  renderList();
   return section;
+}
+
+function buildLifetimeStats(achievements) {
+  const container = el('div', 'jellio-profile-stats-lifetime-container');
+  [
+    [
+      'Watching',
+      [
+        ['Movies', achievements.MoviesCompleted],
+        ['Episodes', achievements.EpisodesCompleted],
+        ['Total watched', achievements.TotalCompleted],
+        ['Best binge', achievements.BestBingeStreak],
+      ],
+    ],
+    [
+      'Books',
+      [
+        ['Finished', achievements.BooksCompleted],
+        ['Pages read', achievements.BookPagesRead],
+        ['Time reading', formatMinutes(achievements.ReadingMinutes)],
+      ],
+    ],
+    [
+      'Manga · manhwa · manhua',
+      [
+        ['Finished', achievements.MangaVolumesCompleted],
+        ['Pages read', achievements.MangaPagesRead],
+        ['Time reading', formatMinutes(achievements.MangaReadingMinutes)],
+      ],
+    ],
+    [
+      'Audiobooks',
+      [
+        ['Finished', achievements.AudiobooksCompleted],
+        ['Time listening', formatMinutes(achievements.ListenedMinutes)],
+      ],
+    ],
+  ].forEach(function (group) {
+    const section = el('section', 'jellio-profile-stat-group');
+    section.appendChild(el('h3', 'jellio-profile-stat-group-title', group[0]));
+    const stats = el('div', 'jellio-profile-stats');
+    group[1].forEach(function (pair) {
+      const stat = el('div', 'jellio-profile-stat');
+      const value = typeof pair[1] === 'string' ? pair[1] : Number(pair[1] || 0).toLocaleString();
+      stat.appendChild(el('span', 'jellio-profile-stat-value', value));
+      stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
+      stats.appendChild(stat);
+    });
+    section.appendChild(stats);
+    container.appendChild(section);
+  });
+  return container;
+}
+
+function computeMonthlyData(recentActivity, targetYear, targetMonth) {
+  const entries = recentActivity || [];
+  const monthEntries = entries.filter(function (entry) {
+    if (!entry.CompletedAtUtc) return false;
+    const d = new Date(entry.CompletedAtUtc);
+    return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+  });
+
+  let movies = 0;
+  let episodes = 0;
+  const days = new Set();
+  const seriesMap = {};
+  let books = 0;
+  let bookPages = 0;
+  let mangaVolumes = 0;
+  let mangaPages = 0;
+  let listenedTicks = 0;
+
+  monthEntries.forEach(function (entry) {
+    const d = new Date(entry.CompletedAtUtc);
+    days.add(d.getDate());
+
+    if (entry.ItemType === 'Movie') {
+      movies += 1;
+    } else if (entry.ItemType === 'Episode') {
+      const count = entry.EpisodeCount || 1;
+      episodes += count;
+      if (entry.SeriesName) {
+        seriesMap[entry.SeriesName] = (seriesMap[entry.SeriesName] || 0) + count;
+      }
+    } else if (entry.ItemType === 'Book') {
+      if (entry.Finished) books += 1;
+      if (entry.PagesRead) bookPages += entry.PagesRead;
+    } else if (entry.ItemType === 'Manga') {
+      if (entry.Finished) mangaVolumes += 1;
+      if (entry.PagesRead) mangaPages += entry.PagesRead;
+    } else if (entry.ItemType === 'AudioBook') {
+      if (entry.ListenedTicks) listenedTicks += entry.ListenedTicks;
+    }
+  });
+
+  let topSeriesName = null;
+  let topSeriesCount = 0;
+  Object.keys(seriesMap).forEach(function (name) {
+    if (seriesMap[name] > topSeriesCount) {
+      topSeriesCount = seriesMap[name];
+      topSeriesName = name;
+    }
+  });
+
+  return {
+    movies: movies,
+    episodes: episodes,
+    totalWatched: movies + episodes,
+    activeDays: days.size,
+    topSeriesName: topSeriesName,
+    topSeriesCount: topSeriesCount,
+    books: books,
+    bookPages: bookPages,
+    mangaVolumes: mangaVolumes,
+    mangaPages: mangaPages,
+    listenedMinutes: Math.round(listenedTicks / (10000000 * 60)),
+    hasActivity: monthEntries.length > 0,
+  };
+}
+
+function buildMonthlyStats(achievements, selectedDate, onDateChange) {
+  const container = el('div', 'jellio-profile-stats-monthly-container');
+
+  const now = new Date();
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+
+  const navWrap = el('div', 'jellio-profile-stats-toggle-wrap');
+  const nav = el('div', 'jellio-profile-month-nav');
+
+  const prevBtn = el('button', 'jellio-profile-month-btn');
+  prevBtn.type = 'button';
+  prevBtn.setAttribute('aria-label', 'Previous month');
+  prevBtn.appendChild(el('span', 'material-icons', 'chevron_left'));
+  prevBtn.addEventListener('click', function () {
+    onDateChange(new Date(year, month - 1, 1));
+  });
+  nav.appendChild(prevBtn);
+
+  const monthLabel = el('div', 'jellio-profile-month-label');
+  monthLabel.appendChild(el('span', 'material-icons', 'calendar_month'));
+  const monthName = selectedDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  monthLabel.appendChild(document.createTextNode(monthName));
+  nav.appendChild(monthLabel);
+
+  const nextBtn = el('button', 'jellio-profile-month-btn');
+  nextBtn.type = 'button';
+  nextBtn.setAttribute('aria-label', 'Next month');
+  nextBtn.appendChild(el('span', 'material-icons', 'chevron_right'));
+  if (isCurrentMonth) {
+    nextBtn.disabled = true;
+  } else {
+    nextBtn.addEventListener('click', function () {
+      onDateChange(new Date(year, month + 1, 1));
+    });
+  }
+  nav.appendChild(nextBtn);
+
+  if (!isCurrentMonth) {
+    const jumpBtn = el('button', 'jellio-profile-month-jump', 'Current month');
+    jumpBtn.type = 'button';
+    jumpBtn.addEventListener('click', function () {
+      onDateChange(new Date());
+    });
+    nav.appendChild(jumpBtn);
+  }
+
+  navWrap.appendChild(nav);
+  container.appendChild(navWrap);
+
+  const data = computeMonthlyData(achievements.RecentActivity, year, month);
+
+  if (data.topSeriesName) {
+    const spotlightWrap = el('div', 'jellio-profile-spotlight');
+    const card = el('div', 'jellio-profile-spotlight-card');
+    card.appendChild(el('span', 'material-icons jellio-profile-spotlight-icon', 'military_tech'));
+    const content = el('div', 'jellio-profile-spotlight-content');
+    content.appendChild(el('span', 'jellio-profile-spotlight-eyebrow', 'Monthly Top Show'));
+    content.appendChild(el('span', 'jellio-profile-spotlight-title', data.topSeriesName));
+    content.appendChild(el('span', 'jellio-profile-spotlight-sub', data.topSeriesCount + ' episodes watched in ' + selectedDate.toLocaleString('default', { month: 'short' })));
+    card.appendChild(content);
+    spotlightWrap.appendChild(card);
+    container.appendChild(spotlightWrap);
+  }
+
+  if (!data.hasActivity) {
+    container.appendChild(el('p', 'jellio-profile-empty', 'No activity recorded for ' + monthName + '.'));
+    return container;
+  }
+
+  [
+    [
+      'Watching in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      [
+        ['Movies', data.movies],
+        ['Episodes', data.episodes],
+        ['Total watched', data.totalWatched],
+        ['Active days', data.activeDays],
+      ],
+    ],
+    [
+      'Books in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      [
+        ['Finished', data.books],
+        ['Pages read', data.bookPages],
+      ],
+    ],
+    [
+      'Manga in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      [
+        ['Finished', data.mangaVolumes],
+        ['Pages read', data.mangaPages],
+      ],
+    ],
+    [
+      'Audiobooks in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      [
+        ['Time listening', formatMinutes(data.listenedMinutes)],
+      ],
+    ],
+  ].forEach(function (group) {
+    const section = el('section', 'jellio-profile-stat-group');
+    section.appendChild(el('h3', 'jellio-profile-stat-group-title', group[0]));
+    const stats = el('div', 'jellio-profile-stats');
+    group[1].forEach(function (pair) {
+      const stat = el('div', 'jellio-profile-stat');
+      const value = typeof pair[1] === 'string' ? pair[1] : Number(pair[1] || 0).toLocaleString();
+      stat.appendChild(el('span', 'jellio-profile-stat-value', value));
+      stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
+      stats.appendChild(stat);
+    });
+    section.appendChild(stats);
+    container.appendChild(section);
+  });
+
+  return container;
 }
 
 // The one whole-user "start over" hammer, deliberately separate from
@@ -383,13 +704,6 @@ export async function renderProfile(root, params) {
 
   root.textContent = '';
 
-  // Admin controls (delete an activity entry, relock a badge, reset a
-  // user's whole progress) only ever show on someone else's own
-  // profile: viewer.Policy.IsAdministrator is the one real gate
-  // screens/settings.js's own "Open admin dashboard" row already uses,
-  // matched here rather than inventing a second one.
-  // Admin tools show on every profile, the admin's own included; a
-  // reader can always remove their own activity entries.
   const isAdmin = !!(viewer && viewer.Policy && viewer.Policy.IsAdministrator);
   const canRemoveActivity = isOwner || isAdmin;
 
@@ -416,7 +730,7 @@ export async function renderProfile(root, params) {
   identity.appendChild(nameRow);
   identity.appendChild(
     buildBioSection(userId, profile.Bio, isOwner, function () {
-      /* bio already updated in place, nothing else to refresh */
+      /* bio already updated in place */
     }),
   );
   header.appendChild(identity);
@@ -426,61 +740,106 @@ export async function renderProfile(root, params) {
   if (achievements.IsPrivate) {
     body.appendChild(buildLockedPanel());
   } else {
-    // Watching, then books, manga and audiobooks each on their own,
-    // always shown (zeroes included) so they read as part of the
-    // profile, not an add-on.
-    [
-      [
-        'Watching',
-        [
-          ['Movies', achievements.MoviesCompleted],
-          ['Episodes', achievements.EpisodesCompleted],
-          ['Total watched', achievements.TotalCompleted],
-          ['Best binge', achievements.BestBingeStreak],
-        ],
-      ],
-      [
-        'Books',
-        [
-          ['Finished', achievements.BooksCompleted],
-          ['Pages read', achievements.BookPagesRead],
-          ['Time reading', formatMinutes(achievements.ReadingMinutes)],
-        ],
-      ],
-      [
-        'Manga · manhwa · manhua',
-        [
-          ['Finished', achievements.MangaVolumesCompleted],
-          ['Pages read', achievements.MangaPagesRead],
-          ['Time reading', formatMinutes(achievements.MangaReadingMinutes)],
-        ],
-      ],
-      [
-        'Audiobooks',
-        [
-          ['Finished', achievements.AudiobooksCompleted],
-          ['Time listening', formatMinutes(achievements.ListenedMinutes)],
-        ],
-      ],
-    ].forEach(function (group) {
-      const section = el('section', 'jellio-profile-stat-group');
-      section.appendChild(el('h3', 'jellio-profile-stat-group-title', group[0]));
-      const stats = el('div', 'jellio-profile-stats');
-      group[1].forEach(function (pair) {
-        const stat = el('div', 'jellio-profile-stat');
-        const value = typeof pair[1] === 'string' ? pair[1] : Number(pair[1] || 0).toLocaleString();
-        stat.appendChild(el('span', 'jellio-profile-stat-value', value));
-        stat.appendChild(el('span', 'jellio-profile-stat-label', pair[0]));
-        stats.appendChild(stat);
-      });
-      section.appendChild(stats);
-      body.appendChild(section);
-    });
     const refresh = function () {
       renderProfile(root, params);
     };
-    body.appendChild(buildBadgesSection(achievements.Badges, isAdmin, userId, refresh));
-    body.appendChild(buildActivitySection(achievements.RecentActivity, canRemoveActivity, userId, refresh));
+
+    const badges = achievements.Badges || [];
+    const unlockedBadgesCount = badges.filter(function (b) { return b.Unlocked; }).length;
+    const activities = achievements.RecentActivity || [];
+
+    // Profile top navigation tabs
+    let activeTab = 'stats'; // 'stats', 'badges', 'activity'
+    const navTabs = el('div', 'jellio-profile-nav-tabs');
+    const tabs = [
+      { key: 'stats', label: 'Overview & Stats', icon: 'analytics' },
+      { key: 'badges', label: 'Badges (' + unlockedBadgesCount + '/' + badges.length + ')', icon: 'military_tech' },
+      { key: 'activity', label: 'Recent Activity (' + activities.length + ')', icon: 'history' },
+    ];
+
+    const tabContentContainer = el('div', 'jellio-profile-tab-content');
+
+    // Stats View state: two-item toggle ('lifetime' or 'monthly')
+    let activeStatMode = 'lifetime';
+    let selectedMonthDate = new Date();
+
+    function renderStatsTab() {
+      tabContentContainer.textContent = '';
+
+      // Two-item toggle menu buttons placed side-by-side
+      const statsToggleWrap = el('div', 'jellio-profile-stats-toggle-wrap');
+      const statsToggle = el('div', 'jellio-profile-stats-toggle');
+
+      const lifetimeBtn = el('button', 'jellio-profile-stats-toggle-btn' + (activeStatMode === 'lifetime' ? ' jellio-profile-stats-toggle-btn-active' : ''), 'Lifetime Stats');
+      lifetimeBtn.type = 'button';
+      lifetimeBtn.addEventListener('click', function () {
+        if (activeStatMode === 'lifetime') return;
+        activeStatMode = 'lifetime';
+        renderStatsTab();
+      });
+      statsToggle.appendChild(lifetimeBtn);
+
+      const monthlyBtn = el('button', 'jellio-profile-stats-toggle-btn' + (activeStatMode === 'monthly' ? ' jellio-profile-stats-toggle-btn-active' : ''), 'Monthly Stats');
+      monthlyBtn.type = 'button';
+      monthlyBtn.addEventListener('click', function () {
+        if (activeStatMode === 'monthly') return;
+        activeStatMode = 'monthly';
+        renderStatsTab();
+      });
+      statsToggle.appendChild(monthlyBtn);
+      statsToggleWrap.appendChild(statsToggle);
+
+      tabContentContainer.appendChild(statsToggleWrap);
+
+      if (activeStatMode === 'lifetime') {
+        tabContentContainer.appendChild(buildLifetimeStats(achievements));
+      } else {
+        tabContentContainer.appendChild(buildMonthlyStats(achievements, selectedMonthDate, function (newDate) {
+          selectedMonthDate = newDate;
+          renderStatsTab();
+        }));
+      }
+
+      // Quick Badges showcase at the bottom of the stats overview
+      if (badges.length) {
+        tabContentContainer.appendChild(buildBadgesSection(badges, isAdmin, userId, refresh));
+      }
+    }
+
+    function renderActiveTab() {
+      Array.prototype.forEach.call(navTabs.children, function (btn) {
+        btn.classList.toggle('jellio-profile-nav-tab-active', btn.dataset.tab === activeTab);
+      });
+
+      if (activeTab === 'stats') {
+        renderStatsTab();
+      } else if (activeTab === 'badges') {
+        tabContentContainer.textContent = '';
+        tabContentContainer.appendChild(buildBadgesSection(badges, isAdmin, userId, refresh));
+      } else if (activeTab === 'activity') {
+        tabContentContainer.textContent = '';
+        tabContentContainer.appendChild(buildActivitySection(activities, canRemoveActivity, userId, refresh));
+      }
+    }
+
+    tabs.forEach(function (tab) {
+      const btn = el('button', 'jellio-profile-nav-tab' + (tab.key === activeTab ? ' jellio-profile-nav-tab-active' : ''));
+      btn.type = 'button';
+      btn.dataset.tab = tab.key;
+      btn.appendChild(el('span', 'material-icons', tab.icon));
+      btn.appendChild(document.createTextNode(tab.label));
+      btn.addEventListener('click', function () {
+        if (activeTab === tab.key) return;
+        activeTab = tab.key;
+        renderActiveTab();
+      });
+      navTabs.appendChild(btn);
+    });
+
+    body.appendChild(navTabs);
+    body.appendChild(tabContentContainer);
+    renderActiveTab();
+
     if (isAdmin) {
       body.appendChild(buildAdminDangerZone(userId, refresh));
     }
