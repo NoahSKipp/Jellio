@@ -3919,9 +3919,13 @@
 }
 
 .jellio-reader-stage-pdf {
-  align-items: flex-start;
+  display: flex;
+  align-items: safe center;
+  justify-content: safe center;
   overflow: auto;
   padding: 1em;
+  box-sizing: border-box;
+  touch-action: pan-x pan-y;
 }
 
 .jellio-reader-pdf-page {
@@ -3929,6 +3933,17 @@
   flex: 0 0 auto;
   margin: auto;
   box-shadow: 0 0.25em 1.5em rgb(0 0 0 / 0.35);
+}
+
+.jellio-reader-stage-pdf.jellio-reader-stage-overflow-x .jellio-reader-pdf-page,
+.jellio-reader-stage-pdf.jellio-reader-stage-overflow .jellio-reader-pdf-page {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.jellio-reader-stage-pdf.jellio-reader-stage-overflow-y .jellio-reader-pdf-page {
+  margin-top: 0;
+  margin-bottom: auto;
 }
 
 .jellio-reader-pdf-canvas {

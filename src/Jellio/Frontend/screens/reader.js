@@ -860,13 +860,29 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     const x = (clientX === undefined ? rect.left + rect.width / 2 : clientX) - rect.left;
     const y = (clientY === undefined ? rect.top + rect.height / 2 : clientY) - rect.top;
     if (strip()) {
-      const ratio = target / zoom;
-      const left = (stage.scrollLeft + x) * ratio - x;
-      const top = (stage.scrollTop + y) * ratio - y;
+      if (target === zoom) return;
+      const clientTargetY = rect.top + y;
+      const children = view.children ? Array.from(view.children) : [];
+      const slot = children.find(function (s) {
+        const sr = s.getBoundingClientRect();
+        return sr.top <= clientTargetY && sr.bottom >= clientTargetY;
+      }) || (index < children.length ? children[index] : null);
+
+      let slotFraction = 0;
+      if (slot) {
+        const sr = slot.getBoundingClientRect();
+        slotFraction = sr.height > 0 ? (clientTargetY - sr.top) / sr.height : 0;
+      }
+
       zoom = target;
       applyZoom();
-      stage.scrollLeft = left;
-      stage.scrollTop = top;
+
+      if (slot) {
+        void view.offsetHeight;
+        const srAfter = slot.getBoundingClientRect();
+        const delta = (srAfter.top + srAfter.height * slotFraction) - clientTargetY;
+        stage.scrollTop += delta;
+      }
       return;
     }
     const contentX = (x - panX) / zoom;
@@ -992,6 +1008,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       ticking = true;
       window.requestAnimationFrame(function () {
         ticking = false;
+        if (pinch) return;
         const currentTop = stage.scrollTop;
         const delta = currentTop - lastScrollTop;
         if (Math.abs(delta) > 20) {
@@ -1090,12 +1107,9 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
   // Taps: a double tap zooms in on that spot (or back out), a single tap
   // goes to the reader's tap zones. A drag that panned isn't a tap.
   let lastTap = null;
-  let suppressClick = false;
+  let suppressClickUntil = 0;
   stage.addEventListener('click', function (event) {
-    if (suppressClick) {
-      suppressClick = false;
-      return;
-    }
+    if (Date.now() < suppressClickUntil) return;
     const now = Date.now();
     if (lastTap && now - lastTap.time < 300 && Math.abs(event.clientX - lastTap.x) < 40 && Math.abs(event.clientY - lastTap.y) < 40) {
       lastTap = null;
@@ -1136,7 +1150,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       y: event.clientY,
       timer: window.setTimeout(function () {
         hold = null;
-        suppressClick = true;
+        suppressClickUntil = Date.now() + 400;
         if (handlers.cancelTap) handlers.cancelTap();
         handlers.onPageMenu(img.currentSrc || img.src, img.dataset.page);
       }, 550),
@@ -1173,7 +1187,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     applyZoom();
   }
   function onPointerUp() {
-    if (drag && drag.moved) suppressClick = true;
+    if (drag && drag.moved) suppressClickUntil = Date.now() + 400;
     drag = null;
   }
 
@@ -1187,16 +1201,27 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
   stage.addEventListener(
     'touchstart',
     function (event) {
-      if (event.touches.length === 2) {
+      if (event.touches.length >= 2) {
+        const dist = distance(event.touches);
+        const midX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+        const midY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+        const rect = stage.getBoundingClientRect();
         pinch = {
-          distance: distance(event.touches),
-          zoom: zoom,
-          x: (event.touches[0].clientX + event.touches[1].clientX) / 2,
-          y: (event.touches[0].clientY + event.touches[1].clientY) / 2,
+          startDist: dist,
+          startZoom: zoom,
+          startX: midX,
+          startY: midY,
+          startPanX: panX,
+          startPanY: panY,
+          contentX: (midX - rect.left - panX) / zoom,
+          contentY: (midY - rect.top - panY) / zoom,
         };
         swipe = null;
+        lastTap = null;
+        suppressClickUntil = Date.now() + 400;
         event.preventDefault();
       } else if (event.touches.length === 1) {
+        if (Date.now() < suppressClickUntil) return;
         const touch = event.touches[0];
         swipe = { x: touch.clientX, y: touch.clientY, time: Date.now(), panX: panX, panY: panY, moved: false };
       }
@@ -1206,9 +1231,22 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
   stage.addEventListener(
     'touchmove',
     function (event) {
-      if (pinch && event.touches.length === 2) {
+      if (pinch && event.touches.length >= 2) {
         event.preventDefault();
-        setZoom(pinch.zoom * (distance(event.touches) / pinch.distance), pinch.x, pinch.y);
+        const dist = distance(event.touches);
+        const midX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+        const midY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+        if (strip()) {
+          const targetZoom = Math.min(COMIC_MAX_ZOOM, Math.max(1, pinch.startZoom * (dist / pinch.startDist)));
+          setZoom(targetZoom, midX, midY);
+        } else {
+          const targetZoom = Math.min(COMIC_MAX_ZOOM, Math.max(1, pinch.startZoom * (dist / pinch.startDist)));
+          const rect = stage.getBoundingClientRect();
+          zoom = targetZoom;
+          panX = (midX - rect.left) - pinch.contentX * zoom;
+          panY = (midY - rect.top) - pinch.contentY * zoom;
+          applyZoom();
+        }
         return;
       }
       if (!swipe || event.touches.length !== 1) return;
@@ -1225,12 +1263,18 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     },
     { passive: false },
   );
+  function endPinch() {
+    if (!pinch) return;
+    pinch = null;
+    swipe = null;
+    lastTap = null;
+    suppressClickUntil = Date.now() + 400;
+    if (zoom < 1.05) resetZoom();
+  }
   stage.addEventListener('touchend', function (event) {
     if (pinch) {
       if (event.touches.length < 2) {
-        pinch = null;
-        if (zoom < 1.05) resetZoom();
-        suppressClick = true;
+        endPinch();
       }
       return;
     }
@@ -1241,7 +1285,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     const quick = Date.now() - swipe.time < 700;
     const moved = swipe.moved;
     swipe = null;
-    if (moved) suppressClick = true;
+    if (moved) suppressClickUntil = Date.now() + 400;
     if (!moved || !quick || zoom > 1 || strip()) return;
     const fits = stage.scrollHeight <= stage.clientHeight + 2;
     if (current.comicLayout === 'paged-vertical') {
@@ -1256,6 +1300,10 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       if (forward) next();
       else prev();
     }
+  });
+  stage.addEventListener('touchcancel', function () {
+    endPinch();
+    swipe = null;
   });
 
   handlers.onScrubReady(count, count);
@@ -1544,8 +1592,11 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
     canvas.style.width = cssWidth;
     canvas.style.height = cssHeight;
     pageWrap.style.width = cssWidth;
-    pageWrap.style.height = cssHeight;
-    stage.classList.toggle('jellio-reader-stage-overflow', cssViewport.height > availableHeight + 32 || cssViewport.width > availableWidth + 32);
+    const overflowX = cssViewport.width > availableWidth;
+    const overflowY = cssViewport.height > availableHeight;
+    stage.classList.toggle('jellio-reader-stage-overflow-x', overflowX);
+    stage.classList.toggle('jellio-reader-stage-overflow-y', overflowY);
+    stage.classList.toggle('jellio-reader-stage-overflow', overflowX || overflowY);
 
     if (renderTask) renderTask.cancel();
     if (textTask) textTask.cancel();
@@ -1579,6 +1630,7 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
     }
 
     stage.scrollTop = 0;
+    stage.scrollLeft = 0;
     reportLocation();
   }
 
@@ -1650,6 +1702,23 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
       return !!(selection && String(selection).trim());
     });
   });
+
+  // Ctrl + wheel (and a trackpad pinch) zooms the PDF.
+  stage.addEventListener(
+    'wheel',
+    function (event) {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? 15 : -15;
+      const nextZoom = Math.min(300, Math.max(50, Math.round(current.pdfZoom + delta)));
+      if (nextZoom !== current.pdfZoom) {
+        current.pdfZoom = nextZoom;
+        if (handlers.onZoom) handlers.onZoom({ pdfZoom: nextZoom });
+        renderPage();
+      }
+    },
+    { passive: false },
+  );
 
   async function readOutline() {
     const outline = (await pdf.getOutline()) || [];
@@ -2771,12 +2840,19 @@ export async function renderReader(root, params) {
   body.addEventListener(
     'touchstart',
     function (event) {
+      if (event.touches.length > 1) {
+        touchStartX = null;
+        return;
+      }
       touchStartX = event.touches[0].clientX;
     },
     { passive: true },
   );
   body.addEventListener('touchend', function (event) {
-    if (touchStartX === null) return;
+    if (touchStartX === null || (event.touches && event.touches.length > 0)) {
+      touchStartX = null;
+      return;
+    }
     const delta = event.changedTouches[0].clientX - touchStartX;
     touchStartX = null;
     // Comics handle their own swipes, pinches and pans (openComic).
