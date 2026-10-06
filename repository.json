@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.59.0] - 2026-10-06\n\n### 🚀 Features\n\n- Take the witch and the drifting skulls out of the Halloween effect\n\n### 🐛 Bug Fixes\n\n- Bring back Continue Watching, Up Next and Continue Reading rows\n",
+        "checksum": "c5da608ffde5a2f9d07e42687fbd75cf",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.59.0/jellio_1.59.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-06T08:54:50Z",
+        "version": "1.59.0"
+      },
+      {
         "changelog": "## [1.58.0] - 2026-10-06\n\n### 🚀 Features\n\n- A spookier Halloween effect with lightning and hand drawn creatures\n",
         "checksum": "203ade84fc9f71668426d06e588df9ca",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.58.0/jellio_1.58.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-01T16:22:01Z",
         "version": "1.40.0"
-      },
-      {
-        "changelog": "## [1.39.0] - 2026-09-29\n\n### 🚀 Features\n\n- Read manga from Discover instead of requesting it\n- Open the show, manga series or item from a Feed entry\n- Show reading books and manga, and listening, in Now Playing\n- Track time spent in the reader\n- Link titles in profile activity and show reading time\n- Split manga reading time from books on profiles\n\n### 🐛 Bug Fixes\n\n- Keep profile activity times aligned on the right\n",
-        "checksum": "855e3b3956a09c876050a81fcc4f570e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.39.0/jellio_1.39.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-29T19:56:19Z",
-        "version": "1.39.0"
       }
     ]
   }
