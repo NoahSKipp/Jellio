@@ -3787,12 +3787,18 @@ export async function renderPlayer(root, params) {
     shell.classList.add('jellio-player-shell-idle');
   }
   function wakeControls() {
+    if (screenTornDown) return;
     shell.classList.remove('jellio-player-shell-idle');
     if (idleTimer) window.clearTimeout(idleTimer);
     idleTimer = window.setTimeout(hideControls, IDLE_HIDE_MS);
   }
-  ['mousemove', 'touchstart', 'keydown', 'click'].forEach(function (eventName) {
-    root.addEventListener(eventName, wakeControls);
+  function onRootWake() {
+    if (screenTornDown) return;
+    wakeControls();
+  }
+  const rootWakeEvents = ['mousemove', 'touchstart', 'keydown', 'click'];
+  rootWakeEvents.forEach(function (eventName) {
+    root.addEventListener(eventName, onRootWake);
   });
   // Real feedback: a plain tap anywhere on the video used to toggle
   // play/pause underneath, indistinguishable from the shell's own
@@ -3803,20 +3809,24 @@ export async function renderPlayer(root, params) {
   // actually toggles playback; root's own click listener above already
   // wakes the shell for a tap landing on video, nothing else needed
   // here.
-  root.addEventListener('dblclick', function (event) {
+  function onPlayerDblClick(event) {
+    if (screenTornDown) return;
     if (event.target && event.target.closest && event.target.closest('button, input, select, textarea, .jellio-player-popover, .jellio-player-sidepanel, .jellio-player-shortcuts-modal, .jellio-player-chat-panel')) {
       return;
     }
     if (fullscreenButton) fullscreenButton.click();
-  });
-  root.addEventListener('wheel', function (event) {
+  }
+  function onPlayerWheel(event) {
+    if (screenTornDown) return;
     if (event.target && event.target.closest && event.target.closest('.jellio-player-popover, .jellio-player-sidepanel, .jellio-player-shortcuts-modal, .jellio-player-chat-panel')) {
       return;
     }
     event.preventDefault();
     wakeControls();
     adjustVolume(event.deltaY < 0 ? 0.05 : -0.05);
-  }, { passive: false });
+  }
+  root.addEventListener('dblclick', onPlayerDblClick);
+  root.addEventListener('wheel', onPlayerWheel, { passive: false });
   wakeControls();
 
   // Real gap: root.addEventListener('keydown', wakeControls) above only
@@ -5355,6 +5365,11 @@ export async function renderPlayer(root, params) {
     }
     window.clearInterval(logoWatchdog);
     document.removeEventListener('keydown', onPlayerKeydown);
+    rootWakeEvents.forEach(function (eventName) {
+      root.removeEventListener(eventName, onRootWake);
+    });
+    root.removeEventListener('dblclick', onPlayerDblClick);
+    root.removeEventListener('wheel', onPlayerWheel);
     exitFullscreenOnCleanup();
     if ('mediaSession' in navigator) {
       try {
