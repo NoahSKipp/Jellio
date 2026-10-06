@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.58.0] - 2026-10-06\n\n### 🚀 Features\n\n- A spookier Halloween effect with lightning and hand drawn creatures\n",
+        "checksum": "203ade84fc9f71668426d06e588df9ca",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.58.0/jellio_1.58.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-06T08:35:53Z",
+        "version": "1.58.0"
+      },
+      {
         "changelog": "## [1.57.0] - 2026-10-06\n\n### 🚀 Features\n\n- Monitor currently watched and continuing airing shows, remove movie notification mute toggle\n",
         "checksum": "7004029b4accb0295f06fa04fa1dd508",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.57.0/jellio_1.57.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-29T19:56:19Z",
         "version": "1.39.0"
-      },
-      {
-        "changelog": "## [1.38.0] - 2026-09-29\n\n### 🚀 Features\n\n- Import a series from another installed source when Mihon's source fails\n- Make the Manga shelf each reader's own library\n- Reading mode and crop borders in the manga reader's bottom bar\n\n### 🐛 Bug Fixes\n\n- Save a Mihon import's reading progress once per series instead of once per chapter\n- Return the import result and source state together when queueing fails\n\n### ⚡ Performance\n\n- Load streamed manga per series for each reader's own library\n",
-        "checksum": "0ef0fd8b9a484705123c6cd6002df8ea",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.38.0/jellio_1.38.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-29T17:47:29Z",
-        "version": "1.38.0"
       }
     ]
   }
