@@ -937,6 +937,9 @@ export async function renderPlayer(root, params) {
   video.mozPreservesPitch = true;
   video.setAttribute('x-webkit-airplay', 'allow');
   video.setAttribute('airplay', 'allow');
+  if (video.remote && typeof video.remote.watchAvailability === 'function') {
+    video.remote.watchAvailability(function () {}).catch(function () {});
+  }
   initGoogleCast().catch(function () {});
   const savedVolume = loadVolumePreference();
   video.volume = savedVolume.volume;
@@ -2746,22 +2749,29 @@ export async function renderPlayer(root, params) {
           gcastBtn.addEventListener('click', async function () {
             try {
               castMenu.classList.add('jellio-player-popover-hidden');
+              const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
+              const castStreamUrl = buildStreamUrl(itemId, mediaSource, 0, {
+                audioStreamIndex: currentAudioStreamIndex,
+              });
+
               if (window.cast && window.cast.framework) {
-                const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
-                await castToGoogleCast(streamUrl, item, currentSec);
-              } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
+                await castToGoogleCast(castStreamUrl, item, currentSec);
                 video.pause();
+                showPlayerToast('Streaming via Google Cast');
+              } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
                 await promptRemotePlayback(video);
+                showPlayerToast('Streaming via Wireless Display');
               } else {
-                const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
-                await castToGoogleCast(streamUrl, item, currentSec);
+                await castToGoogleCast(castStreamUrl, item, currentSec);
+                video.pause();
+                showPlayerToast('Streaming via Google Cast');
               }
-              showPlayerToast('Streaming via Google Cast');
             } catch (err) {
               if (
                 err &&
                 (err.name === 'AbortError' ||
                  err.name === 'NotAllowedError' ||
+                 err.name === 'NotFoundError' ||
                  (err.message && (err.message.includes('dismissed') || err.message.includes('cancel') || err.message.includes('not selected'))))
               ) {
                 // User simply dismissed or closed the browser's native Cast dialog

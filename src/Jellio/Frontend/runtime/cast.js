@@ -48,7 +48,7 @@ let remotePlayer = null;
 let remotePlayerController = null;
 
 export function initGoogleCast() {
-  if (googleCastInitialized || googleCastInitializing) return Promise.resolve(googleCastInitialized);
+  if (googleCastInitialized) return Promise.resolve(true);
   if (typeof window === 'undefined') return Promise.resolve(false);
 
   // If Cast framework is already loaded:
@@ -57,9 +57,28 @@ export function initGoogleCast() {
     return Promise.resolve(true);
   }
 
+  // If the early hook already determined that Cast API is not available on this platform/browser:
+  if (window.__jellioGCastAvailable === false) {
+    return Promise.resolve(false);
+  }
+
+  if (googleCastInitializing) {
+    return new Promise(function (resolve) {
+      const checkTimer = setInterval(function () {
+        if (googleCastInitialized) {
+          clearInterval(checkTimer);
+          resolve(true);
+        } else if (!googleCastInitializing) {
+          clearInterval(checkTimer);
+          resolve(Boolean(window.cast && window.cast.framework));
+        }
+      }, 50);
+    });
+  }
+
   googleCastInitializing = true;
   return new Promise(function (resolve) {
-    window.__onGCastApiAvailable = function (isAvailable) {
+    function onAvailable(isAvailable) {
       googleCastInitializing = false;
       if (isAvailable && window.cast && window.cast.framework) {
         setupCastFramework();
@@ -67,10 +86,35 @@ export function initGoogleCast() {
       } else {
         resolve(false);
       }
+    }
+
+    // Connect to early bootstrap callback hook
+    const prevHook = window.__jellioOnGCastApiAvailable;
+    window.__jellioOnGCastApiAvailable = function (isAvailable) {
+      if (typeof prevHook === 'function') {
+        try { prevHook(isAvailable); } catch (e) {}
+      }
+      onAvailable(isAvailable);
+    };
+
+    // If early bootstrap already ran and captured isAvailable === true:
+    if (window.__jellioGCastAvailable === true && window.cast && window.cast.framework) {
+      onAvailable(true);
+      return;
+    }
+
+    // Direct window callback if cast_sender.js calls __onGCastApiAvailable directly
+    const originalOnAvailable = window.__onGCastApiAvailable;
+    window.__onGCastApiAvailable = function (isAvailable) {
+      if (typeof originalOnAvailable === 'function') {
+        try { originalOnAvailable(isAvailable); } catch (e) {}
+      }
+      onAvailable(isAvailable);
     };
 
     // Load cast sender script if not already present
-    if (!document.querySelector('script[src*="cast_sender.js"]')) {
+    const existingScript = document.querySelector('script[src*="cast_sender.js"]');
+    if (!existingScript) {
       const script = document.createElement('script');
       script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
       script.async = true;
@@ -79,6 +123,19 @@ export function initGoogleCast() {
         resolve(false);
       };
       document.head.appendChild(script);
+    } else {
+      setTimeout(function () {
+        if (googleCastInitializing) {
+          if (window.cast && window.cast.framework) {
+            onAvailable(true);
+          } else if (window.__jellioGCastAvailable != null) {
+            onAvailable(window.__jellioGCastAvailable);
+          } else {
+            googleCastInitializing = false;
+            resolve(false);
+          }
+        }
+      }, 1000);
     }
   });
 }
@@ -144,7 +201,11 @@ function setupCastFramework() {
 
 export function isGoogleCastSupported() {
   return (
-    (typeof window !== 'undefined' && (Boolean(window.cast && window.cast.framework) || Boolean(window.chrome && window.chrome.cast))) ||
+    (typeof window !== 'undefined' && (
+      Boolean(window.cast && window.cast.framework) ||
+      Boolean(window.chrome && window.chrome.cast) ||
+      window.__jellioGCastAvailable === true
+    )) ||
     ('remote' in (HTMLVideoElement.prototype || {}))
   );
 }
