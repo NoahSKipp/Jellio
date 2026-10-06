@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.55.0] - 2026-10-06\n\n### 🚀 Features\n\n- Add looking for devices loading state and empty state to cast popover\n- Add media tech badges, hero play/watchlist buttons, http2 scaling, sleep fadeout, and card image error fallbacks\n- *(player)* Customizable Up Next timer, dynamic credits gating, and post-play end-screen modal\n\n### 🐛 Bug Fixes\n\n- Hide sleep timer from settings on web/desktop where pill button is present\n- *(cast)* Clarify browser cast button and ignore user dismissal in error toast\n",
+        "checksum": "7137fad1b74f5d3900a775dc39f8007a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.55.0/jellio_1.55.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-06T05:59:07Z",
+        "version": "1.55.0"
+      },
+      {
         "changelog": "## [1.54.2] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Resolve cast button double toggle preventing popover from opening\n",
         "checksum": "c062c3da62c7377721017659224622f3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.54.2/jellio_1.54.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-09-28T23:37:08Z",
         "version": "1.35.1"
-      },
-      {
-        "changelog": "## [1.35.0] - 2026-09-28\n\n### 🚀 Features\n\n- Move Downloads to the sidebar's bottom section, above Group Watch\n",
-        "checksum": "d470dfc8d6841e24d499e24df61c54b1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.35.0/jellio_1.35.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-09-28T11:44:43Z",
-        "version": "1.35.0"
       }
     ]
   }
