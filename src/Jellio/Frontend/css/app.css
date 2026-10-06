@@ -10759,11 +10759,6 @@
   filter: blur(1.5px);
 }
 
-.jellio-season-flake {
-  color: #ffffff;
-  text-shadow: 0 0 6px color-mix(in srgb, var(--jellio-season-accent) 55%, transparent);
-}
-
 /* Halloween creatures are inline SVG silhouettes (components/seasons.js),
    drifting diagonally rather than straight down; the wings flap by
    squashing each wing around its root. Mixed near and far so a few read
@@ -11288,73 +11283,344 @@
   }
 }
 
-/* Christmas: a thin string of fairy lights along the very top edge of
-   the screen, each on its own real offset so they twinkle out of sync
-   with each other rather than all at once. */
-.jellio-season-lights {
+/* Christmas: components/seasons.js draws everything here behind the
+   page; sizes follow the window. */
+.jellio-season-swag {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 1.6em;
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-end;
-  padding-bottom: 0.3em;
+  width: 100%;
+  height: 110px;
+  overflow: visible;
 }
 
-.jellio-season-lights span {
-  width: 0.4em;
-  height: 0.4em;
-  border-radius: 50%;
-  animation: jellio-season-twinkle 2.6s ease-in-out infinite;
+.jellio-season-wire {
+  fill: none;
+  stroke: #0b1f14;
+  stroke-width: 2.2;
 }
 
-@keyframes jellio-season-twinkle {
+.jellio-season-bulb {
+  animation: jellio-season-chase 3.2s ease-in-out infinite;
+}
+
+@keyframes jellio-season-chase {
   0%, 100% {
     opacity: 0.35;
-    transform: scale(0.85);
   }
 
   50% {
     opacity: 1;
-    transform: scale(1.15);
   }
 }
 
-/* New Year's: a slow diagonal light sweep across the whole screen,
-   layered behind the real firework canvas (components/seasons.js's own
-   runFireworks()). */
-.jellio-season-shimmer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-.jellio-season-shimmer::after {
-  content: "";
+.jellio-season-bauble {
   position: absolute;
   top: 0;
-  bottom: 0;
-  width: 22%;
-  left: -30%;
-  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--jellio-season-accent) 25%, transparent), transparent);
-  animation: jellio-season-sweep 9s ease-in-out infinite;
+  width: 0;
+  transform-origin: 50% 0;
+  animation: jellio-season-swing 5s ease-in-out infinite;
 }
 
-@keyframes jellio-season-sweep {
-  0% {
-    left: -30%;
+.jellio-season-bauble i {
+  display: block;
+  width: 1px;
+  height: var(--jellio-season-len, 90px);
+  margin: 0 auto;
+  background: rgb(255 255 255 / 0.35);
+}
+
+.jellio-season-bauble svg {
+  display: block;
+  width: var(--jellio-season-size, 38px);
+  height: var(--jellio-season-size, 38px);
+  margin-left: calc(var(--jellio-season-size, 38px) / -2);
+  filter: drop-shadow(0 0 8px var(--jellio-season-glow, #ffd36b));
+}
+
+@keyframes jellio-season-swing {
+  0%, 100% {
+    transform: rotate(-4deg);
   }
 
-  45%, 100% {
-    left: 120%;
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+.jellio-season-garland {
+  position: absolute;
+  top: -6px;
+  width: 280px;
+  height: 120px;
+}
+
+.jellio-season-garland-left {
+  left: 0;
+}
+
+.jellio-season-garland-right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.jellio-season-drift {
+  position: absolute;
+  left: -3%;
+  right: -3%;
+  bottom: 0;
+  height: 120px;
+}
+
+.jellio-season-drift svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: jellio-season-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes jellio-season-drift {
+  from {
+    transform: translateX(-1.5%);
+  }
+
+  to {
+    transform: translateX(1.5%);
+  }
+}
+
+.jellio-season-frost {
+  position: absolute;
+  bottom: 0;
+  width: 260px;
+  height: 260px;
+  opacity: 0.55;
+}
+
+.jellio-season-frost-left {
+  left: 0;
+}
+
+.jellio-season-frost-right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.jellio-season-hearth {
+  position: absolute;
+  left: 50%;
+  bottom: -120px;
+  width: 70%;
+  height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(50% 60% at 50% 100%, rgb(255 150 50 / 0.32), rgb(255 110 30 / 0.1) 55%, transparent 75%);
+  animation: jellio-season-hearth 4.6s ease-in-out infinite;
+}
+
+@keyframes jellio-season-hearth {
+  0%, 100% {
+    opacity: 0.8;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  55% {
+    opacity: 0.65;
+  }
+
+  80% {
+    opacity: 0.95;
+  }
+}
+
+.jellio-season-shoot {
+  position: absolute;
+  width: 140px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #fff);
+  filter: drop-shadow(0 0 6px #fff);
+  opacity: 0;
+  transform-origin: 100% 50%;
+  animation: jellio-season-shoot 17s linear infinite;
+}
+
+@keyframes jellio-season-shoot {
+  0%, 90% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(24deg);
+  }
+
+  91% {
+    opacity: 1;
+  }
+
+  99% {
+    opacity: 0;
+    transform: translate(380px, 170px) rotate(24deg);
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.jellio-season-spark {
+  position: absolute;
+  opacity: 0;
+  animation: jellio-season-spark var(--jellio-season-t, 4s) ease-in-out infinite;
+}
+
+.jellio-season-spark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes jellio-season-spark {
+  0%, 70%, 100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+
+  82% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+/* New Year: confetti and fireworks are on the canvas below; these are
+   the DOM layers around it. */
+.jellio-season-burstflash {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.jellio-season-streamer {
+  position: absolute;
+  top: -4px;
+  width: 120px;
+  height: 360px;
+  overflow: visible;
+  opacity: 0.9;
+  transform-origin: 50% 0;
+  animation: jellio-season-streamer 6s ease-in-out infinite alternate;
+}
+
+@keyframes jellio-season-streamer {
+  from {
+    transform: rotate(-3deg);
+  }
+
+  to {
+    transform: rotate(3deg);
+  }
+}
+
+.jellio-season-bubble {
+  position: absolute;
+  bottom: -12px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 236 170 / 0.55);
+  background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.5), rgb(255 226 140 / 0.08) 60%);
+  opacity: 0;
+  animation: jellio-season-bubble var(--jellio-season-t, 9s) ease-in infinite;
+}
+
+@keyframes jellio-season-bubble {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: translate(var(--jellio-season-sway, 10px), -45vh);
+  }
+
+  100% {
+    transform: translate(calc(var(--jellio-season-sway, 10px) * -1), -102vh);
+    opacity: 0;
+  }
+}
+
+.jellio-season-nstar {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  animation: jellio-season-nstar var(--jellio-season-t, 4s) ease-in-out infinite;
+}
+
+@keyframes jellio-season-nstar {
+  0%, 100% {
+    opacity: 0.15;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.jellio-season-hny {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.jellio-season-hny span {
+  padding: 0 16px;
+  font-size: clamp(2.2rem, 8vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: #fff3c4;
+  text-shadow: 0 0 30px #d4af37, 0 0 80px rgb(212 175 55 / 0.6);
+}
+
+.jellio-season-hny-show {
+  animation: jellio-season-hny 5s ease-out 1;
+}
+
+@keyframes jellio-season-hny {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  80% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
   }
 }
 
 .jellio-season-canvas {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* screens/calendar.js's own real screen: header/tagline above a list of

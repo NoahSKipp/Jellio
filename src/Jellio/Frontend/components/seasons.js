@@ -64,21 +64,6 @@ function cssVar(container, name, fallback) {
   return value || fallback;
 }
 
-function buildFall(container, cls, count, opts) {
-  for (let i = 0; i < count; i++) {
-    const span = document.createElement('span');
-    span.className = 'jellio-season-particle jellio-season-particle-fall ' + cls;
-    if (opts.text) span.textContent = opts.text;
-    span.style.left = rand(0, 100) + 'vw';
-    span.style.setProperty('--jellio-season-sway', rand(-opts.sway, opts.sway) + 'px');
-    if (opts.minSize) span.style.fontSize = rand(opts.minSize, opts.maxSize) + 'px';
-    span.style.opacity = String(rand(opts.minOpacity, opts.maxOpacity));
-    span.style.animationDuration = rand(opts.minDuration, opts.maxDuration) + 's';
-    span.style.animationDelay = '-' + rand(0, opts.maxDuration) + 's';
-    container.appendChild(span);
-  }
-}
-
 // Halloween: the wash, fog, a breathing vignette and eyes in the dark,
 // then hand drawn creatures (SVG, so they look the same on every device)
 // all behind the page: bats that really flap, ghosts rising, spiders
@@ -316,100 +301,306 @@ function mountHalloween(container) {
   return mountHalloweenSky();
 }
 
-// A canvas particle burst, the one theme here that genuinely cannot be a
-// CSS-only span (an expanding, fading ring of dots from a random point
-// needs real per-frame physics), fired every second or two, sometimes
-// two at once, spread across the top half of the screen rather than one
-// fixed corner, each with a brief sparkle trail as it fades. Colours
-// read straight off the same tokens css/app.css just set, so a firework
-// and the sidebar's own recoloured badges never fall out of sync.
-function runFireworks(canvas, container) {
-  const ctx = canvas.getContext('2d');
-  const colors = [
-    cssVar(container, '--jellio-season-accent', '#d4af37'),
-    cssVar(container, '--jellio-season-accent-2', '#eef0f5'),
-  ];
-  let width = 0;
-  let height = 0;
-  let frameId = null;
-  let bursts = [];
-
-  function resize() {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
+// Shared by the Christmas and New Year canvases: a requestAnimationFrame
+// loop that stops while the tab is hidden, and a canvas kept at the size
+// of the window (and its pixel ratio) behind everything else.
+function startLoop(step) {
+  let frameId = 0;
+  let running = true;
+  function frame(now) {
+    if (!running) return;
+    step(now);
+    frameId = window.requestAnimationFrame(frame);
   }
-  resize();
-  window.addEventListener('resize', resize);
-
-  function spawn() {
-    const x = rand(width * 0.08, width * 0.92);
-    const y = rand(height * 0.08, height * 0.5);
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const count = Math.floor(rand(26, 36));
-    const particles = [];
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + rand(-0.1, 0.1);
-      const speed = rand(1.2, 3.6);
-      particles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, trail: Math.random() < 0.35 });
-    }
-    bursts.push({ particles: particles, color: color });
-  }
-
-  let spawnTimer = null;
-  function spawnLoop() {
-    if (!canvas.isConnected) return;
-    spawn();
-    if (Math.random() < 0.4) window.setTimeout(spawn, rand(120, 260));
-    spawnTimer = window.setTimeout(spawnLoop, rand(900, 1900));
-  }
-  spawnTimer = window.setTimeout(spawnLoop, rand(200, 500));
-  spawn();
-
-  function tick() {
-    ctx.clearRect(0, 0, width, height);
-    bursts = bursts.filter(function (burst) {
-      burst.particles.forEach(function (p) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.015;
-        p.life -= 0.012;
-      });
-      burst.particles.forEach(function (p) {
-        if (p.life <= 0) return;
-        ctx.globalAlpha = Math.max(p.life, 0);
-        ctx.fillStyle = burst.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.trail ? 1.1 : 1.9, 0, Math.PI * 2);
-        ctx.fill();
-        if (p.trail && p.life > 0.15) {
-          ctx.globalAlpha = Math.max(p.life, 0) * 0.35;
-          ctx.beginPath();
-          ctx.arc(p.x - p.vx * 1.6, p.y - p.vy * 1.6, 0.9, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      });
-      ctx.globalAlpha = 1;
-      return burst.particles.some(function (p) { return p.life > 0; });
-    });
-    frameId = window.requestAnimationFrame(tick);
-  }
-  tick();
-
-  return function cleanup() {
+  function onVisibility() {
     window.cancelAnimationFrame(frameId);
-    window.clearTimeout(spawnTimer);
-    window.removeEventListener('resize', resize);
+    if (!document.hidden && running) frameId = window.requestAnimationFrame(frame);
+  }
+  document.addEventListener('visibilitychange', onVisibility);
+  frameId = window.requestAnimationFrame(frame);
+  return function stop() {
+    running = false;
+    window.cancelAnimationFrame(frameId);
+    document.removeEventListener('visibilitychange', onVisibility);
   };
 }
 
-function mountNewYear(container) {
-  buildWash(container);
-  container.appendChild(el('div', 'jellio-season-shimmer'));
-  if (reduceMotion()) return undefined;
+function fullCanvas(container) {
   const canvas = document.createElement('canvas');
   canvas.className = 'jellio-season-canvas';
   container.appendChild(canvas);
-  return runFireworks(canvas, container);
+  const ctx = canvas.getContext('2d');
+  const size = { w: 0, h: 0 };
+  function fit() {
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    size.w = window.innerWidth;
+    size.h = window.innerHeight;
+    canvas.width = size.w * ratio;
+    canvas.height = size.h * ratio;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  return { ctx: ctx, size: size, dispose: () => window.removeEventListener('resize', fit) };
+}
+
+function pickOne(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function svgNode(tag, attrs) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach((key) => node.setAttribute(key, attrs[key]));
+  return node;
+}
+
+// New Year: rockets that climb on a trail and burst as peonies, drooping
+// willows, rings or a double burst, each lighting the page around it for
+// a moment; gold and white confetti, streamers, champagne bubbles and a
+// starry sky. At midnight on 1 January, once a year, a "Happy New Year"
+// finale. Everything sits behind the page except that title.
+const NY_MIX = ['#d4af37', '#eef0f5', '#ffe08a', '#ff7a59', '#7fb2ff'];
+const NY_CONFETTI = ['#d4af37', '#eef0f5', '#ffe08a', '#c9a227', '#f6e7b4'];
+const NY_MIDNIGHT_KEY = 'jellioNewYearMidnight';
+
+function mountNewYear(container) {
+  buildWash(container);
+  if (reduceMotion()) return undefined;
+
+  const phone = window.innerWidth < 700;
+  const scale = phone ? 0.6 : 1;
+  const count = (n) => Math.max(1, Math.round(n * scale));
+
+  for (let i = 0; i < count(52); i++) {
+    const star = el('span', 'jellio-season-nstar');
+    const size = rand(1, 2.4);
+    star.style.width = size + 'px';
+    star.style.height = size + 'px';
+    star.style.left = rand(0, 100) + 'vw';
+    star.style.top = rand(0, 62) + 'vh';
+    star.style.setProperty('--jellio-season-t', rand(2.5, 6) + 's');
+    star.style.animationDelay = '-' + rand(0, 6) + 's';
+    container.appendChild(star);
+  }
+  for (let i = 0; i < count(28); i++) {
+    const bubble = el('span', 'jellio-season-bubble');
+    const size = rand(4, 11);
+    bubble.style.width = size + 'px';
+    bubble.style.height = size + 'px';
+    bubble.style.left = rand(2, 98) + 'vw';
+    bubble.style.setProperty('--jellio-season-sway', rand(-14, 14) + 'px');
+    bubble.style.setProperty('--jellio-season-t', rand(8, 14) + 's');
+    bubble.style.animationDelay = '-' + rand(0, 14) + 's';
+    container.appendChild(bubble);
+  }
+  [['left', '#d4af37'], ['right', '#eef0f5']].forEach(function (spec, index) {
+    const box = el('div', 'jellio-season-streamer');
+    box.style[spec[0]] = '2%';
+    box.style.animationDelay = index * -2.2 + 's';
+    const svg = svgNode('svg', { viewBox: '0 0 120 360', width: '100%', height: '100%' });
+    [['#d4af37', 18], ['#eef0f5', 52], ['#c9a227', 86]].forEach(function (ribbon, j) {
+      const dir = j % 2 ? 1 : -1;
+      const d = 'M' + ribbon[1] + ' 0 c ' + dir * 26 + ' 30, ' + -dir * 26 + ' 60, 0 90 s ' + -dir * 26 + ' 60, 0 90 s ' + dir * 26 + ' 60, 0 ' + (60 + j * 20);
+      svg.appendChild(svgNode('path', { d: d, fill: 'none', stroke: ribbon[0], 'stroke-width': 4, 'stroke-linecap': 'round', opacity: 0.85 }));
+    });
+    box.appendChild(svg);
+    container.appendChild(box);
+  });
+
+  const canvas = fullCanvas(container);
+  const ctx = canvas.ctx;
+  let parts = [];
+  let rockets = [];
+  const confetti = [];
+  let nextLaunch = 0;
+  const timers = [];
+  const later = (fn, ms) => timers.push(window.setTimeout(fn, ms));
+
+  function glow(x, y, color) {
+    const flash = el('div', 'jellio-season-burstflash');
+    flash.style.left = x + 'px';
+    flash.style.top = y + 'px';
+    flash.style.background = 'radial-gradient(circle, ' + color + '66 0%, ' + color + '22 38%, transparent 68%)';
+    container.insertBefore(flash, container.children[1] || null);
+    if (flash.animate) {
+      const run = flash.animate([{ opacity: 0.9, transform: 'scale(.5)' }, { opacity: 0, transform: 'scale(1.15)' }], { duration: 900, easing: 'ease-out' });
+      run.onfinish = () => flash.remove();
+    } else {
+      later(() => flash.remove(), 900);
+    }
+  }
+
+  function explode(type, x, y, color) {
+    glow(x, y, color);
+    if (type === 'peony') {
+      const n = Math.round(98 * scale + 14);
+      for (let i = 0; i < n; i++) {
+        const a = (Math.PI * 2 * i) / n;
+        const sp = rand(1.4, 4.1);
+        parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 0.028, life: 1, d: rand(0.011, 0.016), c: color, s: 1.8, tr: [] });
+      }
+    } else if (type === 'willow') {
+      const n = Math.round(80 * scale);
+      for (let i = 0; i < n; i++) {
+        const a = (Math.PI * 2 * i) / n;
+        const sp = rand(0.9, 2.6);
+        parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 0.04, life: 1, d: rand(0.0055, 0.008), c: '#ffd36b', s: 1.5, tr: [], long: true });
+      }
+    } else if (type === 'ring') {
+      const tilt = rand(0.35, 1);
+      for (let i = 0; i < 48; i++) {
+        const a = (Math.PI * 2 * i) / 48;
+        parts.push({ x: x, y: y, vx: Math.cos(a) * 3.1, vy: Math.sin(a) * 3.1 * tilt, g: 0.012, life: 1, d: 0.012, c: color, s: 2, tr: [] });
+      }
+    } else {
+      explode('peony', x, y, color);
+      later(() => explode('ring', x, y, pickOne(NY_MIX)), 240);
+    }
+  }
+
+  function launch(type) {
+    const tx = rand(canvas.size.w * 0.1, canvas.size.w * 0.9);
+    rockets.push({
+      x: tx + rand(-40, 40),
+      y: canvas.size.h + 10,
+      ty: rand(canvas.size.h * 0.1, canvas.size.h * 0.45),
+      vy: -rand(5.5, 7.5),
+      type: type || pickOne(['peony', 'willow', 'ring', 'double']),
+      c: pickOne(NY_MIX),
+      tr: [],
+    });
+  }
+
+  function addConfetti(n, fromTop) {
+    for (let i = 0; i < n; i++) {
+      confetti.push({
+        x: rand(0, canvas.size.w), y: fromTop ? rand(-canvas.size.h * 0.2, 0) : rand(-20, canvas.size.h),
+        w: rand(4, 8), h: rand(6, 12), vy: rand(0.7, 1.7), sw: rand(0.5, 1.6), ph: rand(0, 7),
+        rot: rand(0, 6), vr: rand(-0.05, 0.05), c: pickOne(NY_CONFETTI), a: rand(0.55, 0.85),
+      });
+    }
+  }
+  addConfetti(count(96));
+  launch();
+
+  let sky = null;
+  function finale() {
+    if (!sky) {
+      sky = el('div', 'jellio-season-sky');
+      const title = el('div', 'jellio-season-hny');
+      title.appendChild(el('span', null, 'Happy New Year'));
+      sky.appendChild(title);
+      rootEl.appendChild(sky);
+    }
+    const title = sky.firstChild;
+    title.classList.remove('jellio-season-hny-show');
+    void title.offsetWidth;
+    title.classList.add('jellio-season-hny-show');
+    ['peony', 'willow', 'ring', 'double', 'peony', 'willow', 'double', 'ring', 'peony', 'double'].forEach((type, i) => later(() => launch(type), i * 260));
+    addConfetti(count(120), true);
+  }
+  // Once a year, on 1 January.
+  const today = new Date();
+  if (today.getMonth() === 0 && today.getDate() === 1) {
+    let seen = null;
+    try {
+      seen = window.localStorage.getItem(NY_MIDNIGHT_KEY);
+    } catch (err) {
+      seen = null;
+    }
+    if (seen !== String(today.getFullYear())) {
+      try {
+        window.localStorage.setItem(NY_MIDNIGHT_KEY, String(today.getFullYear()));
+      } catch (err) {
+        // Without storage it just plays on every load of the day.
+      }
+      later(finale, 2500);
+    }
+  }
+
+  const stop = startLoop(function (now) {
+    const w = canvas.size.w;
+    const h = canvas.size.h;
+    if (now > nextLaunch) {
+      launch();
+      if (Math.random() < 0.4) later(() => launch(), rand(150, 400));
+      nextLaunch = now + rand(1100, 2300) / 1.3;
+    }
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+    confetti.forEach(function (c) {
+      c.y += c.vy;
+      c.x += Math.sin(now * 0.001 * c.sw + c.ph) * 0.6;
+      c.rot += c.vr;
+      if (c.y > h + 14) {
+        c.y = -14;
+        c.x = rand(0, w);
+      }
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.scale(1, Math.abs(Math.sin(now * 0.003 * c.sw + c.ph)) * 0.9 + 0.1);
+      ctx.globalAlpha = c.a;
+      ctx.fillStyle = c.c;
+      ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+      ctx.restore();
+    });
+    ctx.globalCompositeOperation = 'lighter';
+    rockets = rockets.filter(function (r) {
+      r.y += r.vy;
+      r.vy *= 0.985;
+      r.tr.push([r.x, r.y]);
+      if (r.tr.length > 12) r.tr.shift();
+      ctx.strokeStyle = '#ffe9a8';
+      ctx.lineWidth = 1.6;
+      for (let i = 1; i < r.tr.length; i++) {
+        ctx.globalAlpha = (i / r.tr.length) * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(r.tr[i - 1][0], r.tr[i - 1][1]);
+        ctx.lineTo(r.tr[i][0], r.tr[i][1]);
+        ctx.stroke();
+      }
+      if (r.y <= r.ty || r.vy > -1.2) {
+        explode(r.type, r.x, r.y, r.c);
+        return false;
+      }
+      return true;
+    });
+    parts = parts.filter(function (p) {
+      p.tr.push([p.x, p.y]);
+      if (p.tr.length > (p.long ? 9 : 4)) p.tr.shift();
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.g;
+      p.vx *= 0.992;
+      p.life -= p.d;
+      if (p.life <= 0) return false;
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = p.s;
+      for (let i = 1; i < p.tr.length; i++) {
+        ctx.globalAlpha = (p.life * i) / p.tr.length;
+        ctx.beginPath();
+        ctx.moveTo(p.tr[i - 1][0], p.tr[i - 1][1]);
+        ctx.lineTo(p.tr[i][0], p.tr[i][1]);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      return true;
+    });
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  });
+
+  return function cleanup() {
+    stop();
+    canvas.dispose();
+    timers.forEach((id) => window.clearTimeout(id));
+    if (sky) sky.remove();
+  };
 }
 
 // Hearts drift up across the whole page now, not confined to one corner,
@@ -435,27 +626,213 @@ function mountValentine(container) {
   }
 }
 
-// A thin string of fairy lights along the very top edge of the screen
-// (twinkling on their own schedule, not tied to the snow below) plus
-// sparse, slow snow across the whole page, a fifth the density of the
-// old Snowfall theme's own canvas storm.
+// Christmas: a draped string of bulbs along the top, pine garland and
+// swinging baubles in the corners, snow in three depths with wind that
+// gusts now and then, a snow drift along the bottom, frost in the bottom
+// corners, a warm hearth glow, and a shooting star with a few sparkles.
+// All of it behind the page; with reduced motion only the wash stays.
+const XMAS_BULBS = ['#ff4d4d', '#ffd36b', '#4dff88', '#5aa8ff', '#ff8fd6'];
+
+function buildStringLights(container) {
+  const w = window.innerWidth;
+  const svg = svgNode('svg', { class: 'jellio-season-swag', viewBox: '0 0 ' + w + ' 110', preserveAspectRatio: 'none' });
+  const swags = Math.max(3, Math.round(w / 280));
+  const seg = w / swags;
+  let d = 'M0 0';
+  for (let i = 0; i < swags; i++) d += ' Q' + (seg * i + seg / 2) + ' ' + (58 + (i % 2) * 8) + ' ' + seg * (i + 1) + ' 6';
+  const wire = svgNode('path', { d: d, class: 'jellio-season-wire' });
+  svg.appendChild(wire);
+  const length = wire.getTotalLength();
+  const total = Math.round(length / 38);
+  for (let b = 0; b < total; b++) {
+    const p = wire.getPointAtLength(((b + 0.5) * length) / total);
+    const color = XMAS_BULBS[b % XMAS_BULBS.length];
+    const group = svgNode('g', { class: 'jellio-season-bulb', style: 'animation-delay:-' + (b % 5) * 0.64 + 's' });
+    group.appendChild(svgNode('circle', { cx: p.x, cy: p.y + 9, r: 13, fill: color, opacity: 0.28 }));
+    group.appendChild(svgNode('rect', { x: p.x - 2.5, y: p.y - 1, width: 5, height: 5, fill: '#10261a' }));
+    group.appendChild(svgNode('path', { d: 'M' + (p.x - 4.5) + ' ' + (p.y + 4) + 'Q' + (p.x - 7) + ' ' + (p.y + 15) + ' ' + p.x + ' ' + (p.y + 17) + 'Q' + (p.x + 7) + ' ' + (p.y + 15) + ' ' + (p.x + 4.5) + ' ' + (p.y + 4) + 'Z', fill: color }));
+    group.appendChild(svgNode('ellipse', { cx: p.x - 1.6, cy: p.y + 9, rx: 1.3, ry: 2.6, fill: '#fff', opacity: 0.55 }));
+    svg.appendChild(group);
+  }
+  container.appendChild(svg);
+  return svg;
+}
+
+function baubleSvg(color, id) {
+  return (
+    '<svg viewBox="0 0 40 46" aria-hidden="true"><defs><radialGradient id="' + id + '" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".25" stop-color="' + color + '"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient></defs>' +
+    '<rect x="16" y="1" width="8" height="7" rx="1.5" fill="#d4af37"/><circle cx="20" cy="28" r="17" fill="url(#' + id + ')"/>' +
+    '<path d="M8 26C14 31 26 31 32 26" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.4"/></svg>'
+  );
+}
+
+function buildGarlands(container) {
+  ['left', 'right'].forEach(function (side) {
+    const box = el('div', 'jellio-season-garland jellio-season-garland-' + side);
+    const svg = svgNode('svg', { viewBox: '0 0 280 120', width: '100%', height: '100%' });
+    svg.appendChild(svgNode('path', { d: 'M-4 18C60 40 120 30 190 62C230 80 262 92 284 118', fill: 'none', stroke: '#0f3d22', 'stroke-width': 16, 'stroke-linecap': 'round' }));
+    svg.appendChild(svgNode('path', { d: 'M-4 18C60 40 120 30 190 62C230 80 262 92 284 118', fill: 'none', stroke: '#1d6b3a', 'stroke-width': 7, 'stroke-linecap': 'round', 'stroke-dasharray': '2 5' }));
+    for (let i = 0; i < 30; i++) {
+      const t = i / 30;
+      const x = -4 + t * 288;
+      const y = 18 + 100 * Math.pow(t, 1.4) + Math.sin(t * 9) * 5;
+      svg.appendChild(svgNode('path', { d: 'M' + x + ' ' + y + 'l' + rand(-9, 9) + ' ' + rand(8, 16), stroke: pickOne(['#1d6b3a', '#2a8a4c', '#0f3d22']), 'stroke-width': 2, 'stroke-linecap': 'round' }));
+    }
+    [[60, 34, '#c0392b'], [130, 40, '#d4af37'], [205, 70, '#c0392b']].forEach((berry) => svg.appendChild(svgNode('circle', { cx: berry[0], cy: berry[1], r: 5, fill: berry[2] })));
+    box.appendChild(svg);
+    container.appendChild(box);
+  });
+  [['14%', '#c0392b', 38, 120, '#ff6a5a'], ['86%', '#d4af37', 34, 150, '#ffe08a'], ['50%', '#3b82f6', 30, 96, '#7fb2ff']].forEach(function (spec, i) {
+    const wrap = el('div', 'jellio-season-bauble');
+    wrap.style.left = spec[0];
+    wrap.style.setProperty('--jellio-season-len', spec[3] + 'px');
+    wrap.style.setProperty('--jellio-season-size', spec[2] + 'px');
+    wrap.style.setProperty('--jellio-season-glow', spec[4]);
+    wrap.style.animationDelay = '-' + i * 1.7 + 's';
+    wrap.style.animationDuration = 4.5 + i + 's';
+    wrap.appendChild(el('i'));
+    wrap.insertAdjacentHTML('beforeend', baubleSvg(spec[1], 'jellio-season-bauble-' + i));
+    container.appendChild(wrap);
+  });
+}
+
+function buildFrost(container) {
+  ['left', 'right'].forEach(function (side) {
+    const box = el('div', 'jellio-season-frost jellio-season-frost-' + side);
+    const svg = svgNode('svg', { viewBox: '0 0 260 260', width: '100%', height: '100%' });
+    let d = '';
+    const branch = function (x, y, a, len, depth) {
+      if (depth === 0 || len < 6) return;
+      const x2 = x + Math.cos(a) * len;
+      const y2 = y + Math.sin(a) * len;
+      d += 'M' + x.toFixed(1) + ' ' + y.toFixed(1) + 'L' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+      branch(x2, y2, a - 0.55, len * 0.62, depth - 1);
+      branch(x2, y2, a + 0.55, len * 0.62, depth - 1);
+      branch(x2, y2, a, len * 0.74, depth - 1);
+    };
+    [-1.2, -0.95, -0.7, -0.45, -0.2].forEach((a) => branch(0, 260, a, 70, 4));
+    svg.appendChild(svgNode('path', { d: d, fill: 'none', stroke: '#cfe6ff', 'stroke-width': 1, 'stroke-linecap': 'round', opacity: 0.7 }));
+    box.appendChild(svg);
+    container.appendChild(box);
+  });
+}
+
 function mountChristmas(container) {
   buildWash(container);
+  if (reduceMotion()) return undefined;
 
-  const lights = el('div', 'jellio-season-lights');
-  for (let i = 0; i < 18; i++) {
-    const dot = document.createElement('span');
-    dot.style.background = i % 2 ? 'var(--jellio-season-accent-2)' : 'var(--jellio-season-accent)';
-    dot.style.boxShadow = '0 0 6px ' + (i % 2 ? 'var(--jellio-season-accent-2)' : 'var(--jellio-season-accent)');
-    dot.style.animationDelay = '-' + rand(0, 2.6) + 's';
-    lights.appendChild(dot);
+  const phone = window.innerWidth < 700;
+  const scale = phone ? 0.6 : 1;
+
+  container.appendChild(el('div', 'jellio-season-hearth'));
+  buildFrost(container);
+  const drift = el('div', 'jellio-season-drift');
+  drift.innerHTML =
+    '<svg viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="jellio-season-drift-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset="1" stop-color="#9fb8d6"/></linearGradient></defs><path d="M0 120V70C80 40 160 38 260 62C360 86 440 36 560 40C680 44 740 84 860 66C960 50 1060 28 1200 58V120Z" fill="url(#jellio-season-drift-fill)" opacity=".92"/><path d="M0 120V92C120 70 220 86 340 82C480 78 560 58 700 70C840 82 960 62 1200 84V120Z" fill="#fff" opacity=".55"/></svg>';
+  container.appendChild(drift);
+
+  const shoot = el('div', 'jellio-season-shoot');
+  shoot.style.left = rand(10, 40) + '%';
+  shoot.style.top = rand(8, 25) + '%';
+  container.appendChild(shoot);
+  for (let i = 0; i < Math.max(4, Math.round(11 * scale)); i++) {
+    const spark = el('div', 'jellio-season-spark');
+    const size = rand(8, 16);
+    spark.style.width = size + 'px';
+    spark.style.height = size + 'px';
+    spark.style.left = rand(3, 96) + '%';
+    spark.style.top = rand(6, 92) + '%';
+    spark.style.setProperty('--jellio-season-t', rand(3, 7) + 's');
+    spark.style.animationDelay = '-' + rand(0, 7) + 's';
+    spark.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 0C11 6 14 9 20 10C14 11 11 14 10 20C9 14 6 11 0 10C6 9 9 6 10 0Z" fill="' + pickOne(['#fff', '#ffe08a', '#bfe3ff']) + '"/></svg>';
+    container.appendChild(spark);
   }
-  container.appendChild(lights);
 
-  if (reduceMotion()) return;
-  buildFall(container, 'jellio-season-flake', 22, {
-    text: '❄', sway: 16, minSize: 9, maxSize: 15, minOpacity: 0.4, maxOpacity: 0.7, minDuration: 9, maxDuration: 16,
+  buildGarlands(container);
+  let lights = buildStringLights(container);
+  let relight = null;
+  const onResize = function () {
+    window.clearTimeout(relight);
+    relight = window.setTimeout(function () {
+      lights.remove();
+      lights = buildStringLights(container);
+    }, 200);
+  };
+  window.addEventListener('resize', onResize);
+
+  const canvas = fullCanvas(container);
+  const ctx = canvas.ctx;
+  const flakes = [];
+  const addFlakes = function (depth, n) {
+    for (let i = 0; i < n; i++) {
+      flakes.push({
+        depth: depth, x: rand(0, canvas.size.w), y: rand(0, canvas.size.h),
+        r: depth === 0 ? rand(0.8, 1.6) : depth === 1 ? rand(1.8, 3) : rand(5, 9),
+        v: depth === 0 ? rand(0.25, 0.5) : depth === 1 ? rand(0.6, 1.1) : rand(1.3, 2),
+        ph: rand(0, 7), a: rand(0.2, 0.6), rot: rand(0, 6),
+      });
+    }
+  };
+  addFlakes(0, Math.round(64 * scale));
+  addFlakes(1, Math.round(34 * scale));
+  addFlakes(2, Math.max(3, Math.round(9 * scale)));
+  const crystal = function (x, y, r, rot) {
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const a = rot + (k * Math.PI) / 3;
+      const cx = Math.cos(a);
+      const cy = Math.sin(a);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + cx * r, y + cy * r);
+      ctx.moveTo(x + cx * r * 0.55, y + cy * r * 0.55);
+      ctx.lineTo(x + Math.cos(a + 0.6) * r * 0.8, y + Math.sin(a + 0.6) * r * 0.8);
+      ctx.moveTo(x + cx * r * 0.55, y + cy * r * 0.55);
+      ctx.lineTo(x + Math.cos(a - 0.6) * r * 0.8, y + Math.sin(a - 0.6) * r * 0.8);
+    }
+    ctx.stroke();
+  };
+  const started = performance.now();
+  let gustUntil = 0;
+  const stop = startLoop(function (now) {
+    const w = canvas.size.w;
+    const h = canvas.size.h;
+    if (now > gustUntil && Math.random() < 0.0006) gustUntil = now + 3500;
+    const wind = Math.sin((now - started) * 0.0004) * 0.35 + (now < gustUntil ? 1.4 : 0);
+    ctx.clearRect(0, 0, w, h);
+    flakes.forEach(function (f) {
+      f.y += f.v;
+      f.x += Math.sin(now * 0.001 * (1 + f.depth * 0.3) + f.ph) * (0.3 + f.depth * 0.25) + wind * (0.4 + f.depth * 0.5);
+      f.rot += 0.004 * (f.depth + 1);
+      if (f.y > h + 12) {
+        f.y = -12;
+        f.x = rand(0, w);
+      }
+      if (f.x > w + 12) f.x = -12;
+      else if (f.x < -12) f.x = w + 12;
+      ctx.globalAlpha = f.depth === 2 ? 0.85 : f.a + 0.2;
+      if (f.depth === 2) {
+        ctx.strokeStyle = '#f2f8ff';
+        ctx.lineWidth = 1.1;
+        ctx.shadowColor = '#bfe3ff';
+        ctx.shadowBlur = 6;
+        crystal(f.x, f.y, f.r, f.rot);
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
   });
+
+  return function cleanup() {
+    stop();
+    canvas.dispose();
+    window.clearTimeout(relight);
+    window.removeEventListener('resize', onResize);
+  };
 }
 
 const MOUNTERS = {
