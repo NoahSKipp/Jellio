@@ -82,8 +82,8 @@ function buildFall(container, cls, count, opts) {
 // Halloween: the wash, fog, a breathing vignette and eyes in the dark,
 // then hand drawn creatures (SVG, so they look the same on every device)
 // all behind the page: bats that really flap, ghosts rising, spiders
-// dropping on silk, flickering jack-o'-lanterns, cobwebs, a blood moon
-// with the odd witch crossing it, embers and drifting skulls. Lightning
+// dropping on silk, flickering jack-o'-lanterns, cobwebs, a blood moon and
+// embers. Lightning
 // is the one layer above the page: a flash that lights the whole screen
 // and a forked bolt, every so often. Counts drop on a phone; with
 // reduced motion only the wash stays.
@@ -92,8 +92,6 @@ const HALLOWEEN_ART = {
   ghost: '<svg viewBox="0 0 60 72" aria-hidden="true"><defs><linearGradient id="jellio-season-ghost-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f0ff"/><stop offset="1" stop-color="#b9a8ff" stop-opacity=".25"/></linearGradient></defs><path d="M30 2C14 2 5 15 5 32V68L13 59L21 69L30 59L39 69L47 59L55 68V32C55 15 46 2 30 2Z" fill="url(#jellio-season-ghost-fill)"/><path d="M5 40C-3 44-5 52 1 58C6 55 7 50 5 46Z M55 40C63 44 65 52 59 58C54 55 53 50 55 46Z" fill="#d8ccff" opacity=".6"/><ellipse cx="22" cy="28" rx="4" ry="6" fill="#1b1230"/><ellipse cx="38" cy="28" rx="4" ry="6" fill="#1b1230"/><ellipse cx="30" cy="43" rx="5" ry="7.5" fill="#1b1230"/></svg>',
   spider: '<svg viewBox="0 0 48 40" aria-hidden="true"><g class="jellio-season-legs" fill="none" stroke="#050308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 20L10 8L2 14"/><path d="M22 23L7 18L1 28"/><path d="M22 26L8 30L4 39"/><path d="M23 28L14 36L12 40"/><path d="M26 20L38 8L46 14"/><path d="M26 23L41 18L47 28"/><path d="M26 26L40 30L44 39"/><path d="M25 28L34 36L36 40"/></g><ellipse cx="24" cy="26" rx="8.5" ry="10" fill="#050308"/><circle cx="24" cy="15" r="5" fill="#050308"/><path d="M21 28L24 24L27 28L24 31Z" fill="#c1121f"/><circle cx="22" cy="14" r="1" fill="#ff3b3b"/><circle cx="26" cy="14" r="1" fill="#ff3b3b"/></svg>',
   pumpkin: '<svg viewBox="0 0 80 72" aria-hidden="true"><defs><radialGradient id="jellio-season-pumpkin-fill" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#ff9a2e"/><stop offset=".7" stop-color="#e2560a"/><stop offset="1" stop-color="#8f2a04"/></radialGradient></defs><path d="M37 14C36 8 38 4 43 1L46 4C43 6 43 9 44 14Z" fill="#3b4a14"/><ellipse cx="22" cy="43" rx="19" ry="25" fill="url(#jellio-season-pumpkin-fill)"/><ellipse cx="58" cy="43" rx="19" ry="25" fill="url(#jellio-season-pumpkin-fill)"/><ellipse cx="40" cy="43" rx="22" ry="27" fill="url(#jellio-season-pumpkin-fill)"/><path d="M40 16C33 28 33 58 40 70M24 20C14 32 14 56 24 66M56 20C66 32 66 56 56 66" fill="none" stroke="#7a2503" stroke-width="1.6" opacity=".55"/><g class="jellio-season-face"><path d="M23 34L33 40L21 44Z M57 34L47 40L59 44Z" fill="#ffd36b"/><path d="M40 46L36 53H44Z" fill="#ffd36b"/><path d="M22 53L26 58L31 55L35 61L40 56L45 61L49 55L54 58L58 53C54 66 26 66 22 53Z" fill="#ffd36b"/></g></svg>',
-  skull: '<svg viewBox="0 0 48 56" aria-hidden="true"><path d="M24 2C11 2 3 11 3 23C3 31 7 36 12 39V48C12 51 14 53 17 53H31C34 53 36 51 36 48V39C41 36 45 31 45 23C45 11 37 2 24 2Z" fill="#e9e4d4"/><ellipse cx="16" cy="25" rx="6.5" ry="7.5" fill="#15101c"/><ellipse cx="32" cy="25" rx="6.5" ry="7.5" fill="#15101c"/><path d="M24 31L20 40H28Z" fill="#15101c"/><path d="M17 44V52M22 44V53M27 44V53M32 44V52" stroke="#15101c" stroke-width="1.6"/></svg>',
-  witch: '<svg viewBox="0 0 120 60" aria-hidden="true"><path d="M2 46L98 32" stroke="#050308" stroke-width="3" stroke-linecap="round"/><path d="M96 26L119 19C117 28 117 38 119 47L96 38Z" fill="#050308"/><path d="M104 28L118 24M104 33L118 33M104 38L118 42" stroke="#2a1a38" stroke-width="1"/><path d="M52 15L60 -2L67 15Z" fill="#050308"/><ellipse cx="60" cy="15" rx="13" ry="3.2" fill="#050308"/><circle cx="60" cy="21" r="5.5" fill="#050308"/><path d="M54 25C48 32 49 38 58 40L74 36L66 25Z" fill="#050308"/><path d="M52 27C38 24 26 31 14 42L44 39Z" fill="#050308"/></svg>',
 };
 
 function halloweenArt(tag, cls, name) {
@@ -238,7 +236,6 @@ function mountHalloween(container) {
 
   const moon = el('div', 'jellio-season-moon');
   place(moon);
-  place(halloweenArt('div', 'jellio-season-witch', 'witch'));
   place(el('div', 'jellio-season-fog'));
   place(el('div', 'jellio-season-flicker'));
 
@@ -314,16 +311,6 @@ function mountHalloween(container) {
     ember.style.animationDuration = rand(8, 15) + 's';
     ember.style.animationDelay = '-' + rand(0, 15) + 's';
     place(ember);
-  }
-
-  for (let i = 0; i < count(3); i++) {
-    const skull = halloweenArt('span', 'jellio-season-skull', 'skull');
-    skull.style.left = rand(6, 92) + 'vw';
-    skull.style.top = rand(18, 80) + 'vh';
-    skull.style.setProperty('--jellio-season-size', rand(22, 36) + 'px');
-    skull.style.animationDuration = rand(22, 34) + 's';
-    skull.style.animationDelay = '-' + rand(0, 30) + 's';
-    place(skull);
   }
 
   return mountHalloweenSky();
