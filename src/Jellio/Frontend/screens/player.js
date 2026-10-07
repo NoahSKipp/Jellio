@@ -592,6 +592,7 @@ function willUseHls(source, forceTranscode) {
 }
 
 export async function renderPlayer(root, params) {
+  let screenTornDown = false;
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-player';
 
@@ -4782,7 +4783,7 @@ export async function renderPlayer(root, params) {
   // renderPlaybackError(root, ...) below and clobbered whatever had
   // since rendered into root, reported live as Back doing nothing (it
   // did navigate, this stale event just wrote right back over it).
-  let screenTornDown = false;
+  // screenTornDown is declared at the top of renderPlayer.
 
   function currentPositionTicks() {
     return streamOffsetTicks + Math.round((video.currentTime || 0) * TICKS_PER_SECOND);
