@@ -9,7 +9,7 @@
     "versions": [
       {
         "changelog": "## [1.60.3] - 2026-10-06\n\n### 🐛 Bug Fixes\n\n- *(player)* Properly teardown wheel, dblclick, and wake listeners on cleanup\n\n### 🚜 Refactor\n\n- *(player)* Remove up next timer from player popover and remove redundant topbar keyboard button\n",
-        "checksum": "b2276e2c2e7a101d27fc0d7ad664b286",
+        "checksum": "17178638520c735307f037ab6da6ea98",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.60.3/jellio_1.60.3.0.zip",
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T23:24:22Z",
