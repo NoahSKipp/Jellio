@@ -196,7 +196,7 @@ function markSeen(exclude, item) {
 // too rather than imported across that boundary, small enough not to
 // be worth sharing, and this file already owns titleKey/exclude's own
 // real contract.
-function dedupe(items, exclude) {
+export function dedupe(items, exclude) {
   const kept = [];
   items.forEach(function (item) {
     if (exclude[item.Id] || exclude[titleKey(item)]) return;
