@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.62.0] - 2026-10-07\n\n### 🚀 Features\n\n- *(streams)* Add quality filter chips that combine with language chips\n",
+        "checksum": "dff8d2086a05d1e623fe7e3058b75167",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.62.0/jellio_1.62.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-07T23:46:28Z",
+        "version": "1.62.0"
+      },
+      {
         "changelog": "## [1.61.3] - 2026-10-07\n\n### 🐛 Bug Fixes\n\n- (player) Hoist screenTornDown to top of renderPlayer to resolve TDZ ReferenceError\n",
         "checksum": "e0f7659e1b9c12298cc9b81f90adf532",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.3/jellio_1.61.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-03T13:03:42Z",
         "version": "1.44.1"
-      },
-      {
-        "changelog": "## [1.44.0] - 2026-10-03\n\n### 🚀 Features\n\n- Persistent audiobook mini-player, downloads storage gauge, chapter jump, author bibliography, recent searches, and audiobook controls\n",
-        "checksum": "4db433e98535f08cc5cbc912fe851bd0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.44.0/jellio_1.44.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-03T00:34:47Z",
-        "version": "1.44.0"
       }
     ]
   }
