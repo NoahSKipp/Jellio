@@ -3333,6 +3333,71 @@ export function getGenreItems(parentId, itemType, genre, limit) {
   });
 }
 
+export function getSeasonalItems(genres, searchTerms, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const jobs = [];
+
+  if (genres && genres.length) {
+    const params = new URLSearchParams({
+      Recursive: 'true',
+      IncludeItemTypes: 'Movie,Series',
+      Genres: genres.join('|'),
+      Limit: String(limit || 50),
+      Fields: 'Genres,ProductionYear,CommunityRating',
+      SortBy: 'CommunityRating',
+      SortOrder: 'Descending',
+    });
+    const path = '/Users/' + userId + '/Items?' + params.toString();
+    jobs.push(
+      cached(path, function () {
+        return getJson(path);
+      }).then(function (result) {
+        return (result && result.Items) || [];
+      }).catch(function () {
+        return [];
+      }),
+    );
+  }
+
+  if (searchTerms && searchTerms.length) {
+    searchTerms.slice(0, 2).forEach(function (term) {
+      const params = new URLSearchParams({
+        Recursive: 'true',
+        IncludeItemTypes: 'Movie,Series',
+        searchTerm: term,
+        Limit: '25',
+        Fields: 'Genres,ProductionYear,CommunityRating',
+      });
+      const path = '/Users/' + userId + '/Items?' + params.toString();
+      jobs.push(
+        cached(path, function () {
+          return getJson(path);
+        }).then(function (result) {
+          return (result && result.Items) || [];
+        }).catch(function () {
+          return [];
+        }),
+      );
+    });
+  }
+
+  return Promise.all(jobs).then(function (results) {
+    const combined = [];
+    const seen = new Set();
+    results.forEach(function (list) {
+      list.forEach(function (item) {
+        if (!seen.has(item.Id)) {
+          seen.add(item.Id);
+          combined.push(item);
+        }
+      });
+    });
+    return collapseAudiobookTracks(combined);
+  });
+}
+
+
 // Real feedback, live: a real episode with a real, working native skip
 // button came back Start: 0, End: 0 from this file's own legacy
 // SkipIntroController.cs lookup below, deep dived rather than assumed
