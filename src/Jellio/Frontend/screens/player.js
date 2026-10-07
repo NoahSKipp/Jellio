@@ -79,7 +79,7 @@ import {
 import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
-import { sourceLabel, buildSourceCard, buildLanguageFilterRow, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
+import { sourceLabel, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { languageName } from '../runtime/languages.js';
@@ -3163,6 +3163,7 @@ export async function renderPlayer(root, params) {
 
   let sourceOptions = [mediaSource];
   let selectedSourceLanguage = null;
+  let selectedSourceQuality = null;
   let switchingSource = false;
 
   function closeSidePanels() {
@@ -3178,15 +3179,17 @@ export async function renderPlayer(root, params) {
       rebuildSourceMenu();
     });
     if (filterRow) sourceFilterContainer.appendChild(filterRow);
+    selectedSourceQuality = null;
+    const qualityRow = buildQualityFilterRow(sourceOptions, function (quality) {
+      selectedSourceQuality = quality;
+      rebuildSourceMenu();
+    });
+    if (qualityRow) sourceFilterContainer.appendChild(qualityRow);
   }
 
   function rebuildSourceMenu() {
     sourceList.textContent = '';
-    const filtered = selectedSourceLanguage
-      ? sourceOptions.filter(function (source) {
-          return sourceAudioLanguages(source).indexOf(selectedSourceLanguage) !== -1;
-        })
-      : sourceOptions;
+    const filtered = filterSources(sourceOptions, selectedSourceLanguage, selectedSourceQuality);
     filtered.forEach(function (source) {
       sourceList.appendChild(
         buildSourceCard(
