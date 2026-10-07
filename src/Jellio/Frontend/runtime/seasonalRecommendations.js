@@ -1,4 +1,4 @@
-import { getJellioConfig, getCurrentUserId, getJson } from './api.js';
+import { getJellioConfig, getSeasonalItems } from './api.js';
 import { activeSeasonalTheme } from '../components/seasons.js';
 import { dedupe } from './recommend.js';
 
@@ -32,9 +32,6 @@ function notPlayed(item) {
 }
 
 export async function getSeasonalRecommendationRow(exclude) {
-  const userId = getCurrentUserId();
-  if (!userId) return null;
-
   try {
     const config = await getJellioConfig();
     const activeTheme = activeSeasonalTheme(new Date(), config);
@@ -43,65 +40,15 @@ export async function getSeasonalRecommendationRow(exclude) {
     const spec = SEASONS_SPEC[activeTheme];
     if (!spec) return null;
 
-    const base =
-      '/Users/' +
-      userId +
-      '/Items?Recursive=true&IncludeItemTypes=Movie,Series&Limit=60&Fields=Genres,ProductionYear,CommunityRating&SortBy=CommunityRating&SortOrder=Descending';
+    const rawItems = await getSeasonalItems(spec.genres, spec.searchTerms, 60);
+    if (!rawItems || !rawItems.length) return null;
 
-    const jobs = [];
-
-    // Query 1: by genres
-    if (spec.genres && spec.genres.length) {
-      jobs.push(
-        getJson(base + '&Genres=' + encodeURIComponent(spec.genres.join('|')))
-          .then(function (result) {
-            return (result && result.Items) || [];
-          })
-          .catch(function () {
-            return [];
-          }),
-      );
-    }
-
-    // Query 2: search term queries for holiday-specific titles
-    if (spec.searchTerms && spec.searchTerms.length) {
-      const termsToSearch = spec.searchTerms.slice(0, 2);
-      termsToSearch.forEach(function (term) {
-        jobs.push(
-          getJson('/Users/' + userId + '/Items?Recursive=true&IncludeItemTypes=Movie,Series&Limit=25&searchTerm=' + encodeURIComponent(term))
-            .then(function (result) {
-              return (result && result.Items) || [];
-            })
-            .catch(function () {
-              return [];
-            }),
-        );
-      });
-    }
-
-    const results = await Promise.all(jobs);
-    const combined = [];
-    const itemIds = new Set();
-
-    results.forEach(function (list) {
-      list.forEach(function (item) {
-        if (!itemIds.has(item.Id)) {
-          itemIds.add(item.Id);
-          combined.push(item);
-        }
-      });
-    });
-
-    if (!combined.length) return null;
-
-    // Filter unplayed and dedupe against exclude
-    const eligible = dedupe(combined.filter(notPlayed), exclude);
+    const eligible = dedupe(rawItems.filter(notPlayed), exclude);
     if (!eligible.length) return null;
 
-    const selected = eligible.slice(0, ROW_SIZE);
     return {
       title: spec.title,
-      items: selected,
+      items: eligible.slice(0, ROW_SIZE),
     };
   } catch (err) {
     console.warn('Jellio: could not load seasonal recommendations', err);
