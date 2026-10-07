@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.61.1] - 2026-10-07\n\n### 🐛 Bug Fixes\n\n- *(recommend)* Export dedupe function from recommend.js\n\n### ⚙️ Miscellaneous Tasks\n\n- Add actions write permission to release workflow\n",
+        "checksum": "5cc5fc53b1db9141e7ae3e419ef19187",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.1/jellio_1.61.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-07T13:53:37Z",
+        "version": "1.61.1"
+      },
+      {
         "changelog": "## [1.61.0] - 2026-10-07\n\n### 🚀 Features\n\n- *(home)* Add seasonal recommendations row below Top Picks for You\n\n### ⚙️ Miscellaneous Tasks\n\n- Trigger publish plugin workflow automatically on release\n",
         "checksum": "bd2fb46fb2e9311ae20420254a0a87bd",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.0/jellio_1.61.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-02T23:18:36Z",
         "version": "1.42.0"
-      },
-      {
-        "changelog": "## [1.41.2] - 2026-10-02\n\n### 🐛 Bug Fixes\n\n- Line up the Library heading with the other shelf headings\n",
-        "checksum": "76ccbba4290951f997ef39bd537ef128",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.41.2/jellio_1.41.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-02T19:38:30Z",
-        "version": "1.41.2"
       }
     ]
   }
