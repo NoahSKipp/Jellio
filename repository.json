@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.61.3] - 2026-10-07\n\n### 🐛 Bug Fixes\n\n- (player) Hoist screenTornDown to top of renderPlayer to resolve TDZ ReferenceError\n",
+        "checksum": "e0f7659e1b9c12298cc9b81f90adf532",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.3/jellio_1.61.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-07T17:01:20Z",
+        "version": "1.61.3"
+      },
+      {
         "changelog": "## [1.61.2] - 2026-10-07\n\n### 🐛 Bug Fixes\n\n- *(seasonal)* Encapsulate seasonal query in api.js to avoid unexported imports\n",
         "checksum": "43b8bc748b92841f245279a067d4ca77",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.2/jellio_1.61.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-03T00:34:47Z",
         "version": "1.44.0"
-      },
-      {
-        "changelog": "## [1.43.0] - 2026-10-03\n\n### 🚀 Features\n\n- Global offline auto-delete settings and collapsible manga series actions\n",
-        "checksum": "e91840f0662b9d0294937640fe12694e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.43.0/jellio_1.43.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-03T00:17:36Z",
-        "version": "1.43.0"
       }
     ]
   }
