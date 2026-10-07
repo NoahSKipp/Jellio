@@ -6600,6 +6600,9 @@
    behind this panel's own sourceOptions to filter, same real skip
    that picker's own inline version used to do. */
 .jellio-player-sidepanel-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
   padding: 0 1.2em 1em;
 }
 

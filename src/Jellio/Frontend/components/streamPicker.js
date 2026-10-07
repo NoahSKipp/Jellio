@@ -343,7 +343,7 @@ export function buildSourceCard(source, onSelect, isActive) {
   }
 
   const tags = [
-    sourceResolutionLabel(source),
+    sourceResolutionLabel(source) || sourceQuality(source),
     sourceBitrateLabel(source),
     formatFileSize(source.Size),
     source.Container,
@@ -484,14 +484,77 @@ export function buildLanguageFilterRow(sources, onSelect) {
   // (ORIGINAL_AUDIO_CODE itself as its own last-resort fallback), so
   // the only genuinely empty case is zero sources to begin with.
   if (!languages.length) return null;
+  return buildChipRow(languages.map(function (code) {
+    return { value: code, label: languageName(code) };
+  }), onSelect);
+}
 
+// Quality buckets, best first. A source counts towards one bucket only,
+// so 'FHD' plus a language narrows to the 1080p streams in that language.
+const QUALITY_ORDER = ['4K', 'QHD', 'FHD', 'HD', 'SD'];
+const QUALITY_NAME_PATTERNS = [
+  ['4K', /(^|[^a-z0-9])(2160p|4k|uhd)([^a-z0-9]|$)/i],
+  ['QHD', /(^|[^a-z0-9])1440p([^a-z0-9]|$)/i],
+  ['FHD', /(^|[^a-z0-9])(1080[pi]|fhd)([^a-z0-9]|$)/i],
+  ['HD', /(^|[^a-z0-9])720p([^a-z0-9]|$)/i],
+  ['SD', /(^|[^a-z0-9])(576p|480p|360p|sd|dvdrip)([^a-z0-9]|$)/i],
+];
+
+// Probed video dimensions win; most unplayed sources have none, so the
+// release name ('2160p', '1080p', ...) is the fallback. Width matters for
+// cropped widescreen encodes, a 3840x1600 file is still 4K.
+export function sourceQuality(source) {
+  const video = (source.MediaStreams || []).filter(function (stream) {
+    return stream.Type === 'Video';
+  })[0];
+  if (video && (video.Height || video.Width)) {
+    const height = video.Height || 0;
+    const width = video.Width || 0;
+    if (height >= 2000 || width >= 3200) return '4K';
+    if (height >= 1300 || width >= 2400) return 'QHD';
+    if (height >= 900 || width >= 1800) return 'FHD';
+    if (height >= 650 || width >= 1200) return 'HD';
+    return 'SD';
+  }
+  const name = source.Name || '';
+  for (let i = 0; i < QUALITY_NAME_PATTERNS.length; i++) {
+    if (QUALITY_NAME_PATTERNS[i][1].test(name)) return QUALITY_NAME_PATTERNS[i][0];
+  }
+  return null;
+}
+
+export function buildQualityFilterRow(sources, onSelect) {
+  const present = {};
+  sources.forEach(function (source) {
+    const quality = sourceQuality(source);
+    if (quality) present[quality] = true;
+  });
+  const qualities = QUALITY_ORDER.filter(function (quality) {
+    return present[quality];
+  });
+  if (!qualities.length) return null;
+  return buildChipRow(qualities.map(function (quality) {
+    return { value: quality, label: quality };
+  }), onSelect);
+}
+
+// Language and quality chips combine: a source has to match both.
+export function filterSources(sources, language, quality) {
+  return sources.filter(function (source) {
+    if (language && sourceAudioLanguages(source).indexOf(language) === -1) return false;
+    if (quality && sourceQuality(source) !== quality) return false;
+    return true;
+  });
+}
+
+function buildChipRow(entries, onSelect) {
   const filterRow = el('div', 'jellio-stream-picker-filters');
   const chips = [];
-  function setSelected(code, chip) {
+  function setSelected(value, chip) {
     chips.forEach(function (entry) {
       entry.classList.toggle('jellio-stream-picker-filter-chip-active', entry === chip);
     });
-    onSelect(code);
+    onSelect(value);
   }
   const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', 'All');
   allChip.type = 'button';
@@ -500,11 +563,11 @@ export function buildLanguageFilterRow(sources, onSelect) {
   });
   chips.push(allChip);
   filterRow.appendChild(allChip);
-  languages.forEach(function (code) {
-    const chip = el('button', 'jellio-stream-picker-filter-chip', languageName(code));
+  entries.forEach(function (entry) {
+    const chip = el('button', 'jellio-stream-picker-filter-chip', entry.label);
     chip.type = 'button';
     chip.addEventListener('click', function () {
-      setSelected(code, chip);
+      setSelected(entry.value, chip);
     });
     chips.push(chip);
     filterRow.appendChild(chip);
@@ -627,16 +690,15 @@ export async function openStreamPicker(item, options) {
   const count = el('div', 'jellio-stream-picker-count');
 
   let selectedLanguage = null;
+  let selectedQuality = null;
   const list = el('div', 'jellio-stream-picker-list');
 
   function renderList() {
     list.textContent = '';
-    const filtered = selectedLanguage
-      ? sources.filter(function (source) {
-          return sourceAudioLanguages(source).indexOf(selectedLanguage) !== -1;
-        })
-      : sources;
-    count.textContent = filtered.length + ' stream' + (filtered.length === 1 ? '' : 's') + ' found';
+    const filtered = filterSources(sources, selectedLanguage, selectedQuality);
+    count.textContent = filtered.length
+      ? filtered.length + ' stream' + (filtered.length === 1 ? '' : 's') + ' found'
+      : 'No streams match these filters';
     filtered.forEach(function (source) {
       list.appendChild(
         buildSourceCard(source, function (picked) {
@@ -659,6 +721,11 @@ export async function openStreamPicker(item, options) {
     renderList();
   });
   if (filterRow) panel.appendChild(filterRow);
+  const qualityRow = buildQualityFilterRow(sources, function (quality) {
+    selectedQuality = quality;
+    renderList();
+  });
+  if (qualityRow) panel.appendChild(qualityRow);
 
   panel.appendChild(count);
   renderList();
