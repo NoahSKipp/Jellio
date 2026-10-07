@@ -14,6 +14,7 @@
 // between 6.6 and 8.1 at the quartiles, why rating is only ever a
 // tiebreaker below: it barely separates anything.
 import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems, getPersonItems } from './api.js';
+import { getSeasonalRecommendationRow } from './seasonalRecommendations.js';
 
 const SEED_LIMIT = 4;
 // Seeds for the two aggregate rows below, a wider real sample of the
@@ -408,10 +409,13 @@ export async function buildRecommendationRows(exclude) {
   }, exclude);
 
   const genreRows = buildGenreRows(genres, genreItemsList, exclude);
+  const seasonalRow = await getSeasonalRecommendationRow(exclude);
+  const seasonalRows = seasonalRow ? [seasonalRow] : [];
   const personRows = buildPersonRows(people, personItemsList, exclude);
 
   // Real feedback: "Top Picks for You" (genreRows' own aggregate row)
-  // should sit right after Studio Hubs, ahead of every per-title
-  // "Because you watched/watching X" row, not behind them.
-  return genreRows.concat(completedRows, nextUpRows, personRows);
+  // sits right after Studio Hubs, followed immediately by seasonal
+  // recommendations when in season, and ahead of every per-title
+  // "Because you watched/watching X" row.
+  return genreRows.concat(seasonalRows, completedRows, nextUpRows, personRows);
 }
