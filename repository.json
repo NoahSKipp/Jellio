@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.61.2] - 2026-10-07\n\n### 🐛 Bug Fixes\n\n- *(seasonal)* Encapsulate seasonal query in api.js to avoid unexported imports\n",
+        "checksum": "43b8bc748b92841f245279a067d4ca77",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.2/jellio_1.61.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-07T14:08:06Z",
+        "version": "1.61.2"
+      },
+      {
         "changelog": "## [1.61.1] - 2026-10-07\n\n### 🐛 Bug Fixes\n\n- *(recommend)* Export dedupe function from recommend.js\n\n### ⚙️ Miscellaneous Tasks\n\n- Add actions write permission to release workflow\n",
         "checksum": "5cc5fc53b1db9141e7ae3e419ef19187",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.61.1/jellio_1.61.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-03T00:17:36Z",
         "version": "1.43.0"
-      },
-      {
-        "changelog": "## [1.42.0] - 2026-10-02\n\n### 🚀 Features\n\n- Per-manga scanlator filter like Mihon's\n- Next and previous chapter in the manga reader\n- Mihon's chapter filters, sort and display for each series\n- Reader options like Mihon's for manga pages\n- Updates feed and automatic library refresh for manga\n- AniList tracking for manga series\n- Warn about duplicate series and switch a series to another source\n- New chapter notifications, library filters and display, download controls, more reader settings\n- Carry over download, filter, reader, and tracking controls across libraries\n",
-        "checksum": "2a139cd38de873c62c4b4ce7df58a264",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.42.0/jellio_1.42.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-02T23:18:36Z",
-        "version": "1.42.0"
       }
     ]
   }
