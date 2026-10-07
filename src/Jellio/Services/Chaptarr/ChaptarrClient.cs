@@ -394,6 +394,22 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
             && instances.OfType<JsonObject>().Any(instance => ReadBool(instance["monitored"]) || ReadBool(instance["hasFiles"]));
     }
 
+    // Whether Chaptarr has actually imported files for this format, as
+    // opposed to only monitoring it while it searches.
+    public static bool IsDownloaded(JsonObject book, string mediaType)
+    {
+        var ownType = ReadString(book["mediaType"]);
+        if (ReadId(book["id"]) > 0 && (ownType is null || ownType == mediaType)
+            && (ReadBool(book["hasFiles"])
+                || (book["statistics"]?["bookFileCount"] is JsonValue count && count.TryGetValue<int>(out var files) && files > 0)))
+        {
+            return true;
+        }
+
+        return book[mediaType == "audiobook" ? "localAudiobookBooks" : "localEbookBooks"] is JsonArray instances
+            && instances.OfType<JsonObject>().Any(instance => ReadBool(instance["hasFiles"]));
+    }
+
     // The id of an existing (unmonitored) entry of this format, if any.
     public static int ExistingInstanceId(JsonObject book, string mediaType)
     {

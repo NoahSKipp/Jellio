@@ -46,7 +46,19 @@ public partial class BookRequestController(
         "ebookMetadataProfileId",
     ];
 
-    public record BookSearchResult(string WorkId, string Title, string? Author, int? Year, string? CoverUrl, string? SeriesTitle, bool HasEbook, bool HasAudiobook);
+    // HasEbook/HasAudiobook mean Chaptarr wants or has that format; the
+    // Downloaded flags mean its files are actually on disk.
+    public record BookSearchResult(
+        string WorkId,
+        string Title,
+        string? Author,
+        int? Year,
+        string? CoverUrl,
+        string? SeriesTitle,
+        bool HasEbook,
+        bool HasAudiobook,
+        bool EbookDownloaded = false,
+        bool AudiobookDownloaded = false);
 
     // Title/Author are optional: a work found through discovery (an
     // Open Library id) falls back to a title search when Chaptarr cannot
@@ -98,9 +110,10 @@ public partial class BookRequestController(
                 continue;
             }
 
-            var mediaType = ChaptarrClient.ReadString(book["mediaType"]);
             var hasEbook = ChaptarrClient.IsWanted(book, "ebook");
             var hasAudiobook = ChaptarrClient.IsWanted(book, "audiobook");
+            var ebookDownloaded = ChaptarrClient.IsDownloaded(book, "ebook");
+            var audiobookDownloaded = ChaptarrClient.IsDownloaded(book, "audiobook");
 
             if (byWork.TryGetValue(workId, out var existing))
             {
@@ -108,6 +121,8 @@ public partial class BookRequestController(
                 {
                     HasEbook = existing.HasEbook || hasEbook,
                     HasAudiobook = existing.HasAudiobook || hasAudiobook,
+                    EbookDownloaded = existing.EbookDownloaded || ebookDownloaded,
+                    AudiobookDownloaded = existing.AudiobookDownloaded || audiobookDownloaded,
                 };
                 continue;
             }
@@ -121,10 +136,33 @@ public partial class BookRequestController(
                 CoverUrl(book),
                 ChaptarrClient.ReadString(book["seriesTitle"]),
                 hasEbook,
-                hasAudiobook);
+                hasAudiobook,
+                ebookDownloaded,
+                audiobookDownloaded);
         }
 
-        return Ok(order.Take(20).Select(workId => byWork[workId]));
+        // A lookup record doesn't always reflect what was requested: the
+        // add can land under another edition's id or the other format's
+        // record, so the work kept showing as not requested. Chaptarr's own
+        // index of tracked books settles it by title.
+        var tracked = await metadataService.TrackedTitlesAsync().ConfigureAwait(false);
+        return Ok(order.Take(20).Select(workId =>
+        {
+            var result = byWork[workId];
+            foreach (var key in BookMetadataService.TitleKeysFor(result.Title))
+            {
+                if (tracked.TryGetValue(key, out var formats))
+                {
+                    result = result with
+                    {
+                        HasEbook = result.HasEbook || formats.Ebook,
+                        HasAudiobook = result.HasAudiobook || formats.Audiobook,
+                    };
+                }
+            }
+
+            return result;
+        }));
     }
 
     public record DiscoverResult(string WorkId, string Title, string? Author, int? Year, string? CoverUrl, bool HasEbook, bool HasAudiobook);
@@ -322,6 +360,7 @@ public partial class BookRequestController(
             var existingTitle = ChaptarrClient.ReadString(book["title"]) ?? workId;
             if (monitored)
             {
+                metadataService.InvalidateIndex();
                 logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, existingTitle, workId);
                 return Ok(new RequestBookResult("added", null));
             }
@@ -359,6 +398,7 @@ public partial class BookRequestController(
         var title = ChaptarrClient.ReadString(book["title"]) ?? workId;
         if (result.Success)
         {
+            metadataService.InvalidateIndex();
             logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, title, workId);
             return Ok(new RequestBookResult(result.Pending ? "pending" : "added", result.Message));
         }

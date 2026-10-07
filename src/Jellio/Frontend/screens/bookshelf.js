@@ -1192,22 +1192,45 @@ export function renderBookshelf(root, params, parentId) {
     const inLib = entries.find(function (e) {
       return normalizeTitle(e.item.Name) === normalizeTitle(result.Title);
     });
-    const hasFormat = isAudiobook ? result.HasAudiobook : result.HasEbook;
-    const isInLibrary = !!inLib || !!hasFormat;
+    const requested = isAudiobook ? result.HasAudiobook : result.HasEbook;
+    const downloaded = isAudiobook ? result.AudiobookDownloaded : result.EbookDownloaded;
 
-    if (isInLibrary) {
+    // Requesting only asks Chaptarr to find and download the book; it
+    // reaches this shelf once Chaptarr has imported it and Jellyfin has
+    // scanned it. Only a real library item gets Listen/Read.
+    function statusButton(icon, label, message) {
+      const button = el('button', 'jellio-book-request-action jellio-book-request-action-done');
+      button.type = 'button';
+      button.title = message;
+      button.appendChild(el('span', 'material-icons ' + icon));
+      button.appendChild(el('span', null, label));
+      button.addEventListener('click', function () {
+        showToast(message);
+      });
+      return button;
+    }
+
+    if (inLib) {
       const button = el('button', 'jellio-book-request-action jellio-book-request-action-read');
       button.type = 'button';
       button.appendChild(el('span', 'material-icons ' + (isAudiobook ? 'headphones' : 'menu_book')));
       button.appendChild(el('span', null, isAudiobook ? 'Listen' : 'Read'));
       button.addEventListener('click', function () {
-        if (inLib) {
-          navigateTo('#/' + (isAudiobook ? 'listen' : 'read') + '?id=' + inLib.item.Id);
-        } else {
-          showToast('Already tracked in your library / Chaptarr');
-        }
+        navigateTo('#/' + (isAudiobook ? 'listen' : 'read') + '?id=' + inLib.item.Id);
       });
       actions.appendChild(button);
+    } else if (downloaded) {
+      actions.appendChild(statusButton(
+        'download_done',
+        'Downloaded',
+        'Chaptarr has downloaded this. It shows up here after Jellyfin scans the ' + (isAudiobook ? 'Audiobooks' : 'Books') + ' library.',
+      ));
+    } else if (requested) {
+      actions.appendChild(statusButton(
+        'schedule',
+        'Requested',
+        'Chaptarr is looking for a release. It shows up here once it has been downloaded.',
+      ));
     } else {
       const button = el('button', 'jellio-book-request-action');
       button.type = 'button';
@@ -1222,8 +1245,8 @@ export function renderBookshelf(root, params, parentId) {
           .then(function (response) {
             const status = response && response.Status;
             if (status === 'added' || status === 'pending' || status === 'exists') {
-              showToast('Added “' + result.Title + '” to library');
-              text.textContent = 'Added ✓';
+              showToast('Requested “' + result.Title + '”. It shows up here once Chaptarr has downloaded it.');
+              text.textContent = 'Requested ✓';
               button.classList.add('jellio-book-request-action-done');
               if (response.Message) button.title = response.Message;
               return;

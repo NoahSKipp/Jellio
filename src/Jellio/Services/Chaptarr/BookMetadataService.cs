@@ -204,6 +204,16 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
 
     public static IEnumerable<string> TitleKeysFor(string? title) => TitleKeys(title);
 
+    // Drops the cached index so a book requested a moment ago counts as
+    // tracked on the very next search instead of up to IndexTtl later.
+    public void InvalidateIndex()
+    {
+        lock (_indexLock)
+        {
+            _index = null;
+        }
+    }
+
     // Chaptarr's whole tracked-book index, fetched once and shared by every
     // item matched against it for a few minutes.
     private Task<JsonArray?> GetIndexAsync()
