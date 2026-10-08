@@ -134,10 +134,22 @@ document.addEventListener('jellio:connectivity', function (event) {
   showToast(offline ? 'Offline. Your downloads still work.' : 'Back online.');
   // The reader and players keep going either way; other screens
   // re-render for the new state.
+  // Back online: the sidebar may have been built while the libraries
+  // couldn't be fetched (Downloads only), so look at them again.
+  if (!offline) {
+    lastNavLinksSignature = null;
+    scheduleNavRecheck(2, 0);
+  }
   const path = parseRoute().path;
   if (path === 'read' || path === 'listen' || path === 'play') return;
   lastRenderedRouteKey = null;
   sync();
+});
+
+// Back to the tab or app: a nav built while requests were being cut off
+// in the background is missing the libraries; one quick look fixes it.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && !isOffline() && isAuthenticated()) scheduleNavRecheck(1, 0);
 });
 
 // The inner shell used to be built only at the moment #jellioRoot itself
@@ -669,7 +681,7 @@ function navLinksSignature(links) {
     .join('|');
 }
 
-function scheduleNavRecheck(attemptsLeft) {
+function scheduleNavRecheck(attemptsLeft, delayMs) {
   const remaining = attemptsLeft == null ? NAV_RECHECK_MAX_ATTEMPTS : attemptsLeft;
   window.setTimeout(function () {
     invalidateNavCaches();
@@ -695,7 +707,7 @@ function scheduleNavRecheck(attemptsLeft) {
       .finally(function () {
         if (remaining - 1 > 0) scheduleNavRecheck(remaining - 1);
       });
-  }, NAV_RECHECK_DELAY_MS);
+  }, delayMs == null ? NAV_RECHECK_DELAY_MS : delayMs);
 }
 
 async function runSync() {

@@ -6,6 +6,7 @@ import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, get
 import { languageName } from './languages.js';
 import {
   isOffline,
+  stillOffline,
   isNetworkError,
   reportNetworkFailure,
   findDownload,
@@ -169,7 +170,7 @@ function fetchWithTimeout(url, options, timeoutMs, externalSignal) {
 async function requestJson(url, options, path, timeoutMs, externalSignal, priority) {
   // Offline (runtime/offline.js): fail straight away rather than wait out
   // a timeout for every request.
-  if (isOffline()) {
+  if (isOffline() && (await stillOffline())) {
     const offlineErr = new TypeError('Offline: ' + path);
     offlineErr.isNetworkError = true;
     throw offlineErr;

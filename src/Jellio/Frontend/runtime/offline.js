@@ -23,6 +23,8 @@ const PING_TIMEOUT_MS = 4000;
 let offline = false;
 let checked = false;
 let recheckTimer = null;
+let lastCheckAt = 0;
+let inFlight = null;
 
 export function isOffline() {
   return offline;
@@ -36,32 +38,74 @@ function setOffline(value) {
   window.clearTimeout(recheckTimer);
   if (value) {
     // Keep trying while offline, so the app notices the server is back.
-    recheckTimer = window.setTimeout(checkServer, 30000);
+    recheckTimer = window.setTimeout(checkServer, 15000);
   } else {
     flushSyncQueue();
     resumeDownloads();
   }
 }
 
-// Whether the server answers: GET /System/Ping, anonymous and tiny.
-export async function checkServer() {
-  if (navigator.onLine === false) {
-    setOffline(true);
-    return false;
-  }
+async function ping(timeoutMs) {
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(getServerAddress() + '/System/Ping', { cache: 'no-store', signal: controller.signal });
     // Any answer from the server (even an error page) means it's up; a
     // service worker fallback is the only thing that can't be an answer.
-    setOffline(response.status === 0 || response.headers.get('X-Jellio-Offline') === '1');
-  } catch (err) {
-    setOffline(true);
+    return !(response.status === 0 || response.headers.get('X-Jellio-Offline') === '1');
   } finally {
     window.clearTimeout(timer);
   }
-  return !offline;
+}
+
+// Whether the server answers: GET /System/Ping, anonymous and tiny. A
+// phone that just woke the tab can take a moment to get its connection
+// back, so a failed ping is tried once more before calling it offline,
+// and a tab in the background never decides it's offline at all (its
+// requests are being cut off by the browser, not the network); it checks
+// again when it's back in view.
+export function checkServer() {
+  if (inFlight) return inFlight;
+  inFlight = (async function () {
+    lastCheckAt = Date.now();
+    if (navigator.onLine === false) {
+      setOffline(true);
+      return false;
+    }
+    let up = false;
+    for (let attempt = 0; attempt < 2 && !up; attempt++) {
+      try {
+        up = await ping(attempt === 0 ? PING_TIMEOUT_MS : PING_TIMEOUT_MS * 2);
+      } catch (err) {
+        up = false;
+      }
+    }
+    if (!up && document.visibilityState === 'hidden') {
+      document.addEventListener('visibilitychange', checkWhenVisible);
+      return !offline;
+    }
+    setOffline(!up);
+    lastCheckAt = Date.now();
+    return up;
+  })().finally(function () {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+function checkWhenVisible() {
+  if (document.visibilityState !== 'visible') return;
+  document.removeEventListener('visibilitychange', checkWhenVisible);
+  checkServer();
+}
+
+// Offline but asked for something: worth a fresh look first if the last
+// check is more than a few seconds old, so the app recovers by itself the
+// moment the connection is back instead of waiting for the next retry.
+export async function stillOffline() {
+  if (!offline) return false;
+  if (Date.now() - lastCheckAt > 5000) await checkServer();
+  return offline;
 }
 
 // A request failing for lack of a connection (not an error answer).
@@ -76,6 +120,16 @@ export function reportNetworkFailure() {
 }
 
 window.addEventListener('online', checkServer);
+// Back to the tab or app: if it thinks it's offline, look again now.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && offline) checkServer();
+});
+window.addEventListener('pageshow', function () {
+  if (offline) checkServer();
+});
+window.addEventListener('focus', function () {
+  if (offline && Date.now() - lastCheckAt > 5000) checkServer();
+});
 window.addEventListener('offline', function () {
   setOffline(true);
 });
