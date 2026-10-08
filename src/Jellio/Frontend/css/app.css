@@ -5185,6 +5185,7 @@
 
 .jellio-mini-player-play-btn .material-icons {
   font-size: 22px;
+  color: var(--jellio-on-secondary, #111111);
 }
 
 .jellio-mini-player-actions {
@@ -5213,7 +5214,9 @@
   .jellio-audio-mini-player {
     left: 12px;
     right: 12px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+    /* Clear of the floating mobile nav pill (about 72px tall, 14px up
+       from the bottom) with a little gap, instead of overlapping it. */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
     max-width: calc(100vw - 24px);
     border-radius: 12px;
   }
