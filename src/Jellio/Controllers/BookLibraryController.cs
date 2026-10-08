@@ -177,7 +177,7 @@ public class BookLibraryController(
             }
 
             var trackedId = tracked is null ? id : ChaptarrClient.ReadId(tracked["id"]);
-            entries[trackedId > 0 ? "c:" + trackedId : "r:" + request.Entry.WorkId + request.Entry.Title] = NewEntry(
+            var entry = NewEntry(
                 trackedId,
                 request.Entry.Title,
                 request.Entry.Author,
@@ -185,7 +185,11 @@ public class BookLibraryController(
                 state,
                 null,
                 null,
-                state == "missing" ? "Chaptarr isn't tracking this any more." : null) with { ItemId = itemId };
+                state == "missing" ? "Chaptarr isn't tracking this any more." : null);
+            entries[trackedId > 0 ? "c:" + trackedId : "r:" + request.Entry.WorkId + request.Entry.Title] = entry with
+            {
+                ItemId = itemId,
+            };
         }
 
         // Who asked for each one.
