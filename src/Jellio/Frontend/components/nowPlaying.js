@@ -89,6 +89,25 @@ function posterUrls(item, imageId) {
 // (SeriesId), same real title displayTitle() shows above the poster,
 // so the row navigates to that same real item, not the episode's own
 // id nothing here otherwise refers to.
+// A Material icon for the device a session plays on, from what its client
+// reports about itself (Jellyfin has no device type of its own).
+export function deviceIcon(session) {
+  const text = ((session.Client || '') + ' ' + (session.DeviceName || '')).toLowerCase();
+  if (!text.trim()) return null;
+  if (/chromecast|crkey|\bcast\b/.test(text)) return { icon: 'cast', label: 'Chromecast' };
+  if (/\btv\b|android tv|google tv|fire ?tv|aft\w|shield|roku|kodi|webos|web0s|tizen|bravia|apple tv|tvos|xbox|playstation|smart-?tv/.test(text)) {
+    return { icon: 'tv', label: 'TV' };
+  }
+  if (/ipad|tablet/.test(text)) return { icon: 'tablet_mac', label: 'Tablet' };
+  if (/iphone|ipod|android phone|android|mobile|findroid|swiftfin|phone|pixel|galaxy|sm-[a-z]\d/.test(text)) {
+    return { icon: 'smartphone', label: 'Phone' };
+  }
+  if (/windows|mac|linux|chromeos|desktop|media player|jellyfin web|browser|chrome|firefox|edge|safari|opera|jellio/.test(text)) {
+    return { icon: 'computer', label: 'Computer' };
+  }
+  return { icon: 'devices', label: 'Device' };
+}
+
 function buildRow(session) {
   const row = el('div', 'jellio-now-playing-row');
   row.tabIndex = 0;
@@ -123,13 +142,23 @@ function buildRow(session) {
     .join(', ');
   row.appendChild(poster);
 
-  const text = el('div', null);
+  const text = el('div', 'jellio-now-playing-row-text');
   text.appendChild(el('p', 'jellio-now-playing-row-title', displayTitle(item)));
   const metaBits = [session.UserName];
   const sub = subtitle(item);
   if (sub) metaBits.push(sub);
   metaBits.push(statusWord(session));
-  text.appendChild(el('p', 'jellio-now-playing-row-meta', metaBits.filter(Boolean).join(' • ')));
+  const meta = el('p', 'jellio-now-playing-row-meta');
+  const device = deviceIcon(session);
+  if (device) {
+    const icon = el('span', 'material-icons jellio-now-playing-row-device ' + device.icon);
+    const where = [session.DeviceName, session.Client].filter(Boolean).join(' · ');
+    icon.title = where ? device.label + ': ' + where : device.label;
+    icon.setAttribute('aria-label', icon.title);
+    meta.appendChild(icon);
+  }
+  meta.appendChild(document.createTextNode(metaBits.filter(Boolean).join(' • ')));
+  text.appendChild(meta);
   row.appendChild(text);
 
   return row;

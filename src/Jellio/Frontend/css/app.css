@@ -14587,3 +14587,11 @@
   color: #ff8a80;
   border-color: rgba(255, 138, 128, 0.35);
 }
+
+/* Now Playing: which kind of device each session plays on. */
+.jellio-now-playing-row-device {
+  margin-right: 0.35em;
+  font-size: 1.1em;
+  vertical-align: -0.2em;
+  opacity: 0.85;
+}

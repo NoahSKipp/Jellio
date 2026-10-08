@@ -21,8 +21,36 @@ const NATIVE_CREDENTIALS_KEY = 'jellyfin_credentials';
 const CLIENT_NAME = 'Jellio';
 const CLIENT_VERSION = '0.1.0';
 
+// "Chrome · Android phone", "Safari · iPad", "Firefox · Windows": enough
+// for Now Playing to tell a phone from a PC from a TV.
+function describeBrowser() {
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\/|Opera/.test(ua)
+      ? 'Opera'
+      : /Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Chrome\//.test(ua)
+          ? 'Chrome'
+          : /Safari\//.test(ua)
+            ? 'Safari'
+            : 'Browser';
+  const touchMac = /Macintosh/.test(ua) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1;
+  let platform = '';
+  if (/SMART-TV|SmartTV|Tizen|Web0S|webOS|BRAVIA|AFT\w|CrKey|Android TV|GoogleTV/i.test(ua)) platform = 'TV';
+  else if (/iPad/.test(ua) || touchMac) platform = 'iPad';
+  else if (/iPhone|iPod/.test(ua)) platform = 'iPhone';
+  else if (/Android/.test(ua)) platform = /Mobile/.test(ua) ? 'Android phone' : 'Android tablet';
+  else if (/Windows/.test(ua)) platform = 'Windows';
+  else if (/CrOS/.test(ua)) platform = 'ChromeOS';
+  else if (/Macintosh/.test(ua)) platform = 'Mac';
+  else if (/Linux/.test(ua)) platform = 'Linux';
+  return platform ? browser + ' · ' + platform : browser;
+}
+
 function getDeviceName() {
-  return (typeof window !== 'undefined' && window.jellioNative && window.jellioNative.deviceName) || 'Browser';
+  return (typeof window !== 'undefined' && window.jellioNative && window.jellioNative.deviceName) || describeBrowser();
 }
 
 function readJson(key) {
