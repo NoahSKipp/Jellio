@@ -3015,6 +3015,36 @@ export function isAnimeCollection(collection) {
   return /anime|anilist|kitsu/i.test(collection.Name || '');
 }
 
+// Controllers/AnimeController.cs: every title in an anime catalog. Anime
+// sits in the Movies and Shows libraries too; this keeps it to the Anime
+// library and out of Home and the other libraries. An empty set when the
+// server can't say, so nothing is hidden by mistake.
+function normalizedId(id) {
+  return String(id || '').replace(/-/g, '').toLowerCase();
+}
+
+export function getAnimeIds() {
+  return cached('anime-ids', function () {
+    return getJson('/Jellio/anime/ids', 20000).then(function (result) {
+      return new Set(((result && result.Ids) || []).map(normalizedId));
+    });
+  }).catch(function () {
+    return new Set();
+  });
+}
+
+export function isAnimeItem(item, animeIds) {
+  if (!item || !animeIds || !animeIds.size) return false;
+  return animeIds.has(normalizedId(item.Id)) || (!!item.SeriesId && animeIds.has(normalizedId(item.SeriesId)));
+}
+
+export function withoutAnime(items, animeIds) {
+  if (!animeIds || !animeIds.size) return items || [];
+  return (items || []).filter(function (item) {
+    return !isAnimeItem(item, animeIds);
+  });
+}
+
 export function collectionKind(collection) {
   if (isAnimeCollection(collection)) return 'tvshows';
   const ids = collection.ProviderIds || {};
@@ -3183,16 +3213,17 @@ export function getHeroCandidates(limit, options) {
   const itemTypes = opts.itemTypes || 'Movie,Series';
   const key = 'hero:' + userId + ':' + (opts.parentId || '') + ':' + itemTypes + ':' + (limit || 8);
   return cached(key, function () {
+    // Asks for extra so there are still enough once anime is left out.
     const params = new URLSearchParams({
       SortBy: 'Random',
       Recursive: 'true',
       IncludeItemTypes: itemTypes,
-      Limit: String(limit || 8),
+      Limit: String((limit || 8) * 3),
       Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating',
     });
     if (opts.parentId) params.set('ParentId', opts.parentId);
-    return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
-      return (result && result.Items) || [];
+    return Promise.all([getJson('/Users/' + userId + '/Items?' + params.toString()), getAnimeIds()]).then(function (results) {
+      return withoutAnime((results[0] && results[0].Items) || [], results[1]).slice(0, limit || 8);
     });
   });
 }

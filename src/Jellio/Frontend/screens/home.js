@@ -17,6 +17,8 @@ import {
   isAnimeCollection,
   getCalendarEntries,
   getImageUrl,
+  getAnimeIds,
+  withoutAnime,
 } from '../runtime/api.js';
 import { buildRecommendationRows, titleKey } from '../runtime/recommend.js';
 import { buildCard } from '../components/card.js';
@@ -53,7 +55,9 @@ const MIN_CATALOG_ITEMS = 3;
 // The anime library has a page of its own carrying every AniList
 // catalog (screens/library.js's own renderAnime). One of them here is
 // a taste of it, more than one is that page again in the wrong place.
-const MAX_ANIME_CATALOG_ROWS = 1;
+// Anime stays in the Anime library (Controllers/AnimeController.cs), so
+// none of its catalogs get a row here.
+const MAX_ANIME_CATALOG_ROWS = 0;
 const GENRE_ROWS = 4;
 const GENRE_ROW_LIMIT = 24;
 // components/rowListModal.js's own "browse everything": real full
@@ -133,11 +137,14 @@ async function fetchCatalogRows(collections) {
 
   usable = usable.slice(0, MAX_CATALOG_ROWS);
 
-  const results = await Promise.allSettled(
-    usable.map(function (collection) {
-      return getCollectionItems(collection.Id, collectionKind(collection), CATALOG_ROW_LIMIT);
-    }),
-  );
+  const [results, animeIds] = await Promise.all([
+    Promise.allSettled(
+      usable.map(function (collection) {
+        return getCollectionItems(collection.Id, collectionKind(collection), CATALOG_ROW_LIMIT);
+      }),
+    ),
+    getAnimeIds(),
+  ]);
 
   return results
     .map(function (result, index) {
@@ -147,7 +154,7 @@ async function fetchCatalogRows(collections) {
         id: collection.Id,
         kind: collectionKind(collection),
         title: titleFor(collection.Name, collectionKind(collection)),
-        items: result.value,
+        items: withoutAnime(result.value, animeIds),
       };
     })
     .filter(Boolean);
@@ -157,7 +164,9 @@ function buildCatalogRows(catalogData, seen) {
   const sections = [];
   catalogData.forEach(function (entry) {
     const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
-      return getCollectionItems(entry.id, entry.kind, ROW_LIST_LIMIT);
+      return Promise.all([getCollectionItems(entry.id, entry.kind, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
+        return withoutAnime(results[0], results[1]);
+      });
     });
     if (row) sections.push(wrapRowForCustomization(row, 'catalog:' + entry.id));
   });
@@ -167,15 +176,18 @@ function buildCatalogRows(catalogData, seen) {
 async function fetchGenreRows() {
   try {
     const genres = await discoverGenres(null, 'Movie,Series', GENRE_ROWS);
-    const results = await Promise.allSettled(
-      genres.map(function (genre) {
-        return getGenreItems(null, 'Movie,Series', genre, GENRE_ROW_LIMIT);
-      }),
-    );
+    const [results, animeIds] = await Promise.all([
+      Promise.allSettled(
+        genres.map(function (genre) {
+          return getGenreItems(null, 'Movie,Series', genre, GENRE_ROW_LIMIT);
+        }),
+      ),
+      getAnimeIds(),
+    ]);
     return results
       .map(function (result, index) {
         if (result.status !== 'fulfilled') return null;
-        return { title: genres[index], items: result.value };
+        return { title: genres[index], items: withoutAnime(result.value, animeIds) };
       })
       .filter(Boolean);
   } catch (err) {
@@ -188,7 +200,9 @@ function buildGenreRows(genreData, seen) {
   const sections = [];
   genreData.forEach(function (entry) {
     const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
-      return getGenreItems(null, 'Movie,Series', entry.title, ROW_LIST_LIMIT);
+      return Promise.all([getGenreItems(null, 'Movie,Series', entry.title, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
+        return withoutAnime(results[0], results[1]);
+      });
     });
     if (row) sections.push(wrapRowForCustomization(row, 'genre:' + entry.title));
   });
@@ -330,7 +344,10 @@ function buildComingSoonCard(entry) {
 async function buildComingSoonRow() {
   let entries = [];
   try {
-    entries = await getCalendarEntries();
+    const [all, animeIds] = await Promise.all([getCalendarEntries(), getAnimeIds()]);
+    entries = (all || []).filter(function (entry) {
+      return !animeIds.has(String(entry.ItemId || '').replace(/-/g, '').toLowerCase());
+    });
   } catch (err) {
     console.warn('Jellio: could not load Coming Soon', err);
     return null;
@@ -632,10 +649,11 @@ async function buildExpensiveSections() {
     });
   const genreData = fetchGenreRows();
 
+  const animeIds = await getAnimeIds();
   pushAll(
     (await recommendationRows)
       .map(function (spec) {
-        const row = buildRow(spec.title, spec.items);
+        const row = buildRow(spec.title, withoutAnime(spec.items, animeIds));
         return row ? wrapRowForCustomization(row, 'rec:' + spec.title) : null;
       })
       .filter(Boolean),
