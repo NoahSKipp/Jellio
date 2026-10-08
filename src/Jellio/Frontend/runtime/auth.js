@@ -21,7 +21,7 @@ const NATIVE_CREDENTIALS_KEY = 'jellyfin_credentials';
 const CLIENT_NAME = 'Jellio';
 const CLIENT_VERSION = '0.1.0';
 
-// "Chrome · Android phone", "Safari · iPad", "Firefox · Windows": enough
+// "Chrome on Android phone", "Safari on iPad", "Firefox on Windows": enough
 // for Now Playing to tell a phone from a PC from a TV.
 function describeBrowser() {
   const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
@@ -46,11 +46,19 @@ function describeBrowser() {
   else if (/CrOS/.test(ua)) platform = 'ChromeOS';
   else if (/Macintosh/.test(ua)) platform = 'Mac';
   else if (/Linux/.test(ua)) platform = 'Linux';
-  return platform ? browser + ' · ' + platform : browser;
+  return platform ? browser + ' on ' + platform : browser;
+}
+
+// Goes into the Authorization header of every request, and the server
+// rejects a header with anything outside plain ASCII (a "·" here once
+// broke every signed-in request), so only letters, digits, spaces and a
+// few safe marks get through.
+function headerSafe(text) {
+  return String(text || '').replace(/[^A-Za-z0-9 ._()-]/g, '').trim() || 'Browser';
 }
 
 function getDeviceName() {
-  return (typeof window !== 'undefined' && window.jellioNative && window.jellioNative.deviceName) || describeBrowser();
+  return headerSafe((typeof window !== 'undefined' && window.jellioNative && window.jellioNative.deviceName) || describeBrowser());
 }
 
 function readJson(key) {
