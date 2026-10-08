@@ -36,7 +36,7 @@ import {
   syncMiniPlayer,
 } from '../components/audioMiniPlayer.js';
 
-const SKIP_SECONDS_BACK = 15;
+const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
 const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 const SLEEP_OPTIONS = [0, 15, 30, 45, 60, -1]; // minutes, -1 = end of chapter
@@ -279,7 +279,7 @@ export async function renderListen(root, params) {
 
   const transport = el('div', 'jellio-listen-transport');
   const prevChapterButton = iconButton('skip_previous', 'Previous chapter');
-  const backSkipButton = iconButton('replay_15', 'Back ' + SKIP_SECONDS_BACK + ' seconds');
+  const backSkipButton = iconButton('replay_30', 'Back ' + SKIP_SECONDS_BACK + ' seconds');
   const playButton = iconButton('play_arrow', 'Play', 'jellio-listen-play');
   const forwardSkipButton = iconButton('forward_30', 'Forward ' + SKIP_SECONDS_FORWARD + ' seconds');
   const nextChapterButton = iconButton('skip_next', 'Next chapter');

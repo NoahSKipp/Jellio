@@ -18,7 +18,7 @@ import {
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
-const SKIP_SECONDS_BACK = 15;
+const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
 const PROGRESS_REPORT_MS = 10000;
 const RESTART_CHAPTER_THRESHOLD = 5;
@@ -590,7 +590,7 @@ function updateMiniPlayerUI() {
     bar.style.width = Math.min(100, Math.max(0, (now / dur) * 100)) + '%';
   }
   if (playIcon) {
-    playIcon.textContent = activeSession.audio.paused ? 'play_arrow' : 'pause';
+    playIcon.className = 'material-icons ' + (activeSession.audio.paused ? 'play_arrow' : 'pause');
   }
   if (timeSpan) {
     timeSpan.textContent = formatClock(now) + ' / ' + formatClock(dur);
@@ -658,7 +658,7 @@ export function syncMiniPlayer() {
     backBtn.type = 'button';
     backBtn.setAttribute('aria-label', 'Back ' + SKIP_SECONDS_BACK + ' seconds');
     backBtn.title = 'Back ' + SKIP_SECONDS_BACK + 's';
-    backBtn.appendChild(el('span', 'material-icons replay_15'));
+    backBtn.appendChild(el('span', 'material-icons replay_30'));
     backBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       seekBook(getBookTime() - SKIP_SECONDS_BACK);
