@@ -629,7 +629,37 @@ export function syncMiniPlayer() {
     miniPlayerEl = el('div', 'jellio-audio-mini-player');
     const progressBar = el('div', 'jellio-mini-player-progress-bar');
     progressBar.style.cursor = 'pointer';
-    progressBar.title = 'Scrub position';
+    // Spotify style: hovering shows the time (and chapter) a click jumps
+    // to, with the bar lit up to that point. The readout lives on the page
+    // itself because the player clips anything above its own top edge.
+    const hoverFill = el('div', 'jellio-mini-player-progress-hover');
+    progressBar.appendChild(hoverFill);
+    let scrubTip = null;
+    function hideScrubTip() {
+      hoverFill.style.width = '0';
+      if (scrubTip) {
+        scrubTip.remove();
+        scrubTip = null;
+      }
+    }
+    progressBar.addEventListener('mousemove', function (e) {
+      if (!activeSession || !activeSession.timeline || !activeSession.timeline.durationSec) return;
+      const rect = progressBar.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const seconds = ratio * activeSession.timeline.durationSec;
+      hoverFill.style.width = ratio * 100 + '%';
+      if (!scrubTip) {
+        scrubTip = el('div', 'jellio-mini-player-scrub-tip');
+        document.body.appendChild(scrubTip);
+      }
+      const chapter = activeSession.timeline.chapters && activeSession.timeline.chapters[chapterIndexAt(seconds)];
+      scrubTip.textContent = formatClock(seconds) + (chapter && chapter.title ? ' · ' + chapter.title : '');
+      const width = scrubTip.offsetWidth;
+      const left = Math.max(8, Math.min(window.innerWidth - width - 8, e.clientX - width / 2));
+      scrubTip.style.left = left + 'px';
+      scrubTip.style.top = rect.top - scrubTip.offsetHeight - 8 + 'px';
+    });
+    progressBar.addEventListener('mouseleave', hideScrubTip);
     progressBar.addEventListener('click', function (e) {
       e.stopPropagation();
       if (!activeSession || !activeSession.timeline || !activeSession.timeline.durationSec) return;
