@@ -162,6 +162,55 @@ function buildFeedRow(entry) {
   return row;
 }
 
+// Content type filter chips: every type shows by default; a chip that's
+// switched off stays visible, struck through, so it's clear what's hidden.
+const FEED_TYPES = [
+  { key: 'movies', label: 'Movies', icon: 'movie' },
+  { key: 'shows', label: 'Shows', icon: 'tv' },
+  { key: 'books', label: 'Books', icon: 'menu_book' },
+  { key: 'manga', label: 'Manga', icon: 'collections_bookmark' },
+  { key: 'audiobooks', label: 'Audiobooks', icon: 'headphones' },
+  { key: 'badges', label: 'Badges', icon: 'emoji_events' },
+];
+const FEED_HIDDEN_KEY = 'jellio-feed-hidden-types';
+
+function feedType(entry) {
+  if (entry.Kind === 'Badge') return 'badges';
+  switch (entry.ItemType) {
+    case 'Movie':
+      return 'movies';
+    case 'Episode':
+    case 'Series':
+    case 'Season':
+      return 'shows';
+    case 'Book':
+      return 'books';
+    case 'Manga':
+      return 'manga';
+    case 'AudioBook':
+      return 'audiobooks';
+    default:
+      return 'movies';
+  }
+}
+
+function readHiddenTypes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FEED_HIDDEN_KEY) || '[]');
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch (err) {
+    return new Set();
+  }
+}
+
+function saveHiddenTypes(hidden) {
+  try {
+    localStorage.setItem(FEED_HIDDEN_KEY, JSON.stringify(Array.from(hidden)));
+  } catch (err) {
+    // Kept for this visit only.
+  }
+}
+
 export async function renderFeed(root) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-feed';
@@ -196,20 +245,64 @@ export async function renderFeed(root) {
   const isAdmin = !!(viewer && viewer.Policy && viewer.Policy.IsAdministrator);
   const me = String(getCurrentUserId() || '').replace(/-/g, '');
 
+  const hidden = readHiddenTypes();
   const list = el('div', 'jellio-feed-list');
+  const empty = el('p', 'jellio-profile-empty', 'Nothing to show with these filters.');
+
+  function applyFilters() {
+    let shown = 0;
+    Array.from(list.children).forEach(function (child) {
+      const off = hidden.has(child.dataset.feedType);
+      child.hidden = off;
+      if (!off) shown++;
+    });
+    empty.hidden = shown > 0;
+  }
+
+  const filters = el('div', 'jellio-feed-filters');
+  filters.setAttribute('role', 'group');
+  filters.setAttribute('aria-label', 'Show in the feed');
+  const present = new Set(entries.map(feedType));
+  FEED_TYPES.filter((type) => present.has(type.key)).forEach(function (type) {
+    const chip = el('button', 'jellio-feed-filter-chip');
+    chip.type = 'button';
+    chip.appendChild(el('span', 'material-icons ' + type.icon));
+    chip.appendChild(el('span', null, type.label));
+    function paint() {
+      const off = hidden.has(type.key);
+      chip.classList.toggle('jellio-feed-filter-chip-off', off);
+      chip.setAttribute('aria-pressed', off ? 'false' : 'true');
+      chip.title = off ? 'Show ' + type.label.toLowerCase() : 'Hide ' + type.label.toLowerCase();
+    }
+    paint();
+    chip.addEventListener('click', function () {
+      if (hidden.has(type.key)) hidden.delete(type.key);
+      else hidden.add(type.key);
+      saveHiddenTypes(hidden);
+      paint();
+      applyFilters();
+    });
+    filters.appendChild(chip);
+  });
+  root.appendChild(filters);
+
   entries.forEach(function (entry) {
     const row = buildFeedRow(entry);
     const own = String(entry.UserId).replace(/-/g, '') === me;
     if (!own && !isAdmin) {
+      row.dataset.feedType = feedType(entry);
       list.appendChild(row);
       return;
     }
     const item = el('div', 'jellio-feed-item');
+    item.dataset.feedType = feedType(entry);
     item.appendChild(row);
     item.appendChild(buildRemoveButton(entry, own, item));
     list.appendChild(item);
   });
   root.appendChild(list);
+  root.appendChild(empty);
+  applyFilters();
 }
 
 function buildRemoveButton(entry, own, item) {

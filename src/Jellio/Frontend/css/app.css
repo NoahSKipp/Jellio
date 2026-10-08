@@ -14595,3 +14595,44 @@
   vertical-align: -0.2em;
   opacity: 0.85;
 }
+
+/* Feed content type filters (screens/feed.js). */
+.jellio-feed-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin: 0 0 1.2em;
+}
+
+.jellio-feed-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.42em 0.95em;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.jellio-feed-filter-chip .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-feed-filter-chip-off {
+  border-color: rgb(255 255 255 / 0.18);
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.jellio-feed-filter-chip:focus-visible {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 2px;
+}
