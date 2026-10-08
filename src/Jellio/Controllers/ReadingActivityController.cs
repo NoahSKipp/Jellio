@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Jellio.Services;
@@ -69,6 +70,14 @@ public class ReadingActivityController(AchievementService achievementService, Ma
                     TimeSpan.FromSeconds(Math.Clamp(body.ReadSeconds, 0, MaxListenSecondsPerSession)).Ticks,
                     body.Finished),
                 duplicatesAsOne: streamDuplicatesAsOne).ConfigureAwait(false);
+
+            // The newest chapter there is: the series is finished too.
+            var lastNumber = streamed.Series.Chapters.Where(c => c.Number >= 0).Select(c => c.Number).DefaultIfEmpty(-1).Max();
+            if (body.Finished && streamChapterNumber is { } finishedNumber && finishedNumber >= 0 && finishedNumber >= lastNumber)
+            {
+                await achievementService.RecordMangaSeriesFinishedAsync(userId, body.ItemId, streamed.Series.Title).ConfigureAwait(false);
+            }
+
             return NoContent();
         }
 
@@ -116,6 +125,25 @@ public class ReadingActivityController(AchievementService achievementService, Ma
             new AchievementService.ReadingSession(kind!, pagesRead, currentPage, pageCount, listenedTicks, body.Finished),
             duplicatesAsOne: duplicatesAsOne,
             chapterNumber: localChapterNumber).ConfigureAwait(false);
+
+        // The last volume in a manga's folder: the series is finished too.
+        if (kind == "manga" && body.Finished && !string.IsNullOrWhiteSpace(seriesName))
+        {
+            var volumes = libraryManager.GetItemList(new InternalItemsQuery
+            {
+                ParentId = item.ParentId,
+                IncludeItemTypes = [Jellyfin.Data.Enums.BaseItemKind.Book],
+            });
+            var last = volumes
+                .OrderBy(volume => volume.IndexNumber ?? int.MaxValue)
+                .ThenBy(volume => volume.SortName ?? volume.Name, StringComparer.OrdinalIgnoreCase)
+                .LastOrDefault();
+            if (last is not null && last.Id == item.Id)
+            {
+                await achievementService.RecordMangaSeriesFinishedAsync(userId, item.Id, seriesName).ConfigureAwait(false);
+            }
+        }
+
         return NoContent();
     }
 }

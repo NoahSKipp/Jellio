@@ -304,6 +304,42 @@ public class AchievementService(
 
     // Also for chapters read straight from a source (MangaStreamService),
     // which have no library item.
+    // The last chapter or volume of a manga was just finished: one feed
+    // entry for the whole series ("Finished reading Berserk"), once.
+    public async Task RecordMangaSeriesFinishedAsync(Guid userId, Guid itemId, string seriesTitle)
+    {
+        if (string.IsNullOrWhiteSpace(seriesTitle))
+        {
+            return;
+        }
+
+        await _writeLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var stats = store.Load(userId);
+            if (!stats.CompletedReadingIds.Add("manga-series:" + ShelfStoreKey(seriesTitle)))
+            {
+                return;
+            }
+
+            stats.RecentActivity.Insert(
+                0,
+                new ActivityEntry(itemId, seriesTitle, "Manga", seriesTitle, null, DateTime.UtcNow, null, null, null, null, null, null, true));
+            if (stats.RecentActivity.Count > MaxRecentActivity)
+            {
+                stats.RecentActivity.RemoveRange(MaxRecentActivity, stats.RecentActivity.Count - MaxRecentActivity);
+            }
+
+            store.Save(userId, stats);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    private static string ShelfStoreKey(string title) => Jellio.Services.Reading.ShelfStore.SeriesKey(title);
+
     public async Task CreditReadingSessionAsync(Guid userId, Guid itemId, string bookName, string? seriesName, string completionKey, ReadingSession session, bool duplicatesAsOne = false)
     {
         var itemType = session.Kind switch

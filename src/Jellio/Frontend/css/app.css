@@ -14612,6 +14612,8 @@
   flex-wrap: wrap;
   gap: 0.5em;
   margin: 0 0 1.2em;
+  /* Same inset as the cards below, so the chips line up with them. */
+  padding: 0 var(--jellio-safe-gutter);
 }
 
 .jellio-feed-filter-chip {

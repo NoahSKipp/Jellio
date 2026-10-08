@@ -262,8 +262,9 @@ export async function renderFeed(root) {
   const filters = el('div', 'jellio-feed-filters');
   filters.setAttribute('role', 'group');
   filters.setAttribute('aria-label', 'Show in the feed');
-  const present = new Set(entries.map(feedType));
-  FEED_TYPES.filter((type) => present.has(type.key)).forEach(function (type) {
+  // Every type, even ones with nothing in the feed yet, so a reader can
+  // set them up ahead of time.
+  FEED_TYPES.forEach(function (type) {
     const chip = el('button', 'jellio-feed-filter-chip');
     chip.type = 'button';
     chip.appendChild(el('span', 'material-icons ' + type.icon));
