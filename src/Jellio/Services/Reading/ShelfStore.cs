@@ -149,6 +149,25 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
             }
         });
 
+    // Takes a book or audiobook ("i:<item id>") off a reader's shelf and
+    // out of their categories. hidden keeps it off the shelf for them until
+    // they add it back; otherwise every trace of it goes (it was deleted).
+    public void ForgetItem(Guid userId, string key, bool hidden) =>
+        _store.Update(userId, data =>
+        {
+            data.Library?.Remove(key);
+            data.LibraryRemoved.Remove(key);
+            foreach (var category in data.Categories)
+            {
+                category.Items.Remove(key);
+            }
+
+            if (hidden)
+            {
+                data.LibraryRemoved.Add(key);
+            }
+        });
+
     // Every reader with a shelf.
     public IReadOnlyList<Guid> UserIds() => _store.UserIds();
 

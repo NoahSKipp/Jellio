@@ -20,6 +20,7 @@ import {
   setPlayed,
   searchBooksToRequest,
   requestBook,
+  removeBookFromLibrary,
   searchMangaSources,
   requestMangaSeries,
 } from '../runtime/api.js';
@@ -36,9 +37,10 @@ import {
 } from '../components/mangaSeries.js';
 import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
-import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary } from '../runtime/shelf.js';
+import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary, invalidateShelf } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { renderMangaUpdates } from './mangaUpdates.js';
+import { renderBookRequests } from './bookRequests.js';
 import { shareHash } from '../runtime/shareLink.js';
 import { loadLibraryView, openLibraryView, passesLibraryFilters, activeFilterCount } from '../components/libraryView.js';
 import { listDownloads } from '../runtime/offline.js';
@@ -498,6 +500,7 @@ export function renderBookshelf(root, params, parentId) {
   const kind = requestedKind === 'audiobook' || requestedKind === 'manga' ? requestedKind : 'ebook';
   if (kind === 'manga' && params.get('series')) return renderMangaSeries(root, params, parentId);
   if (kind === 'manga' && params.get('updates')) return renderMangaUpdates(root, params);
+  if (kind !== 'manga' && params.get('requests')) return renderBookRequests(root, params, kind);
   const copy = KINDS[kind];
   setTitle(copy.title + ' - Jellio');
   root.classList.add('jellio-screen-bookshelf');
@@ -505,6 +508,8 @@ export function renderBookshelf(root, params, parentId) {
   let cancelled = false;
   let closeMangaSheet = null;
   let entries = [];
+  // Books this reader took off their shelf; search can add them back.
+  let hiddenEntries = [];
   let filterText = '';
   let selectedAuthor = '';
   let sort = readSort(kind);
@@ -513,6 +518,36 @@ export function renderBookshelf(root, params, parentId) {
   let loadedItems = null;
   let downloadedIds = new Set();
   libraryViewState = loadLibraryView(kind);
+
+  function splitHidden(all) {
+    const removed = new Set(shelf.LibraryRemoved || []);
+    entries = all.filter((entry) => !removed.has(entry.key));
+    hiddenEntries = all.filter((entry) => removed.has(entry.key));
+  }
+
+  function removeFromLibrary(entry) {
+    const title = entry.item.Name || 'this ' + copy.one;
+    if (!window.confirm('Remove “' + title + '” from your library? If nobody else has it, it is deleted from the server.')) return;
+    removeBookFromLibrary(kind, { ItemId: entry.item.Id })
+      .then(function (result) {
+        showToast(
+          result && result.Mode === 'personal'
+            ? 'Removed from your library. Others still have it, so it stays on the server.'
+            : 'Removed “' + title + '” from the server.',
+        );
+        changedShelf();
+      })
+      .catch(function (err) {
+        console.warn('Jellio: could not remove the book', err);
+        showToast('Couldn’t remove it. Try again.');
+      });
+  }
+
+  // The shelf store changed on the server side; reload it and the items.
+  function changedShelf() {
+    invalidateShelf(kind);
+    load();
+  }
 
   // Manga chapters belong to their series' categories.
   function keyForItem(item) {
@@ -606,6 +641,15 @@ export function renderBookshelf(root, params, parentId) {
           },
         });
       }
+      if (kind !== 'manga' && entry) {
+        options.push({
+          label: 'Remove from library',
+          icon: 'delete',
+          onClick: function () {
+            removeFromLibrary(entry);
+          },
+        });
+      }
       return readOptions(item, entry && (entry.seriesGroup || entry.item.Id === item.Id) ? entry : null).concat(options);
     },
   };
@@ -673,6 +717,18 @@ export function renderBookshelf(root, params, parentId) {
   const tabs = el('div', 'jellio-shelf-tabs');
   tabs.setAttribute('role', 'tablist');
   root.appendChild(tabs);
+  function requestsButton() {
+    const button = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
+    button.type = 'button';
+    button.appendChild(el('span', 'material-icons assignment'));
+    button.appendChild(el('span', null, 'Requests'));
+    button.addEventListener('click', function () {
+      const next = new URLSearchParams(params);
+      next.set('requests', '1');
+      navigateTo('#/books?' + next.toString());
+    });
+    return button;
+  }
   function updatesButton() {
     const button = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
     button.type = 'button';
@@ -704,6 +760,7 @@ export function renderBookshelf(root, params, parentId) {
       const wrap = el('section', 'jellio-book-request');
       wrap.appendChild(discover);
       if (kind === 'manga') wrap.appendChild(updatesButton());
+      else wrap.appendChild(requestsButton());
       requestMount.appendChild(wrap);
     })
     .catch(function () {});
@@ -1192,6 +1249,9 @@ export function renderBookshelf(root, params, parentId) {
     const inLib = entries.find(function (e) {
       return normalizeTitle(e.item.Name) === normalizeTitle(result.Title);
     });
+    const hidden = !inLib && hiddenEntries.find(function (e) {
+      return normalizeTitle(e.item.Name) === normalizeTitle(result.Title);
+    });
     const requested = isAudiobook ? result.HasAudiobook : result.HasEbook;
     const downloaded = isAudiobook ? result.AudiobookDownloaded : result.EbookDownloaded;
 
@@ -1219,9 +1279,27 @@ export function renderBookshelf(root, params, parentId) {
         navigateTo('#/' + (isAudiobook ? 'listen' : 'read') + '?id=' + inLib.item.Id);
       });
       actions.appendChild(button);
+    } else if (hidden) {
+      const button = el('button', 'jellio-book-request-action');
+      button.type = 'button';
+      button.appendChild(el('span', 'material-icons library_add'));
+      button.appendChild(el('span', null, 'Add back'));
+      button.addEventListener('click', function () {
+        button.disabled = true;
+        setInLibrary(hidden.key, true)
+          .then(function () {
+            showToast('“' + (hidden.item.Name || result.Title) + '” is back in your library.');
+            changedShelf();
+          })
+          .catch(function () {
+            button.disabled = false;
+            showToast('Couldn’t add it back. Try again.');
+          });
+      });
+      actions.appendChild(button);
     } else if (downloaded) {
       actions.appendChild(statusButton(
-        'download_done',
+        'cloud_done',
         'Downloaded',
         'Chaptarr has downloaded this. It shows up here after Jellyfin scans the ' + (isAudiobook ? 'Audiobooks' : 'Books') + ' library.',
       ));
@@ -1343,7 +1421,7 @@ export function renderBookshelf(root, params, parentId) {
         entries = manga.entries;
         results[2] = manga.continueEntries;
       } else {
-        entries = items.map((item) => describe(item, info, results[3] || {}, downloadedIds));
+        splitHidden(items.map((item) => describe(item, info, results[3] || {}, downloadedIds)));
       }
 
       if (!entries.length) {
@@ -1397,7 +1475,7 @@ export function renderBookshelf(root, params, parentId) {
       if (kind === 'manga') {
         entries = mangaEntries(loadedItems.items, loadedItems.info, loadedItems.progress, shelf, loadedItems.stream).entries;
       } else {
-        entries = loadedItems.items.map((item) => describe(item, loadedItems.info, loadedItems.progress, loadedItems.downloaded || downloadedIds));
+        splitHidden(loadedItems.items.map((item) => describe(item, loadedItems.info, loadedItems.progress, loadedItems.downloaded || downloadedIds)));
       }
       renderTabs();
       paintSortControls();
