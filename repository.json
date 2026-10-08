@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.65.0] - 2026-10-08\n\n### 🚀 Features\n\n- Keep anime to the Anime library, and only post finished reading to the feed\n",
+        "checksum": "f7302f4e954a1c6f0464566f2ee28d4f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.65.0/jellio_1.65.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-08T14:35:26Z",
+        "version": "1.65.0"
+      },
+      {
         "changelog": "## [1.64.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(now-playing)* Show which kind of device each session plays on\n\n### 🐛 Bug Fixes\n\n- *(offline)* Recover from a false offline state after leaving the tab\n",
         "checksum": "4d1f1382879ba76110277750ebf8cd7a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.64.0/jellio_1.64.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-03T20:05:53Z",
         "version": "1.47.0"
-      },
-      {
-        "changelog": "## [1.46.0] - 2026-10-03\n\n### 🚀 Features\n\n- *(audiobook)* Search audiobooks by title, series, and author\n",
-        "checksum": "e0b078a9bad6a76eeb4a7c08748c1b0b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.46.0/jellio_1.46.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-03T14:37:06Z",
-        "version": "1.46.0"
       }
     ]
   }
