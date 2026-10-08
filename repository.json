@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.69.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(feed)* Every content type chip always shown, and finished manga series post\n\n### 🐛 Bug Fixes\n\n- *(feed)* Only post a finished manga series when the series is completed\n",
+        "checksum": "4d4eac0f534867125aa426b8d682a798",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.69.0/jellio_1.69.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-08T21:52:43Z",
+        "version": "1.69.0"
+      },
+      {
         "changelog": "## [1.68.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(listen)* Show the time a click jumps to when hovering the mini player bar\n- *(listen)* Volume controls and hover time preview on both audiobook players\n",
         "checksum": "f0b597e44376157e9c4190b5f6849959",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.68.0/jellio_1.68.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-05T08:44:47Z",
         "version": "1.52.1"
-      },
-      {
-        "changelog": "## [1.52.0] - 2026-10-05\n\n### 🚀 Features\n\n- Share button that copies a link to a title\n- Share links from cards, manga series and manga chapters too\n",
-        "checksum": "28dbc92d031b95088b42f752c5637894",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.52.0/jellio_1.52.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-05T08:27:53Z",
-        "version": "1.52.0"
       }
     ]
   }
