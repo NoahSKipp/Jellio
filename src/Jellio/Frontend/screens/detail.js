@@ -290,7 +290,16 @@ function openTrailerModal(trailer, youTubeId) {
   const playerWrap = el('div', 'jellio-trailer-modal-player');
   const iframe = document.createElement('iframe');
   iframe.className = 'jellio-trailer-modal-iframe';
-  iframe.src = 'https://www.youtube-nocookie.com/embed/' + youTubeId + '?autoplay=1&rel=0';
+  // jellyfin-web's page carries <meta name="referrer" content="no-referrer">,
+  // and YouTube now refuses an embed that arrives without a Referer (its
+  // "error 153"). The iframe's own policy overrides the page's, and the
+  // origin is passed along too.
+  iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+  iframe.src =
+    'https://www.youtube-nocookie.com/embed/' +
+    youTubeId +
+    '?autoplay=1&rel=0&origin=' +
+    encodeURIComponent(window.location.origin);
   iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
   iframe.setAttribute('allowfullscreen', 'true');
   playerWrap.appendChild(iframe);
