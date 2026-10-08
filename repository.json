@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.67.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(announcements)* Send an announcement to one user or to everyone\n",
+        "checksum": "bead9a26a38a6f9bffa112e51ad14d1c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.67.0/jellio_1.67.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-08T18:16:38Z",
+        "version": "1.67.0"
+      },
+      {
         "changelog": "## [1.66.1] - 2026-10-08\n\n### 🐛 Bug Fixes\n\n- *(auth)* Keep the device name plain ASCII so signed-in requests aren't rejected\n",
         "checksum": "4fd52ee0b3e5cb6b99d069ad03e018fb",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.66.1/jellio_1.66.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-04T10:02:35Z",
         "version": "1.49.1"
-      },
-      {
-        "changelog": "## [1.49.0] - 2026-10-03\n\n### 🚀 Features\n\n- Video player media session and speed stepping, synchronous detail preview, listen drawer filter, and reader shortcuts\n- Persistent subtitle offset, instant search, reader auto-immersive scroll, and audiobook shortcut cheat sheet\n- In-app trailer modal, episode quick-play, reader jump-to-page, paused frame stepping, and stream picker arrow navigation\n",
-        "checksum": "90443b913095ad4aa7df43133bd93f2e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.49.0/jellio_1.49.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-03T22:08:25Z",
-        "version": "1.49.0"
       }
     ]
   }
