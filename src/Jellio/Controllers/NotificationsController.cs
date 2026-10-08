@@ -37,7 +37,8 @@ public class NotificationsController(
     ShelfStore shelfStore
 ) : ControllerBase
 {
-    public record BroadcastRequest(string? Message);
+    // UserId: one reader to send it to; left out, every reader gets it.
+    public record BroadcastRequest(string? Message, Guid? UserId = null);
 
     private const int MaxAnnouncementLength = 300;
 
@@ -158,8 +159,18 @@ public class NotificationsController(
             return BadRequest("Message is too long. Please keep it under " + MaxAnnouncementLength + " characters.");
         }
 
+        var recipients = userManager.GetUsers().ToList();
+        if (request.UserId is { } targetId && targetId != Guid.Empty)
+        {
+            recipients = recipients.Where(user => user.Id == targetId).ToList();
+            if (recipients.Count == 0)
+            {
+                return NotFound("That user no longer exists");
+            }
+        }
+
         var now = DateTime.UtcNow;
-        foreach (var user in userManager.GetUsers())
+        foreach (var user in recipients)
         {
             store.Update(user.Id, notifications => notifications.Insert(
                 0,

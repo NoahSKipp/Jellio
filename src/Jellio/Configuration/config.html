@@ -379,10 +379,17 @@
             <h2 class="sectionTitle">Announcements</h2>
           </div>
           <div class="fieldDescription">
-            Sends a one time message to every user on this server (a restart, planned
-            maintenance, anything worth a heads up). Delivered as a toast to anyone with
-            Jellio open, and left sitting in everyone's own Notifications either way.
+            Sends a one time message to every user on this server, or to one of them (a
+            restart, planned maintenance, anything worth a heads up). Delivered as a toast to
+            anyone with Jellio or Jellio TV open, and left in their Notifications either way.
           </div>
+        </div>
+
+        <div class="selectContainer">
+          <label class="selectLabel" for="selAnnouncementUser">Send to</label>
+          <select is="emby-select" id="selAnnouncementUser" class="emby-select-withcolor emby-select">
+            <option value="">All users</option>
+          </select>
         </div>
 
         <div class="inputContainer">
@@ -392,7 +399,7 @@
 
         <div>
           <button is="emby-button" type="button" id="btnSendAnnouncement" class="raised block emby-button">
-            <span>Send to all users</span>
+            <span id="lblSendAnnouncement">Send to all users</span>
           </button>
         </div>
       </div>
@@ -534,15 +541,18 @@
         }
 
         var button = document.querySelector('#btnSendAnnouncement');
+        var select = document.querySelector('#selAnnouncementUser');
+        var userId = select.value || null;
+        var userName = userId ? select.options[select.selectedIndex].textContent : null;
         button.disabled = true;
         window.ApiClient.ajax({
           type: 'POST',
           url: window.ApiClient.getUrl('Jellio/notifications/broadcast'),
-          data: JSON.stringify({ Message: message }),
+          data: JSON.stringify({ Message: message, UserId: userId }),
           contentType: 'application/json',
         }).then(function () {
           input.value = '';
-          Dashboard.alert('Announcement sent to every user.');
+          Dashboard.alert(userName ? 'Message sent to ' + userName + '.' : 'Announcement sent to every user.');
         }).catch(function (err) {
           // Same real JSON encoded string BadRequest(string) already
           // returns everywhere else in this codebase, unwrapped the
@@ -576,6 +586,31 @@
       // covers a real, once seen case: this whole inline script executing
       // before its own page container has actually landed in the live
       // document yet.
+      // The Send to list: All users, then each user by name.
+      function loadAnnouncementUsers() {
+        var select = document.querySelector('#selAnnouncementUser');
+        if (!select || select.dataset.loaded) return;
+        window.ApiClient.getUsers().then(function (users) {
+          select.dataset.loaded = 'true';
+          (users || [])
+            .slice()
+            .sort(function (a, b) {
+              return (a.Name || '').localeCompare(b.Name || '');
+            })
+            .forEach(function (user) {
+              var option = document.createElement('option');
+              option.value = user.Id;
+              option.textContent = user.Name;
+              select.appendChild(option);
+            });
+        });
+        select.addEventListener('change', function () {
+          document.querySelector('#lblSendAnnouncement').textContent = select.value
+            ? 'Send to ' + select.options[select.selectedIndex].textContent
+            : 'Send to all users';
+        });
+      }
+
       function bindJellioPageEvents() {
         var page = document.querySelector('#jellioConfigurationPage');
         if (!page) {
@@ -589,6 +624,7 @@
           document.querySelector('#btnSendAnnouncement').addEventListener('click', sendAnnouncement);
         }
         loadConfig();
+        loadAnnouncementUsers();
       }
 
       bindJellioPageEvents();
