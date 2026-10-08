@@ -86,8 +86,13 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
 
             var stats = achievementStore.Load(user.Id);
 
+            // Reading and listening only show once finished; older progress
+            // entries stay in the profile history but not on the feed.
+            var finishedOrWatched = stats.RecentActivity
+                .Where(entry => entry.ItemType is not ("Book" or "Manga" or "AudioBook") || entry.Finished)
+                .ToList();
             entries.AddRange(
-                ActivityGrouping.Group(stats.RecentActivity).Select(group =>
+                ActivityGrouping.Group(finishedOrWatched).Select(group =>
                     new FeedEntry(
                         user.Id,
                         user.Username,

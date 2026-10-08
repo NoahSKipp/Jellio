@@ -386,25 +386,10 @@ public class AchievementService(
                 stats.BestReadingStreak = Math.Max(stats.BestReadingStreak, stats.CurrentReadingStreak);
             }
 
-            // Several sessions on the same book the same day are one feed
-            // entry, not one per sitting.
-            var latest = stats.RecentActivity.Count > 0 ? stats.RecentActivity[0] : null;
-            if (latest is not null
-                && latest.ItemType == itemType
-                && string.Equals(latest.ItemName, bookName, StringComparison.Ordinal)
-                && latest.CompletedAtUtc.ToLocalTime().Date == today)
-            {
-                stats.RecentActivity[0] = latest with
-                {
-                    CompletedAtUtc = nowUtc,
-                    PagesRead = (latest.PagesRead ?? 0) + session.PagesRead,
-                    CurrentPage = session.CurrentPage ?? latest.CurrentPage,
-                    PageCount = session.PageCount ?? latest.PageCount,
-                    ListenedTicks = (latest.ListenedTicks ?? 0) + session.ListenedTicks,
-                    Finished = latest.Finished || newlyFinished,
-                };
-            }
-            else
+            // The feed only hears about reading and listening once something
+            // is finished: a manga chapter, a book, an audiobook. Progress
+            // still counts toward stats and badges above.
+            if (newlyFinished)
             {
                 stats.RecentActivity.Insert(
                     0,

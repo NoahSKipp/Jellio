@@ -12,6 +12,8 @@
 import {
   getItem,
   getLibraryItems,
+  getAnimeIds,
+  withoutAnime,
   itemTypesForKind,
   discoverGenres,
   getAllGenres,
@@ -48,7 +50,6 @@ const ROW_LIST_LIMIT = 500;
 // documents). A catalog with more real members than this still misses
 // a few, not worth a second real paginated fetch just to close that
 // last gap.
-const ANIME_ITEM_ID_LIMIT = 500;
 
 // Every real item id any real anime/anilist catalog collection
 // currently claims, best effort: the Shows hub below drops anything in
@@ -59,30 +60,6 @@ const ANIME_ITEM_ID_LIMIT = 500;
 // rejecting, the Shows hub renders unfiltered same as before this
 // existed rather than breaking outright over a real best effort
 // feature.
-function getAnimeItemIds() {
-  return getCollections()
-    .then(function (collections) {
-      const animeCollections = collections.filter(isAnimeCollection);
-      if (!animeCollections.length) return new Set();
-      return Promise.allSettled(
-        animeCollections.map(function (collection) {
-          return getCollectionItems(collection.Id, 'tvshows', ANIME_ITEM_ID_LIMIT);
-        }),
-      ).then(function (results) {
-        const ids = new Set();
-        results.forEach(function (result) {
-          if (result.status !== 'fulfilled') return;
-          result.value.forEach(function (item) {
-            if (item && item.Id) ids.add(item.Id);
-          });
-        });
-        return ids;
-      });
-    })
-    .catch(function () {
-      return new Set();
-    });
-}
 
 // Ported in spirit from NuvioWeb's own filterPicker.js: a sort/filter
 // control over the library's own top row rather than a full rebuild of
@@ -228,7 +205,7 @@ export async function renderLibrary(root, params) {
   // to keep it off the plain Shows hub too, real feedback's own direct
   // ask. Not attempted for any other library kind, a Movies or Books
   // page has no real anime overlap question to answer at all.
-  const excludeAnimeIds = collectionType === 'tvshows' ? getAnimeItemIds() : Promise.resolve(null);
+  const excludeAnimeIds = collectionType === 'tvshows' || collectionType === 'movies' ? getAnimeIds() : Promise.resolve(null);
 
   let mainRow = null;
 
@@ -259,9 +236,7 @@ export async function renderLibrary(root, params) {
       ]);
       items = (result && result.Items) || [];
       if (animeIds && animeIds.size) {
-        items = items.filter(function (item) {
-          return !animeIds.has(item.Id);
-        });
+        items = withoutAnime(items, animeIds);
       }
     } catch (err) {
       console.warn('Jellio: could not load library items', err);
@@ -273,7 +248,9 @@ export async function renderLibrary(root, params) {
         sortOrder: parts[1],
         genre: genre || undefined,
       }).then(function (result) {
-        return (result && result.Items) || [];
+        return Promise.resolve(excludeAnimeIds).then(function (animeIds) {
+          return withoutAnime((result && result.Items) || [], animeIds);
+        });
       });
     });
     if (mainRow) mainRow.remove();
@@ -332,12 +309,12 @@ export async function renderLibrary(root, params) {
           if (result.status === 'fulfilled') {
             let items = result.value;
             if (animeIds && animeIds.size) {
-              items = items.filter(function (item) {
-                return !animeIds.has(item.Id);
-              });
+              items = withoutAnime(items, animeIds);
             }
             const row = buildRow(genres[index], items, null, function () {
-              return getGenreItems(parentId, itemType, genres[index], ROW_LIST_LIMIT);
+              return getGenreItems(parentId, itemType, genres[index], ROW_LIST_LIMIT).then(function (all) {
+                return withoutAnime(all, animeIds);
+              });
             });
             if (row) rows.insertBefore(row, skeleton.parentNode === rows ? skeleton : null);
           }
