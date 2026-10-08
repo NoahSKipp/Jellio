@@ -34,6 +34,9 @@ import {
   loadTrack,
   getDefaultAudiobookSpeed,
   syncMiniPlayer,
+  attachScrubPreview,
+  buildVolumeControl,
+  setAudiobookVolume,
 } from '../components/audioMiniPlayer.js';
 
 const SKIP_SECONDS_BACK = 30;
@@ -261,6 +264,7 @@ export async function renderListen(root, params) {
   scrub.value = '0';
   scrub.setAttribute('aria-label', 'Position in book');
   scrubTrack.appendChild(scrub);
+  attachScrubPreview(scrubTrack);
   if (timeline.durationSec > 0) {
     timeline.chapters.slice(1).forEach(function (chapter) {
       const tick = el('span', 'jellio-listen-scrub-tick');
@@ -297,6 +301,7 @@ export async function renderListen(root, params) {
   chaptersButton.type = 'button';
   chaptersButton.appendChild(el('span', 'material-icons list'));
   chaptersButton.appendChild(el('span', null, 'Chapters'));
+  extras.appendChild(buildVolumeControl());
   extras.appendChild(speedButton);
   extras.appendChild(sleepButton);
   extras.appendChild(chaptersButton);
@@ -575,13 +580,13 @@ export async function renderListen(root, params) {
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       if (session && session.audio) {
-        session.audio.volume = Math.min(1, Math.round(((session.audio.volume || 1) + 0.1) * 10) / 10);
+        setAudiobookVolume(Math.min(1, Math.round(((session.audio.volume || 0) + 0.1) * 10) / 10), false);
         showToast('Volume ' + Math.round(session.audio.volume * 100) + '%');
       }
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
       if (session && session.audio) {
-        session.audio.volume = Math.max(0, Math.round(((session.audio.volume || 1) - 0.1) * 10) / 10);
+        setAudiobookVolume(Math.max(0, Math.round(((session.audio.volume || 0) - 0.1) * 10) / 10), false);
         showToast('Volume ' + Math.round(session.audio.volume * 100) + '%');
       }
     } else if (event.key === 'm' || event.key === 'M') {

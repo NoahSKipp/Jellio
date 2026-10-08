@@ -42,6 +42,102 @@ export function saveAudiobookVolume(volume, muted) {
   } catch (err) {}
 }
 
+// Spotify style: hovering a progress bar shows the time (and chapter) a
+// click there jumps to, and lights the bar up to that point when a
+// hoverFill is given. The readout sits on the page itself, so a player
+// that clips its own edges doesn't cut it off.
+export function attachScrubPreview(track, hoverFill) {
+  let tip = null;
+  function hide() {
+    if (hoverFill) hoverFill.style.width = '0';
+    if (tip) {
+      tip.remove();
+      tip = null;
+    }
+  }
+  track.addEventListener('mousemove', function (e) {
+    if (!activeSession || !activeSession.timeline || !activeSession.timeline.durationSec) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const seconds = ratio * activeSession.timeline.durationSec;
+    if (hoverFill) hoverFill.style.width = ratio * 100 + '%';
+    if (!tip) {
+      tip = el('div', 'jellio-mini-player-scrub-tip');
+      document.body.appendChild(tip);
+    }
+    const chapter = activeSession.timeline.chapters && activeSession.timeline.chapters[chapterIndexAt(seconds)];
+    tip.textContent = formatClock(seconds) + (chapter && chapter.title ? ' · ' + chapter.title : '');
+    const width = tip.offsetWidth;
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - width - 8, e.clientX - width / 2)) + 'px';
+    tip.style.top = rect.top - tip.offsetHeight - 8 + 'px';
+  });
+  track.addEventListener('mouseleave', hide);
+  track.addEventListener('click', hide);
+}
+
+// Volume: a mute button and a slider, for the mini player and the full
+// player alike. Saved for next time, and every control on screen (and
+// the keyboard shortcuts) stays in step through jellio:audiobook-volume.
+export function setAudiobookVolume(volume, muted) {
+  const v = Math.min(1, Math.max(0, volume));
+  if (activeSession && activeSession.audio) {
+    activeSession.audio.volume = v;
+    activeSession.audio.muted = !!muted;
+  }
+  saveAudiobookVolume(v, !!muted);
+  document.dispatchEvent(new CustomEvent('jellio:audiobook-volume', { detail: { volume: v, muted: !!muted } }));
+}
+
+export function buildVolumeControl(extraClass) {
+  const wrap = el('div', 'jellio-volume-control' + (extraClass ? ' ' + extraClass : ''));
+  wrap.addEventListener('click', function (e) {
+    e.stopPropagation();
+  });
+  const muteButton = el('button', 'jellio-volume-button');
+  muteButton.type = 'button';
+  const icon = el('span', 'material-icons volume_up');
+  muteButton.appendChild(icon);
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = '100';
+  slider.step = '1';
+  slider.className = 'jellio-volume-slider';
+  slider.setAttribute('aria-label', 'Volume');
+  wrap.appendChild(muteButton);
+  wrap.appendChild(slider);
+
+  function current() {
+    const audio = activeSession && activeSession.audio;
+    return audio ? { volume: audio.volume, muted: audio.muted } : { volume: getSavedAudiobookVolume(), muted: getSavedAudiobookMuted() };
+  }
+  function paint(state) {
+    const shown = state.muted ? 0 : state.volume;
+    slider.value = String(Math.round(shown * 100));
+    slider.style.setProperty('--jellio-volume', Math.round(shown * 100) + '%');
+    icon.className = 'material-icons ' + (state.muted || state.volume === 0 ? 'volume_off' : state.volume < 0.5 ? 'volume_down' : 'volume_up');
+    muteButton.setAttribute('aria-label', state.muted ? 'Unmute' : 'Mute');
+    muteButton.title = state.muted ? 'Unmute' : 'Mute';
+  }
+  muteButton.addEventListener('click', function () {
+    const state = current();
+    setAudiobookVolume(state.volume || 1, !state.muted);
+  });
+  slider.addEventListener('input', function () {
+    setAudiobookVolume(Number(slider.value) / 100, false);
+  });
+  function onChange(event) {
+    if (!wrap.isConnected) {
+      document.removeEventListener('jellio:audiobook-volume', onChange);
+      return;
+    }
+    paint(event.detail);
+  }
+  document.addEventListener('jellio:audiobook-volume', onChange);
+  paint(current());
+  return wrap;
+}
+
 export function getSavedAudiobookMuted() {
   try {
     return window.localStorage.getItem(AUDIOBOOK_MUTED_KEY) === '1';
@@ -629,37 +725,9 @@ export function syncMiniPlayer() {
     miniPlayerEl = el('div', 'jellio-audio-mini-player');
     const progressBar = el('div', 'jellio-mini-player-progress-bar');
     progressBar.style.cursor = 'pointer';
-    // Spotify style: hovering shows the time (and chapter) a click jumps
-    // to, with the bar lit up to that point. The readout lives on the page
-    // itself because the player clips anything above its own top edge.
     const hoverFill = el('div', 'jellio-mini-player-progress-hover');
     progressBar.appendChild(hoverFill);
-    let scrubTip = null;
-    function hideScrubTip() {
-      hoverFill.style.width = '0';
-      if (scrubTip) {
-        scrubTip.remove();
-        scrubTip = null;
-      }
-    }
-    progressBar.addEventListener('mousemove', function (e) {
-      if (!activeSession || !activeSession.timeline || !activeSession.timeline.durationSec) return;
-      const rect = progressBar.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const seconds = ratio * activeSession.timeline.durationSec;
-      hoverFill.style.width = ratio * 100 + '%';
-      if (!scrubTip) {
-        scrubTip = el('div', 'jellio-mini-player-scrub-tip');
-        document.body.appendChild(scrubTip);
-      }
-      const chapter = activeSession.timeline.chapters && activeSession.timeline.chapters[chapterIndexAt(seconds)];
-      scrubTip.textContent = formatClock(seconds) + (chapter && chapter.title ? ' · ' + chapter.title : '');
-      const width = scrubTip.offsetWidth;
-      const left = Math.max(8, Math.min(window.innerWidth - width - 8, e.clientX - width / 2));
-      scrubTip.style.left = left + 'px';
-      scrubTip.style.top = rect.top - scrubTip.offsetHeight - 8 + 'px';
-    });
-    progressBar.addEventListener('mouseleave', hideScrubTip);
+    attachScrubPreview(progressBar, hoverFill);
     progressBar.addEventListener('click', function (e) {
       e.stopPropagation();
       if (!activeSession || !activeSession.timeline || !activeSession.timeline.durationSec) return;
@@ -720,6 +788,7 @@ export function syncMiniPlayer() {
     content.appendChild(controls);
 
     const actions = el('div', 'jellio-mini-player-actions');
+    actions.appendChild(buildVolumeControl('jellio-volume-control-compact'));
     const timeLabel = el('span', 'jellio-mini-player-time', '0:00 / 0:00');
     actions.appendChild(timeLabel);
 
