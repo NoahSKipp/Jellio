@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.68.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(listen)* Show the time a click jumps to when hovering the mini player bar\n- *(listen)* Volume controls and hover time preview on both audiobook players\n",
+        "checksum": "f0b597e44376157e9c4190b5f6849959",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.68.0/jellio_1.68.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-08T21:31:27Z",
+        "version": "1.68.0"
+      },
+      {
         "changelog": "## [1.67.2] - 2026-10-08\n\n### 🐛 Bug Fixes\n\n- Mini player progress that fills as it plays, and trailers that play\n",
         "checksum": "92b5922d133fab029ade24589eb73e9e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.67.2/jellio_1.67.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-05T08:27:53Z",
         "version": "1.52.0"
-      },
-      {
-        "changelog": "## [1.51.0] - 2026-10-04\n\n### 🚀 Features\n\n- Picture in picture when leaving the tab, with a setting, and recover a frozen picture\n",
-        "checksum": "c059a13e6a4ca91333cc1d161ad1bb94",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.51.0/jellio_1.51.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-04T19:26:46Z",
-        "version": "1.51.0"
       }
     ]
   }
