@@ -14646,3 +14646,41 @@
   outline: 2px solid var(--jellio-secondary-color);
   outline-offset: 2px;
 }
+
+/* Mini player scrub preview (components/audioMiniPlayer.js). */
+.jellio-mini-player-progress-bar {
+  position: relative;
+}
+
+.jellio-mini-player-progress-fill {
+  position: relative;
+  z-index: 1;
+}
+
+.jellio-mini-player-progress-hover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: rgb(255 255 255 / 0.28);
+  pointer-events: none;
+}
+
+.jellio-mini-player-scrub-tip {
+  position: fixed;
+  z-index: 10000;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #282828;
+  color: #fff;
+  font-family: var(--jellio-font-family);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.5);
+}
