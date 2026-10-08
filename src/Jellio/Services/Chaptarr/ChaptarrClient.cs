@@ -20,7 +20,7 @@ namespace Jellio.Services.Chaptarr;
 // silently drop every field it didn't know about.
 public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<ChaptarrClient> logger)
 {
-    public record AddResult(bool Success, bool Pending, string? Message);
+    public record AddResult(bool Success, bool Pending, string? Message, int BookId = 0);
 
     // Covers are small; anything past this is not a cover worth proxying.
     private const long MaxImageBytes = 15 * 1024 * 1024;
@@ -200,7 +200,8 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
 
             if (response.IsSuccessStatusCode)
             {
-                return new AddResult(true, false, null);
+                var added = TryParse(body) as JsonObject;
+                return new AddResult(true, false, null, ReadId(added?["id"]));
             }
 
             var message = ReadMessage(body) ?? "Chaptarr returned " + (int)response.StatusCode;
@@ -423,6 +424,89 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         return book[mediaType == "audiobook" ? "localAudiobookBooks" : "localEbookBooks"] is JsonArray instances
             ? instances.OfType<JsonObject>().Select(instance => ReadId(instance["id"])).FirstOrDefault(found => found > 0)
             : 0;
+    }
+
+    // GET /api/v1/queue (QueueController): what is downloading or waiting
+    // to import, with each record's book.
+    public async Task<JsonArray?> GetQueueAsync(string mediaType, CancellationToken cancellationToken) =>
+        (await GetJsonAsync("/api/v1/queue?page=1&pageSize=200&includeBook=true&includeAuthor=true&mediaType=" + Uri.EscapeDataString(mediaType), cancellationToken).ConfigureAwait(false))?["records"] as JsonArray;
+
+    // GET /api/v1/wanted/missing (MissingController): monitored books of
+    // this format with no files yet, so still being searched for.
+    public async Task<JsonArray?> GetMissingAsync(string mediaType, CancellationToken cancellationToken) =>
+        (await GetJsonAsync("/api/v1/wanted/missing?page=1&pageSize=200&includeAuthor=true&monitored=true&mediaType=" + Uri.EscapeDataString(mediaType), cancellationToken).ConfigureAwait(false))?["records"] as JsonArray;
+
+    // DELETE /api/v1/book/{id} (BookController.DeleteBook): this format's
+    // instance only, its files too when deleteFiles.
+    public Task<bool> DeleteBookAsync(int bookId, bool deleteFiles, CancellationToken cancellationToken) =>
+        SendAsync(
+            HttpMethod.Delete,
+            "/api/v1/book/" + bookId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "?deleteFiles=" + (deleteFiles ? "true" : "false") + "&addImportListExclusion=false&applyToBothFormats=false",
+            null,
+            cancellationToken);
+
+    // DELETE /api/v1/queue/{id}: drops a download, from the client too.
+    public Task<bool> RemoveQueueItemAsync(int queueId, CancellationToken cancellationToken) =>
+        SendAsync(
+            HttpMethod.Delete,
+            "/api/v1/queue/" + queueId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "?removeFromClient=true&blocklist=false",
+            null,
+            cancellationToken);
+
+    // POST /api/v1/command BookSearch: look for a release again now.
+    public Task<bool> SearchBookAsync(int bookId, CancellationToken cancellationToken) =>
+        SendAsync(
+            HttpMethod.Post,
+            "/api/v1/command",
+            new JsonObject { ["name"] = "BookSearch", ["bookIds"] = new JsonArray(bookId) },
+            cancellationToken);
+
+    private async Task<bool> SendAsync(HttpMethod method, string pathAndQuery, JsonNode? body, CancellationToken cancellationToken)
+    {
+        if (!TryGetConfig(out var baseUrl, out var apiKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            var client = httpClientFactory.CreateClient(nameof(ChaptarrClient));
+            using var request = BuildRequest(method, baseUrl + pathAndQuery, apiKey);
+            if (body is not null)
+            {
+                request.Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+            }
+
+            using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Jellio: Chaptarr {Method} {Path} failed, {StatusCode}", method, pathAndQuery, response.StatusCode);
+                return false;
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Jellio: Chaptarr {Method} {Path} threw", method, pathAndQuery);
+            return false;
+        }
+    }
+
+    private static JsonNode? TryParse(string body)
+    {
+        try
+        {
+            return string.IsNullOrWhiteSpace(body) ? null : JsonNode.Parse(body);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     // PUT /api/v1/book/monitor, then POST /api/v1/command BookSearch: the

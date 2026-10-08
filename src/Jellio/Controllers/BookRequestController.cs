@@ -31,6 +31,7 @@ public partial class BookRequestController(
     BookMetadataService metadataService,
     Jellio.Services.Manga.AniListClient aniListClient,
     IUserManager userManager,
+    Jellio.Services.Reading.BookRequestStore requestStore,
     ILogger<BookRequestController> logger) : ControllerBase
 {
     private static readonly string[] AuthorFieldsToReset =
@@ -344,8 +345,19 @@ public partial class BookRequestController(
             return Ok(new RequestBookResult("error", bookType == "audiobook" ? "Chaptarr found no audiobook edition of this book" : "Chaptarr found no ebook edition of this book"));
         }
 
+        void Record(int chaptarrBookId) => requestStore.Add(userId, new Jellio.Services.Reading.BookRequestEntry
+        {
+            WorkId = ChaptarrClient.ReadString(book["foreignBookId"]) ?? workId,
+            ChaptarrBookId = chaptarrBookId,
+            Title = ChaptarrClient.ReadString(book["title"]) ?? body.Title ?? workId,
+            Author = ChaptarrClient.ReadString(book["author"]?["authorName"]) ?? body.Author,
+            BookType = bookType,
+            RequestedAt = DateTimeOffset.UtcNow,
+        });
+
         if (ChaptarrClient.IsWanted(book, bookType))
         {
+            Record(ChaptarrClient.ExistingInstanceId(book, bookType));
             return Ok(new RequestBookResult("exists", "Already in Chaptarr"));
         }
 
@@ -360,6 +372,7 @@ public partial class BookRequestController(
             var existingTitle = ChaptarrClient.ReadString(book["title"]) ?? workId;
             if (monitored)
             {
+                Record(existingId);
                 metadataService.InvalidateIndex();
                 logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, existingTitle, workId);
                 return Ok(new RequestBookResult("added", null));
@@ -398,6 +411,7 @@ public partial class BookRequestController(
         var title = ChaptarrClient.ReadString(book["title"]) ?? workId;
         if (result.Success)
         {
+            Record(result.BookId);
             metadataService.InvalidateIndex();
             logger.LogInformation("Jellio: {User} requested the {BookType} of {Title} ({WorkId}) from Chaptarr", requester, bookType, title, workId);
             return Ok(new RequestBookResult(result.Pending ? "pending" : "added", result.Message));
@@ -483,7 +497,7 @@ public partial class BookRequestController(
     }
 
     // Search results show the whole work, so any edition's cover will do.
-    private static string? CoverUrl(JsonObject book)
+    internal static string? CoverUrl(JsonObject book)
     {
         var imageLists = new List<JsonNode?> { book["images"] };
         if (book["editions"] is JsonArray editions)

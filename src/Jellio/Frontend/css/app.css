@@ -14448,3 +14448,142 @@
   justify-content: center;
   padding: clamp(40px, 10vh, 100px) 0;
 }
+
+/* Books and Audiobooks Requests page (screens/bookRequests.js). */
+.jellio-book-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 var(--jellio-gutter, 16px) 32px;
+}
+
+.jellio-book-requests-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.jellio-book-requests-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5em;
+  aspect-ratio: 2 / 3;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 0.5em;
+  background: var(--jellio-card-bg);
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-book-requests-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jellio-book-requests-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.jellio-book-requests-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.jellio-book-requests-byline,
+.jellio-book-requests-detail {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.jellio-book-requests-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.82em;
+  font-weight: 600;
+}
+
+.jellio-book-requests-state .material-icons {
+  font-size: 1.1em;
+}
+
+.jellio-book-requests-downloading .jellio-book-requests-state,
+.jellio-book-requests-importing .jellio-book-requests-state {
+  background: color-mix(in srgb, var(--jellio-secondary-color) 22%, transparent);
+}
+
+.jellio-book-requests-available .jellio-book-requests-state {
+  background: rgba(76, 175, 80, 0.22);
+}
+
+.jellio-book-requests-failed .jellio-book-requests-state,
+.jellio-book-requests-blocked .jellio-book-requests-state {
+  background: rgba(244, 67, 54, 0.22);
+}
+
+.jellio-book-requests-progress {
+  height: 4px;
+  max-width: 320px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.jellio-book-requests-progress-fill {
+  height: 100%;
+  background: var(--jellio-secondary-color);
+  transition: width 400ms ease;
+}
+
+.jellio-book-requests-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.jellio-book-requests-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: none;
+  color: var(--jellio-text-color);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.jellio-book-requests-action .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-book-requests-action:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jellio-book-requests-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.jellio-book-requests-action-danger {
+  color: #ff8a80;
+  border-color: rgba(255, 138, 128, 0.35);
+}

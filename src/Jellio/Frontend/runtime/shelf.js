@@ -62,6 +62,11 @@ export function loadShelf(kind) {
   return loaded.get(kind);
 }
 
+// After the server changed a shelf on its own (a book removed).
+export function invalidateShelf(kind) {
+  changed(kind);
+}
+
 export function onShelfChange(listener) {
   document.addEventListener('jellio:shelf-changed', listener);
   return () => document.removeEventListener('jellio:shelf-changed', listener);

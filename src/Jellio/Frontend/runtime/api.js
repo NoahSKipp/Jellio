@@ -951,6 +951,40 @@ export function requestBook(result, bookType) {
   );
 }
 
+// Controllers/BookLibraryController.cs: where each book or audiobook
+// request stands in Chaptarr. { Configured, Items: [{ ChaptarrBookId,
+// Title, Author, CoverUrl, State, Progress, TimeLeft, Message,
+// RequestedBy, Mine, RequestedAt, ItemId }] }.
+export function getBookRequests(mediaType) {
+  return getJson('/Jellio/books/requests?mediaType=' + encodeURIComponent(mediaType), 30000);
+}
+
+export function searchBookAgain(chaptarrBookId) {
+  return postJson('/Jellio/books/requests/' + encodeURIComponent(chaptarrBookId) + '/search', {}, 30000);
+}
+
+// Off this reader's shelf only while others still have it ({ Mode:
+// 'personal' }), deleted from Chaptarr and the server once nobody does
+// ({ Mode: 'full' }). target: { ItemId } for a library book, or
+// { ChaptarrBookId, Title } for a request that hasn't arrived yet.
+export function removeBookFromLibrary(mediaType, target) {
+  return postJson(
+    '/Jellio/books/library/remove',
+    {
+      MediaType: mediaType,
+      ItemId: target.ItemId || null,
+      ChaptarrBookId: target.ChaptarrBookId || 0,
+      Title: target.Title || null,
+    },
+    60000,
+  ).then(function (result) {
+    Array.from(cache.keys()).forEach(function (key) {
+      if (key.indexOf('IncludeItemTypes=') !== -1 || key.indexOf('shelf-info') !== -1) invalidateCache(key);
+    });
+    return result;
+  });
+}
+
 // Controllers/MangaRequestController.cs: manga, manhwa and manhua
 // requests through Suwayomi. Search fans out across Suwayomi's sources,
 // so it can take a while.

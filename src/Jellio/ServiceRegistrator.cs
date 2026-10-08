@@ -161,6 +161,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddHostedService(sp => sp.GetRequiredService<Jellio.Services.Manga.MangaUpdatesService>());
 
         services.AddSingleton<ReadingProgressStore>();
+        services.AddSingleton<Jellio.Services.Reading.BookRequestStore>();
         services.AddSingleton<AnnotationStore>();
         services.AddSingleton<ComicArchiveService>();
         services.AddSingleton<VocabularyStore>();
