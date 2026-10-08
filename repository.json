@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.64.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(now-playing)* Show which kind of device each session plays on\n\n### 🐛 Bug Fixes\n\n- *(offline)* Recover from a false offline state after leaving the tab\n",
+        "checksum": "4d1f1382879ba76110277750ebf8cd7a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.64.0/jellio_1.64.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-08T13:45:59Z",
+        "version": "1.64.0"
+      },
+      {
         "changelog": "## [1.63.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(books)* Add a Requests page and per-reader removal for books and audiobooks\n\n### 🐛 Bug Fixes\n\n- *(books)* Show Requested and Downloaded instead of Listen for books not in the library yet\n\n### 🎨 Styling\n\n- *(books)* Format the requests entry initializer\n",
         "checksum": "b5973055790bb1f42267ede57b26dec4",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.63.0/jellio_1.63.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-03T14:37:06Z",
         "version": "1.46.0"
-      },
-      {
-        "changelog": "## [1.45.0] - 2026-10-03\n\n### 🚀 Features\n\n- *(manga)* Deduplicate chapters and pages in reading statistics and shelf counts\n",
-        "checksum": "3dc02222ca46ecec260f748739481b10",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.45.0/jellio_1.45.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-03T13:14:56Z",
-        "version": "1.45.0"
       }
     ]
   }
