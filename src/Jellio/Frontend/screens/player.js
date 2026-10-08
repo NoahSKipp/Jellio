@@ -2937,7 +2937,7 @@ export async function renderPlayer(root, params) {
     if (isCasting) {
       castBanner.style.display = 'flex';
       castBannerText.textContent = 'Streaming to ' + (castState.name || 'Smart TV');
-      bannerPlayPauseIcon.textContent = castState.isPaused ? 'play_arrow' : 'pause';
+      bannerPlayPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
       playPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
       playPauseButton.setAttribute('aria-label', castState.isPaused ? 'Play' : 'Pause');
 
