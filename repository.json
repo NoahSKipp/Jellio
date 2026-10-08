@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.67.1] - 2026-10-08\n\n### 🐛 Bug Fixes\n\n- *(listen)* Visible back-skip button and a single play/pause icon\n",
+        "checksum": "d655055e5edbc82f490212a0baa5b0e0",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.67.1/jellio_1.67.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-08T20:38:37Z",
+        "version": "1.67.1"
+      },
+      {
         "changelog": "## [1.67.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(announcements)* Send an announcement to one user or to everyone\n",
         "checksum": "bead9a26a38a6f9bffa112e51ad14d1c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.67.0/jellio_1.67.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-04T19:18:18Z",
         "version": "1.50.0"
-      },
-      {
-        "changelog": "## [1.49.1] - 2026-10-04\n\n### ⚙️ Miscellaneous Tasks\n\n- Support workflow_dispatch in publish workflow\n- Pass repo flag to gh commands in publish workflow\n",
-        "checksum": "b241e98e6530bf32b3da7bc57b018254",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.49.1/jellio_1.49.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-04T10:02:35Z",
-        "version": "1.49.1"
       }
     ]
   }
