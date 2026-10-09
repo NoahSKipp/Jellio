@@ -233,7 +233,10 @@ public partial class NotificationsController(
         }
 
         Response.Headers.CacheControl = "private, max-age=604800";
-        return PhysicalFile(path, imageId!.EndsWith(".png", StringComparison.Ordinal) ? "image/png" : "image/jpeg");
+        var contentType = imageId!.EndsWith(".png", StringComparison.Ordinal)
+            ? "image/png"
+            : imageId.EndsWith(".gif", StringComparison.Ordinal) ? "image/gif" : "image/jpeg";
+        return PhysicalFile(path, contentType);
     }
 
     // Decodes, shrinks to fit AnnouncementImageMaxDimension and stores the
@@ -266,6 +269,16 @@ public partial class NotificationsController(
                 {
                     return (null, "That image's dimensions are too large.");
                 }
+            }
+
+            // A GIF is kept as sent so it still animates; resizing would
+            // keep only its first frame.
+            if (bytes.Length > 6 && bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F')
+            {
+                System.IO.Directory.CreateDirectory(AnnouncementImageDirectory);
+                var gifName = Guid.NewGuid().ToString("N") + ".gif";
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(AnnouncementImageDirectory, gifName), bytes);
+                return (gifName, null);
             }
 
             using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(bytes);
@@ -314,7 +327,7 @@ public partial class NotificationsController(
         }
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex("^[a-f0-9]{32}\\.(jpg|png)$")]
+    [System.Text.RegularExpressions.GeneratedRegex("^[a-f0-9]{32}\\.(jpg|png|gif)$")]
     private static partial System.Text.RegularExpressions.Regex AnnouncementImageName();
 
     [HttpPost("read")]
