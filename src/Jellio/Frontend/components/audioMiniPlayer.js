@@ -15,6 +15,7 @@ import {
   isAutoDeleteReadEnabled,
   setLocalProgress,
 } from '../runtime/offline.js';
+import { isDucking } from '../runtime/duck.js';
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -500,6 +501,7 @@ export function startAudioSession(config) {
   audio.volume = getSavedAudiobookVolume();
   audio.muted = getSavedAudiobookMuted();
   audio.addEventListener('volumechange', function () {
+    if (isDucking()) return;
     saveAudiobookVolume(audio.volume, audio.muted);
   });
   document.body.appendChild(audio);

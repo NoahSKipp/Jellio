@@ -37,6 +37,7 @@ import { getPrimaryNavLinks } from './components/navShared.js';
 import { mountSeasons } from './components/seasons.js';
 import { startNowPlaying } from './components/nowPlaying.js';
 import { startNotifications } from './components/notifications.js';
+import { startSounds } from './components/sounds.js';
 import { startAchievementNotifier } from './components/achievementNotifier.js';
 import { loadGrouplistSetting } from './runtime/grouplistSettings.js';
 import { loadAdminStatus } from './runtime/adminStatus.js';
@@ -774,6 +775,7 @@ async function runSync() {
     await teardownActiveScreen();
     startNowPlaying();
     startNotifications();
+    startSounds();
     startAchievementNotifier();
     startSyncPlay();
     startGroupWatchInvites();
