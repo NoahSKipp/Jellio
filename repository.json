@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.70.3] - 2026-10-09\n",
+        "checksum": "a31b06a7067679ce0656d489c7c265ea",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.3/jellio_1.70.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-09T15:21:01Z",
+        "version": "1.70.3"
+      },
+      {
         "changelog": "## [1.70.2] - 2026-10-09\n\n### 🐛 Bug Fixes\n\n- *(streams)* Say no streams are available instead of offering Gelato's placeholder\n",
         "checksum": "c1fd9bfb72bc65ce9a5fcdedb09e70a7",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.2/jellio_1.70.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T05:59:07Z",
         "version": "1.55.0"
-      },
-      {
-        "changelog": "## [1.54.2] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Resolve cast button double toggle preventing popover from opening\n",
-        "checksum": "c062c3da62c7377721017659224622f3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.54.2/jellio_1.54.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-05T15:32:03Z",
-        "version": "1.54.2"
       }
     ]
   }
