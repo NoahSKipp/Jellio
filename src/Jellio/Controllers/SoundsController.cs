@@ -22,9 +22,13 @@ namespace Jellio.Controllers;
 [Authorize]
 public partial class SoundsController(IUserManager userManager, IApplicationPaths applicationPaths) : ControllerBase
 {
-    public record SendSoundRequest(string? Sound, Guid? UserId = null, int Volume = 100, int DuckVolume = 30);
+    // Direction: where it's heard, "both" (default), "left", "right" or
+    // "rear" (the surround speakers behind, where there are any).
+    public record SendSoundRequest(string? Sound, Guid? UserId = null, int Volume = 100, int DuckVolume = 30, string? Direction = null);
 
-    public record PendingSound(long Seq, string SoundId, int Volume, int DuckVolume, DateTime SentAt);
+    public record PendingSound(long Seq, string SoundId, int Volume, int DuckVolume, DateTime SentAt, string Direction = "both");
+
+    private static readonly string[] Directions = ["both", "left", "right", "rear"];
 
     private const int MaxSoundBytes = 10 * 1024 * 1024;
     private static readonly TimeSpan PendingLifetime = TimeSpan.FromSeconds(90);
@@ -87,6 +91,8 @@ public partial class SoundsController(IUserManager userManager, IApplicationPath
 
         var volume = Math.Clamp(request.Volume, 0, 100);
         var duck = Math.Clamp(request.DuckVolume, 0, 100);
+        var requested = request.Direction?.Trim().ToLowerInvariant() ?? "both";
+        var direction = Array.IndexOf(Directions, requested) >= 0 ? requested : "both";
         var now = DateTime.UtcNow;
         lock (Lock)
         {
@@ -99,7 +105,7 @@ public partial class SoundsController(IUserManager userManager, IApplicationPath
                 }
 
                 list.RemoveAll(sound => now - sound.SentAt > PendingLifetime);
-                list.Add(new PendingSound(++_seq, soundId, volume, duck, now));
+                list.Add(new PendingSound(++_seq, soundId, volume, duck, now, direction));
             }
         }
 
