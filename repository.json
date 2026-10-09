@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.70.2] - 2026-10-09\n\n### 🐛 Bug Fixes\n\n- *(streams)* Say no streams are available instead of offering Gelato's placeholder\n",
+        "checksum": "c1fd9bfb72bc65ce9a5fcdedb09e70a7",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.2/jellio_1.70.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-09T14:45:13Z",
+        "version": "1.70.2"
+      },
+      {
         "changelog": "## [1.70.1] - 2026-10-09\n\n### 🐛 Bug Fixes\n\n- *(announcements)* A visible Choose image button, plus paste and drop\n- *(listen)* Count listening time toward lifetime stats\n",
         "checksum": "51fd38c59f5e490a5f5e7216211a20f9",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.1/jellio_1.70.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-05T15:32:03Z",
         "version": "1.54.2"
-      },
-      {
-        "changelog": "## [1.54.1] - 2026-10-05\n\n### 🐛 Bug Fixes\n\n- Keep skeleton beneath loaded rows, remove duplicate cast, declutter mobile player and media actions\n",
-        "checksum": "097cb85c8866d3d55d5067bdf3ce226d",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.54.1/jellio_1.54.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-05T15:07:01Z",
-        "version": "1.54.1"
       }
     ]
   }
