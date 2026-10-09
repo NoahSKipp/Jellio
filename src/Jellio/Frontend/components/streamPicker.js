@@ -575,6 +575,37 @@ function buildChipRow(entries, onSelect) {
   return filterRow;
 }
 
+// Like Nuvio: nothing playable found, so say so instead of offering a
+// stream that can't play. Usually the title isn't out digitally yet.
+function renderNoStreams(root, item, onRetry, onClose) {
+  root.textContent = '';
+  const wrap = el('div', 'jellio-stream-picker-empty');
+  wrap.appendChild(el('span', 'material-icons videocam_off jellio-stream-picker-empty-icon'));
+  wrap.appendChild(el('h2', 'jellio-stream-picker-empty-title', 'No streams available'));
+  const released = item && item.PremiereDate ? new Date(item.PremiereDate) : null;
+  const recent = released && Date.now() - released.getTime() < 120 * 24 * 60 * 60 * 1000;
+  wrap.appendChild(
+    el(
+      'p',
+      'jellio-stream-picker-empty-text',
+      recent || !released
+        ? 'There may not be a digital release yet. Check back once it’s out on digital.'
+        : 'Nothing was found for this title right now. Try again later.',
+    ),
+  );
+  const actions = el('div', 'jellio-screen-retry-actions');
+  const retry = el('button', 'jellio-detail-error-back', 'Try again');
+  retry.type = 'button';
+  retry.addEventListener('click', onRetry);
+  actions.appendChild(retry);
+  const close = el('button', 'jellio-detail-error-back', 'Close');
+  close.type = 'button';
+  close.addEventListener('click', onClose);
+  actions.appendChild(close);
+  wrap.appendChild(actions);
+  root.appendChild(wrap);
+}
+
 // A picker with nothing real to pick between is not worth showing at
 // all, same reasoning screens/player.js's own mid-playback Sources
 // button already uses for a one-option list: straight to Play instead,
@@ -591,7 +622,7 @@ export async function openStreamPicker(item, options) {
 
   let sources = [];
   try {
-    sources = await getMediaSources(item.Id);
+    sources = await getMediaSources(item.Id, { forceFresh: !!opts.forceFresh });
   } catch (err) {
     console.warn('Jellio: could not load sources for the stream picker', err);
     if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
@@ -606,9 +637,9 @@ export async function openStreamPicker(item, options) {
 
   if (!sources.length) {
     shell.status.textContent = '';
-    renderRetry(shell.status, 'No streams found for this title.', function () {
-      openStreamPicker(item, options);
-    }, { onBack: closeStreamPicker, backLabel: 'Close' });
+    renderNoStreams(shell.status, item, function () {
+      openStreamPicker(item, Object.assign({}, opts, { forceFresh: true }));
+    }, closeStreamPicker);
     return;
   }
 
