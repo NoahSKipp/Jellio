@@ -1992,10 +1992,22 @@ export function invalidateMediaSourcesCache(itemId) {
 }
 
 // With no releases found, Gelato lists the title's own placeholder so the
-// list is never empty: stubbed like every stream ("/stub") but without
-// the addon's stream name a real release always carries. It can't play.
-export function isPlaceholderSource(source) {
-  return !!source && source.Path === '/stub' && !String(source.Name || '').trim();
+// list is never empty: no file behind it ("/stub" or a gelato:// path),
+// no size, and named after the title itself (or not at all) rather than
+// by the addon the way a real release is. It can't play.
+export function isPlaceholderSource(source, item) {
+  if (!source) return false;
+  const path = String(source.Path || '');
+  if (path && path !== '/stub' && !/^(gelato|stremio):/i.test(path)) return false;
+  if (source.Size) return false;
+  const name = String(source.Name || '').trim();
+  if (!name) return true;
+  const titles = [item && item.Name, item && item.SeriesName, item && item.OriginalTitle]
+    .filter(Boolean)
+    .map(function (title) {
+      return String(title).trim().toLowerCase();
+    });
+  return titles.indexOf(name.toLowerCase()) !== -1;
 }
 
 export function getMediaSources(itemId, options) {
@@ -2014,7 +2026,7 @@ export function getMediaSources(itemId, options) {
   return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString()).then(
     function (result) {
       const sources = ((result && result.MediaSources) || []).filter(function (source) {
-        return !isPlaceholderSource(source);
+        return !isPlaceholderSource(source, result);
       });
       mediaSourcesCache.set(idStr, { time: now, sources: sources });
       return sources;
