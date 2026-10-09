@@ -54,6 +54,9 @@ public class UserAchievementStats
 
     public long BestSingleDayRuntimeTicks { get; set; }
 
+    // AchievementCatalog.Version these unlocks were last checked against.
+    public int CatalogVersion { get; set; }
+
     public HashSet<string> UnlockedBadgeIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Dictionary<string, DateTime> UnlockedAt { get; set; } = new(StringComparer.OrdinalIgnoreCase);

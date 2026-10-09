@@ -12,7 +12,18 @@ public class AchievementStore(IApplicationPaths applicationPaths)
     private readonly JsonUserStore<UserAchievementStats> _store =
         new(applicationPaths, "achievements", () => new UserAchievementStats());
 
-    public UserAchievementStats Load(Guid userId) => _store.Load(userId);
+    // Every read runs the one-time re-check after thresholds go up, saving
+    // the result so it only ever happens once per user.
+    public UserAchievementStats Load(Guid userId)
+    {
+        var stats = _store.Load(userId);
+        if (stats.CatalogVersion < AchievementCatalog.Version)
+        {
+            stats = _store.Update(userId, AchievementCatalog.RecheckAction);
+        }
+
+        return stats;
+    }
 
     public void Save(Guid userId, UserAchievementStats stats) => _store.Save(userId, stats);
 
@@ -23,5 +34,10 @@ public class AchievementStore(IApplicationPaths applicationPaths)
     // AchievementService's own real playback-stop writer the exact same
     // real way every other caller of this file's own underlying store
     // already had to stop doing.
-    public UserAchievementStats Update(Guid userId, Action<UserAchievementStats> mutate) => _store.Update(userId, mutate);
+    public UserAchievementStats Update(Guid userId, Action<UserAchievementStats> mutate) =>
+        _store.Update(userId, stats =>
+        {
+            AchievementCatalog.Recheck(stats);
+            mutate(stats);
+        });
 }
