@@ -447,6 +447,17 @@
           <audio id="audSoundPreview" controls style="display:none;margin-top:0.6em;max-width:100%;"></audio>
         </div>
 
+        <div class="selectContainer">
+          <label class="selectLabel" for="selSoundDirection">Direction</label>
+          <select is="emby-select" id="selSoundDirection" class="emby-select-withcolor emby-select">
+            <option value="both">Both sides</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="rear">Behind (surround speakers)</option>
+          </select>
+          <div class="fieldDescription">Behind needs a surround setup; on plain stereo it plays from both sides.</div>
+        </div>
+
         <div class="inputContainer">
           <label class="inputLabel" for="rngSoundVolume">Sound volume: <span id="lblSoundVolume">100</span>%</label>
           <input type="range" id="rngSoundVolume" min="5" max="100" step="5" value="100" style="width:100%;" />
@@ -793,6 +804,7 @@
             UserId: userId,
             Volume: Number(document.querySelector('#rngSoundVolume').value),
             DuckVolume: Number(document.querySelector('#rngDuckVolume').value),
+            Direction: document.querySelector('#selSoundDirection').value,
           }),
           contentType: 'application/json',
         }).then(function () {
