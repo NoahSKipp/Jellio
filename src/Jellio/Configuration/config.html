@@ -397,6 +397,18 @@
           <textarea is="emby-textarea" id="txtAnnouncementMessage" rows="3" maxlength="300"></textarea>
         </div>
 
+        <div class="inputContainer">
+          <label class="inputLabel" for="fileAnnouncementImage">Image (optional)</label>
+          <input type="file" id="fileAnnouncementImage" accept="image/jpeg,image/png,image/gif,image/webp" />
+          <div class="fieldDescription">Shown with the message, shrunk to fit; the original isn't kept.</div>
+          <div id="announcementImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
+            <img id="imgAnnouncementPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
+            <button is="emby-button" type="button" id="btnClearAnnouncementImage" class="emby-button">
+              <span>Remove image</span>
+            </button>
+          </div>
+        </div>
+
         <div>
           <button is="emby-button" type="button" id="btnSendAnnouncement" class="raised block emby-button">
             <span id="lblSendAnnouncement">Send to all users</span>
@@ -535,8 +547,8 @@
       function sendAnnouncement() {
         var input = document.querySelector('#txtAnnouncementMessage');
         var message = input.value.trim();
-        if (!message) {
-          Dashboard.alert('Please enter a message first.');
+        if (!message && !announcementImage) {
+          Dashboard.alert('Please enter a message or pick an image first.');
           return;
         }
 
@@ -548,10 +560,11 @@
         window.ApiClient.ajax({
           type: 'POST',
           url: window.ApiClient.getUrl('Jellio/notifications/broadcast'),
-          data: JSON.stringify({ Message: message, UserId: userId }),
+          data: JSON.stringify({ Message: message, UserId: userId, Image: announcementImage }),
           contentType: 'application/json',
         }).then(function () {
           input.value = '';
+          clearAnnouncementImage();
           Dashboard.alert(userName ? 'Message sent to ' + userName + '.' : 'Announcement sent to every user.');
         }).catch(function (err) {
           // Same real JSON encoded string BadRequest(string) already
@@ -586,6 +599,41 @@
       // covers a real, once seen case: this whole inline script executing
       // before its own page container has actually landed in the live
       // document yet.
+      // The optional picture, read as a data URL; the server shrinks it.
+      var announcementImage = null;
+      function clearAnnouncementImage() {
+        announcementImage = null;
+        var file = document.querySelector('#fileAnnouncementImage');
+        if (file) file.value = '';
+        var preview = document.querySelector('#announcementImagePreview');
+        if (preview) preview.style.display = 'none';
+      }
+      function bindAnnouncementImage() {
+        var file = document.querySelector('#fileAnnouncementImage');
+        if (!file || file.dataset.bound) return;
+        file.dataset.bound = 'true';
+        file.addEventListener('change', function () {
+          var picked = file.files && file.files[0];
+          if (!picked) {
+            clearAnnouncementImage();
+            return;
+          }
+          if (picked.size > 10 * 1024 * 1024) {
+            Dashboard.alert('That image is over 10 MB. Please pick a smaller one.');
+            clearAnnouncementImage();
+            return;
+          }
+          var reader = new FileReader();
+          reader.onload = function () {
+            announcementImage = reader.result;
+            document.querySelector('#imgAnnouncementPreview').src = reader.result;
+            document.querySelector('#announcementImagePreview').style.display = 'flex';
+          };
+          reader.readAsDataURL(picked);
+        });
+        document.querySelector('#btnClearAnnouncementImage').addEventListener('click', clearAnnouncementImage);
+      }
+
       // The Send to list: All users, then each user by name.
       function loadAnnouncementUsers() {
         var select = document.querySelector('#selAnnouncementUser');
@@ -625,6 +673,7 @@
         }
         loadConfig();
         loadAnnouncementUsers();
+        bindAnnouncementImage();
       }
 
       bindJellioPageEvents();

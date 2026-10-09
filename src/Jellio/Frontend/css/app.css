@@ -14775,3 +14775,28 @@
 .jellio-listen-scrub-track {
   position: relative;
 }
+
+/* Announcement pictures (components/toast.js, components/notifications.js). */
+.jellio-toast-with-image {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.jellio-toast-image {
+  display: block;
+  max-width: min(320px, 70vw);
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.jellio-notifications-row-image {
+  display: block;
+  max-width: 100%;
+  max-height: 160px;
+  margin-top: 0.5em;
+  border-radius: 8px;
+  object-fit: contain;
+}
