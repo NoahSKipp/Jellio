@@ -22,6 +22,7 @@ const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
 const PROGRESS_REPORT_MS = 10000;
 const RESTART_CHAPTER_THRESHOLD = 5;
+const LISTEN_FLUSH_SECONDS = 5 * 60;
 const DEFAULT_SPEED_KEY = 'jellio_audiobook_default_speed';
 const AUDIOBOOK_VOLUME_KEY = 'jellio_audiobook_volume';
 const AUDIOBOOK_MUTED_KEY = 'jellio_audiobook_muted';
@@ -602,6 +603,7 @@ export function startAudioSession(config) {
   audio.addEventListener('pause', function () {
     notifyPlayState();
     updateMediaSessionState();
+    flushListening();
     if (activeSession && activeSession.reportedTrackId) {
       reportPlaybackProgress(activeSession.reportedTrackId, activeSession.reportedTrackId, positionTicks(), true);
     }
@@ -626,6 +628,9 @@ export function startAudioSession(config) {
       reportPlaybackProgress(activeSession.reportedTrackId, activeSession.reportedTrackId, positionTicks(), false);
       saveLocalPosition();
     }
+    // Listening time goes to the server every few minutes too, so a
+    // phone that never fires an unload event still counts it.
+    if (activeSession && activeSession.listenedSeconds >= LISTEN_FLUSH_SECONDS) flushListening();
   }, PROGRESS_REPORT_MS);
 
   setupMediaSession();
@@ -635,11 +640,13 @@ export function startAudioSession(config) {
 
 export function stopAudioSession() {
   if (!activeSession) return;
+  // Before the session is cleared: flushListening reads it, and used to
+  // find nothing, so closing the player dropped every minute listened.
+  flushListening();
   const session = activeSession;
   activeSession = null;
   uiListeners = null;
 
-  flushListening();
   stopReport(false);
   window.clearInterval(session.progressTimer);
   if (session.sleepTicker) window.clearInterval(session.sleepTicker);
@@ -839,4 +846,13 @@ export function syncMiniPlayer() {
 window.addEventListener('beforeunload', function () {
   flushListening();
   stopReport(false);
+});
+
+// Phones rarely fire beforeunload; leaving the tab or app is the last
+// reliable moment to send what was listened.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushListening();
+});
+window.addEventListener('pagehide', function () {
+  flushListening();
 });
