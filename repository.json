@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.70.4] - 2026-10-09\n",
+        "checksum": "b786f38cbd79b799b70d5f2aa1c6343a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.4/jellio_1.70.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-09T16:02:51Z",
+        "version": "1.70.4"
+      },
+      {
         "changelog": "## [1.70.3] - 2026-10-09\n",
         "checksum": "a31b06a7067679ce0656d489c7c265ea",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.3/jellio_1.70.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T07:00:37Z",
         "version": "1.56.0"
-      },
-      {
-        "changelog": "## [1.55.0] - 2026-10-06\n\n### 🚀 Features\n\n- Add looking for devices loading state and empty state to cast popover\n- Add media tech badges, hero play/watchlist buttons, http2 scaling, sleep fadeout, and card image error fallbacks\n- *(player)* Customizable Up Next timer, dynamic credits gating, and post-play end-screen modal\n\n### 🐛 Bug Fixes\n\n- Hide sleep timer from settings on web/desktop where pill button is present\n- *(cast)* Clarify browser cast button and ignore user dismissal in error toast\n",
-        "checksum": "7137fad1b74f5d3900a775dc39f8007a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.55.0/jellio_1.55.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-06T05:59:07Z",
-        "version": "1.55.0"
       }
     ]
   }
