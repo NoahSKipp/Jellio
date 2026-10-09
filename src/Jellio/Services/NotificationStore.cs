@@ -15,7 +15,9 @@ public record WatchlistNotification(
     DateTime CreatedUtc,
     bool Read,
     string? SeriesKey = null,
-    int? MangaId = null
+    int? MangaId = null,
+    // An announcement's picture (Jellio/notifications/image/{ImageId}).
+    string? ImageId = null
 );
 
 // Real per user watchlist release notifications, one plain JSON array per

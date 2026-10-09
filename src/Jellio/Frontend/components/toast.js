@@ -25,14 +25,32 @@ function ensureToast() {
 // whatever it is telling the reader about (components/notifications.js's
 // own release toast, straight to the title) rather than just an
 // announcement with no way to act on it before it fades.
-export function showToast(message, onClick) {
+// options.imageUrl adds a picture above the text (an announcement's
+// image), and keeps the toast up a little longer to look at it.
+export function showToast(message, onClick, options) {
+  const opts = options || {};
   const node = ensureToast();
-  node.textContent = message;
+  node.textContent = '';
+  node.classList.toggle('jellio-toast-with-image', !!opts.imageUrl);
+  if (opts.imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'jellio-toast-image';
+    img.alt = '';
+    img.src = opts.imageUrl;
+    img.addEventListener('error', () => img.remove());
+    node.appendChild(img);
+  }
+  if (message) {
+    const text = document.createElement('span');
+    text.className = 'jellio-toast-text';
+    text.textContent = message;
+    node.appendChild(text);
+  }
   node.onclick = onClick || null;
   node.classList.toggle('jellio-toast-clickable', !!onClick);
   node.classList.add('jellio-toast-visible');
   if (hideTimer) window.clearTimeout(hideTimer);
   hideTimer = window.setTimeout(function () {
     node.classList.remove('jellio-toast-visible');
-  }, HIDE_MS);
+  }, opts.imageUrl ? HIDE_MS + 4000 : HIDE_MS);
 }

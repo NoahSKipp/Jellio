@@ -8,7 +8,7 @@
 // loop and panel existing for the life of the page rather than being
 // rebuilt on every sidebar render.
 import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl, getStreamCoverUrl } from '../runtime/api.js';
-import { isAuthenticated } from '../runtime/auth.js';
+import { isAuthenticated, getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
@@ -73,6 +73,13 @@ function openItem(n) {
   navigateTo('#/item?id=' + n.ItemId);
 }
 
+// An announcement's picture, shrunk server side; the token rides in the
+// URL since an <img> can't send headers.
+function announcementImageUrl(n) {
+  if (!n.ImageId) return null;
+  return getServerAddress() + '/Jellio/notifications/image/' + encodeURIComponent(n.ImageId) + '?ApiKey=' + encodeURIComponent(getAccessToken() || '');
+}
+
 function buildRow(n) {
   const isAnnouncement = n.Kind === 'announcement';
   const row = el('div', 'jellio-notifications-row' + (isAnnouncement ? ' jellio-notifications-row-announcement' : ''));
@@ -96,6 +103,16 @@ function buildRow(n) {
   const text = el('div', 'jellio-notifications-row-text');
   text.appendChild(el('p', 'jellio-notifications-row-title', n.Name || ''));
   text.appendChild(el('p', 'jellio-notifications-row-meta', subtitleFor(n)));
+  const imageUrl = isAnnouncement ? announcementImageUrl(n) : null;
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'jellio-notifications-row-image';
+    img.alt = '';
+    img.loading = 'lazy';
+    img.src = imageUrl;
+    img.addEventListener('error', () => img.remove());
+    text.appendChild(img);
+  }
   row.appendChild(text);
 
   const deleteButton = el('button', 'jellio-notifications-row-delete');
@@ -242,6 +259,7 @@ function poll() {
                 : function () {
                     openItem(n);
                   },
+              { imageUrl: n.Kind === 'announcement' ? announcementImageUrl(n) : null },
             );
           }
         });
