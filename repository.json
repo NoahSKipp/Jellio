@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.70.5] - 2026-10-09\n\n### 🐛 Bug Fixes\n\n- *(announcements)* Keep GIF pictures animated\n",
+        "checksum": "3949e8643900988749ed50618d36766a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.5/jellio_1.70.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-09T17:29:37Z",
+        "version": "1.70.5"
+      },
+      {
         "changelog": "## [1.70.4] - 2026-10-09\n",
         "checksum": "b786f38cbd79b799b70d5f2aa1c6343a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.4/jellio_1.70.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T07:33:11Z",
         "version": "1.56.1"
-      },
-      {
-        "changelog": "## [1.56.0] - 2026-10-06\n\n### 🚀 Features\n\n- Profile monthly analytics, spring pop-outs, next episode pre-buffering, and media sources caching\n",
-        "checksum": "b79040eb943e27ec8083716ae8854cfc",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.56.0/jellio_1.56.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-06T07:00:37Z",
-        "version": "1.56.0"
       }
     ]
   }
