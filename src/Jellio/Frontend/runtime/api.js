@@ -2838,6 +2838,10 @@ export function getNotifications() {
   return getJson('/Jellio/notifications');
 }
 
+export function getPendingSounds(after) {
+  return getJson('/Jellio/sounds/pending?after=' + encodeURIComponent(after), 8000);
+}
+
 export function markNotificationsRead() {
   return postJson('/Jellio/notifications/read', {});
 }
