@@ -1991,6 +1991,13 @@ export function invalidateMediaSourcesCache(itemId) {
   }
 }
 
+// With no releases found, Gelato lists the title's own placeholder so the
+// list is never empty: stubbed like every stream ("/stub") but without
+// the addon's stream name a real release always carries. It can't play.
+export function isPlaceholderSource(source) {
+  return !!source && source.Path === '/stub' && !String(source.Name || '').trim();
+}
+
 export function getMediaSources(itemId, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -2006,7 +2013,9 @@ export function getMediaSources(itemId, options) {
   const params = new URLSearchParams({ Fields: 'MediaSources' });
   return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString()).then(
     function (result) {
-      const sources = (result && result.MediaSources) || [];
+      const sources = ((result && result.MediaSources) || []).filter(function (source) {
+        return !isPlaceholderSource(source);
+      });
       mediaSourcesCache.set(idStr, { time: now, sources: sources });
       return sources;
     },

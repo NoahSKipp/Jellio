@@ -10339,6 +10339,32 @@
   color: var(--jellio-text-color);
 }
 
+.jellio-stream-picker-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6em;
+  max-width: 28em;
+  margin: 0 auto;
+  padding: 2em var(--jellio-safe-gutter);
+  text-align: center;
+}
+
+.jellio-stream-picker-empty-icon {
+  font-size: 3em;
+  opacity: 0.6;
+}
+
+.jellio-stream-picker-empty-title {
+  margin: 0;
+  font-size: 1.4em;
+}
+
+.jellio-stream-picker-empty-text {
+  margin: 0 0 0.8em;
+  color: var(--jellio-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
 .jellio-stream-picker-back {
   position: absolute;
   top: var(--jellio-safe-gutter);
