@@ -474,6 +474,60 @@
             <span id="lblSendSound">Play for all users</span>
           </button>
         </div>
+
+        <div class="verticalSection" style="margin-top:2.5em;">
+          <div class="sectionTitleContainer flex align-items-center">
+            <h2 class="sectionTitle">Screen overlays</h2>
+          </div>
+          <div class="fieldDescription">
+            Puts a picture or a line of text in the middle of a user's screen on Jellio or Jellio
+            TV for a few seconds, over whatever they're doing. Nothing is left in their
+            notifications.
+          </div>
+        </div>
+
+        <div class="selectContainer">
+          <label class="selectLabel" for="selOverlayUser">Show to</label>
+          <select is="emby-select" id="selOverlayUser" class="emby-select-withcolor emby-select">
+            <option value="">All users</option>
+          </select>
+        </div>
+
+        <div class="inputContainer">
+          <label class="inputLabel" for="txtOverlayText">Text (optional)</label>
+          <input is="emby-input" type="text" id="txtOverlayText" maxlength="200" />
+        </div>
+
+        <div class="inputContainer">
+          <div class="inputLabel">Image (optional)</div>
+          <input type="file" id="fileOverlayImage" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
+          <button is="emby-button" type="button" id="btnChooseOverlayImage" class="raised emby-button">
+            <span>Choose image</span>
+          </button>
+          <div class="fieldDescription">Or paste (Ctrl+V) an image into the text box. GIFs keep their animation.</div>
+          <div id="overlayImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
+            <img id="imgOverlayPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
+            <button is="emby-button" type="button" id="btnClearOverlayImage" class="emby-button">
+              <span>Remove image</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="inputContainer">
+          <label class="inputLabel" for="rngOverlayOpacity">Opacity: <span id="lblOverlayOpacity">80</span>%</label>
+          <input type="range" id="rngOverlayOpacity" min="10" max="100" step="5" value="80" style="width:100%;" />
+        </div>
+
+        <div class="inputContainer">
+          <label class="inputLabel" for="rngOverlaySeconds">Shown for: <span id="lblOverlaySeconds">5</span> seconds</label>
+          <input type="range" id="rngOverlaySeconds" min="1" max="60" step="1" value="5" style="width:100%;" />
+        </div>
+
+        <div>
+          <button is="emby-button" type="button" id="btnSendOverlay" class="raised block emby-button">
+            <span id="lblSendOverlay">Show to all users</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -725,6 +779,7 @@
       function loadAnnouncementUsers() {
         fillUserSelect('#selAnnouncementUser', '#lblSendAnnouncement', 'Send to ', 'Send to all users');
         fillUserSelect('#selSoundUser', '#lblSendSound', 'Play for ', 'Play for all users');
+        fillUserSelect('#selOverlayUser', '#lblSendOverlay', 'Show to ', 'Show to all users');
       }
       function fillUserSelect(selectId, labelId, prefix, allLabel) {
         var select = document.querySelector(selectId);
@@ -786,6 +841,102 @@
         document.querySelector('#btnSendSound').addEventListener('click', sendSound);
       }
 
+      var overlayImage = null;
+      function clearOverlayImage() {
+        overlayImage = null;
+        document.querySelector('#fileOverlayImage').value = '';
+        document.querySelector('#overlayImagePreview').style.display = 'none';
+      }
+      function bindOverlays() {
+        var file = document.querySelector('#fileOverlayImage');
+        if (!file || file.dataset.bound) return;
+        file.dataset.bound = 'true';
+        function usePicked(picked) {
+          if (!picked) return;
+          if (!/^image\//.test(picked.type || '')) {
+            Dashboard.alert('That file is not an image.');
+            return;
+          }
+          if (picked.size > 10 * 1024 * 1024) {
+            Dashboard.alert('That image is over 10 MB. Please pick a smaller one.');
+            return;
+          }
+          var reader = new FileReader();
+          reader.onload = function () {
+            overlayImage = reader.result;
+            document.querySelector('#imgOverlayPreview').src = reader.result;
+            document.querySelector('#overlayImagePreview').style.display = 'flex';
+          };
+          reader.readAsDataURL(picked);
+        }
+        file.addEventListener('change', function () {
+          usePicked(file.files && file.files[0]);
+        });
+        document.querySelector('#btnChooseOverlayImage').addEventListener('click', function () {
+          file.click();
+        });
+        document.querySelector('#txtOverlayText').addEventListener('paste', function (event) {
+          var items = (event.clipboardData && event.clipboardData.items) || [];
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].kind === 'file' && /^image\//.test(items[i].type)) {
+              event.preventDefault();
+              usePicked(items[i].getAsFile());
+              return;
+            }
+          }
+        });
+        document.querySelector('#btnClearOverlayImage').addEventListener('click', clearOverlayImage);
+        [['#rngOverlayOpacity', '#lblOverlayOpacity'], ['#rngOverlaySeconds', '#lblOverlaySeconds']].forEach(function (pair) {
+          var range = document.querySelector(pair[0]);
+          range.addEventListener('input', function () {
+            document.querySelector(pair[1]).textContent = range.value;
+          });
+        });
+        document.querySelector('#btnSendOverlay').addEventListener('click', sendOverlay);
+      }
+
+      function sendOverlay() {
+        var textInput = document.querySelector('#txtOverlayText');
+        var text = textInput.value.trim();
+        if (!text && !overlayImage) {
+          Dashboard.alert('Please enter some text or choose an image first.');
+          return;
+        }
+        var button = document.querySelector('#btnSendOverlay');
+        var select = document.querySelector('#selOverlayUser');
+        var userId = select.value || null;
+        var userName = userId ? select.options[select.selectedIndex].textContent : null;
+        button.disabled = true;
+        window.ApiClient.ajax({
+          type: 'POST',
+          url: window.ApiClient.getUrl('Jellio/overlays'),
+          data: JSON.stringify({
+            Text: text,
+            Image: overlayImage,
+            UserId: userId,
+            Opacity: Number(document.querySelector('#rngOverlayOpacity').value),
+            Seconds: Number(document.querySelector('#rngOverlaySeconds').value),
+          }),
+          contentType: 'application/json',
+        }).then(function () {
+          Dashboard.alert(userName ? 'Shown to ' + userName + '.' : 'Shown to everyone.');
+        }).catch(function (err) {
+          var readBody = err && typeof err.text === 'function' ? err.text() : Promise.resolve('');
+          return readBody.then(function (body) {
+            var parsedMessage = body;
+            try {
+              var parsed = JSON.parse(body);
+              if (typeof parsed === 'string') parsedMessage = parsed;
+            } catch (parseErr) {
+              // Not JSON: body already is the message.
+            }
+            Dashboard.alert(parsedMessage || 'Could not send that overlay.');
+          });
+        }).finally(function () {
+          button.disabled = false;
+        });
+      }
+
       function sendSound() {
         if (!soundData) {
           Dashboard.alert('Please choose a sound first.');
@@ -842,6 +993,7 @@
         loadAnnouncementUsers();
         bindAnnouncementImage();
         bindSounds();
+        bindOverlays();
       }
 
       bindJellioPageEvents();

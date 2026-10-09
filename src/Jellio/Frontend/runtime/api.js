@@ -2847,6 +2847,10 @@ export function getNotifications() {
   return getJson('/Jellio/notifications');
 }
 
+export function getPendingOverlays(after) {
+  return getJson('/Jellio/overlays/pending?after=' + encodeURIComponent(after), 8000);
+}
+
 export function getPendingSounds(after) {
   return getJson('/Jellio/sounds/pending?after=' + encodeURIComponent(after), 8000);
 }
