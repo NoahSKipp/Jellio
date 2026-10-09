@@ -398,9 +398,12 @@
         </div>
 
         <div class="inputContainer">
-          <label class="inputLabel" for="fileAnnouncementImage">Image (optional)</label>
-          <input type="file" id="fileAnnouncementImage" accept="image/jpeg,image/png,image/gif,image/webp" />
-          <div class="fieldDescription">Shown with the message, shrunk to fit; the original isn't kept.</div>
+          <div class="inputLabel">Image (optional)</div>
+          <input type="file" id="fileAnnouncementImage" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
+          <button is="emby-button" type="button" id="btnChooseAnnouncementImage" class="raised emby-button">
+            <span>Choose image</span>
+          </button>
+          <div class="fieldDescription">Or paste (Ctrl+V) or drop an image onto the message box. Shown with the message, shrunk to fit; the original isn't kept.</div>
           <div id="announcementImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
             <img id="imgAnnouncementPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
             <button is="emby-button" type="button" id="btnClearAnnouncementImage" class="emby-button">
@@ -612,15 +615,14 @@
         var file = document.querySelector('#fileAnnouncementImage');
         if (!file || file.dataset.bound) return;
         file.dataset.bound = 'true';
-        file.addEventListener('change', function () {
-          var picked = file.files && file.files[0];
-          if (!picked) {
-            clearAnnouncementImage();
+        function usePicked(picked) {
+          if (!picked) return;
+          if (!/^image\//.test(picked.type || '')) {
+            Dashboard.alert('That file is not an image.');
             return;
           }
           if (picked.size > 10 * 1024 * 1024) {
             Dashboard.alert('That image is over 10 MB. Please pick a smaller one.');
-            clearAnnouncementImage();
             return;
           }
           var reader = new FileReader();
@@ -630,6 +632,34 @@
             document.querySelector('#announcementImagePreview').style.display = 'flex';
           };
           reader.readAsDataURL(picked);
+        }
+        file.addEventListener('change', function () {
+          usePicked(file.files && file.files[0]);
+        });
+        document.querySelector('#btnChooseAnnouncementImage').addEventListener('click', function () {
+          file.click();
+        });
+        // Paste or drop straight onto the message box.
+        var textBox = document.querySelector('#txtAnnouncementMessage');
+        textBox.addEventListener('paste', function (event) {
+          var items = (event.clipboardData && event.clipboardData.items) || [];
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].kind === 'file' && /^image\//.test(items[i].type)) {
+              event.preventDefault();
+              usePicked(items[i].getAsFile());
+              return;
+            }
+          }
+        });
+        textBox.addEventListener('dragover', function (event) {
+          event.preventDefault();
+        });
+        textBox.addEventListener('drop', function (event) {
+          var dropped = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+          if (dropped && /^image\//.test(dropped.type)) {
+            event.preventDefault();
+            usePicked(dropped);
+          }
         });
         document.querySelector('#btnClearAnnouncementImage').addEventListener('click', clearAnnouncementImage);
       }
