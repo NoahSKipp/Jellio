@@ -6,6 +6,8 @@ import { getPendingSounds } from '../runtime/api.js';
 import { beginDuck, endDuck } from '../runtime/duck.js';
 
 const POLL_MS = 5000;
+// A clip that stalls can't keep other media turned down past this.
+const MAX_SOUND_MS = 90000;
 
 let started = false;
 let after = -1;
@@ -43,9 +45,14 @@ function playNext() {
   audio.volume = Math.min(1, Math.max(0, sound.Volume / 100));
   let ducked = [];
   let finished = false;
+  const guard = window.setTimeout(function () {
+    audio.pause();
+    finish();
+  }, MAX_SOUND_MS);
   function finish() {
     if (finished) return;
     finished = true;
+    window.clearTimeout(guard);
     restoreMedia(ducked);
     endDuck();
     playing = false;
