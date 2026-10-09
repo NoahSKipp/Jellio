@@ -38,6 +38,7 @@ import { mountSeasons } from './components/seasons.js';
 import { startNowPlaying } from './components/nowPlaying.js';
 import { startNotifications } from './components/notifications.js';
 import { startSounds } from './components/sounds.js';
+import { startOverlays } from './components/overlays.js';
 import { startAchievementNotifier } from './components/achievementNotifier.js';
 import { loadGrouplistSetting } from './runtime/grouplistSettings.js';
 import { loadAdminStatus } from './runtime/adminStatus.js';
@@ -776,6 +777,7 @@ async function runSync() {
     startNowPlaying();
     startNotifications();
     startSounds();
+    startOverlays();
     startAchievementNotifier();
     startSyncPlay();
     startGroupWatchInvites();
