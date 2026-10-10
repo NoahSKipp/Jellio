@@ -23,6 +23,7 @@
 // settings already use) instead: an icon'd header naming the card,
 // then one divided row per real control inside it. No behaviour here
 // changed from the previous pass, only how it renders.
+import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel } from '../runtime/bufferSettings.js';
 import {
   getCurrentUser,
   updateUserPassword,
@@ -337,6 +338,19 @@ async function buildGrouplistCard() {
 // same real request every time a reader starts a new episode.
 function buildPlaybackCard() {
   const { card, body } = buildCard('play_circle', 'Playback');
+  body.appendChild(
+    buildSelectRow(
+      null,
+      'Pre-buffer',
+      'How much of a video loads before it starts, and again if it runs out mid-playback. More or Maximum waits a little longer at the start for fewer hiccups on large (4K) files. Paused videos keep loading ahead either way.',
+      PREBUFFER_OPTIONS,
+      getPrebufferLevel(),
+      function (value, select, status) {
+        setPrebufferLevel(value);
+        status.textContent = 'Saved. Applies from the next video you start.';
+      },
+    ),
+  );
   body.appendChild(
     buildToggleRow(
       null,

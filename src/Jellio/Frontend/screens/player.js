@@ -102,6 +102,7 @@ import {
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
+import { prebufferSettings } from '../runtime/bufferSettings.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // Same real 0.9 threshold Services/AchievementService.cs's own
@@ -931,6 +932,11 @@ export async function renderPlayer(root, params) {
 
   const video = document.createElement('video');
   video.className = 'jellio-player-video';
+  // Ask the browser to keep loading ahead, paused included.
+  video.preload = 'auto';
+  // Set by the stall wait (Pre-buffer More/Maximum): playback is held, not
+  // paused by the reader, so no pause screen.
+  let stallHold = false;
   video.src = streamUrl;
   video.playsInline = true;
   video.preservesPitch = true;
@@ -3412,11 +3418,17 @@ export async function renderPlayer(root, params) {
   function isConfirmedCachedSource() {
     return !!(mediaSource && mediaSource.Formats && mediaSource.Formats.indexOf('gelato-cached') !== -1);
   }
-  function waitForPlayableBuffer(callback) {
+  // targetOverride/timeoutOverride: the stall wait below. Otherwise the
+  // start-up wait, raised by Settings > Playback > Pre-buffer; a larger
+  // setting also skips the quick start for cached sources, since a big
+  // 4K file is exactly where that quick start runs dry.
+  function waitForPlayableBuffer(callback, targetOverride, timeoutOverride) {
     let settled = false;
-    const confirmedCached = isConfirmedCachedSource();
-    const targetSeconds = confirmedCached ? CONFIRMED_CACHED_TARGET_SECONDS : PREBUFFER_TARGET_SECONDS;
-    const timeoutMs = confirmedCached ? CONFIRMED_CACHED_TIMEOUT_MS : PREBUFFER_TIMEOUT_MS;
+    const prebuffer = prebufferSettings();
+    const raised = prebuffer.startSeconds > PREBUFFER_TARGET_SECONDS;
+    const confirmedCached = !raised && isConfirmedCachedSource();
+    const targetSeconds = targetOverride || (confirmedCached ? CONFIRMED_CACHED_TARGET_SECONDS : Math.max(PREBUFFER_TARGET_SECONDS, prebuffer.startSeconds));
+    const timeoutMs = timeoutOverride || (confirmedCached ? CONFIRMED_CACHED_TIMEOUT_MS : Math.max(PREBUFFER_TIMEOUT_MS, prebuffer.startTimeoutMs));
     function bufferedAheadSeconds() {
       const start = video.currentTime || 0;
       const buffered = video.buffered;
@@ -3436,7 +3448,10 @@ export async function renderPlayer(root, params) {
       callback();
     }
     function check() {
-      if (bufferedAheadSeconds() >= targetSeconds || video.readyState >= 4) settle();
+      // readyState 4 only means the browser expects to play through at the
+      // current rate; with a raised target the seconds have to be there.
+      if (bufferedAheadSeconds() >= targetSeconds || (!raised && !targetOverride && video.readyState >= 4)) settle();
+      else if (video.duration && video.currentTime + bufferedAheadSeconds() >= video.duration - 0.5) settle();
     }
     const fallbackTimer = window.setTimeout(settle, timeoutMs);
     video.addEventListener('progress', check);
@@ -5049,12 +5064,14 @@ export async function renderPlayer(root, params) {
   });
 
   video.addEventListener('play', function () {
+    stallHold = false;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     playPauseIcon.className = 'material-icons pause';
     playPauseButton.setAttribute('aria-label', 'Pause');
     pauseOverlay.classList.remove('jellio-player-pause-overlay-visible');
   });
   video.addEventListener('pause', function () {
+    if (stallHold) return;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     playPauseIcon.className = 'material-icons play_arrow';
     playPauseButton.setAttribute('aria-label', 'Play');
@@ -5280,6 +5297,24 @@ export async function renderPlayer(root, params) {
   // mechanism a slow connection already gets from a native client.
   // Wired unconditionally, same real reason as the command listener
   // above: both already check syncPlaylistItemId themselves first.
+  // Pre-buffer More/Maximum: when playback runs dry, hold it until a
+  // proper stretch is loaded again instead of stuttering on every few
+  // seconds that trickle in. Not in a group, where the server decides.
+  video.addEventListener('waiting', function () {
+    const stallSeconds = prebufferSettings().stallSeconds;
+    if (!stallSeconds || syncPlaylistItemId || stallHold || video.paused || !hasReportedStart) return;
+    stallHold = true;
+    video.pause();
+    waitForPlayableBuffer(
+      function () {
+        if (!stallHold) return;
+        stallHold = false;
+        attemptPlay();
+      },
+      stallSeconds,
+      prebufferSettings().stallTimeoutMs,
+    );
+  });
   video.addEventListener('waiting', function () {
     if (!syncPlaylistItemId) return;
     notifyBuffering(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
