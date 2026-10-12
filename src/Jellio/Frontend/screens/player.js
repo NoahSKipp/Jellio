@@ -3226,6 +3226,11 @@ export async function renderPlayer(root, params) {
   function closeSidePanels() {
     sourcePanel.classList.add('jellio-player-sidepanel-hidden');
     episodesPanel.classList.add('jellio-player-sidepanel-hidden');
+    sourceButton.setAttribute('aria-expanded', 'false');
+    episodesButton.setAttribute('aria-expanded', 'false');
+    if (shell) shell.scrollLeft = 0;
+    if (root) root.scrollLeft = 0;
+    wakeControls();
   }
 
   function rebuildSourceFilter() {
@@ -3291,11 +3296,22 @@ export async function renderPlayer(root, params) {
 
   sourceButton.addEventListener('click', function () {
     closePopovers(null);
+    const willOpen = sourcePanel.classList.contains('jellio-player-sidepanel-hidden');
     episodesPanel.classList.add('jellio-player-sidepanel-hidden');
-    sourcePanel.classList.toggle('jellio-player-sidepanel-hidden');
+    episodesButton.setAttribute('aria-expanded', 'false');
+    if (willOpen) {
+      sourcePanel.classList.remove('jellio-player-sidepanel-hidden');
+      sourceButton.setAttribute('aria-expanded', 'true');
+    } else {
+      sourcePanel.classList.add('jellio-player-sidepanel-hidden');
+      sourceButton.setAttribute('aria-expanded', 'false');
+    }
     wakeControls();
   });
-  sourceCloseButton.addEventListener('click', closeSidePanels);
+  sourceCloseButton.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeSidePanels();
+  });
 
   // === Episodes side panel: season tabs plus that season's own
   // episode list, only real for a series (Movies have nothing to
@@ -3312,7 +3328,10 @@ export async function renderPlayer(root, params) {
   episodesPanel.appendChild(seasonTabs);
   const episodeList = el('div', 'jellio-player-sidepanel-list');
   episodesPanel.appendChild(episodeList);
-  episodesCloseButton.addEventListener('click', closeSidePanels);
+  episodesCloseButton.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeSidePanels();
+  });
 
   function buildEpisodeRow(episode) {
     const row = el('button', 'jellio-player-episode-row' + (episode.Id === itemId ? ' jellio-player-episode-row-active' : ''));
@@ -3415,16 +3434,30 @@ export async function renderPlayer(root, params) {
   function revealCurrentEpisode() {
     if (episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) return;
     const activeTab = seasonTabs.querySelector('.jellio-player-sidepanel-tab-active');
-    if (activeTab) activeTab.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (activeTab && seasonTabs) {
+      const targetLeft = activeTab.offsetLeft - (seasonTabs.clientWidth / 2) + (activeTab.offsetWidth / 2);
+      seasonTabs.scrollTo({ left: Math.max(0, targetLeft), behavior: 'auto' });
+    }
     const activeRow = episodeList.querySelector('.jellio-player-episode-row-active');
-    if (activeRow) activeRow.scrollIntoView({ block: 'center' });
+    if (activeRow && episodeList) {
+      const targetTop = activeRow.offsetTop - (episodeList.clientHeight / 2) + (activeRow.offsetHeight / 2);
+      episodeList.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+    }
   }
 
   episodesButton.addEventListener('click', function () {
     closePopovers(null);
+    const willOpen = episodesPanel.classList.contains('jellio-player-sidepanel-hidden');
     sourcePanel.classList.add('jellio-player-sidepanel-hidden');
-    episodesPanel.classList.toggle('jellio-player-sidepanel-hidden');
-    window.requestAnimationFrame(revealCurrentEpisode);
+    sourceButton.setAttribute('aria-expanded', 'false');
+    if (willOpen) {
+      episodesPanel.classList.remove('jellio-player-sidepanel-hidden');
+      episodesButton.setAttribute('aria-expanded', 'true');
+      window.requestAnimationFrame(revealCurrentEpisode);
+    } else {
+      episodesPanel.classList.add('jellio-player-sidepanel-hidden');
+      episodesButton.setAttribute('aria-expanded', 'false');
+    }
     wakeControls();
   });
 
@@ -4100,10 +4133,8 @@ export async function renderPlayer(root, params) {
         });
         if (openPopover) {
           openPopover.menu.classList.add('jellio-player-popover-hidden');
-        } else if (!sourcePanel.classList.contains('jellio-player-sidepanel-hidden')) {
-          sourcePanel.classList.add('jellio-player-sidepanel-hidden');
-        } else if (!episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) {
-          episodesPanel.classList.add('jellio-player-sidepanel-hidden');
+        } else if (!sourcePanel.classList.contains('jellio-player-sidepanel-hidden') || !episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) {
+          closeSidePanels();
         } else {
           closeChatPanel();
         }
