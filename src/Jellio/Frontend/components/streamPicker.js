@@ -23,6 +23,7 @@
 // shape server side before this runtime ever sees it), real feedback
 // asked for that specifically left out rather than guessed at.
 import { getMediaSources, getImageUrl, TICKS_PER_SECOND } from '../runtime/api.js';
+import { isBadSource } from '../runtime/streamHealth.js';
 import { navigateTo } from '../runtime/router.js';
 import { languageName } from '../runtime/languages.js';
 import { renderLoading, renderRetry } from './networkState.js';
@@ -643,6 +644,18 @@ export async function openStreamPicker(item, options) {
     return;
   }
 
+  // Streams that recently failed to play go last, flagged below.
+  sources = sources
+    .map(function (source, index) {
+      return { source: source, index: index, bad: isBadSource(item.Id, source) };
+    })
+    .sort(function (a, b) {
+      return (a.bad === b.bad ? 0 : a.bad ? 1 : -1) || a.index - b.index;
+    })
+    .map(function (entry) {
+      return entry.source;
+    });
+
   if (!opts.forceChoice && sources.length === 1) {
     closeStreamPicker();
     navigateTo(playHash(item.Id, sources[0].Id));
@@ -653,7 +666,7 @@ export async function openStreamPicker(item, options) {
     const remembered = readRememberedSources()[item.Id];
     const rememberedId = remembered && remembered.mediaSourceId;
     const stillOffered = rememberedId && sources.some(function (source) {
-      return source.Id === rememberedId;
+      return source.Id === rememberedId && !isBadSource(item.Id, source);
     });
     if (stillOffered) {
       closeStreamPicker();
@@ -731,13 +744,16 @@ export async function openStreamPicker(item, options) {
       ? filtered.length + ' stream' + (filtered.length === 1 ? '' : 's') + ' found'
       : 'No streams match these filters';
     filtered.forEach(function (source) {
-      list.appendChild(
-        buildSourceCard(source, function (picked) {
-          if (isRememberStreamEnabled()) rememberSourceChoice(item.Id, picked.Id);
-          closeStreamPicker();
-          navigateTo(playHash(item.Id, picked.Id));
-        }),
-      );
+      const card = buildSourceCard(source, function (picked) {
+        if (isRememberStreamEnabled()) rememberSourceChoice(item.Id, picked.Id);
+        closeStreamPicker();
+        navigateTo(playHash(item.Id, picked.Id));
+      });
+      if (isBadSource(item.Id, source)) {
+        card.classList.add('jellio-stream-picker-card-bad');
+        card.insertBefore(el('div', 'jellio-stream-picker-bad-note', '⚠ Didn’t play recently'), card.firstChild);
+      }
+      list.appendChild(card);
     });
     const firstCard = list.querySelector('.jellio-stream-picker-card');
     if (firstCard) {

@@ -79,6 +79,7 @@ import {
 import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
+import { markBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
 import { sourceLabel, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -3366,6 +3367,7 @@ export async function renderPlayer(root, params) {
   // that gap without a scary error for what is often just the source
   // still catching up, the toast now only a real last resort.
   function attemptPlay(isRetry) {
+    armStartTimer();
     const playResult = video.play();
     if (playResult && typeof playResult.catch === 'function') {
       playResult.catch(function (err) {
@@ -4697,6 +4699,141 @@ export async function renderPlayer(root, params) {
   }
 
   let hasReportedStart = false;
+
+  // ---- Stream failover ----------------------------------------------------
+  // A stream that errors before its first frame, shows no picture within
+  // START_TIMEOUT_MS, or turns out to be a placeholder clip (AIOStreams'
+  // "download failed" video runs about two minutes against a full-length
+  // runtime) is remembered as bad and the next stream is tried by itself:
+  // same language as this attempt first, else the reader's audio language.
+  // Each retry is a fresh #/play navigation carrying the ids already tried.
+  // Not in a Group Watch, where the group decides what plays.
+  const START_TIMEOUT_MS = 25000;
+  const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
+  const failoverLanguage = params.get('lang') || '';
+  let failoverStarted = false;
+  let startTimer = null;
+  const expectedRuntimeSeconds = item && item.RunTimeTicks ? item.RunTimeTicks / TICKS_PER_SECOND : 0;
+
+  function currentSourceLanguage() {
+    if (failoverLanguage) return failoverLanguage;
+    const languages = sourceAudioLanguages(mediaSource);
+    return languages.length ? languages[0] : '';
+  }
+
+  async function failoverToNextStream(reason) {
+    if (failoverStarted || screenTornDown || getCurrentGroup()) return false;
+    failoverStarted = true;
+    if (startTimer) window.clearTimeout(startTimer);
+    console.warn('Jellio: stream failed (' + reason + '), trying the next one', mediaSource && mediaSource.Id);
+    markBadSource(itemId, mediaSource);
+    const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
+    let language = currentSourceLanguage();
+    if (!language) {
+      try {
+        const user = await currentUserPromise;
+        language = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
+      } catch (err) {}
+    }
+    let sources = [];
+    try {
+      sources = await getMediaSources(itemId, { forceFresh: true });
+    } catch (err) {}
+    if (screenTornDown) return true;
+    const candidates = sources.filter(function (source) {
+      return tried.indexOf(source.Id) === -1 && !isBadSource(itemId, source);
+    });
+    const languageCode = String(language || '').toLowerCase().slice(0, 2);
+    const ordered = languageCode
+      ? candidates.filter(function (source) {
+          return sourceAudioLanguages(source).some(function (code) {
+            return String(code).toLowerCase().slice(0, 2) === languageCode;
+          });
+        }).concat(candidates.filter(function (source) {
+          return !sourceAudioLanguages(source).some(function (code) {
+            return String(code).toLowerCase().slice(0, 2) === languageCode;
+          });
+        }))
+      : candidates;
+    if (!ordered.length) {
+      cleanup();
+      renderPlaybackError(
+        root,
+        itemId,
+        tried.length > 1
+          ? 'None of the ' + tried.length + ' streams tried for this title worked. Try again later or pick one from Change Stream.'
+          : 'This stream could not be played and there is no other one to try. Pick one from Change Stream or try again later.',
+      );
+      return true;
+    }
+    navigateTo(
+      playHash(itemId, ordered[0].Id) +
+        '&tried=' + encodeURIComponent(tried.join(',')) +
+        (language ? '&lang=' + encodeURIComponent(language) : ''),
+    );
+    return true;
+  }
+
+  // Shown while a retry is loading: what happened, which attempt this is,
+  // and a way out.
+  let failoverOverlay = null;
+  if (failoverTried.length) {
+    failoverOverlay = el('div', 'jellio-player-failover');
+    const box = el('div', 'jellio-player-failover-box');
+    box.appendChild(el('div', 'jellio-player-failover-spinner'));
+    box.appendChild(el('div', 'jellio-player-failover-title', 'That stream didn’t work'));
+    box.appendChild(
+      el('div', 'jellio-player-failover-text', 'Trying the next one (attempt ' + (failoverTried.length + 1) + '): ' + sourceLabel(mediaSource)),
+    );
+    const stop = el('button', 'jellio-player-failover-stop', 'Stop');
+    stop.type = 'button';
+    stop.addEventListener('click', function () {
+      failoverStarted = true;
+      if (startTimer) window.clearTimeout(startTimer);
+      navigateTo('#/item?id=' + itemId);
+    });
+    box.appendChild(stop);
+    failoverOverlay.appendChild(box);
+    root.appendChild(failoverOverlay);
+  }
+
+  function hideFailoverOverlay() {
+    if (!failoverOverlay) return;
+    failoverOverlay.remove();
+    failoverOverlay = null;
+    showPlayerToast('Now playing: ' + sourceLabel(mediaSource));
+  }
+
+  // No picture within START_TIMEOUT_MS of the first play attempt.
+  function armStartTimer() {
+    if (startTimer || failoverStarted) return;
+    startTimer = window.setTimeout(function () {
+      startTimer = null;
+      if (screenTornDown || hasReportedStart || video.readyState >= 3) return;
+      failoverToNextStream('no picture after ' + START_TIMEOUT_MS / 1000 + 's');
+    }, START_TIMEOUT_MS);
+  }
+
+  // The served file's own length against the title's runtime. Only for a
+  // file played as is: a transcode's duration grows as it encodes.
+  function checkForPlaceholder() {
+    if (failoverStarted || streamIsTranscoded) return;
+    if (looksLikePlaceholder(video.duration, expectedRuntimeSeconds)) {
+      failoverToNextStream('placeholder clip of ' + Math.round(video.duration) + 's');
+    }
+  }
+  // The server's own probe of the stream already gives its length.
+  if (mediaSource && mediaSource.RunTimeTicks && looksLikePlaceholder(mediaSource.RunTimeTicks / TICKS_PER_SECOND, expectedRuntimeSeconds)) {
+    window.setTimeout(function () {
+      failoverToNextStream('server reports a ' + Math.round(mediaSource.RunTimeTicks / TICKS_PER_SECOND) + 's stream');
+    }, 0);
+  }
+  video.addEventListener('loadedmetadata', checkForPlaceholder);
+  video.addEventListener('durationchange', checkForPlaceholder);
+  video.addEventListener('timeupdate', function () {
+    if (hasReportedStart && failoverOverlay) hideFailoverOverlay();
+  });
+  // ---------------------------------------------------------------------------
   // Real completion for the Watch Together badges, same 90% real
   // threshold AchievementService.cs's own IsRealWatch() uses server
   // side for the solo path, only reachable here at all: no server side
@@ -4890,12 +5027,15 @@ export async function renderPlayer(root, params) {
       showPlayerToast('Playback stopped unexpectedly. Try a different stream.');
       return;
     }
-    cleanup();
-    renderPlaybackError(
-      root,
-      itemId,
-      'This stream could not be played. Try a different one from Change Stream.',
-    );
+    failoverToNextStream('error before the first frame').then(function (handled) {
+      if (handled) return;
+      cleanup();
+      renderPlaybackError(
+        root,
+        itemId,
+        'This stream could not be played. Try a different one from Change Stream.',
+      );
+    });
   });
 
   video.addEventListener('loadedmetadata', function () {
@@ -4949,6 +5089,13 @@ export async function renderPlayer(root, params) {
   // 'ended' has already fired plenty of those by then).
   video.addEventListener('ended', function () {
     if (!hasReportedStart) return;
+    // Ending far short of the runtime is a placeholder clip, not the end
+    // of the title: no end screen, no watched mark, try the next stream.
+    const endedAtSeconds = streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0);
+    if (looksLikePlaceholder(endedAtSeconds, expectedRuntimeSeconds) && !getCurrentGroup()) {
+      failoverToNextStream('ended after ' + Math.round(endedAtSeconds) + 's');
+      return;
+    }
     // The real duration itself, not just the credit: whatever
     // positionSeconds actually reached by the time 'ended' fires IS
     // this real stream's own real length, the strongest of the three

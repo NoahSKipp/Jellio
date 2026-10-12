@@ -14859,3 +14859,77 @@
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.75);
   overflow-wrap: anywhere;
 }
+
+/* Automatic stream failover (screens/player.js). */
+.jellio-player-failover {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.jellio-player-failover-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7em;
+  max-width: 32em;
+  padding: 2em 2.4em;
+  border-radius: 16px;
+  background: var(--jellio-bg-elevated, #1c1c1c);
+  text-align: center;
+}
+
+.jellio-player-failover-spinner {
+  width: 2.6em;
+  height: 2.6em;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: jellio-failover-spin 0.9s linear infinite;
+}
+
+@keyframes jellio-failover-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.jellio-player-failover-title {
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+.jellio-player-failover-text {
+  color: var(--jellio-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.jellio-player-failover-stop {
+  margin-top: 0.6em;
+  padding: 0.55em 1.6em;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.jellio-player-failover-stop:hover,
+.jellio-player-failover-stop:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.jellio-stream-picker-card-bad {
+  opacity: 0.6;
+}
+
+.jellio-stream-picker-bad-note {
+  font-size: 0.8em;
+  color: #ffb74d;
+  margin-bottom: 0.3em;
+}
