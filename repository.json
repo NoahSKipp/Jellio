@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.73.0] - 2026-10-12\n\n### 🚀 Features\n\n- *(player)* Try the next stream when one doesn't play\n",
+        "checksum": "c22f82f7bd42accb45dd324cf193a08c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.73.0/jellio_1.73.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-12T09:01:53Z",
+        "version": "1.73.0"
+      },
+      {
         "changelog": "## [1.72.0] - 2026-10-10\n\n### 🚀 Features\n\n- *(player)* Adjustable pre-buffer for smoother 4K playback\n",
         "checksum": "f8f9b5f5bd01b61cc127b7e4d9d7d432",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.72.0/jellio_1.72.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T09:07:59Z",
         "version": "1.60.0"
-      },
-      {
-        "changelog": "## [1.59.0] - 2026-10-06\n\n### 🚀 Features\n\n- Take the witch and the drifting skulls out of the Halloween effect\n\n### 🐛 Bug Fixes\n\n- Bring back Continue Watching, Up Next and Continue Reading rows\n",
-        "checksum": "c5da608ffde5a2f9d07e42687fbd75cf",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.59.0/jellio_1.59.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-06T08:54:50Z",
-        "version": "1.59.0"
       }
     ]
   }
