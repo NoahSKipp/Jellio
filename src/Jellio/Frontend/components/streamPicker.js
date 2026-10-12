@@ -24,8 +24,11 @@
 // asked for that specifically left out rather than guessed at.
 import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy } from '../runtime/api.js';
 import { isBadSource } from '../runtime/streamHealth.js';
-import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
+import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
+import { QUALITY_ORDER, labelQuality, sourceQuality } from '../runtime/quality.js';
+
+export { sourceQuality };
 import { navigateTo } from '../runtime/router.js';
 import { languageName } from '../runtime/languages.js';
 import { renderLoading, renderRetry } from './networkState.js';
@@ -198,7 +201,8 @@ function sourceAudioLabel(source) {
 
 export function sourceLabel(source) {
   const name = (source.Name || '').split('\n')[0] || 'Source';
-  const details = [sourceResolutionLabel(source), formatFileSize(source.Size)]
+  // A label that already names its quality doesn't need the probed one.
+  const details = [labelQuality(source) ? '' : sourceResolutionLabel(source), formatFileSize(source.Size)]
     .filter(Boolean)
     .join(' · ');
   return details ? name + ' (' + details + ')' : name;
@@ -333,6 +337,20 @@ function formatResumeLabel(ticks) {
 // in for the close-this-overlay-and-navigate behaviour only this
 // file's own picker below needs; the player's own in-place source
 // switch wants something else entirely done with the same card.
+const OUTLOOK_ICONS = { good: 'check_circle', warn: 'warning', block: 'block' };
+
+// "Plays smoothly" / "Likely to stutter: ..." / "Won't play: ..." from
+// runtime/transcodePolicy.js's playbackOutlook().
+export function buildOutlookBadge(outlook) {
+  const badge = el('span', 'jellio-outlook jellio-outlook-' + outlook.tone);
+  const icon = el('span', 'material-icons ' + OUTLOOK_ICONS[outlook.tone]);
+  icon.setAttribute('aria-hidden', 'true');
+  badge.appendChild(icon);
+  badge.appendChild(el('span', null, outlook.text));
+  badge.title = outlook.title;
+  return badge;
+}
+
 export function buildSourceCard(source, onSelect, isActive) {
   const card = document.createElement('button');
   card.type = 'button';
@@ -346,7 +364,7 @@ export function buildSourceCard(source, onSelect, isActive) {
   }
 
   const tags = [
-    sourceResolutionLabel(source) || sourceQuality(source),
+    labelQuality(source) || sourceResolutionLabel(source) || sourceQuality(source),
     sourceBitrateLabel(source),
     formatFileSize(source.Size),
     source.Container,
@@ -492,39 +510,6 @@ export function buildLanguageFilterRow(sources, onSelect) {
   }), onSelect);
 }
 
-// Quality buckets, best first. A source counts towards one bucket only,
-// so 'FHD' plus a language narrows to the 1080p streams in that language.
-const QUALITY_ORDER = ['4K', 'QHD', 'FHD', 'HD', 'SD'];
-const QUALITY_NAME_PATTERNS = [
-  ['4K', /(^|[^a-z0-9])(2160p|4k|uhd)([^a-z0-9]|$)/i],
-  ['QHD', /(^|[^a-z0-9])1440p([^a-z0-9]|$)/i],
-  ['FHD', /(^|[^a-z0-9])(1080[pi]|fhd)([^a-z0-9]|$)/i],
-  ['HD', /(^|[^a-z0-9])720p([^a-z0-9]|$)/i],
-  ['SD', /(^|[^a-z0-9])(576p|480p|360p|sd|dvdrip)([^a-z0-9]|$)/i],
-];
-
-// Probed video dimensions win; most unplayed sources have none, so the
-// release name ('2160p', '1080p', ...) is the fallback. Width matters for
-// cropped widescreen encodes, a 3840x1600 file is still 4K.
-export function sourceQuality(source) {
-  const video = (source.MediaStreams || []).filter(function (stream) {
-    return stream.Type === 'Video';
-  })[0];
-  if (video && (video.Height || video.Width)) {
-    const height = video.Height || 0;
-    const width = video.Width || 0;
-    if (height >= 2000 || width >= 3200) return '4K';
-    if (height >= 1300 || width >= 2400) return 'QHD';
-    if (height >= 900 || width >= 1800) return 'FHD';
-    if (height >= 650 || width >= 1200) return 'HD';
-    return 'SD';
-  }
-  const name = source.Name || '';
-  for (let i = 0; i < QUALITY_NAME_PATTERNS.length; i++) {
-    if (QUALITY_NAME_PATTERNS[i][1].test(name)) return QUALITY_NAME_PATTERNS[i][0];
-  }
-  return null;
-}
 
 export function buildQualityFilterRow(sources, onSelect) {
   const present = {};
@@ -661,7 +646,7 @@ export async function openStreamPicker(item, options) {
       // on in either means no badge.
       if (!videoInfoOf(source)) return;
       const classification = classifySource(source, canBrowserDirectPlay(source));
-      methods.set(source.Id, { method: classification.playMethod, guessed: classification.guessed });
+      methods.set(source.Id, { method: classification.playMethod, classification: classification });
     });
     if (getVideoTranscodePolicy() === 'Block') {
       const playable = sources.filter(function (source) {
@@ -793,16 +778,7 @@ export async function openStreamPicker(item, options) {
         navigateTo(playHash(item.Id, picked.Id));
       });
       const judged = methods.get(source.Id);
-      if (judged) {
-        const label = judged.method === 'DirectPlay' ? 'Direct play' : judged.method;
-        const badge = el(
-          'span',
-          'jellio-stream-picker-method jellio-stream-picker-method-' + judged.method.toLowerCase(),
-          judged.guessed ? 'Likely ' + label.toLowerCase() : label,
-        );
-        if (judged.guessed) badge.title = 'Going by the stream’s name; it hasn’t been probed yet';
-        card.appendChild(badge);
-      }
+      if (judged) card.appendChild(buildOutlookBadge(playbackOutlook(judged.classification)));
       if (isBadSource(item.Id, source)) {
         card.classList.add('jellio-stream-picker-card-bad');
         card.insertBefore(el('div', 'jellio-stream-picker-bad-note', '⚠ Didn’t play recently'), card.firstChild);

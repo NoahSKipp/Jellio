@@ -82,9 +82,9 @@ import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/u
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { markBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
-import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
+import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
-import { sourceLabel, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
+import { sourceLabel, buildOutlookBadge, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { languageName } from '../runtime/languages.js';
@@ -3244,21 +3244,22 @@ export async function renderPlayer(root, params) {
     if (qualityRow) sourceFilterContainer.appendChild(qualityRow);
   }
 
-  // With the Video transcode policy on, streams the server would have to
-  // re-encode stay listed, last, marked yellow (Avoid) or red and not
-  // playable (Block).
-  function transcodeVerdict(source) {
-    if (!avoidingVideoTranscodes() || !videoInfoOf(source)) return null;
-    const classification = classifySource(source, canBrowserDirectPlay(source));
-    return classification.needsVideoTranscode ? classification : null;
-  }
+  // With the Video transcode policy on, every judged stream says how
+  // well it should play; ones the server would have to re-encode stay
+  // listed, last, yellow (Avoid) or red and not playable (Block).
 
   function rebuildSourceMenu() {
     sourceList.textContent = '';
     const blocking = getVideoTranscodePolicy() === 'Block';
     const filtered = filterSources(sourceOptions, selectedSourceLanguage, selectedSourceQuality)
       .map(function (source, index) {
-        return { source: source, verdict: transcodeVerdict(source), index: index };
+        const judged = avoidingVideoTranscodes() && videoInfoOf(source) ? classifySource(source, canBrowserDirectPlay(source)) : null;
+        return {
+          source: source,
+          verdict: judged && judged.needsVideoTranscode ? judged : null,
+          outlook: judged ? playbackOutlook(judged) : null,
+          index: index,
+        };
       })
       .sort(function (a, b) {
         return (a.verdict ? 1 : 0) - (b.verdict ? 1 : 0) || a.index - b.index;
@@ -3278,22 +3279,9 @@ export async function renderPlayer(root, params) {
         },
         source.Id === mediaSource.Id,
       );
+      const outlook = entry.outlook;
+      if (outlook) card.insertBefore(buildOutlookBadge(outlook), card.children[1] || null);
       if (verdict) {
-        const mark = el('div', 'jellio-player-transcode-mark ' + (blocking ? 'jellio-player-transcode-mark-block' : 'jellio-player-transcode-mark-warn'));
-        const icon = el('span', 'material-icons ' + (blocking ? 'block' : 'warning'));
-        icon.setAttribute('aria-hidden', 'true');
-        mark.appendChild(icon);
-        const reasons = verdict.reasons.map(describeTranscodeReason).join(', ');
-        mark.appendChild(
-          el(
-            'span',
-            null,
-            (blocking ? 'Blocked: needs a video re-encode' : 'Slow: needs a video re-encode') +
-              (reasons ? ' (' + reasons + ')' : '') +
-              (verdict.guessed ? ', going by its name' : ''),
-          ),
-        );
-        card.insertBefore(mark, card.firstChild);
         card.classList.add(blocking ? 'jellio-player-source-blocked' : 'jellio-player-source-warn');
         if (blocking) card.setAttribute('aria-disabled', 'true');
       }
@@ -4962,9 +4950,30 @@ export async function renderPlayer(root, params) {
   }
   video.addEventListener('loadedmetadata', checkForPlaceholder);
   video.addEventListener('durationchange', checkForPlaceholder);
-  video.addEventListener('timeupdate', function () {
-    if (hasReportedStart && failoverOverlay) hideFailoverOverlay();
-  });
+  // Gone as soon as the picture actually moves, whatever reports it: a
+  // timeupdate before the start report, 'playing', or a video element
+  // swapped out by a reload.
+  function hideFailoverIfPlaying() {
+    if (failoverOverlay && !video.paused && video.currentTime > 0 && video.readyState >= 2) hideFailoverOverlay();
+  }
+  video.addEventListener('timeupdate', hideFailoverIfPlaying);
+  video.addEventListener('playing', hideFailoverIfPlaying);
+  if (failoverOverlay) {
+    let lastSeen = { element: null, time: 0 };
+    const failoverWatch = window.setInterval(function () {
+      if (!failoverOverlay || screenTornDown) {
+        window.clearInterval(failoverWatch);
+        return;
+      }
+      const current = root.querySelector('video') || video;
+      if (lastSeen.element === current && !current.paused && current.currentTime > lastSeen.time + 0.3) {
+        hideFailoverOverlay();
+        window.clearInterval(failoverWatch);
+        return;
+      }
+      lastSeen = { element: current, time: current.currentTime };
+    }, 1000);
+  }
   // ---------------------------------------------------------------------------
   // Real completion for the Watch Together badges, same 90% real
   // threshold AchievementService.cs's own IsRealWatch() uses server

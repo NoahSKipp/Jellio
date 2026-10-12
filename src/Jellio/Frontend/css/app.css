@@ -14934,56 +14934,41 @@
   margin-bottom: 0.3em;
 }
 
-/* Stream picker play method badges (Video transcode policy Avoid/Block). */
-.jellio-stream-picker-method {
-  display: inline-block;
+/* "Plays smoothly" / "Likely to stutter" / "Won't play" on stream cards
+   (Video transcode policy Avoid/Block). */
+.jellio-outlook {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
   align-self: flex-start;
-  margin-top: 0.35em;
-  padding: 0.1em 0.55em;
+  margin: 0.15em 0 0.3em;
+  padding: 0.1em 0.6em 0.1em 0.4em;
   border-radius: 999px;
-  font-size: 0.75em;
+  font-size: 0.78em;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.12);
 }
 
-.jellio-stream-picker-method-directplay {
-  background: rgba(76, 175, 80, 0.25);
+.jellio-outlook .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-outlook-good {
+  background: rgba(76, 175, 80, 0.22);
   color: #a5d6a7;
 }
 
-.jellio-stream-picker-method-remux {
-  background: rgba(33, 150, 243, 0.22);
-  color: #90caf9;
+.jellio-outlook-warn {
+  background: rgba(255, 213, 79, 0.18);
+  color: #ffd54f;
 }
 
-.jellio-stream-picker-method-transcode {
-  background: rgba(255, 152, 0, 0.22);
-  color: #ffcc80;
+.jellio-outlook-block {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef9a9a;
 }
 
 /* Player Sources panel: streams the Video transcode policy warns about
    (Avoid, yellow) or refuses (Block, red). */
-.jellio-player-transcode-mark {
-  display: flex;
-  align-items: center;
-  gap: 0.35em;
-  font-size: 0.8em;
-  font-weight: 600;
-  margin-bottom: 0.3em;
-}
-
-.jellio-player-transcode-mark .material-icons {
-  font-size: 1.15em;
-}
-
-.jellio-player-transcode-mark-warn {
-  color: #ffd54f;
-}
-
-.jellio-player-transcode-mark-block {
-  color: #ef5350;
-}
-
 .jellio-player-source-warn {
   box-shadow: inset 3px 0 0 #ffd54f;
 }

@@ -56,3 +56,44 @@ const REASON_TEXT = {
 export function describeTranscodeReason(reason) {
   return REASON_TEXT[reason] || reason;
 }
+
+const SHORT_REASON = {
+  codec: 'a video format this device can’t play',
+  'hdr-on-sdr': 'HDR on a non-HDR screen',
+  'dolby-vision-5': 'Dolby Vision only',
+  interlaced: 'interlaced video',
+  'burn-in': 'image subtitles',
+};
+
+// What a viewer cares about: will this play smoothly here? tone is good,
+// warn (Avoid) or block (Block). Guesses from a stream's name are worded
+// less certainly than probed details.
+export function playbackOutlook(classification, policy) {
+  const current = policy || getVideoTranscodePolicy();
+  const guessed = !!classification.guessed;
+  const note = guessed ? ' Going by the stream’s name; it hasn’t been checked yet.' : '';
+  if (!classification.needsVideoTranscode) {
+    return {
+      tone: 'good',
+      text: guessed ? 'Likely plays smoothly' : 'Plays smoothly',
+      title:
+        (classification.playMethod === 'DirectPlay'
+          ? 'Plays the file as is.'
+          : 'The server only repackages it; the picture isn’t converted.') + note,
+    };
+  }
+  const reason = SHORT_REASON[classification.reasons[0]] || 'needs converting';
+  const why = 'The server would have to convert the video (' + classification.reasons.map(describeTranscodeReason).join(', ') + ')';
+  if (current === 'Block') {
+    return {
+      tone: 'block',
+      text: (guessed ? 'Probably won’t play: ' : 'Won’t play: ') + reason,
+      title: why + ', which is turned off on this server.' + note,
+    };
+  }
+  return {
+    tone: 'warn',
+    text: (guessed ? 'May stutter: ' : 'Likely to stutter: ') + reason,
+    title: why + ', which is slow on this server.' + note,
+  };
+}
