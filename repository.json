@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.74.0] - 2026-10-12\n\n### 🚀 Features\n\n- *(player)* Video transcode policy to avoid server-side video re-encodes\n- *(player)* Judge unprobed streams by their AIOStreams name\n- *(player)* Log Jellyfin's transcode reasons and the client\n- *(player)* Mark streams that need a video re-encode in the Sources panel\n",
+        "checksum": "ec91b872625af805ce1c7a9d0c1162d3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.74.0/jellio_1.74.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-12T10:18:57Z",
+        "version": "1.74.0"
+      },
+      {
         "changelog": "## [1.73.1] - 2026-10-12\n\n### 🐛 Bug Fixes\n\n- *(player)* Episode panel shows only the chosen season and opens on the current episode\n",
         "checksum": "f3f26d569f57d6e75d0f671c2db7c75a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.73.1/jellio_1.73.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T20:09:49Z",
         "version": "1.60.2"
-      },
-      {
-        "changelog": "## [1.60.1] - 2026-10-06\n\n### 🐛 Bug Fixes\n\n- *(reader)* Fix manga pinch-zoom page jumping and pdf zoom left-side cutoff\n",
-        "checksum": "e1afc02249288416f6492e62dda86399",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.60.1/jellio_1.60.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-06T18:08:36Z",
-        "version": "1.60.1"
       }
     ]
   }
