@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -13,31 +12,32 @@ namespace Jellio.Controllers;
 /// (DirectPlay, Remux, Transcode), why the video would need a re-encode,
 /// Jellyfin's own TranscodeReasons and the Video transcode policy in force.
 /// For measuring how often a server without hardware acceleration is asked
-/// to re-encode video. Sent by the web player after PlaybackInfo.
+/// to re-encode video. Sent by the web player and Jellio TV after
+/// PlaybackInfo.
 /// </summary>
 [ApiController]
 [Route("Jellio/playback")]
 [Authorize]
 public class PlaybackLogController(ILogger<PlaybackLogController> logger) : ControllerBase
 {
-    public record DecisionBody(Guid ItemId, string? MediaSourceId, string? PlayMethod, string[]? Reasons, JsonElement? ServerTranscodeReasons, string? Policy);
+    public record DecisionBody(Guid ItemId, string? MediaSourceId, string? PlayMethod, string[]? Reasons, string? ServerTranscodeReasons, string? Policy, bool Guessed = false, string? Client = null);
 
     [HttpPost("decision")]
     public IActionResult Decision([FromBody] DecisionBody body)
     {
         var userId = HttpContext.User.Identity is ClaimsIdentity identity ? identity.FindFirst("Jellyfin-UserId")?.Value : null;
         var reasons = body.Reasons is { Length: > 0 } ? string.Join(",", body.Reasons.Take(10)) : "none";
-        var serverReasons = body.ServerTranscodeReasons is { } element && element.ValueKind != JsonValueKind.Null
-            ? element.ToString()
-            : "none";
+        var serverReasons = string.IsNullOrWhiteSpace(body.ServerTranscodeReasons) ? "none" : body.ServerTranscodeReasons;
         logger.LogInformation(
-            "Jellio playback: {PlayMethod} for item {ItemId} source {MediaSourceId}, video re-encode reasons {Reasons}, Jellyfin TranscodeReasons {ServerReasons}, policy {Policy}, user {UserId}",
+            "Jellio playback: {PlayMethod} for item {ItemId} source {MediaSourceId}, video re-encode reasons {Reasons}, Jellyfin TranscodeReasons {ServerReasons}, policy {Policy}, details {Source}, client {Client}, user {UserId}",
             Clean(body.PlayMethod),
             body.ItemId,
             Clean(body.MediaSourceId),
             Clean(reasons),
             Clean(serverReasons),
             Clean(body.Policy),
+            body.Guessed ? "from stream name" : "probed",
+            Clean(body.Client ?? "web"),
             userId);
         return NoContent();
     }

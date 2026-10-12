@@ -2643,13 +2643,21 @@ export async function loadVideoTranscodePolicy() {
 
 // One line in the Jellyfin server log per playback: how it plays and why,
 // to see how often a video re-encode happens. Fire and forget.
+// Jellyfin's own reasons ride on the TranscodingUrl it negotiated.
+function serverTranscodeReasons(mediaSource) {
+  const url = (mediaSource && mediaSource.TranscodingUrl) || '';
+  const match = /[?&]TranscodeReasons=([^&]*)/i.exec(url);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export function logPlaybackDecision(itemId, mediaSource, classification, policy) {
   const body = {
     ItemId: itemId,
     MediaSourceId: (mediaSource && mediaSource.Id) || null,
     PlayMethod: classification.playMethod,
     Reasons: classification.reasons,
-    ServerTranscodeReasons: (mediaSource && mediaSource.TranscodeReasons) || null,
+    ServerTranscodeReasons: serverTranscodeReasons(mediaSource),
+    Guessed: !!classification.guessed,
     Policy: policy,
   };
   postJson('/Jellio/playback/decision', body).catch(function () {});
