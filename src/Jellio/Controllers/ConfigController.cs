@@ -26,7 +26,7 @@ public class ConfigController : ControllerBase
 
     public record SeasonalEffectConfig(bool Enabled, SeasonalRange Range);
 
-    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects, bool SkipIntroCreditsAdminMenuEnabled, bool BookRequestsEnabled, bool TranslationEnabled, bool MangaRequestsEnabled);
+    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects, bool SkipIntroCreditsAdminMenuEnabled, bool BookRequestsEnabled, bool TranslationEnabled, bool MangaRequestsEnabled, string VideoTranscodePolicy);
 
     [HttpGet]
     public ActionResult<ClientConfig> Get()
@@ -55,6 +55,7 @@ public class ConfigController : ControllerBase
 
         // Only whether book requests are available, never the token itself.
         var bookRequestsEnabled = !string.IsNullOrWhiteSpace(cfg.ChaptarrUrl) && !string.IsNullOrWhiteSpace(cfg.ChaptarrApiKey);
-        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects, cfg.SkipIntroCreditsAdminMenuEnabled, bookRequestsEnabled, !string.IsNullOrWhiteSpace(cfg.DeepLApiKey), !string.IsNullOrWhiteSpace(cfg.SuwayomiUrl)));
+        var policy = cfg.VideoTranscodePolicy is "Avoid" or "Block" ? cfg.VideoTranscodePolicy : "Allow";
+        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects, cfg.SkipIntroCreditsAdminMenuEnabled, bookRequestsEnabled, !string.IsNullOrWhiteSpace(cfg.DeepLApiKey), !string.IsNullOrWhiteSpace(cfg.SuwayomiUrl), policy));
     }
 }

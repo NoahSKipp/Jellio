@@ -159,6 +159,13 @@ public class PluginConfiguration : BasePluginConfiguration
     // here, and can be switched back off again once a real sweep is done.
     public bool SkipIntroCreditsAdminMenuEnabled { get; set; }
 
+    // How freely the web player may ask this server to re-encode video:
+    // "Allow" (a home server with hardware transcoding, the old behaviour),
+    // "Avoid" (prefer sources and stream settings that copy the video,
+    // converting only audio or the container) or "Block" (never start a
+    // video re-encode). For servers without hardware transcoding.
+    public string VideoTranscodePolicy { get; set; } = "Allow";
+
     // Chaptarr, the Readarr successor that acquires books for the Books
     // library: Controllers/BookRequestController.cs searches it and adds
     // requested books through its own API. The key is Chaptarr's standard

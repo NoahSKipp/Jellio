@@ -14933,3 +14933,30 @@
   color: #ffb74d;
   margin-bottom: 0.3em;
 }
+
+/* Stream picker play method badges (Video transcode policy Avoid/Block). */
+.jellio-stream-picker-method {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 0.35em;
+  padding: 0.1em 0.55em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.jellio-stream-picker-method-directplay {
+  background: rgba(76, 175, 80, 0.25);
+  color: #a5d6a7;
+}
+
+.jellio-stream-picker-method-remux {
+  background: rgba(33, 150, 243, 0.22);
+  color: #90caf9;
+}
+
+.jellio-stream-picker-method-transcode {
+  background: rgba(255, 152, 0, 0.22);
+  color: #ffcc80;
+}

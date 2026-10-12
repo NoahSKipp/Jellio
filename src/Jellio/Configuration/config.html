@@ -322,6 +322,22 @@
             </div>
           </div>
 
+          <div class="selectContainer">
+            <label class="selectLabel" for="selVideoTranscodePolicy">Video transcode policy</label>
+            <select is="emby-select" id="selVideoTranscodePolicy" class="emby-select-withcolor emby-select">
+              <option value="Allow">Allow (home server, default)</option>
+              <option value="Avoid">Avoid</option>
+              <option value="Block">Block</option>
+            </select>
+            <div class="fieldDescription">
+              For servers without hardware transcoding. Avoid: Jellio picks sources and stream
+              settings that copy the video and only convert audio or the container, flags image
+              subtitles as slow, and moves on from a stalled re-encode. Block: Jellio never asks
+              the server to re-encode video; sources that would need it are skipped. Allow keeps
+              the usual behaviour.
+            </div>
+          </div>
+
           <div class="checkboxContainer checkboxContainer-withDescription">
             <label class="emby-checkbox-label">
               <input is="emby-checkbox" type="checkbox" id="chkSkipIntroCreditsAdminMenuEnabled" />
@@ -616,6 +632,7 @@
           document.querySelector('#txtSimklClientId').value = withDefault(config.SimklClientId, '');
           document.querySelector('#txtAnimeSkipClientId').value = withDefault(config.AnimeSkipClientId, '');
           document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked = withDefault(config.SkipIntroCreditsAdminMenuEnabled, false);
+          document.querySelector('#selVideoTranscodePolicy').value = withDefault(config.VideoTranscodePolicy, 'Allow');
           Dashboard.hideLoadingMsg();
         });
       }
@@ -644,6 +661,7 @@
           config.SimklClientId = document.querySelector('#txtSimklClientId').value.trim();
           config.AnimeSkipClientId = document.querySelector('#txtAnimeSkipClientId').value.trim();
           config.SkipIntroCreditsAdminMenuEnabled = document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked;
+          config.VideoTranscodePolicy = document.querySelector('#selVideoTranscodePolicy').value || 'Allow';
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });

@@ -2,6 +2,8 @@
 // auth.js's own headers. Nothing here touches window.ApiClient: the whole
 // point of this runtime is that a screen's data never depends on native
 // jellyfin-web's own request/cache state, only on a real HTTP response.
+import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
+import { copyableVideoCodecs } from './transcodeClassifier.js';
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession } from './auth.js';
 import { languageName } from './languages.js';
 import {
@@ -2476,6 +2478,23 @@ export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
   }
   if (directPlay) {
     params.set('Static', 'true');
+  } else if (avoidingVideoTranscodes()) {
+    // Video transcode policy Avoid/Block: name every video codec this
+    // browser plays, h264 first, so the server copies the video whenever
+    // the source already is one of them and only converts the audio or the
+    // container. No VideoBitRate: with one set, a source whose bitrate isn't
+    // known (most addon streams) can't be copied. HDR ranges are allowed
+    // through so an HDR source is copied rather than tone mapped.
+    const codecs = copyableVideoCodecs(browserCaps());
+    params.set('VideoCodec', codecs.join(','));
+    params.set('AudioCodec', 'aac');
+    params.set('AudioBitRate', '192000');
+    params.set('AllowVideoStreamCopy', 'true');
+    params.set('AllowAudioStreamCopy', 'true');
+    codecs.filter((codec) => codec !== 'h264').forEach(function (codec) {
+      params.set(codec + '-videorangetype', 'SDR,HDR10,HDR10Plus,HLG,DOVIWithHDR10,DOVIWithHLG,DOVIWithSDR,DOVIWithHDR10Plus');
+    });
+    if (useHls) params.set('SegmentContainer', 'mp4');
   } else {
     params.set('VideoCodec', 'h264');
     params.set('AudioCodec', 'aac');
@@ -2614,6 +2633,28 @@ export function getSleepTimerStatus() {
 // setting an admin just changed in the dashboard is worth a fresh
 // fetch within a few minutes, not held stale for a whole session the
 // way this runtime's own longer CACHE_TTL_MS would.
+// The server's Video transcode policy, applied for buildStreamUrl and the
+// player's source checks.
+export async function loadVideoTranscodePolicy() {
+  const config = await getJellioConfig();
+  setVideoTranscodePolicy(config && config.VideoTranscodePolicy);
+  return getVideoTranscodePolicy();
+}
+
+// One line in the Jellyfin server log per playback: how it plays and why,
+// to see how often a video re-encode happens. Fire and forget.
+export function logPlaybackDecision(itemId, mediaSource, classification, policy) {
+  const body = {
+    ItemId: itemId,
+    MediaSourceId: (mediaSource && mediaSource.Id) || null,
+    PlayMethod: classification.playMethod,
+    Reasons: classification.reasons,
+    ServerTranscodeReasons: (mediaSource && mediaSource.TranscodeReasons) || null,
+    Policy: policy,
+  };
+  postJson('/Jellio/playback/decision', body).catch(function () {});
+}
+
 export function getJellioConfig() {
   return cached('jellio-config', function () {
     return getJson('/Jellio/config');

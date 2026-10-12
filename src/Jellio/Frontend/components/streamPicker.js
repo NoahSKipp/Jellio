@@ -22,8 +22,10 @@
 // real MediaSourceInfo, Gelato normalizes every source down to that one
 // shape server side before this runtime ever sees it), real feedback
 // asked for that specifically left out rather than guessed at.
-import { getMediaSources, getImageUrl, TICKS_PER_SECOND } from '../runtime/api.js';
+import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy } from '../runtime/api.js';
 import { isBadSource } from '../runtime/streamHealth.js';
+import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
+import { videoStreamOf } from '../runtime/transcodeClassifier.js';
 import { navigateTo } from '../runtime/router.js';
 import { languageName } from '../runtime/languages.js';
 import { renderLoading, renderRetry } from './networkState.js';
@@ -644,13 +646,52 @@ export async function openStreamPicker(item, options) {
     return;
   }
 
-  // Streams that recently failed to play go last, flagged below.
+  // Video transcode policy (plugin settings): in Avoid and Block each
+  // stream is checked for whether the server would have to re-encode its
+  // video here; those go after the ones it can copy, and in Block they're
+  // left out.
+  try {
+    await loadVideoTranscodePolicy();
+  } catch (err) {}
+  const avoiding = avoidingVideoTranscodes();
+  const methods = new Map();
+  if (avoiding) {
+    sources.forEach(function (source) {
+      // No video details yet (an unprobed addon stream): nothing to judge.
+      if (!videoStreamOf(source)) return;
+      methods.set(source.Id, classifySource(source, canBrowserDirectPlay(source)).playMethod);
+    });
+    if (getVideoTranscodePolicy() === 'Block') {
+      const playable = sources.filter(function (source) {
+        return methods.get(source.Id) !== 'Transcode';
+      });
+      if (!playable.length) {
+        if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
+        shell.status.textContent = '';
+        renderRetry(
+          shell.status,
+          'Every stream for this title would need the server to re-encode the video, which is turned off on this server.',
+          null,
+          { onBack: closeStreamPicker, backLabel: 'Close' },
+        );
+        return;
+      }
+      sources = playable;
+    }
+  }
+
+  // Streams that recently failed to play go last, flagged below; in Avoid,
+  // streams that need a video re-encode go after the rest.
   sources = sources
     .map(function (source, index) {
-      return { source: source, index: index, bad: isBadSource(item.Id, source) };
+      return {
+        source: source,
+        index: index,
+        rank: (isBadSource(item.Id, source) ? 2 : 0) + (methods.get(source.Id) === 'Transcode' ? 1 : 0),
+      };
     })
     .sort(function (a, b) {
-      return (a.bad === b.bad ? 0 : a.bad ? 1 : -1) || a.index - b.index;
+      return a.rank - b.rank || a.index - b.index;
     })
     .map(function (entry) {
       return entry.source;
@@ -749,6 +790,16 @@ export async function openStreamPicker(item, options) {
         closeStreamPicker();
         navigateTo(playHash(item.Id, picked.Id));
       });
+      const method = methods.get(source.Id);
+      if (method) {
+        card.appendChild(
+          el(
+            'span',
+            'jellio-stream-picker-method jellio-stream-picker-method-' + method.toLowerCase(),
+            method === 'DirectPlay' ? 'Direct play' : method,
+          ),
+        );
+      }
       if (isBadSource(item.Id, source)) {
         card.classList.add('jellio-stream-picker-card-bad');
         card.insertBefore(el('div', 'jellio-stream-picker-bad-note', '⚠ Didn’t play recently'), card.firstChild);

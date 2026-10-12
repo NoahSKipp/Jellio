@@ -38,6 +38,8 @@ import {
   getMediaSources,
   buildStreamUrl,
   canBrowserDirectPlay,
+  loadVideoTranscodePolicy,
+  logPlaybackDecision,
   supportsNativeHls,
   reportPlaybackStart,
   reportPlaybackProgress,
@@ -80,6 +82,8 @@ import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/u
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { markBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
+import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
+import { videoStreamOf } from '../runtime/transcodeClassifier.js';
 import { sourceLabel, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -745,6 +749,40 @@ export async function renderPlayer(root, params) {
       },
     );
     return undefined;
+  }
+
+  // Video transcode policy (plugin settings). Every playback is logged to
+  // the server with its play method and why. Avoid and Block move to a
+  // source whose video can be copied when the chosen one would need a
+  // re-encode; Block refuses to start one at all.
+  try {
+    await loadVideoTranscodePolicy();
+  } catch (err) {}
+  const sourceClassification = classifySource(mediaSource, canBrowserDirectPlay(mediaSource) && !(startTicks > 0));
+  logPlaybackDecision(itemId, mediaSource, sourceClassification, getVideoTranscodePolicy());
+  if (avoidingVideoTranscodes() && sourceClassification.needsVideoTranscode && !params.get('tried')) {
+    const alternatives = await getMediaSources(itemId).catch(function () {
+      return [];
+    });
+    if (screenTornDown) return undefined;
+    const copyable = alternatives.find(function (source) {
+      return source.Id !== mediaSource.Id && !isBadSource(itemId, source) && !classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
+    });
+    // In Avoid a stream the reader picked by hand is played as picked.
+    if (copyable && (!preferredMediaSourceId || getVideoTranscodePolicy() === 'Block')) {
+      navigateTo(playHash(itemId, copyable.Id));
+      return undefined;
+    }
+    if (getVideoTranscodePolicy() === 'Block') {
+      renderPlaybackError(
+        root,
+        itemId,
+        'This needs the server to re-encode the video (' +
+          sourceClassification.reasons.map(describeTranscodeReason).join(', ') +
+          '), which is turned off on this server, and no other stream for it can be played as is.',
+      );
+      return undefined;
+    }
   }
 
   root.textContent = '';
@@ -2148,8 +2186,11 @@ export async function renderPlayer(root, params) {
         // rather than a whole second list: real feedback asked for
         // these to just work, not for a UI that makes the reader
         // think about the real format difference up front.
+        // Video transcode policy Avoid: an image subtitle has to be burned
+        // into the video, a full re-encode, so it says so.
         const label =
-          (stream.DisplayTitle || stream.Language || 'Subtitle') + (stream.IsTextSubtitleStream ? '' : ' (image)');
+          (stream.DisplayTitle || stream.Language || 'Subtitle') +
+          (stream.IsTextSubtitleStream ? '' : avoidingVideoTranscodes() ? ' (slow: burns into video)' : ' (image)');
         const option = el(
           'button',
           'jellio-player-popover-option' +
@@ -2170,7 +2211,11 @@ export async function renderPlayer(root, params) {
 
   function rebuildSubtitleMenu() {
     subtitleLanguageList.textContent = '';
-    const subtitleStreams = getSubtitleStreams(mediaSource);
+    // Video transcode policy Block: image subtitles would need a re-encode,
+    // so they aren't offered.
+    const subtitleStreams = getSubtitleStreams(mediaSource).filter(function (stream) {
+      return getVideoTranscodePolicy() !== 'Block' || stream.IsTextSubtitleStream;
+    });
     if (!subtitleStreams.length) {
       subtitleButton.disabled = true;
       return;
@@ -4730,7 +4775,12 @@ export async function renderPlayer(root, params) {
   // same language as this attempt first, else the reader's audio language.
   // Each retry is a fresh #/play navigation carrying the ids already tried.
   // Not in a Group Watch, where the group decides what plays.
-  const START_TIMEOUT_MS = 25000;
+  // A video re-encode under the Avoid policy gets only the pre-buffer
+  // start wait before it's abandoned for a stream that can be copied.
+  const START_TIMEOUT_MS =
+    avoidingVideoTranscodes() && sourceClassification.needsVideoTranscode
+      ? Math.max(prebufferSettings().startTimeoutMs, 12000)
+      : 25000;
   const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
   const failoverLanguage = params.get('lang') || '';
   let failoverStarted = false;
@@ -4765,18 +4815,33 @@ export async function renderPlayer(root, params) {
     const candidates = sources.filter(function (source) {
       return tried.indexOf(source.Id) === -1 && !isBadSource(itemId, source);
     });
+    // Same language as this attempt first.
     const languageCode = String(language || '').toLowerCase().slice(0, 2);
-    const ordered = languageCode
-      ? candidates.filter(function (source) {
-          return sourceAudioLanguages(source).some(function (code) {
-            return String(code).toLowerCase().slice(0, 2) === languageCode;
-          });
-        }).concat(candidates.filter(function (source) {
-          return !sourceAudioLanguages(source).some(function (code) {
-            return String(code).toLowerCase().slice(0, 2) === languageCode;
-          });
-        }))
-      : candidates;
+    function byLanguage(list) {
+      if (!languageCode) return list;
+      const matches = function (source) {
+        return sourceAudioLanguages(source).some(function (code) {
+          return String(code).toLowerCase().slice(0, 2) === languageCode;
+        });
+      };
+      return list.filter(matches).concat(list.filter(function (source) {
+        return !matches(source);
+      }));
+    }
+    // Avoid/Block: streams whose video can be copied before any that need
+    // a re-encode, which Block drops. One without video details yet counts
+    // as copyable.
+    let ordered = byLanguage(candidates);
+    if (avoidingVideoTranscodes()) {
+      const needsReencode = function (source) {
+        return !!videoStreamOf(source) && classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
+      };
+      const copyable = candidates.filter(function (source) {
+        return !needsReencode(source);
+      });
+      const reencode = getVideoTranscodePolicy() === 'Block' ? [] : candidates.filter(needsReencode);
+      ordered = byLanguage(copyable).concat(byLanguage(reencode));
+    }
     if (!ordered.length) {
       cleanup();
       renderPlaybackError(
