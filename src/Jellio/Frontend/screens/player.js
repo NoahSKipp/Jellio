@@ -3244,20 +3244,60 @@ export async function renderPlayer(root, params) {
     if (qualityRow) sourceFilterContainer.appendChild(qualityRow);
   }
 
+  // With the Video transcode policy on, streams the server would have to
+  // re-encode stay listed, last, marked yellow (Avoid) or red and not
+  // playable (Block).
+  function transcodeVerdict(source) {
+    if (!avoidingVideoTranscodes() || !videoInfoOf(source)) return null;
+    const classification = classifySource(source, canBrowserDirectPlay(source));
+    return classification.needsVideoTranscode ? classification : null;
+  }
+
   function rebuildSourceMenu() {
     sourceList.textContent = '';
-    const filtered = filterSources(sourceOptions, selectedSourceLanguage, selectedSourceQuality);
-    filtered.forEach(function (source) {
-      sourceList.appendChild(
-        buildSourceCard(
-          source,
-          function (picked) {
-            closeSidePanels();
-            if (picked.Id !== mediaSource.Id) switchSource(picked);
-          },
-          source.Id === mediaSource.Id,
-        ),
+    const blocking = getVideoTranscodePolicy() === 'Block';
+    const filtered = filterSources(sourceOptions, selectedSourceLanguage, selectedSourceQuality)
+      .map(function (source, index) {
+        return { source: source, verdict: transcodeVerdict(source), index: index };
+      })
+      .sort(function (a, b) {
+        return (a.verdict ? 1 : 0) - (b.verdict ? 1 : 0) || a.index - b.index;
+      });
+    filtered.forEach(function (entry) {
+      const source = entry.source;
+      const verdict = entry.verdict;
+      const card = buildSourceCard(
+        source,
+        function (picked) {
+          if (verdict && blocking && picked.Id !== mediaSource.Id) {
+            showPlayerToast('This stream needs the server to re-encode the video, which is turned off on this server.');
+            return;
+          }
+          closeSidePanels();
+          if (picked.Id !== mediaSource.Id) switchSource(picked);
+        },
+        source.Id === mediaSource.Id,
       );
+      if (verdict) {
+        const mark = el('div', 'jellio-player-transcode-mark ' + (blocking ? 'jellio-player-transcode-mark-block' : 'jellio-player-transcode-mark-warn'));
+        const icon = el('span', 'material-icons ' + (blocking ? 'block' : 'warning'));
+        icon.setAttribute('aria-hidden', 'true');
+        mark.appendChild(icon);
+        const reasons = verdict.reasons.map(describeTranscodeReason).join(', ');
+        mark.appendChild(
+          el(
+            'span',
+            null,
+            (blocking ? 'Blocked: needs a video re-encode' : 'Slow: needs a video re-encode') +
+              (reasons ? ' (' + reasons + ')' : '') +
+              (verdict.guessed ? ', going by its name' : ''),
+          ),
+        );
+        card.insertBefore(mark, card.firstChild);
+        card.classList.add(blocking ? 'jellio-player-source-blocked' : 'jellio-player-source-warn');
+        if (blocking) card.setAttribute('aria-disabled', 'true');
+      }
+      sourceList.appendChild(card);
     });
   }
 

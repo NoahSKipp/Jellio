@@ -14960,3 +14960,36 @@
   background: rgba(255, 152, 0, 0.22);
   color: #ffcc80;
 }
+
+/* Player Sources panel: streams the Video transcode policy warns about
+   (Avoid, yellow) or refuses (Block, red). */
+.jellio-player-transcode-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.8em;
+  font-weight: 600;
+  margin-bottom: 0.3em;
+}
+
+.jellio-player-transcode-mark .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-player-transcode-mark-warn {
+  color: #ffd54f;
+}
+
+.jellio-player-transcode-mark-block {
+  color: #ef5350;
+}
+
+.jellio-player-source-warn {
+  box-shadow: inset 3px 0 0 #ffd54f;
+}
+
+.jellio-player-source-blocked {
+  box-shadow: inset 3px 0 0 #ef5350;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
