@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.74.1] - 2026-10-12\n\n### 🐛 Bug Fixes\n\n- *(player)* Clearer stream badges, HD detection and failover overlay\n",
+        "checksum": "bd2ac471251ff0b9145958aed77d7ece",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.74.1/jellio_1.74.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-12T14:08:21Z",
+        "version": "1.74.1"
+      },
+      {
         "changelog": "## [1.74.0] - 2026-10-12\n\n### 🚀 Features\n\n- *(player)* Video transcode policy to avoid server-side video re-encodes\n- *(player)* Judge unprobed streams by their AIOStreams name\n- *(player)* Log Jellyfin's transcode reasons and the client\n- *(player)* Mark streams that need a video re-encode in the Sources panel\n",
         "checksum": "ec91b872625af805ce1c7a9d0c1162d3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.74.0/jellio_1.74.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-06T23:24:22Z",
         "version": "1.60.3"
-      },
-      {
-        "changelog": "## [1.60.2] - 2026-10-06\n\n### 🐛 Bug Fixes\n\n- *(cast)* Fix google cast sdk initialization and remote playback in chrome android pwa\n",
-        "checksum": "9f77471327bfbaa6e7c091ca161db001",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.60.2/jellio_1.60.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-06T20:09:49Z",
-        "version": "1.60.2"
       }
     ]
   }
