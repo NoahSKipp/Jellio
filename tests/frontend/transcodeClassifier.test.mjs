@@ -1,7 +1,7 @@
 // node --test tests/frontend
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyVideo, copyableVideoCodecs, playMethodFor, videoCodecString } from '../../src/Jellio/Frontend/runtime/transcodeClassifier.js';
+import { classifyVideo, copyableVideoCodecs, playMethodFor, videoCodecString, videoHintFromName } from '../../src/Jellio/Frontend/runtime/transcodeClassifier.js';
 
 // A browser that decodes H.264 8-bit, HEVC (8 and 10-bit) and VP9, but not
 // AV1 or 10-bit H.264: roughly Safari or Chrome with hardware HEVC.
@@ -74,4 +74,41 @@ test('codec strings', () => {
   assert.equal(videoCodecString({ Codec: 'h264', Profile: 'High', Level: 41 }), 'avc1.640029');
   assert.equal(videoCodecString({ Codec: 'h264', Profile: 'High 10', BitDepth: 10, Level: 41 }), 'avc1.6e0029');
   assert.equal(videoCodecString({ Codec: 'hevc', Profile: 'Main 10', BitDepth: 10, Level: 150 }), 'hvc1.2.4.L150.B0');
+});
+
+// Unprobed Gelato sources: the AIOStreams name stands in for MediaStreams.
+const nameCases = [
+  // [name, expected hint (null: nothing to go on)]
+  ['⚡ RD 2160p\nHEVC | DV | HDR10', { Codec: 'hevc', BitDepth: 10, VideoRangeType: 'DOVIWithHDR10' }],
+  ['4K WEB-DL DV x265', { Codec: 'hevc', BitDepth: 10, VideoRangeType: 'DOVI' }],
+  ['1080p BluRay x264', { Codec: 'h264', BitDepth: 8, VideoRangeType: 'SDR' }],
+  ['2160p HDR10+ H.265', { Codec: 'hevc', BitDepth: 10, VideoRangeType: 'HDR10Plus' }],
+  ['1080p AV1 10bit', { Codec: 'av1', BitDepth: 10, VideoRangeType: 'SDR' }],
+  ['Dolby Vision HDR', { Codec: null, BitDepth: 10, VideoRangeType: 'DOVIWithHDR10' }],
+  ['Torrentio 1080p', null],
+  ['', null],
+];
+
+for (const [name, expected] of nameCases) {
+  test('name hint: ' + JSON.stringify(name), () => {
+    const hint = videoHintFromName(name);
+    if (expected === null) return assert.equal(hint, null);
+    assert.deepEqual(hint, Object.assign({ Type: 'Video' }, expected));
+  });
+}
+
+test('unprobed source is classified from its name', () => {
+  const dv5 = classifyVideo({ Name: 'WEB-DL DV HEVC', MediaStreams: [] }, hevcBrowser);
+  assert.deepEqual([dv5.needsVideoTranscode, dv5.reasons, dv5.guessed], [true, ['dolby-vision-5'], true]);
+  const hevc = classifyVideo({ Name: '1080p HEVC', MediaStreams: [] }, plainBrowser);
+  assert.deepEqual([hevc.needsVideoTranscode, hevc.reasons, hevc.guessed], [true, ['codec'], true]);
+  const h264 = classifyVideo({ Name: '1080p x264' }, plainBrowser);
+  assert.deepEqual([h264.needsVideoTranscode, h264.guessed], [false, true]);
+  const hdrNoCodec = classifyVideo({ Name: 'HDR' }, plainBrowser);
+  assert.deepEqual(hdrNoCodec.reasons, ['hdr-on-sdr']);
+});
+
+test('probed streams win over the name', () => {
+  const result = classifyVideo({ Name: 'HEVC DV', MediaStreams: [{ Type: 'Video', Codec: 'h264', Profile: 'High', BitDepth: 8 }] }, plainBrowser);
+  assert.deepEqual([result.needsVideoTranscode, result.guessed], [false, false]);
 });

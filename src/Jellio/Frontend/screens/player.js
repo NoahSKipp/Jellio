@@ -83,7 +83,7 @@ import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { markBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
-import { videoStreamOf } from '../runtime/transcodeClassifier.js';
+import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { sourceLabel, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -765,9 +765,14 @@ export async function renderPlayer(root, params) {
       return [];
     });
     if (screenTornDown) return undefined;
-    const copyable = alternatives.find(function (source) {
+    const others = alternatives.filter(function (source) {
       return source.Id !== mediaSource.Id && !isBadSource(itemId, source) && !classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
     });
+    // One known to copy (probed, or by its name) before one nothing is known about.
+    const copyable =
+      others.find(function (source) {
+        return !!videoInfoOf(source);
+      }) || others[0];
     // In Avoid a stream the reader picked by hand is played as picked.
     if (copyable && (!preferredMediaSourceId || getVideoTranscodePolicy() === 'Block')) {
       navigateTo(playHash(itemId, copyable.Id));
@@ -4834,7 +4839,7 @@ export async function renderPlayer(root, params) {
     let ordered = byLanguage(candidates);
     if (avoidingVideoTranscodes()) {
       const needsReencode = function (source) {
-        return !!videoStreamOf(source) && classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
+        return !!videoInfoOf(source) && classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
       };
       const copyable = candidates.filter(function (source) {
         return !needsReencode(source);

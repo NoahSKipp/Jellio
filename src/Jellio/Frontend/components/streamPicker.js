@@ -25,7 +25,7 @@
 import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy } from '../runtime/api.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
-import { videoStreamOf } from '../runtime/transcodeClassifier.js';
+import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { navigateTo } from '../runtime/router.js';
 import { languageName } from '../runtime/languages.js';
 import { renderLoading, renderRetry } from './networkState.js';
@@ -657,13 +657,15 @@ export async function openStreamPicker(item, options) {
   const methods = new Map();
   if (avoiding) {
     sources.forEach(function (source) {
-      // No video details yet (an unprobed addon stream): nothing to judge.
-      if (!videoStreamOf(source)) return;
-      methods.set(source.Id, classifySource(source, canBrowserDirectPlay(source)).playMethod);
+      // Unprobed addon streams are judged from their name; nothing to go
+      // on in either means no badge.
+      if (!videoInfoOf(source)) return;
+      const classification = classifySource(source, canBrowserDirectPlay(source));
+      methods.set(source.Id, { method: classification.playMethod, guessed: classification.guessed });
     });
     if (getVideoTranscodePolicy() === 'Block') {
       const playable = sources.filter(function (source) {
-        return methods.get(source.Id) !== 'Transcode';
+        return !methods.has(source.Id) || methods.get(source.Id).method !== 'Transcode';
       });
       if (!playable.length) {
         if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
@@ -687,7 +689,7 @@ export async function openStreamPicker(item, options) {
       return {
         source: source,
         index: index,
-        rank: (isBadSource(item.Id, source) ? 2 : 0) + (methods.get(source.Id) === 'Transcode' ? 1 : 0),
+        rank: (isBadSource(item.Id, source) ? 2 : 0) + (methods.has(source.Id) && methods.get(source.Id).method === 'Transcode' ? 1 : 0),
       };
     })
     .sort(function (a, b) {
@@ -790,15 +792,16 @@ export async function openStreamPicker(item, options) {
         closeStreamPicker();
         navigateTo(playHash(item.Id, picked.Id));
       });
-      const method = methods.get(source.Id);
-      if (method) {
-        card.appendChild(
-          el(
-            'span',
-            'jellio-stream-picker-method jellio-stream-picker-method-' + method.toLowerCase(),
-            method === 'DirectPlay' ? 'Direct play' : method,
-          ),
+      const judged = methods.get(source.Id);
+      if (judged) {
+        const label = judged.method === 'DirectPlay' ? 'Direct play' : judged.method;
+        const badge = el(
+          'span',
+          'jellio-stream-picker-method jellio-stream-picker-method-' + judged.method.toLowerCase(),
+          judged.guessed ? 'Likely ' + label.toLowerCase() : label,
         );
+        if (judged.guessed) badge.title = 'Going by the stream’s name; it hasn’t been probed yet';
+        card.appendChild(badge);
       }
       if (isBadSource(item.Id, source)) {
         card.classList.add('jellio-stream-picker-card-bad');

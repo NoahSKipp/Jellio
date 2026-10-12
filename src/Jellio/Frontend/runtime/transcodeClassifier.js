@@ -32,6 +32,36 @@ export function videoStreamOf(mediaSource) {
   return streams.filter((stream) => stream.Type === 'Video')[0] || null;
 }
 
+// Gelato probes a stream only when it's played, so most sources come with
+// no MediaStreams. AIOStreams names still say what's inside ("4K HEVC DV
+// HDR10"); read a stand-in video stream from them, or null when they say
+// nothing about the video.
+export function videoHintFromName(name) {
+  const text = ' ' + String(name || '').replace(/[|·•,()[\]{}/_\n\r\t-]+/g, ' ') + ' ';
+  let codec = null;
+  if (/\s(hevc|[xh]\.?265)\s/i.test(text)) codec = 'hevc';
+  else if (/\sav1\s/i.test(text)) codec = 'av1';
+  else if (/\svp9\s/i.test(text)) codec = 'vp9';
+  else if (/\s(avc|[xh]\.?264)\s/i.test(text)) codec = 'h264';
+  const dv = /\s(dv|dovi|dolby\s?vision)\s/i.test(text);
+  let range = null;
+  if (/hdr10(\+|plus)/i.test(text)) range = 'HDR10Plus';
+  else if (/\shdr(10)?\s/i.test(text)) range = 'HDR10';
+  else if (/\shlg\s/i.test(text)) range = 'HLG';
+  if (dv) range = range === 'HDR10Plus' ? 'DOVIWithHDR10Plus' : range === 'HDR10' ? 'DOVIWithHDR10' : range === 'HLG' ? 'DOVIWithHLG' : 'DOVI';
+  if (!codec && !range) return null;
+  const tenBit = range !== null || /\s10\s?bit\s/i.test(text);
+  return { Type: 'Video', Codec: codec, BitDepth: tenBit ? 10 : 8, VideoRangeType: range || 'SDR' };
+}
+
+// The real video stream, else one read from the source's name.
+export function videoInfoOf(mediaSource) {
+  const real = videoStreamOf(mediaSource);
+  if (real) return { stream: real, guessed: false };
+  const hinted = videoHintFromName(mediaSource && mediaSource.Name);
+  return hinted ? { stream: hinted, guessed: true } : null;
+}
+
 // The codecs string a browser is asked about for this video stream.
 export function videoCodecString(stream) {
   const codec = String(stream.Codec || '').toLowerCase();
@@ -60,16 +90,21 @@ function isDolbyVisionOnly(stream) {
 
 // Returns { needsVideoTranscode, reasons: [...] }. Reasons are short ids:
 // 'codec' (can't decode here), 'hdr-on-sdr' (needs tone mapping),
-// 'dolby-vision-5', 'interlaced', 'burn-in'.
+// 'dolby-vision-5', 'interlaced', 'burn-in'. guessed: the video details
+// came from the stream's name, not a probe.
 export function classifyVideo(mediaSource, caps, options) {
   const opts = options || {};
   const reasons = [];
-  const video = videoStreamOf(mediaSource);
+  const info = videoInfoOf(mediaSource);
   if (opts.burnInSubtitle) reasons.push('burn-in');
-  if (!video) return { needsVideoTranscode: reasons.length > 0, reasons };
+  if (!info) return { needsVideoTranscode: reasons.length > 0, reasons, guessed: false };
+  const video = info.stream;
 
-  const codecString = videoCodecString(video);
-  if (!codecString || !caps.canPlayVideo(codecString)) reasons.push('codec');
+  // A name without a codec says nothing about decoding it.
+  if (!(info.guessed && !video.Codec)) {
+    const codecString = videoCodecString(video);
+    if (!codecString || !caps.canPlayVideo(codecString)) reasons.push('codec');
+  }
 
   if (isDolbyVisionOnly(video)) {
     reasons.push('dolby-vision-5');
@@ -79,7 +114,7 @@ export function classifyVideo(mediaSource, caps, options) {
 
   if (video.IsInterlaced) reasons.push('interlaced');
 
-  return { needsVideoTranscode: reasons.length > 0, reasons };
+  return { needsVideoTranscode: reasons.length > 0, reasons, guessed: info.guessed };
 }
 
 // "DirectPlay" (the file as is), "Remux" (video copied, container or audio
