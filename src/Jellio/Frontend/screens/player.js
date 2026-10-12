@@ -3268,17 +3268,24 @@ export async function renderPlayer(root, params) {
     return row;
   }
 
+  // Only the latest season asked for fills the list: an earlier answer
+  // arriving late used to be appended to it as well.
+  let episodeListRequest = 0;
   function loadSeasonEpisodes(seriesId, season, tabButton) {
     Array.prototype.forEach.call(seasonTabs.children, function (child) {
       child.classList.remove('jellio-player-sidepanel-tab-active');
     });
     if (tabButton) tabButton.classList.add('jellio-player-sidepanel-tab-active');
     episodeList.textContent = '';
+    const request = ++episodeListRequest;
     getEpisodes(seriesId, season.Id)
       .then(function (episodes) {
+        if (request !== episodeListRequest) return;
+        episodeList.textContent = '';
         episodes.forEach(function (episode) {
           episodeList.appendChild(buildEpisodeRow(episode));
         });
+        revealCurrentEpisode();
       })
       .catch(function (err) {
         console.warn('Jellio: could not load episodes for player episode panel', err);
@@ -3303,6 +3310,7 @@ export async function renderPlayer(root, params) {
         const orderedSeasons = seasons.slice().sort(function (a, b) {
           return (isSpecialsSeason(a) ? 1 : 0) - (isSpecialsSeason(b) ? 1 : 0);
         });
+        let currentSeasonLoaded = false;
         orderedSeasons.forEach(function (season) {
           const tab = el('button', 'jellio-player-sidepanel-tab', season.Name || '');
           tab.type = 'button';
@@ -3310,9 +3318,12 @@ export async function renderPlayer(root, params) {
             loadSeasonEpisodes(item.SeriesId, season, tab);
           });
           seasonTabs.appendChild(tab);
-          if (season.Id === item.SeasonId) loadSeasonEpisodes(item.SeriesId, season, tab);
+          if (season.Id === item.SeasonId) {
+            currentSeasonLoaded = true;
+            loadSeasonEpisodes(item.SeriesId, season, tab);
+          }
         });
-        if (!episodeList.children.length && orderedSeasons[0]) {
+        if (!currentSeasonLoaded && orderedSeasons[0]) {
           loadSeasonEpisodes(item.SeriesId, orderedSeasons[0], seasonTabs.firstChild);
         }
       })
@@ -3321,10 +3332,21 @@ export async function renderPlayer(root, params) {
       });
   }
 
+  // The playing episode (highlighted) and its season tab scrolled into
+  // view whenever the panel is open.
+  function revealCurrentEpisode() {
+    if (episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) return;
+    const activeTab = seasonTabs.querySelector('.jellio-player-sidepanel-tab-active');
+    if (activeTab) activeTab.scrollIntoView({ block: 'nearest', inline: 'center' });
+    const activeRow = episodeList.querySelector('.jellio-player-episode-row-active');
+    if (activeRow) activeRow.scrollIntoView({ block: 'center' });
+  }
+
   episodesButton.addEventListener('click', function () {
     closePopovers(null);
     sourcePanel.classList.add('jellio-player-sidepanel-hidden');
     episodesPanel.classList.toggle('jellio-player-sidepanel-hidden');
+    window.requestAnimationFrame(revealCurrentEpisode);
     wakeControls();
   });
 
