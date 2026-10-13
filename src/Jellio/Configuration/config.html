@@ -340,6 +340,19 @@
 
           <div class="checkboxContainer checkboxContainer-withDescription">
             <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="chkHomeRowCache" />
+              <span>Home row cache</span>
+            </label>
+            <div class="fieldDescription checkboxFieldDescription">
+              Browsers keep the home screen's rows and share them between tabs, showing them at
+              once and refreshing them in the background a few at a time (one at a time while
+              someone is watching). Turn off to have every tab ask the server for every row on
+              each load, as before.
+            </div>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
               <input is="emby-checkbox" type="checkbox" id="chkSkipIntroCreditsAdminMenuEnabled" />
               <span>Show "Find Skip Intro/Credits" on Movie/Series right click</span>
             </label>
@@ -633,6 +646,7 @@
           document.querySelector('#txtAnimeSkipClientId').value = withDefault(config.AnimeSkipClientId, '');
           document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked = withDefault(config.SkipIntroCreditsAdminMenuEnabled, false);
           document.querySelector('#selVideoTranscodePolicy').value = withDefault(config.VideoTranscodePolicy, 'Allow');
+          document.querySelector('#chkHomeRowCache').checked = withDefault(config.HomeRowCache, true);
           Dashboard.hideLoadingMsg();
         });
       }
@@ -662,6 +676,7 @@
           config.AnimeSkipClientId = document.querySelector('#txtAnimeSkipClientId').value.trim();
           config.SkipIntroCreditsAdminMenuEnabled = document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked;
           config.VideoTranscodePolicy = document.querySelector('#selVideoTranscodePolicy').value || 'Allow';
+          config.HomeRowCache = document.querySelector('#chkHomeRowCache').checked;
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });

@@ -14985,3 +14985,7 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.jellio-home-lazy-sentinel {
+  height: 1px;
+}

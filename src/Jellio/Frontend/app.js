@@ -12,6 +12,7 @@ import {
   getImageUrl,
   itemTypesForKind,
   invalidateNavCaches,
+  invalidateUserDataRows,
 } from './runtime/api.js';
 import { renderLogin } from './screens/login.js';
 import { renderHome, preloadHomeSections } from './screens/home.js';
@@ -43,7 +44,7 @@ import { startAchievementNotifier } from './components/achievementNotifier.js';
 import { loadGrouplistSetting } from './runtime/grouplistSettings.js';
 import { loadAdminStatus } from './runtime/adminStatus.js';
 import { loadSkipIntroCreditsMenuSetting } from './runtime/introCreditsMenuSetting.js';
-import { startSyncPlay } from './runtime/syncPlay.js';
+import { startSyncPlay, onUserDataChange } from './runtime/syncPlay.js';
 import { startGroupWatchInvites } from './components/groupWatchInvites.js';
 import { showSplash, hideSplash, setSplashTotal, reportSplashStep } from './components/splash.js';
 import { showToast } from './components/toast.js';
@@ -712,6 +713,8 @@ function scheduleNavRecheck(attemptsLeft, delayMs) {
   }, delayMs == null ? NAV_RECHECK_DELAY_MS : delayMs);
 }
 
+let userDataRowsHooked = false;
+
 async function runSync() {
   try {
     if (!isAuthenticated()) {
@@ -780,6 +783,12 @@ async function runSync() {
     startOverlays();
     startAchievementNotifier();
     startSyncPlay();
+    // Watched, resumed or favourited on another device: home rows are
+    // asked for fresh in every tab.
+    if (!userDataRowsHooked) {
+      userDataRowsHooked = true;
+      onUserDataChange(invalidateUserDataRows);
+    }
     startGroupWatchInvites();
     loadGrouplistSetting();
     loadAdminStatus();

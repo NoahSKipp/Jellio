@@ -19,6 +19,8 @@ import {
   getImageUrl,
   getAnimeIds,
   withoutAnime,
+  isHomeRowCacheEnabled,
+  markHomeRowPainted,
 } from '../runtime/api.js';
 import { buildRecommendationRows, titleKey } from '../runtime/recommend.js';
 import { buildCard } from '../components/card.js';
@@ -504,6 +506,46 @@ export function invalidateHomeSections() {
   cheapBuilt = [];
 }
 
+function invalidateAllHomeSections() {
+  invalidateHomeSections();
+  expensiveSectionsPromise = null;
+  expensiveBuilt = [];
+}
+
+// runtime/api.js's row cache refreshed an answer that differs from what
+// is showing (or dropped rows after something was watched): rebuild the
+// rows concerned, once per burst. Rows keyed the same replace the old
+// ones, so unchanged rows don't flicker out.
+const PERSONAL_ROW_CLASSES = ['personal', 'user', 'latest', 'watchlist'];
+const rowCacheRefreshers = new Set();
+let rowCacheRefreshTimer = null;
+let rowCacheRefreshAll = false;
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('jellio:rowcache-change', function (event) {
+    const detail = (event && event.detail) || {};
+    const classes = detail.classes || [];
+    if (
+      detail.type === 'wipe' ||
+      classes.some(function (cls) {
+        return PERSONAL_ROW_CLASSES.indexOf(cls) === -1;
+      })
+    ) {
+      rowCacheRefreshAll = true;
+    }
+    window.clearTimeout(rowCacheRefreshTimer);
+    rowCacheRefreshTimer = window.setTimeout(function () {
+      const all = rowCacheRefreshAll;
+      rowCacheRefreshAll = false;
+      if (all) invalidateAllHomeSections();
+      else invalidateHomeSections();
+      rowCacheRefreshers.forEach(function (refresh) {
+        refresh(all);
+      });
+    }, 400);
+  });
+}
+
 // Nuvio's own real incremental-channel pattern (search's per-addon fan
 // out, StreamsRepository's own stream aggregation, both confirmed
 // against real source): a reader never waits on the slowest phase to
@@ -689,6 +731,21 @@ export function preloadHomeSections() {
       return { sections: [], collections: null };
     });
   }
+  // With the row cache on, the rows below the fold (recommendation,
+  // catalog and genre rows) wait until the screen scrolls near them:
+  // renderHome's sentinel calls preloadExpensiveHomeSections().
+  if (isHomeRowCacheEnabled()) {
+    return cheapSectionsPromise.then(function (result) {
+      return result.sections.concat(expensiveBuilt);
+    });
+  }
+  startExpensiveSections();
+  return Promise.all([cheapSectionsPromise, expensiveSectionsPromise]).then(function (results) {
+    return results[0].sections.concat(results[1]);
+  });
+}
+
+function startExpensiveSections() {
   if (!expensiveSectionsPromise) {
     expensiveSectionsPromise = buildExpensiveSections().catch(function (err) {
       console.warn('Jellio: could not build home sections', err);
@@ -696,8 +753,12 @@ export function preloadHomeSections() {
       return [];
     });
   }
-  return Promise.all([cheapSectionsPromise, expensiveSectionsPromise]).then(function (results) {
-    return results[0].sections.concat(results[1]);
+  return expensiveSectionsPromise;
+}
+
+export function preloadExpensiveHomeSections() {
+  return startExpensiveSections().then(function (expensive) {
+    return cheapBuilt.concat(expensive);
   });
 }
 
@@ -861,6 +922,7 @@ export async function renderHome(root, params) {
     });
     const insertTarget = after || (skeleton.parentNode === rows ? skeleton : null);
     rows.insertBefore(section, insertTarget);
+    markHomeRowPainted();
     applyHomeCustomization(rows, editMode);
 
     // As real rows arrive, reduce placeholder rows but keep at least 2
@@ -878,7 +940,8 @@ export async function renderHome(root, params) {
   // (a Continue Watching row whose last show was just finished).
   function settleRows(settledSections) {
     if (!active) return;
-    removeSkeleton();
+    // Lazy rows still to come below: their placeholders stay until then.
+    if (!lazyRows || lazyRowsDone) removeSkeleton();
     const current = Array.isArray(settledSections) && settledSections.length
       ? settledSections
       : cheapBuilt.concat(expensiveBuilt);
@@ -894,11 +957,59 @@ export async function renderHome(root, params) {
       }
     });
   }
+  // Row cache on: recommendation, catalog and genre rows load once the
+  // screen gets near them, not all at once on mount.
+  const lazyRows = isHomeRowCacheEnabled();
+  let lazyRowsRequested = false;
+  let lazyRowsDone = false;
+  function requestLazyRows() {
+    if (lazyRowsRequested || !active) return;
+    lazyRowsRequested = true;
+    preloadExpensiveHomeSections()
+      .then(function (sections) {
+        lazyRowsDone = true;
+        settleRows(sections);
+      })
+      .catch(function () {
+        lazyRowsDone = true;
+        removeSkeleton();
+      });
+  }
+  let lazyObserver = null;
+  let lazyTimer = null;
+  if (lazyRows) {
+    const sentinel = el('div', 'jellio-home-lazy-sentinel');
+    root.appendChild(sentinel);
+    if (typeof IntersectionObserver === 'function') {
+      lazyObserver = new IntersectionObserver(
+        function (entries) {
+          const visible = entries.some(function (entry) {
+            return entry.isIntersecting;
+          });
+          window.clearTimeout(lazyTimer);
+          // A pass straight through while the page settles doesn't count.
+          if (visible) lazyTimer = window.setTimeout(requestLazyRows, 150);
+        },
+        { rootMargin: '0px 0px 600px 0px' },
+      );
+      lazyObserver.observe(sentinel);
+    } else {
+      lazyTimer = window.setTimeout(requestLazyRows, 1500);
+    }
+  }
+
   const subscription = preloadHomeSectionsWithProgress(placeSection);
   subscription.promise.then(settleRows).catch(function (err) {
     console.warn('Jellio: home sections promise failed', err);
     removeSkeleton();
   });
+
+  function refreshFromRowCache(all) {
+    if (!active) return;
+    preloadHomeSections().then(settleRows);
+    if (all && lazyRowsRequested) preloadExpensiveHomeSections().then(settleRows);
+  }
+  rowCacheRefreshers.add(refreshFromRowCache);
 
   // invalidateHomeSections() above already re-derives Continue Watching
   // fresh on the NEXT visit to this screen; this covers the one real
@@ -929,6 +1040,9 @@ export async function renderHome(root, params) {
 
   return function cleanup() {
     active = false;
+    rowCacheRefreshers.delete(refreshFromRowCache);
+    if (lazyObserver) lazyObserver.disconnect();
+    window.clearTimeout(lazyTimer);
     removeSkeleton();
     subscription.unsubscribe();
     window.clearTimeout(userDataRefreshTimer);

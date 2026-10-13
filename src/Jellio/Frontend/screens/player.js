@@ -77,6 +77,7 @@ import {
   clearJoinSync,
   getJoinSync,
   prefetchStreams,
+  setPlaybackActive,
   syncTracker,
 } from '../runtime/api.js';
 import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
@@ -1072,6 +1073,15 @@ export async function renderPlayer(root, params) {
 
   video.addEventListener('playing', function () {
     if (loadingLogo && video.readyState >= 3) hideLoadingLogo();
+  });
+  // Other tabs refresh their home rows one at a time while this plays.
+  video.addEventListener('playing', function () {
+    setPlaybackActive(true);
+  });
+  ['pause', 'ended', 'emptied'].forEach(function (type) {
+    video.addEventListener(type, function () {
+      setPlaybackActive(false);
+    });
   });
   ['timeupdate', 'seeked', 'canplay'].forEach(function (type) {
     video.addEventListener(type, function () {
@@ -5714,6 +5724,7 @@ export async function renderPlayer(root, params) {
   // load rather than duplicating what it already does, and needs to
   // reach it from earlier in this same function body.
   async function cleanup() {
+    setPlaybackActive(false);
     if (unsubscribeCast) unsubscribeCast();
     if (getActiveCast()) disconnectCast().catch(function () {});
     document.removeEventListener('visibilitychange', onTabVisibility);

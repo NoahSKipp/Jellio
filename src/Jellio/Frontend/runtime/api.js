@@ -4,7 +4,8 @@
 // jellyfin-web's own request/cache state, only on a real HTTP response.
 import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
 import { copyableVideoCodecs } from './transcodeClassifier.js';
-import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession } from './auth.js';
+import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser } from './auth.js';
+import { createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
 import {
   isOffline,
@@ -125,13 +126,45 @@ function checkMultiplexUpgrade() {
 function slotLimit(priority) {
   const base = isMultiplexedProtocol ? MULTIPLEXED_CONCURRENT_REQUESTS : BASE_CONCURRENT_REQUESTS;
   const extra = isMultiplexedProtocol ? MULTIPLEXED_PRIORITY_EXTRA_SLOTS : BASE_PRIORITY_EXTRA_SLOTS;
-  return base + (priority ? extra : 0);
+  return Math.min(base + (priority ? extra : 0), startupRequestCap());
 }
+
+// With the home row cache on, a freshly opened tab sends at most three
+// requests at once for its first seconds (one while a video plays in
+// another tab), so a cold start doesn't push the server to its limit
+// while someone else is streaming.
+const PAGE_STARTED_AT = Date.now();
+const STARTUP_WINDOW_MS = 5000;
+
+function inStartupWindow() {
+  return Date.now() - PAGE_STARTED_AT < STARTUP_WINDOW_MS;
+}
+
+function startupRequestCap() {
+  if (!rowCacheFlag || !inStartupWindow()) return Infinity;
+  return rowCache && rowCache.isPlayingElsewhere() ? 1 : 3;
+}
+
+function pumpRequestQueue() {
+  while (queuedRequestStarts.length > 0 && activeRequestCount < slotLimit(queuedRequestStarts[0].priority)) {
+    queuedRequestStarts.shift().start();
+  }
+}
+
+if (typeof window !== 'undefined') window.setTimeout(pumpRequestQueue, STARTUP_WINDOW_MS + 10);
+
+// For the home load report: requests started in the startup window and
+// the most in flight at once then.
+const startupRequests = { started: 0, maxConcurrent: 0 };
 
 function acquireRequestSlot(priority) {
   return new Promise(function (resolve) {
     function start() {
       activeRequestCount++;
+      if (inStartupWindow()) {
+        startupRequests.started++;
+        startupRequests.maxConcurrent = Math.max(startupRequests.maxConcurrent, activeRequestCount);
+      }
       resolve(function releaseRequestSlot() {
         activeRequestCount--;
         const next = queuedRequestStarts[0];
@@ -254,6 +287,7 @@ document.addEventListener('jellio:session-captured', function () {
 function notifySessionExpired() {
   if (sessionExpiredNotified) return;
   sessionExpiredNotified = true;
+  clearCachedRows();
   clearSession();
   // app.js's own jellio:session-captured listener (screens/login.js's
   // own header explains that real pattern first) is the same real
@@ -399,6 +433,180 @@ export function clearCache() {
   cache.clear();
 }
 
+// ---- Home row cache (runtime/rowcache.js) ----------------------------------
+// Row requests opt in through rowJson() below: stored answers paint a new
+// tab's rows at once and are refreshed in the background, shared between
+// tabs. The admin setting "Home row cache" (on by default) turns it off,
+// and then every request goes out exactly as before.
+const ROW_CACHE_FLAG_KEY = 'jellio_home_row_cache';
+const ROW_CACHE_WIPE_KEY = 'jellio_rowcache_wipe';
+const ROW_CACHE_REPORT_MS = 6000;
+
+function readRowCacheFlag() {
+  try {
+    return window.localStorage.getItem(ROW_CACHE_FLAG_KEY) !== '0';
+  } catch (err) {
+    return true;
+  }
+}
+
+let rowCacheFlag = typeof window !== 'undefined' ? readRowCacheFlag() : false;
+let rowCache = null;
+
+export function isHomeRowCacheEnabled() {
+  return rowCacheFlag;
+}
+
+function setHomeRowCacheEnabled(enabled) {
+  const next = !!enabled;
+  if (next === rowCacheFlag) return;
+  rowCacheFlag = next;
+  try {
+    window.localStorage.setItem(ROW_CACHE_FLAG_KEY, next ? '1' : '0');
+  } catch (err) {}
+  if (!next) clearCachedRows();
+}
+
+function applyRowCacheConfig(config) {
+  if (config && typeof config.HomeRowCache === 'boolean') setHomeRowCacheEnabled(config.HomeRowCache);
+  return config;
+}
+
+function safeLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch (err) {
+    return null;
+  }
+}
+
+function rowCacheScope() {
+  const user = getSessionUser();
+  return { serverId: (user && user.ServerId) || getServerAddress(), userId: getCurrentUserId() };
+}
+
+function activeRowCache() {
+  if (!rowCacheFlag || !getCurrentUserId()) return null;
+  const scope = rowCacheScope();
+  if (rowCache) {
+    rowCache.setScope(scope);
+    return rowCache;
+  }
+  let wipeOnStart = false;
+  try {
+    wipeOnStart = window.localStorage.getItem(ROW_CACHE_WIPE_KEY) === '1';
+    window.localStorage.removeItem(ROW_CACHE_WIPE_KEY);
+  } catch (err) {}
+  rowCache = createRowCache({
+    storage: pickStorage(window),
+    channel: createTabChannel(window),
+    locks: (typeof navigator !== 'undefined' && navigator.locks) || null,
+    leaseStore: safeLocalStorage(),
+    scope: scope,
+    wipeOnStart: wipeOnStart,
+  });
+  rowCache.onChange(onRowCacheChange);
+  // The server's setting, read once the first rows are in.
+  window.setTimeout(function () {
+    getJellioConfig().catch(function () {});
+  }, STARTUP_WINDOW_MS + 500);
+  window.setTimeout(reportHomeLoad, Math.max(0, PAGE_STARTED_AT + ROW_CACHE_REPORT_MS - Date.now()));
+  return rowCache;
+}
+
+// A refreshed answer differs from what was shown, or rows were dropped:
+// the short in-memory layer above would hand the old one back, and the
+// home screen redraws the rows concerned (screens/home.js).
+function onRowCacheChange(event) {
+  cache.clear();
+  document.dispatchEvent(new CustomEvent('jellio:rowcache-change', { detail: event }));
+}
+
+const ROW_RANKS = { personal: 1, user: 2, views: 3, collections: 3, hero: 3, watchlist: 4, latest: 4 };
+
+// A GET for a home row, served from the row cache when it's on.
+// options: { priority (request slot priority), rank (row order, lower
+// first), timeout }.
+function rowJson(path, cls, options) {
+  const o = options || {};
+  const fetcher = function () {
+    return getJson(path, o.timeout, undefined, o.priority);
+  };
+  const rc = activeRowCache();
+  if (!rc) return fetcher();
+  const rank = typeof o.rank === 'number' ? o.rank : Object.prototype.hasOwnProperty.call(ROW_RANKS, cls) ? ROW_RANKS[cls] : 6;
+  return rc.get(path, cls, fetcher, { priority: rank });
+}
+
+// Something was watched, read or added to the watchlist, here or in
+// another tab: Continue Watching, Up Next and the rest are asked for
+// fresh, everywhere.
+export function invalidateUserDataRows() {
+  if (rowCache) rowCache.invalidate(USER_DATA_CLASSES);
+}
+
+let lastProgressInvalidation = 0;
+function invalidateUserDataRowsThrottled(intervalMs) {
+  if (Date.now() - lastProgressInvalidation < intervalMs) return;
+  lastProgressInvalidation = Date.now();
+  invalidateUserDataRows();
+}
+
+// Settings > Clear cached rows, logout and the setting going off.
+export function clearCachedRows() {
+  cache.clear();
+  if (rowCache) {
+    rowCache.wipe();
+  } else {
+    try {
+      window.localStorage.setItem(ROW_CACHE_WIPE_KEY, '1');
+    } catch (err) {}
+  }
+}
+
+// screens/player.js: a video is playing in this tab. Other tabs then
+// refresh one row at a time.
+export function setPlaybackActive(playing) {
+  const rc = playing ? activeRowCache() : rowCache;
+  if (rc) rc.setPlaying(playing);
+}
+
+let firstRowPaintMs = null;
+// screens/home.js, when the first row goes on screen.
+export function markHomeRowPainted() {
+  if (firstRowPaintMs != null) return;
+  firstRowPaintMs = Math.round(typeof performance !== 'undefined' ? performance.now() : Date.now() - PAGE_STARTED_AT);
+}
+
+// One line per page load in the console and the Jellyfin log: how the
+// row cache did and how hard the start hit the server.
+function reportHomeLoad() {
+  if (!rowCache) return;
+  const stats = rowCache.stats();
+  const report = {
+    Hits: stats.hits,
+    Stale: stats.stale,
+    Misses: stats.misses,
+    Fetches: stats.fetches,
+    FromOtherTabs: stats.fromOtherTabs,
+    RequestsFirst5s: startupRequests.started,
+    MaxConcurrentFirst5s: startupRequests.maxConcurrent,
+    FirstRowPaintMs: firstRowPaintMs,
+    StreamPlayingElsewhere: rowCache.isPlayingElsewhere(),
+    Storage: rowCache.storageName,
+    Route: (window.location.hash || '').split('?')[0] || '#/home',
+  };
+  console.info('Jellio home load', report);
+  try {
+    fetch(getServerAddress() + '/Jellio/playback/homeload', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+      body: JSON.stringify(report),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (err) {}
+}
+
 export function getItem(itemId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -471,7 +679,7 @@ export function getCurrentUser() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   return cached('user:' + userId, function () {
-    return getJson('/Users/' + userId);
+    return rowJson('/Users/' + userId, 'user');
   });
 }
 
@@ -491,7 +699,7 @@ export function getUserViews() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   return cached('views:' + userId, function () {
-    return getJson('/Users/' + userId + '/Views').then(function (result) {
+    return rowJson('/Users/' + userId + '/Views', 'views').then(function (result) {
       return (result && result.Items) || [];
     });
   });
@@ -516,7 +724,7 @@ export function getResumeItems(limit) {
     // Continue Listening row (getContinueListening below), not here.
     '&MediaTypes=Video' +
     '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb';
-  return getPriorityJson(query).then(function (result) {
+  return rowJson(query, 'personal', { priority: true, rank: 0 }).then(function (result) {
     return applyRealDurationOverrides((result && result.Items) || []);
   });
 }
@@ -532,19 +740,21 @@ export function getContinueListening(limit) {
     IncludeItemTypes: 'AudioBook',
     Fields: 'PrimaryImageAspectRatio,RunTimeTicks',
   });
-  return getPriorityJson('/Users/' + userId + '/Items/Resume?' + params.toString()).then(function (result) {
+  return rowJson('/Users/' + userId + '/Items/Resume?' + params.toString(), 'personal', { priority: true, rank: 2 }).then(function (result) {
     return collapseAudiobookTracks((result && result.Items) || []);
   });
 }
 
 // Real items for a list of ids, in the order given (the /Items endpoint
 // itself returns them in its own sort order, not the caller's).
-export function getItemsByIds(ids) {
+// rowClass: cache it with the row asking (getContinueReading).
+export function getItemsByIds(ids, rowClass) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!ids || !ids.length) return Promise.resolve([]);
   const params = new URLSearchParams({ Ids: ids.join(','), Fields: 'PrimaryImageAspectRatio' });
-  return getPriorityJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  const path = '/Users/' + userId + '/Items?' + params.toString();
+  return (rowClass ? rowJson(path, rowClass, { priority: true, rank: 2 }) : getPriorityJson(path)).then(function (result) {
     const byId = new Map();
     ((result && result.Items) || []).forEach(function (item) {
       byId.set(String(item.Id).replace(/-/g, ''), item);
@@ -605,13 +815,20 @@ export function saveReadingProgress(itemId, locator, progress, totalPages) {
     TotalPages: totalPages || null,
   };
   setLocalProgress(itemId, body);
-  return sendOrQueue('POST', '/Jellio/reading/progress/' + itemId, body);
+  return sendOrQueue('POST', '/Jellio/reading/progress/' + itemId, body).then(function (result) {
+    if (progress >= 0.98) invalidateUserDataRows();
+    else invalidateUserDataRowsThrottled(2 * 60000);
+    return result;
+  });
 }
 
 // Marks books or chapters (saved or streamed ids) read or unread.
 export function markReadingItems(itemIds, read) {
   invalidateStreamLibrary();
-  return postJson('/Jellio/reading/progress/mark', { ItemIds: itemIds, Read: !!read });
+  return postJson('/Jellio/reading/progress/mark', { ItemIds: itemIds, Read: !!read }).then(function (result) {
+    invalidateUserDataRows();
+    return result;
+  });
 }
 
 // Sends now, or queues the request for when the server is back (the
@@ -628,7 +845,7 @@ function sendOrQueue(method, path, body) {
 // Books started but not finished, most recently read first, with their
 // reading progress folded into UserData so cards paint a progress bar.
 export function getContinueReading(limit) {
-  return getPriorityJson('/Jellio/reading/in-progress?limit=' + (limit || 20)).then(function (entries) {
+  return rowJson('/Jellio/reading/in-progress?limit=' + (limit || 20), 'personal', { priority: true, rank: 2 }).then(function (entries) {
     const list = entries || [];
     const progressById = new Map();
     const pagesById = new Map();
@@ -640,6 +857,7 @@ export function getContinueReading(limit) {
       list.map(function (entry) {
         return entry.ItemId;
       }),
+      'personal',
     ).then(function (items) {
       return items.map(function (item) {
         const key = String(item.Id).replace(/-/g, '');
@@ -1264,7 +1482,7 @@ export function getNextUp(limit) {
   const path = '/Shows/NextUp?' + params.toString();
   return Promise.all([
     cached(path, function () {
-      return getPriorityJson(path);
+      return rowJson(path, 'personal', { priority: true, rank: 1 });
     }, SHORT_CACHE_TTL_MS),
     getHiddenNextUpSeries(),
   ]).then(function (results) {
@@ -1287,7 +1505,7 @@ export function getNextUp(limit) {
 // row's own very next fetch rather than up to a minute later.
 function getHiddenNextUpSeries() {
   return cached('next-up-hidden', function () {
-    return getPriorityJson('/Jellio/next-up-hidden');
+    return rowJson('/Jellio/next-up-hidden', 'personal', { priority: true, rank: 1 });
   }, SHORT_CACHE_TTL_MS).catch(function () {
     return [];
   });
@@ -1300,6 +1518,7 @@ export function hideSeriesFromNextUp(seriesId) {
     headers: getAuthHeaders(),
   }).then(function (response) {
     if (!response.ok) throw new Error('Failed to hide series from Up Next');
+    invalidateUserDataRows();
   });
 }
 
@@ -1341,7 +1560,7 @@ export function getRecentlyCompleted(limit) {
     Limit: String(limit),
     Fields: 'Genres,People,ProductionYear,CommunityRating,RunTimeTicks',
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'personal', { rank: 5 }).then(function (result) {
     return (result && result.Items) || [];
   });
 }
@@ -1393,7 +1612,7 @@ export async function getRecommendationCandidates(seed, limit) {
   const jobs = [];
   if (genres.length) {
     jobs.push(
-      getJson(base + '&Genres=' + encodeURIComponent(genres.join('|')))
+      rowJson(base + '&Genres=' + encodeURIComponent(genres.join('|')), 'rows')
         .then(function (result) {
           return { tag: 'genre', items: (result && result.Items) || [] };
         })
@@ -1409,7 +1628,7 @@ export async function getRecommendationCandidates(seed, limit) {
       })
       .join(',');
     jobs.push(
-      getJson(base + '&PersonIds=' + personIds)
+      rowJson(base + '&PersonIds=' + personIds, 'rows')
         .then(function (result) {
           return { tag: 'person', items: (result && result.Items) || [] };
         })
@@ -1471,7 +1690,7 @@ export function getPersonItems(personId, limit) {
     SortBy: 'CommunityRating',
     SortOrder: 'Descending',
   });
-  return getJson('/Users/' + userId + '/Items?' + params.toString()).then(function (result) {
+  return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'people').then(function (result) {
     return (result && result.Items) || [];
   });
 }
@@ -1793,6 +2012,7 @@ export async function setPlayed(itemId, isPlayed) {
     err.status = response.status;
     throw err;
   }
+  invalidateUserDataRows();
   return response.json();
 }
 
@@ -1817,6 +2037,7 @@ export async function setWatchlist(itemId, isWatchlisted) {
     err.status = response.status;
     throw err;
   }
+  invalidateUserDataRows();
   return response.json();
 }
 
@@ -2604,7 +2825,7 @@ export function reportPlaybackStart(itemId, mediaSourceId, positionTicks) {
     PositionTicks: positionTicks || 0,
     CanSeek: true,
     PlayMethod: 'DirectStream',
-  }).catch(function (err) {
+  }).then(invalidateUserDataRows).catch(function (err) {
     console.warn('Jellio: reportPlaybackStart failed', err);
   });
 }
@@ -2618,6 +2839,9 @@ export function reportPlaybackProgress(itemId, mediaSourceId, positionTicks, isP
     IsPaused: !!isPaused,
     CanSeek: true,
     PlayMethod: 'DirectStream',
+  }).then(function () {
+    // A progress milestone, not every report.
+    invalidateUserDataRowsThrottled(2 * 60000);
   }).catch(function (err) {
     console.warn('Jellio: reportPlaybackProgress failed', err);
   });
@@ -2633,7 +2857,7 @@ export function reportPlaybackStopped(itemId, mediaSourceId, positionTicks) {
     ItemId: itemId,
     MediaSourceId: mediaSourceId,
     PositionTicks: positionTicks || 0,
-  }).catch(function (err) {
+  }).then(invalidateUserDataRows).catch(function (err) {
     console.warn('Jellio: reportPlaybackStopped failed', err);
   });
 }
@@ -2698,7 +2922,7 @@ export function logPlaybackDecision(itemId, mediaSource, classification, policy)
 
 export function getJellioConfig() {
   return cached('jellio-config', function () {
-    return getJson('/Jellio/config');
+    return getJson('/Jellio/config').then(applyRowCacheConfig);
   }, SHORT_CACHE_TTL_MS);
 }
 
@@ -2928,7 +3152,7 @@ export function sendGroupWatchInvite(groupId, groupName, toUserId) {
 // mainstream titles). Empty, not an error, on a server with no TMDB
 // token configured yet or a Watchlist with nothing upcoming on it.
 export function getCalendarEntries() {
-  return getJson('/Jellio/calendar');
+  return rowJson('/Jellio/calendar', 'watchlist');
 }
 
 // Jellio's own NotificationsController: the same real Watchlist scan
@@ -3069,7 +3293,7 @@ function getAllCollections(userId) {
       // children and buildCatalogRows drops all of them, silently.
       Fields: 'ProviderIds,ChildCount',
     });
-    return getJson('/Users/' + userId + '/Items?' + params.toString());
+    return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'collections');
   }
 
   return fetchPage(0).then(function (first) {
@@ -3136,7 +3360,7 @@ function normalizedId(id) {
 
 export function getAnimeIds() {
   return cached('anime-ids', function () {
-    return getJson('/Jellio/anime/ids', 20000).then(function (result) {
+    return rowJson('/Jellio/anime/ids', 'collections', { timeout: 20000 }).then(function (result) {
       return new Set(((result && result.Ids) || []).map(normalizedId));
     });
   }).catch(function () {
@@ -3179,7 +3403,7 @@ export function getCollectionItems(collectionId, kind, limit) {
   });
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {
-    return getJson(path);
+    return rowJson(path, 'rows');
   }).then(function (result) {
     return (result && result.Items) || [];
   });
@@ -3333,7 +3557,7 @@ export function getHeroCandidates(limit, options) {
       Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating',
     });
     if (opts.parentId) params.set('ParentId', opts.parentId);
-    return Promise.all([getJson('/Users/' + userId + '/Items?' + params.toString()), getAnimeIds()]).then(function (results) {
+    return Promise.all([rowJson('/Users/' + userId + '/Items?' + params.toString(), 'hero'), getAnimeIds()]).then(function (results) {
       return withoutAnime((results[0] && results[0].Items) || [], results[1]).slice(0, limit || 8);
     });
   });
@@ -3390,7 +3614,7 @@ function scanGenres(parentId, itemType) {
   if (parentId) params.set('ParentId', parentId);
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {
-    return getJson(path);
+    return rowJson(path, 'genres');
   }).then(function (result) {
     return (result && result.Items) || [];
   });
@@ -3504,7 +3728,7 @@ export function getGenreItems(parentId, itemType, genre, limit) {
   if (parentId) params.set('ParentId', parentId);
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {
-    return getJson(path);
+    return rowJson(path, 'genres');
   }).then(function (result) {
     return collapseAudiobookTracks((result && result.Items) || []);
   });
@@ -3528,7 +3752,7 @@ export function getSeasonalItems(genres, searchTerms, limit) {
     const path = '/Users/' + userId + '/Items?' + params.toString();
     jobs.push(
       cached(path, function () {
-        return getJson(path);
+        return rowJson(path, 'rows');
       }).then(function (result) {
         return (result && result.Items) || [];
       }).catch(function () {
@@ -3549,7 +3773,7 @@ export function getSeasonalItems(genres, searchTerms, limit) {
       const path = '/Users/' + userId + '/Items?' + params.toString();
       jobs.push(
         cached(path, function () {
-          return getJson(path);
+          return rowJson(path, 'rows');
         }).then(function (result) {
           return (result && result.Items) || [];
         }).catch(function () {
@@ -3856,7 +4080,10 @@ export function creditGroupWatchTogether() {
 // length. screens/player.js's own real <video>.duration is what
 // decides when to call this, not this file.
 export function creditRealWatch(itemId) {
-  return postJson('/Jellio/achievements/real-watch', { ItemId: itemId });
+  return postJson('/Jellio/achievements/real-watch', { ItemId: itemId }).then(function (result) {
+    invalidateUserDataRows();
+    return result;
+  });
 }
 
 // Same real reason creditRealWatch above bypasses item.RunTimeTicks:
@@ -3876,7 +4103,10 @@ export function probeRealDuration(itemId) {
 
 // exact: the length itself; otherwise only a lower bound on it.
 export function reportRealDuration(itemId, durationTicks, exact) {
-  return postJson('/Jellio/real-duration', { ItemId: itemId, DurationTicks: Math.round(durationTicks), Exact: !!exact });
+  return postJson('/Jellio/real-duration', { ItemId: itemId, DurationTicks: Math.round(durationTicks), Exact: !!exact }).then(function (result) {
+    invalidateUserDataRows();
+    return result;
+  });
 }
 
 // getResumeItems below calls this once per fetch, not once per card:
@@ -3885,7 +4115,7 @@ export function reportRealDuration(itemId, durationTicks, exact) {
 // trip, not twenty.
 function getRealDurationOverrides(itemIds) {
   if (!itemIds.length) return Promise.resolve({});
-  return getPriorityJson('/Jellio/real-duration?ids=' + itemIds.join(',')).catch(function () {
+  return rowJson('/Jellio/real-duration?ids=' + itemIds.join(','), 'personal', { priority: true, rank: 0 }).catch(function () {
     return {};
   });
 }

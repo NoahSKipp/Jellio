@@ -13,7 +13,7 @@ namespace Jellio.Controllers;
 /// Jellyfin's own TranscodeReasons and the Video transcode policy in force.
 /// For measuring how often a server without hardware acceleration is asked
 /// to re-encode video. Sent by the web player and Jellio TV after
-/// PlaybackInfo.
+/// PlaybackInfo. Also the web frontend's home load report.
 /// </summary>
 [ApiController]
 [Route("Jellio/playback")]
@@ -38,6 +38,42 @@ public class PlaybackLogController(ILogger<PlaybackLogController> logger) : Cont
             Clean(body.Policy),
             body.Guessed ? "from stream name" : "probed",
             Clean(body.Client ?? "web"),
+            userId);
+        return NoContent();
+    }
+
+    public record HomeLoadBody(
+        int Hits,
+        int Stale,
+        int Misses,
+        int Fetches,
+        int FromOtherTabs,
+        int RequestsFirst5s,
+        int MaxConcurrentFirst5s,
+        int? FirstRowPaintMs,
+        bool StreamPlayingElsewhere,
+        string? Storage,
+        string? Route);
+
+    // One line per page load from the web frontend's home row cache: how
+    // much came from the cache and how many requests the start sent.
+    [HttpPost("homeload")]
+    public IActionResult HomeLoad([FromBody] HomeLoadBody body)
+    {
+        var userId = HttpContext.User.Identity is ClaimsIdentity identity ? identity.FindFirst("Jellyfin-UserId")?.Value : null;
+        logger.LogInformation(
+            "Jellio home load: {Hits} cached, {Stale} stale, {Misses} missed, {Fetches} fetched, {FromOtherTabs} from other tabs; {Requests} requests in the first 5 s, at most {MaxConcurrent} at once; first row after {FirstRowMs} ms; stream playing elsewhere {Playing}; storage {Storage}, route {Route}, user {UserId}",
+            body.Hits,
+            body.Stale,
+            body.Misses,
+            body.Fetches,
+            body.FromOtherTabs,
+            body.RequestsFirst5s,
+            body.MaxConcurrentFirst5s,
+            body.FirstRowPaintMs?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-",
+            body.StreamPlayingElsewhere,
+            Clean(body.Storage),
+            Clean(body.Route),
             userId);
         return NoContent();
     }

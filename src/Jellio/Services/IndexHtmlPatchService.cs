@@ -170,6 +170,7 @@ public class IndexHtmlPatchService(
         "runtime/transcodeClassifier.js",
         "runtime/transcodePolicy.js",
         "runtime/quality.js",
+        "runtime/rowcache.js",
         "screens/login.js",
         "screens/home.js",
         "screens/library.js",

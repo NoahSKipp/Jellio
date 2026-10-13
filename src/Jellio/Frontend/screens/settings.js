@@ -38,6 +38,8 @@ import {
   getJellioConfig,
   startMangaImport,
   getMangaImportStatus,
+  clearCachedRows,
+  isHomeRowCacheEnabled,
 } from '../runtime/api.js';
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
@@ -939,11 +941,32 @@ function buildAppUpdateCard(native) {
   return card;
 }
 
+// The home row cache (runtime/rowcache.js) lives in this browser; this
+// empties it for every tab.
+function buildHomeCacheCard() {
+  const { card, body } = buildCard('home', 'Home screen');
+  const row = buildActionRow(
+    'delete_sweep',
+    'Clear cached rows',
+    isHomeRowCacheEnabled()
+      ? 'Home rows are kept in this browser and refreshed in the background. Clearing makes the next load ask the server for all of them.'
+      : 'The home row cache is turned off on this server.',
+    function () {
+      clearCachedRows();
+      const description = row.querySelector('.jellio-settings-row-description');
+      if (description) description.textContent = 'Cleared. The home screen asks the server for every row on its next load.';
+    },
+  );
+  body.appendChild(row);
+  return card;
+}
+
 function buildAboutCategory() {
   const wrap = el('div', 'jellio-settings-category');
   const version = jellioVersion();
   const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
+  wrap.appendChild(buildHomeCacheCard());
   const native = window.jellioNative && window.jellioNative.updates;
   if (native) wrap.appendChild(buildAppUpdateCard(native));
   return wrap;

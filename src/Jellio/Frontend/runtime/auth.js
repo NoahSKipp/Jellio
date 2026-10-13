@@ -10,6 +10,8 @@
 // live with that because it only ever augments native pages. This codebase
 // does not, so it keeps its own record of who is signed in, updated the
 // moment a real login response is seen, not on native code's timetable.
+import { requestRowCacheWipe } from './rowcache.js';
+
 export const Jellio = window.Jellio || (window.Jellio = {});
 
 const STORAGE_PREFIX = 'jellio_auth::';
@@ -579,6 +581,7 @@ export async function redeemPasswordResetPin(pin) {
 // reloads so both land back on native's own sign in screen rather than
 // the two disagreeing about who is signed in.
 export function logout() {
+  requestRowCacheWipe(window);
   clearSession();
   try {
     window.localStorage.removeItem('jellyfin_credentials');

@@ -166,6 +166,12 @@ public class PluginConfiguration : BasePluginConfiguration
     // video re-encode). For servers without hardware transcoding.
     public string VideoTranscodePolicy { get; set; } = "Allow";
 
+    // The web frontend keeps home row answers in the browser and shares
+    // them between tabs, refreshing them in the background, so a new tab
+    // paints at once and doesn't fire every row query together. Off: every
+    // row is asked for from the server on each load, as before.
+    public bool HomeRowCache { get; set; } = true;
+
     // Chaptarr, the Readarr successor that acquires books for the Books
     // library: Controllers/BookRequestController.cs searches it and adds
     // requested books through its own API. The key is Chaptarr's standard
