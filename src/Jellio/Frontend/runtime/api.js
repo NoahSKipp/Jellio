@@ -1856,6 +1856,27 @@ export function searchItems(term, limit, signal) {
   });
 }
 
+// Only what the library already holds: Gelato's SearchActionFilter passes
+// a "local:" search straight to Jellyfin's own search (tens of
+// milliseconds) instead of asking the addons, so owned titles show while
+// the addon search is still out. Without Gelato nothing matches it;
+// search.js falls back to the plain search there.
+export function searchLibrary(term, signal) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  if (!term) return Promise.resolve([]);
+  const params = new URLSearchParams({
+    searchTerm: 'local:' + term,
+    Recursive: 'true',
+    IncludeItemTypes: 'Movie,Series',
+    Fields: 'PrimaryImageAspectRatio,ProviderIds,ProductionYear',
+    Limit: '50',
+  });
+  return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
 // Real bottleneck traced through Gelato's own SearchActionFilter.cs: the
 // combined searchItems() call above waits on Task.WhenAll(movie search,
 // series search) server side before answering at all, even though this

@@ -20,10 +20,9 @@
 // same query fresh, same real "screens fetch their own state" shape
 // every other screen here already uses rather than caching the actual
 // result set.
-import { searchItems, searchMovies, searchSeries } from '../runtime/api.js';
+import { searchItems, searchLibrary, searchMovies, searchSeries } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
 import { buildSkeletonRow } from '../components/homeSkeleton.js';
-import { appendCardsLazily } from '../components/lazyGrid.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { reflectStateInAddressBar, navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
@@ -211,24 +210,6 @@ export async function renderSearch(root, params) {
   results.className = 'jellio-search-results';
   root.appendChild(results);
 
-  // Real feedback: results used to land in one flat grid, movies and
-  // series interleaved in whatever order Gelato's own AIOStreams proxy
-  // happened to return them, no way to tell the two apart at a glance
-  // beyond each card's own small type-adjacent detail. searchItems()
-  // already asks for IncludeItemTypes: 'Movie,Series' only, so
-  // item.Type is always one of exactly those two real values here, the
-  // same real split screens/home.js's own Watchlist tab already uses
-  // for its own Movies/Series sections.
-  function buildTypeSection(title, items) {
-    if (!items.length) return null;
-    const section = el('section', 'jellio-row');
-    section.appendChild(el('h2', 'jellio-row-title', title));
-    const grid = el('div', 'jellio-library-grid');
-    section.appendChild(grid);
-    appendCardsLazily(grid, items, buildCard);
-    return section;
-  }
-
   let timer = null;
   let saveTimer = null;
   let requestId = 0;
@@ -259,6 +240,76 @@ export async function renderSearch(root, params) {
   // the slower one. moviesSlot/seriesSlot below are fixed DOM anchors so
   // a late-arriving Movies section still renders above Series, not
   // wherever insertion order happened to land it.
+  // Each type fills in as answers arrive: titles already in the library
+  // (searchLibrary, near instant) first, then the addon search's results
+  // appended after them, nothing shown twice and nothing reordered under
+  // the pointer. Placeholder cards sit at the end while a type is still
+  // loading.
+  const SEARCH_SKELETON_CARDS = 4;
+
+  function identityKeys(item) {
+    const keys = ['id:' + String(item.Id || '').replace(/-/g, '').toLowerCase()];
+    const ids = item.ProviderIds || {};
+    ['Tmdb', 'Imdb', 'Tvdb'].forEach(function (provider) {
+      const value = ids[provider] || ids[provider.toLowerCase()];
+      if (value) keys.push(item.Type + ':' + provider + ':' + value);
+    });
+    if (item.Name && item.ProductionYear) keys.push(item.Type + ':name:' + item.Name.trim().toLowerCase() + ':' + item.ProductionYear);
+    return keys;
+  }
+
+  function createTypeState(slot, title) {
+    return { slot: slot, title: title, section: null, grid: null, seen: new Set(), pending: 0, failed: null };
+  }
+
+  function addItems(state, items) {
+    const fresh = items.filter(function (item) {
+      const keys = identityKeys(item);
+      if (keys.some(function (key) { return state.seen.has(key); })) return false;
+      keys.forEach(function (key) { state.seen.add(key); });
+      return true;
+    });
+    if (fresh.length) {
+      if (!state.section) {
+        state.slot.textContent = '';
+        state.section = el('section', 'jellio-row');
+        state.section.appendChild(el('h2', 'jellio-row-title', state.title));
+        state.grid = el('div', 'jellio-library-grid');
+        state.section.appendChild(state.grid);
+        state.slot.appendChild(state.section);
+      }
+      const firstPlaceholder = state.grid.querySelector('.jellio-search-skeleton-card');
+      fresh.forEach(function (item) {
+        state.grid.insertBefore(buildCard(item), firstPlaceholder);
+      });
+    }
+    paintLoading(state);
+    return fresh.length;
+  }
+
+  function paintLoading(state) {
+    if (state.section) {
+      const placeholders = state.grid.querySelectorAll('.jellio-search-skeleton-card');
+      if (state.pending > 0 && !placeholders.length) {
+        for (let i = 0; i < SEARCH_SKELETON_CARDS; i++) {
+          state.grid.appendChild(el('div', 'jellio-search-skeleton-card jellio-shimmer'));
+        }
+      } else if (state.pending === 0) {
+        placeholders.forEach(function (node) { node.remove(); });
+      }
+      return;
+    }
+    state.slot.textContent = '';
+    if (state.pending > 0) {
+      state.slot.appendChild(buildSkeletonRow());
+    } else if (state.failed) {
+      const note = document.createElement('p');
+      note.className = 'jellio-service-empty jellio-search-status';
+      note.textContent = describeNetworkFailure(state.title.toLowerCase() + ' results', state.failed);
+      state.slot.appendChild(note);
+    }
+  }
+
   function runSearch(term) {
     recentSection.hidden = true;
     filterBar.hidden = false;
@@ -270,90 +321,108 @@ export async function renderSearch(root, params) {
 
     const moviesSlot = el('div', 'jellio-search-type-slot');
     const seriesSlot = el('div', 'jellio-search-type-slot');
-    moviesSlot.appendChild(buildSkeletonRow());
-    seriesSlot.appendChild(buildSkeletonRow());
     results.appendChild(moviesSlot);
     results.appendChild(seriesSlot);
-
     currentSlots = { moviesSlot: moviesSlot, seriesSlot: seriesSlot };
     applyCategoryFilter();
 
-    let settledCount = 0;
+    const movies = createTypeState(moviesSlot, 'Movies');
+    const series = createTypeState(seriesSlot, 'Series');
+    // The library search and the type's own addon search.
+    movies.pending = 2;
+    series.pending = 2;
+    paintLoading(movies);
+    paintLoading(series);
+
     let anyResults = false;
     let fellBack = false;
 
-    function maybeFinishStatus() {
-      if (thisRequest !== requestId) return;
-      settledCount += 1;
-      if (settledCount < 2) return;
-      status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
+    function current() {
+      return thisRequest === requestId;
+    }
+
+    function add(items) {
+      const movieCount = addItems(movies, items.filter(function (item) { return item.Type === 'Movie'; }));
+      const seriesCount = addItems(series, items.filter(function (item) { return item.Type === 'Series'; }));
+      if (movieCount || seriesCount) anyResults = true;
+    }
+
+    function settle(state) {
+      state.pending = Math.max(0, state.pending - 1);
+      paintLoading(state);
+      if (movies.pending === 0 && series.pending === 0) {
+        status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
+      }
+    }
+
+    function request(fetcher) {
+      const controller = new AbortController();
+      inFlight.push(controller);
+      return fetcher(term, controller.signal);
     }
 
     // Real servers without Gelato installed (or on an older build
-    // without these two routes yet) 404 here: fall back to the original
-    // combined call so search still works there, same real result that
-    // call always gave, just without the incremental split.
+    // without these two routes yet) 404 on the per-type search, and the
+    // "local:" library search matches nothing there: the plain combined
+    // search answers for both types instead.
     function fallBackToCombined(err) {
-      if (thisRequest !== requestId || fellBack) return;
+      if (!current() || fellBack) return;
       fellBack = true;
       console.warn('Jellio: per-type search unavailable, falling back to combined search', err);
-      const controller = new AbortController();
-      inFlight.push(controller);
-      searchItems(term, undefined, controller.signal)
+      request(function (t, signal) { return searchItems(t, undefined, signal); })
         .then(function (items) {
-          if (thisRequest !== requestId) return;
-          moviesSlot.textContent = '';
-          seriesSlot.textContent = '';
-          const movies = items.filter(function (item) { return item.Type === 'Movie'; });
-          const series = items.filter(function (item) { return item.Type === 'Series'; });
-          if (movies.length || series.length) anyResults = true;
-          const movieSection = buildTypeSection('Movies', movies);
-          if (movieSection) moviesSlot.appendChild(movieSection);
-          const seriesSection = buildTypeSection('Series', series);
-          if (seriesSection) seriesSlot.appendChild(seriesSection);
-          status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
+          if (!current()) return;
+          add(items);
         })
         .catch(function (fallbackErr) {
-          if (thisRequest !== requestId) return;
-          moviesSlot.textContent = '';
-          seriesSlot.textContent = '';
+          if (!current()) return;
           console.warn('Jellio: combined search fallback also failed', fallbackErr);
-          status.textContent = describeNetworkFailure('search results', fallbackErr);
+          movies.failed = movies.failed || fallbackErr;
+          series.failed = series.failed || fallbackErr;
+        })
+        .finally(function () {
+          if (!current()) return;
+          settle(movies);
+          settle(series);
         });
     }
 
-    function runOne(fetcher, slot, title) {
-      const controller = new AbortController();
-      inFlight.push(controller);
-      fetcher(term, controller.signal)
+    request(searchLibrary)
+      .then(function (items) {
+        if (current()) add(items);
+      })
+      .catch(function (err) {
+        if (current()) console.warn('Jellio: library search failed', err);
+      })
+      .finally(function () {
+        if (!current()) return;
+        settle(movies);
+        settle(series);
+      });
+
+    function runOne(fetcher, state) {
+      request(fetcher)
         .then(function (items) {
-          if (thisRequest !== requestId) return;
-          slot.textContent = '';
-          if (fellBack && (title === 'Movies' || title === 'Series')) return;
-          if (items.length) anyResults = true;
-          const section = buildTypeSection(title, items);
-          if (section) slot.appendChild(section);
-          maybeFinishStatus();
+          if (!current() || fellBack) return;
+          add(items);
+          settle(state);
         })
         .catch(function (err) {
-          if (thisRequest !== requestId) return;
-          slot.textContent = '';
-          if (err && err.status === 404 && (title === 'Movies' || title === 'Series')) {
+          if (!current()) return;
+          if (err && err.status === 404) {
+            // Settled by the fallback, which answers for both types.
             fallBackToCombined(err);
             return;
           }
-          if (fellBack && (title === 'Movies' || title === 'Series')) return;
-          console.warn('Jellio: ' + title.toLowerCase() + ' search failed', err);
-          const note = document.createElement('p');
-          note.className = 'jellio-service-empty jellio-search-status';
-          note.textContent = describeNetworkFailure(title.toLowerCase() + ' results', err);
-          slot.appendChild(note);
-          maybeFinishStatus();
+          if (fellBack) return;
+          console.warn('Jellio: ' + state.title.toLowerCase() + ' search failed', err);
+          state.failed = err;
+          settle(state);
         });
     }
 
-    runOne(searchMovies, moviesSlot, 'Movies');
-    runOne(searchSeries, seriesSlot, 'Series');
+    runOne(searchMovies, movies);
+    runOne(searchSeries, series);
   }
 
   function commitCurrentSearch() {

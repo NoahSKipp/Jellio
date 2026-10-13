@@ -14989,3 +14989,9 @@
 .jellio-home-lazy-sentinel {
   height: 1px;
 }
+
+/* Search: placeholder cards after the results while a type is still loading. */
+.jellio-search-skeleton-card {
+  aspect-ratio: 2 / 3;
+  border-radius: var(--jellio-card-radius);
+}
