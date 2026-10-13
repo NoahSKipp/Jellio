@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.77.1] - 2026-10-13\n\n### 🐛 Bug Fixes\n\n- *(calendar)* Find watched shows from episode history and wait longer for new seasons\n",
+        "checksum": "7517f9c6e26a20466235dbe2e51e8e24",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.1/jellio_1.77.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-13T20:04:57Z",
+        "version": "1.77.1"
+      },
+      {
         "changelog": "## [1.77.0] - 2026-10-13\n\n### 🚀 Features\n\n- *(settings)* Add a Display category with a seasonal motion level\n",
         "checksum": "df85021d09a3ae74e2b1ccb59b448ea2",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.0/jellio_1.77.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T00:22:05Z",
         "version": "1.63.0"
-      },
-      {
-        "changelog": "## [1.62.0] - 2026-10-07\n\n### 🚀 Features\n\n- *(streams)* Add quality filter chips that combine with language chips\n",
-        "checksum": "dff8d2086a05d1e623fe7e3058b75167",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.62.0/jellio_1.62.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-07T23:46:28Z",
-        "version": "1.62.0"
       }
     ]
   }
