@@ -122,7 +122,7 @@ export async function renderCalendar(root) {
       el(
         'p',
         'jellio-service-empty',
-        'Nothing upcoming yet. Anything on your Watchlist with a known air or digital release date shows up here.',
+        'Nothing upcoming yet. Your Watchlist and the shows you have been watching appear here once a new episode or release date is announced.',
       ),
     );
     return;

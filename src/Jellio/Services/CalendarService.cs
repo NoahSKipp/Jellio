@@ -13,6 +13,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
@@ -55,19 +56,55 @@ public class CalendarService(
 
     private readonly ConcurrentDictionary<string, (DateTime CachedAt, CalendarEntry? Entry)> _cache = new();
 
+    // How long after the last watched episode a show that is still airing
+    // (or has no status) keeps being checked for a next season. Gaps of two
+    // to three years are common for TV (Severance, Stranger Things, The
+    // Boys); anime sequels often take longer still (Jujutsu Kaisen, Frieren,
+    // Vinland Saga), so anime gets five. A title only reaches the calendar
+    // once TMDB has an announced air date, so a long window costs a few
+    // cached lookups, not noise.
+    public static readonly TimeSpan SeriesWindow = TimeSpan.FromDays(3 * 365);
+    public static readonly TimeSpan AnimeSeriesWindow = TimeSpan.FromDays(5 * 365);
+
+    private static readonly TimeSpan MonitoredCacheTtl = TimeSpan.FromMinutes(30);
+    private readonly ConcurrentDictionary<Guid, (DateTime At, IReadOnlyList<BaseItem> Items)> _monitoredCache = new();
+
     /// <summary>
-    /// Returns all library items that should be monitored for upcoming releases or air dates:
-    /// 1. Items on the user's Watchlist (IsFavorite = true) - both movies and series.
-    /// 2. Currently watched / continuing TV shows:
-    ///    - Continuing/airing series where user has watched episodes, even if all currently
-    ///      available local episodes are watched (userData.Played = true).
-    ///    - In-progress series where unplayed episodes remain and the user has actively watched recently.
+    /// Whether a series the user has watched some of is checked for new
+    /// episodes. lastWatched is the newest episode the user played or
+    /// paused; null (played without a date) counts as recent.
+    /// </summary>
+    public static bool ShouldMonitorSeries(SeriesStatus? status, DateTime? lastWatched, bool isAnime, DateTime now)
+    {
+        if (status == SeriesStatus.Ended)
+        {
+            return false;
+        }
+
+        if (!lastWatched.HasValue)
+        {
+            return true;
+        }
+
+        return now - lastWatched.Value <= (isAnime ? AnimeSeriesWindow : SeriesWindow);
+    }
+
+    /// <summary>
+    /// Every title checked for upcoming releases or air dates: the user's
+    /// Watchlist (IsFavorite), plus every series they have watched an
+    /// episode of that ShouldMonitorSeries keeps. Jellyfin records plays on
+    /// episodes, not on the series, so the last watched date comes from the
+    /// user's episode history.
     /// </summary>
     public IReadOnlyList<BaseItem> GetMonitoredItems(User user)
     {
+        if (_monitoredCache.TryGetValue(user.Id, out var hit) && DateTime.UtcNow - hit.At < MonitoredCacheTtl)
+        {
+            return hit.Items;
+        }
+
         var monitored = new Dictionary<Guid, BaseItem>();
 
-        // 1. Explicit watchlist (favorites)
         var watchlist = libraryManager.GetItemList(new InternalItemsQuery(user)
         {
             IsFavorite = true,
@@ -79,87 +116,70 @@ public class CalendarService(
             monitored[item.Id] = item;
         }
 
-        // 2. Currently watched & ongoing/airing series
-        var allSeries = libraryManager.GetItemList(new InternalItemsQuery(user)
-        {
-            IncludeItemTypes = [BaseItemKind.Series],
-        });
-
+        var lastWatched = LastWatchedBySeries(user);
+        var anime = AnimeCatalog.GetIds(libraryManager);
         var now = DateTime.UtcNow;
-        var inProgressCutoff = now.AddDays(-180); // 6 months active window for in-progress series
-        var continuingCutoff = now.AddDays(-365); // 1 year active window for caught-up continuing series
-
-        foreach (var item in allSeries)
+        foreach (var (seriesId, watchedAt) in lastWatched)
         {
-            if (monitored.ContainsKey(item.Id))
+            if (monitored.ContainsKey(seriesId) || libraryManager.GetItemById(seriesId) is not Series series)
             {
                 continue;
             }
 
-            if (item is not Series series)
+            if (ShouldMonitorSeries(series.Status, watchedAt, anime.Contains(series.Id), now))
             {
-                continue;
-            }
-
-            var userData = userDataManager.GetUserData(user, series);
-            if (userData == null)
-            {
-                continue;
-            }
-
-            var hasWatched = userData.Played || userData.PlayCount > 0 || userData.LastPlayedDate.HasValue || userData.PlaybackPositionTicks > 0;
-            if (!hasWatched)
-            {
-                continue;
-            }
-
-            // Definitively ended series that the user already completed
-            if (series.Status == MediaBrowser.Model.Entities.SeriesStatus.Ended && userData.Played)
-            {
-                continue;
-            }
-
-            // Continuing / actively airing shows:
-            // Even if the user finished all currently available episodes (userData.Played == true),
-            // the show is still airing new episodes. Respect continuing status and keep monitoring.
-            if (series.Status == MediaBrowser.Model.Entities.SeriesStatus.Continuing)
-            {
-                if (!userData.LastPlayedDate.HasValue || userData.LastPlayedDate.Value >= continuingCutoff)
-                {
-                    monitored[series.Id] = series;
-                    continue;
-                }
-            }
-            else if (series.Status != MediaBrowser.Model.Entities.SeriesStatus.Ended && userData.Played)
-            {
-                // Unspecified status but completed recently (within 90 days): monitor in case next season airs
-                if (userData.LastPlayedDate.HasValue && userData.LastPlayedDate.Value >= now.AddDays(-90))
-                {
-                    monitored[series.Id] = series;
-                    continue;
-                }
-            }
-
-            // In-progress shows (unplayed episodes still remain in library)
-            if (!userData.Played)
-            {
-                // In-progress episode currently paused
-                if (userData.PlaybackPositionTicks > 0)
-                {
-                    monitored[series.Id] = series;
-                    continue;
-                }
-
-                // Or played recently (or play count > 0 with no timestamp)
-                if (!userData.LastPlayedDate.HasValue || userData.LastPlayedDate.Value >= inProgressCutoff)
-                {
-                    monitored[series.Id] = series;
-                    continue;
-                }
+                monitored[series.Id] = series;
             }
         }
 
-        return monitored.Values.ToList();
+        var result = monitored.Values.ToList();
+        _monitoredCache[user.Id] = (DateTime.UtcNow, result);
+        logger.LogInformation(
+            "Jellio: calendar watches {Count} titles for {User} ({Watched} watched series)",
+            result.Count,
+            user.Username,
+            lastWatched.Count);
+        return result;
+    }
+
+    // Series id to the newest LastPlayedDate among its played or paused
+    // episodes (null when an episode was played without a date).
+    private Dictionary<Guid, DateTime?> LastWatchedBySeries(User user)
+    {
+        var result = new Dictionary<Guid, DateTime?>();
+        var played = libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            IncludeItemTypes = [BaseItemKind.Episode],
+            IsPlayed = true,
+            Recursive = true,
+        });
+        var paused = libraryManager.GetItemList(new InternalItemsQuery(user)
+        {
+            IncludeItemTypes = [BaseItemKind.Episode],
+            IsResumable = true,
+            Recursive = true,
+        });
+
+        foreach (var episode in played.Concat(paused).OfType<Episode>())
+        {
+            var seriesId = episode.SeriesId;
+            if (seriesId == Guid.Empty)
+            {
+                continue;
+            }
+
+            var date = userDataManager.GetUserData(user, episode)?.LastPlayedDate;
+            if (!result.TryGetValue(seriesId, out var known))
+            {
+                result[seriesId] = date;
+            }
+            else if (known.HasValue && (!date.HasValue || date.Value > known.Value))
+            {
+                result[seriesId] = date;
+            }
+        }
+
+        return result;
     }
 
     // Moved verbatim from Controllers/CalendarController.cs's own
