@@ -37,6 +37,7 @@ import {
   getPlaybackInfo,
   getMediaSources,
   buildStreamUrl,
+  buildCastStreamUrl,
   canBrowserDirectPlay,
   loadVideoTranscodePolicy,
   logPlaybackDecision,
@@ -2798,19 +2799,29 @@ export async function renderPlayer(root, params) {
             try {
               castMenu.classList.add('jellio-player-popover-hidden');
               const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
-              const castStreamUrl = buildStreamUrl(itemId, mediaSource, 0, {
+              const currentTicks = Math.round(currentSec * TICKS_PER_SECOND);
+              const castStreamUrl = buildCastStreamUrl(itemId, mediaSource, currentTicks, {
                 audioStreamIndex: currentAudioStreamIndex,
+                subtitleStreamIndex: activeSubtitleStreamIndex,
               });
 
               if (window.cast && window.cast.framework) {
-                await castToGoogleCast(castStreamUrl, item, currentSec);
+                await castToGoogleCast(castStreamUrl, item, currentSec, {
+                  mediaSource: mediaSource,
+                  startOffsetTicks: currentTicks,
+                  posterUrl: getImageUrl(itemId, 'Primary', { maxWidth: 800 }),
+                });
                 video.pause();
                 showPlayerToast('Streaming via Google Cast');
               } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
                 await promptRemotePlayback(video);
                 showPlayerToast('Streaming via Wireless Display');
               } else {
-                await castToGoogleCast(castStreamUrl, item, currentSec);
+                await castToGoogleCast(castStreamUrl, item, currentSec, {
+                  mediaSource: mediaSource,
+                  startOffsetTicks: currentTicks,
+                  posterUrl: getImageUrl(itemId, 'Primary', { maxWidth: 800 }),
+                });
                 video.pause();
                 showPlayerToast('Streaming via Google Cast');
               }
@@ -2904,7 +2915,7 @@ export async function renderPlayer(root, params) {
         video.pause();
         castMenu.classList.add('jellio-player-popover-hidden');
         showPlayerToast('Streaming to ' + target.name + '...');
-        await castToJellyfinSession(target, itemId, currentTicks, mediaSource, currentAudioStreamIndex, currentSubtitleStreamIndex);
+        await castToJellyfinSession(target, itemId, currentTicks, mediaSource, currentAudioStreamIndex, activeSubtitleStreamIndex);
         showPlayerToast('Casting on ' + target.name);
       } catch (err) {
         console.warn('Jellio: failed to cast to ' + target.name, err);

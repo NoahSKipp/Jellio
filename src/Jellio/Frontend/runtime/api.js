@@ -2512,6 +2512,39 @@ export function buildStreamUrl(itemId, mediaSource, startTimeTicks, options) {
   return getServerAddress() + path + '?' + params.toString();
 }
 
+// Constructs an MP4 stream URL tailored specifically for Google Cast / Chromecast hardware.
+// Enforces MP4 container with H.264 video and AAC audio for universal Chromecast hardware compatibility.
+// If the media source already has H.264 video or AAC audio, Jellyfin copies those streams directly
+// (AllowVideoStreamCopy/AllowAudioStreamCopy) with zero quality loss and negligible CPU usage.
+export function buildCastStreamUrl(itemId, mediaSource, startTimeTicks, options) {
+  const opts = options || {};
+  const token = getAccessToken();
+  const mediaSourceId = (mediaSource && mediaSource.Id) || itemId;
+
+  const params = new URLSearchParams({
+    MediaSourceId: mediaSourceId,
+    DeviceId: getDeviceId(),
+    ApiKey: token || '',
+    Static: 'false',
+    VideoCodec: 'h264',
+    AudioCodec: 'aac',
+    AudioBitRate: '192000',
+    AllowVideoStreamCopy: 'true',
+    AllowAudioStreamCopy: 'true',
+    StartTimeTicks: String(startTimeTicks || 0),
+  });
+
+  if (opts.audioStreamIndex != null) {
+    params.set('AudioStreamIndex', String(opts.audioStreamIndex));
+  }
+  if (opts.subtitleStreamIndex != null) {
+    params.set('SubtitleStreamIndex', String(opts.subtitleStreamIndex));
+    params.set('SubtitleMethod', 'Encode');
+  }
+
+  return getServerAddress() + '/Videos/' + itemId + '/stream.mp4?' + params.toString();
+}
+
 // Real endpoint, GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg
 // (TrickplayController.cs's own GetTrickplayTileImage), confirmed
 // against that controller's own real route before writing this: index

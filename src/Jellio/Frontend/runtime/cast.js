@@ -10,6 +10,7 @@ import {
   sendPlayCommand,
   sendPlaystateCommand,
   sendSessionGeneralCommand,
+  getImageUrl,
 } from './api.js';
 
 const TICKS_PER_SECOND = 10000000;
@@ -157,13 +158,16 @@ function setupCastFramework() {
         if (remotePlayer.isConnected) {
           const session = castContext.getCurrentSession();
           const deviceName = (session && session.getCastDevice() && session.getCastDevice().friendlyName) || 'Chromecast';
-          activeCast = {
-            type: 'google-cast',
-            name: deviceName,
-            isPaused: remotePlayer.isPaused,
-            positionTicks: Math.round((remotePlayer.currentTime || 0) * TICKS_PER_SECOND),
-            durationTicks: Math.round((remotePlayer.duration || 0) * TICKS_PER_SECOND),
-          };
+          if (!activeCast || activeCast.type !== 'google-cast') {
+            activeCast = {
+              type: 'google-cast',
+              name: deviceName,
+              isPaused: remotePlayer.isPaused,
+              positionTicks: Math.round((remotePlayer.currentTime || 0) * TICKS_PER_SECOND),
+              durationTicks: Math.round((remotePlayer.duration || 0) * TICKS_PER_SECOND),
+              startOffsetTicks: 0,
+            };
+          }
         } else {
           if (activeCast && activeCast.type === 'google-cast') {
             activeCast = null;
@@ -187,7 +191,8 @@ function setupCastFramework() {
       window.cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
       function () {
         if (activeCast && activeCast.type === 'google-cast') {
-          activeCast.positionTicks = Math.round((remotePlayer.currentTime || 0) * TICKS_PER_SECOND);
+          const baseTicks = activeCast.startOffsetTicks || 0;
+          activeCast.positionTicks = Math.round(baseTicks + (remotePlayer.currentTime || 0) * TICKS_PER_SECOND);
           notifyListeners();
         }
       },
@@ -308,7 +313,7 @@ export async function castToJellyfinSession(target, itemId, currentTicks, mediaS
 }
 
 // Cast via Google Cast SDK
-export async function castToGoogleCast(streamUrl, item, currentSeconds) {
+export async function castToGoogleCast(streamUrl, item, currentSeconds, options) {
   if (!window.cast || !window.cast.framework) {
     await initGoogleCast();
   }
@@ -328,24 +333,39 @@ export async function castToGoogleCast(streamUrl, item, currentSeconds) {
   mediaInfo.streamType = window.chrome.cast.media.StreamType.BUFFERED;
 
   const metadata = new window.chrome.cast.media.GenericMediaMetadata();
-  metadata.title = (item && item.Name) || 'Video';
-  if (item && item.SeriesName) {
-    metadata.subtitle = item.SeriesName;
+  const title = (item && item.Name) || 'Video';
+  const subtitle = (item && item.SeriesName) ? item.SeriesName : '';
+  metadata.title = subtitle ? (subtitle + ' - ' + title) : title;
+  if (subtitle) {
+    metadata.subtitle = title;
   }
+
+  const posterUrl = (options && options.posterUrl) || (item && item.Id && getImageUrl(item.Id, 'Primary', { maxWidth: 800 }));
+  if (posterUrl && window.chrome && window.chrome.cast && window.chrome.cast.Image) {
+    metadata.images = [new window.chrome.cast.Image(posterUrl)];
+  }
+
   mediaInfo.metadata = metadata;
 
   const request = new window.chrome.cast.media.LoadRequest(mediaInfo);
-  request.currentTime = currentSeconds || 0;
+  request.currentTime = 0;
   request.autoplay = true;
 
   await session.loadMedia(request);
 
   const deviceName = (session.getCastDevice() && session.getCastDevice().friendlyName) || 'Chromecast';
+  const startOffsetTicks = (options && options.startOffsetTicks) != null
+    ? options.startOffsetTicks
+    : Math.round((currentSeconds || 0) * TICKS_PER_SECOND);
+  const durationTicks = (options && options.mediaSource && options.mediaSource.RunTimeTicks) || 0;
+
   activeCast = {
     type: 'google-cast',
     name: deviceName,
     isPaused: false,
-    positionTicks: Math.round((currentSeconds || 0) * TICKS_PER_SECOND),
+    positionTicks: startOffsetTicks,
+    durationTicks: durationTicks,
+    startOffsetTicks: startOffsetTicks,
   };
 
   notifyListeners();
@@ -412,8 +432,12 @@ export async function sendRemoteSeek(targetTicks) {
     activeCast.positionTicks = targetTicks;
     notifyListeners();
   } else if (activeCast.type === 'google-cast' && remotePlayer && remotePlayerController) {
-    remotePlayer.currentTime = targetTicks / TICKS_PER_SECOND;
-    remotePlayerController.seek();
+    const baseSeconds = (activeCast.startOffsetTicks || 0) / TICKS_PER_SECOND;
+    const seekSec = (targetTicks / TICKS_PER_SECOND) - baseSeconds;
+    if (seekSec >= 0) {
+      remotePlayer.currentTime = seekSec;
+      remotePlayerController.seek();
+    }
   }
 }
 
@@ -456,7 +480,9 @@ export async function disconnectCast() {
       if (castContext) {
         castContext.endCurrentSession(true);
       }
-      if (remotePlayer && remotePlayer.currentTime) {
+      if (activeCast && activeCast.positionTicks) {
+        resumePositionTicks = activeCast.positionTicks;
+      } else if (remotePlayer && remotePlayer.currentTime) {
         resumePositionTicks = Math.round(remotePlayer.currentTime * TICKS_PER_SECOND);
       }
     } catch (err) {
