@@ -21,7 +21,8 @@ import {
   searchBooksToRequest,
   requestBook,
   removeBookFromLibrary,
-  searchMangaSources,
+  streamMangaSources,
+  bestMangaMatch,
   requestMangaSeries,
 } from '../runtime/api.js';
 import { getServerAddress, getAccessToken } from '../runtime/auth.js';
@@ -1022,6 +1023,7 @@ export function renderBookshelf(root, params, parentId) {
 
   let searchTimer = null;
   let sourceSearchToken = 0;
+  let mangaSearchAbort = null;
 
   function triggerSourceSearch() {
     if (searchTimer) {
@@ -1046,10 +1048,23 @@ export function renderBookshelf(root, params, parentId) {
   function executeSourceSearch(query) {
     const thisToken = ++sourceSearchToken;
     if (kind === 'manga') {
-      searchMangaSources(query)
-        .then(function (response) {
+      // Each source's results show as it answers (streamMangaSources);
+      // a newer search stops the old one's stream.
+      if (mangaSearchAbort) mangaSearchAbort.abort();
+      const controller = new AbortController();
+      mangaSearchAbort = controller;
+      const live = startMangaSources(query);
+      streamMangaSources(
+        query,
+        function (event) {
           if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
-          renderMangaSources(response, query);
+          live.update(event);
+        },
+        controller.signal,
+      )
+        .then(function (summary) {
+          if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
+          live.finish(summary);
         })
         .catch(function (err) {
           if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
@@ -1070,34 +1085,65 @@ export function renderBookshelf(root, params, parentId) {
     }
   }
 
-  function renderMangaSources(response, query) {
+  // Groups go in best match first as they arrive; the status line says
+  // how many sources are still being searched and which are skipped for
+  // now because they kept failing (the server tries them again later).
+  function startMangaSources(query) {
     sourcesResults.textContent = '';
-    const sources = (response && response.Sources) || [];
-    let totalResults = 0;
-    sources.forEach(function (s) {
-      if (s.Results) totalResults += s.Results.length;
-    });
+    sourcesStatus.textContent = 'Searching manga sources…';
+    let shown = 0;
 
-    if (!totalResults) {
-      sourcesStatus.textContent = 'No manga found on sources for “' + query + '”.';
-      return;
+    function unavailableNote(summary) {
+      return summary.Unavailable.length ? 'Unavailable for now: ' + summary.Unavailable.join(', ') : '';
     }
-    sourcesStatus.textContent = '';
-    sources.forEach(function (source) {
-      if (!source.Results || !source.Results.length) return;
-      const group = el('section', 'jellio-manga-source');
-      const title = el('div', 'jellio-manga-source-name');
-      title.appendChild(el('span', null, source.SourceName));
-      if (source.Lang && source.Lang !== 'all') {
-        title.appendChild(el('span', 'jellio-manga-source-lang', source.Lang.toUpperCase()));
-      }
-      group.appendChild(title);
 
-      source.Results.forEach(function (manga) {
-        group.appendChild(buildMangaSourceRow(manga));
+    function place(source) {
+      const group = buildMangaSourceGroup(source);
+      const match = bestMangaMatch(source);
+      group.dataset.match = String(match);
+      const after = Array.from(sourcesResults.children).find(function (child) {
+        return Number(child.dataset.match || 0) < match;
       });
-      sourcesResults.appendChild(group);
+      sourcesResults.insertBefore(group, after || null);
+      shown++;
+    }
+
+    return {
+      update: function (event) {
+        const source = event.source;
+        if (event.type === 'source' && source && source.Results.length && (source.Status === 'Ok' || source.Status === 'Cached')) {
+          place(source);
+        }
+        const summary = event.summary;
+        const parts = [];
+        if (summary.Pending > 0) parts.push('Still searching ' + summary.Pending + (summary.Pending === 1 ? ' source…' : ' sources…'));
+        const note = unavailableNote(summary);
+        if (note) parts.push(note);
+        if (parts.length) sourcesStatus.textContent = parts.join(' · ');
+      },
+      finish: function (summary) {
+        // An older server answers everything at once.
+        if (!shown) summary.Sources.forEach(place);
+        const note = unavailableNote(summary);
+        sourcesStatus.textContent = shown
+          ? note
+          : 'No manga found on sources for “' + query + '”.' + (note ? ' ' + note + '.' : '');
+      },
+    };
+  }
+
+  function buildMangaSourceGroup(source) {
+    const group = el('section', 'jellio-manga-source');
+    const title = el('div', 'jellio-manga-source-name');
+    title.appendChild(el('span', null, source.SourceName));
+    if (source.Lang && source.Lang !== 'all') {
+      title.appendChild(el('span', 'jellio-manga-source-lang', source.Lang.toUpperCase()));
+    }
+    group.appendChild(title);
+    source.Results.forEach(function (manga) {
+      group.appendChild(buildMangaSourceRow(manga));
     });
+    return group;
   }
 
   function buildMangaSourceRow(manga) {

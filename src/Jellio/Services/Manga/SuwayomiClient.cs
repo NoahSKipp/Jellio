@@ -46,7 +46,7 @@ public record SuwayomiRequestResult(bool Success, bool AlreadyInLibrary, int Que
 /// (a JWT from its login mutation, renewed when rejected). Its "simple
 /// login" cookie mode isn't supported.
 /// </summary>
-public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<SuwayomiClient> logger)
+public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<SuwayomiClient> logger) : IMangaSourceSearch
 {
     private static readonly TimeSpan SourcesTtl = TimeSpan.FromMinutes(10);
 

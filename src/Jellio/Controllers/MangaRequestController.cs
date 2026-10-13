@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Jellio.Services.Chaptarr;
 using Jellio.Services.Manga;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -25,6 +27,7 @@ namespace Jellio.Controllers;
 [Authorize]
 public partial class MangaRequestController(
     SuwayomiClient suwayomi,
+    MangaSearchService mangaSearch,
     MangaImportService importService,
     MangaStreamService streamService,
     Jellio.Services.Reading.ShelfStore shelfStore,
@@ -37,7 +40,6 @@ public partial class MangaRequestController(
     private const int MaxBackupBytes = 64 * 1024 * 1024;
     private const int MaxSources = 16;
     private const int ResultsPerSource = 6;
-    private static readonly TimeSpan SearchBudget = TimeSpan.FromSeconds(25);
 
     public record SourceResult(long SourceId, string SourceName, string Lang, IReadOnlyList<MangaResult> Results);
 
@@ -53,7 +55,8 @@ public partial class MangaRequestController(
         IReadOnlyList<string> InstalledLanguages,
         int TotalSources,
         int NsfwSources,
-        IReadOnlyList<SourceResult> Sources);
+        IReadOnlyList<SourceResult> Sources,
+        IReadOnlyList<string>? Unavailable = null);
 
     // AddToLibrary: false when the reader is only opening the series to
     // read (Discover's Read); reading it adds it to their shelf anyway.
@@ -83,9 +86,11 @@ public partial class MangaRequestController(
     }
 
     /// <summary>
-    /// Searches every configured-language source at once (four at a time,
-    /// within a time budget) and returns each source's closest matches,
-    /// best-matching sources first.
+    /// Searches every configured-language source at once (MangaSearchService:
+    /// a timeout per source, sources that keep failing skipped for a while,
+    /// answers reused for a few minutes) and returns each source's closest
+    /// matches, best-matching sources first, in one response. Kept for
+    /// older clients; search/stream answers source by source.
     /// </summary>
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken)
@@ -104,61 +109,25 @@ public partial class MangaRequestController(
 
         var wanted = Normalize(query);
         var toSearch = sources.Matching.Take(MaxSources).ToList();
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(SearchBudget);
-        using var throttle = new SemaphoreSlim(4);
-        var searches = toSearch.Select(async Task<SourceResult?> (SuwayomiSource source) =>
+        var answered = new List<SourceResult>();
+        var unavailable = new List<string>();
+        var failed = 0;
+        await foreach (var outcome in mangaSearch.SearchAsync(toSearch, query, cancellationToken).ConfigureAwait(false))
         {
-            await throttle.WaitAsync(budget.Token).ConfigureAwait(false);
-            try
+            switch (outcome.Status)
             {
-                var found = await suwayomi.SearchAsync(source.Id, query, budget.Token).ConfigureAwait(false);
-                if (found is null)
-                {
-                    return null;
-                }
-
-                var results = found
-                    .Select(manga => new MangaResult(
-                        manga.Id,
-                        manga.Title,
-                        manga.Author,
-                        manga.Status,
-                        manga.InLibrary,
-                        "/Jellio/manga/thumbnail/" + manga.Id,
-                        Similarity(wanted, Normalize(manga.Title))))
-                    .OrderByDescending(result => result.Match)
-                    .Take(ResultsPerSource)
-                    .ToList();
-                return new SourceResult(source.Id, source.Name, source.Lang, results);
+                case MangaSourceStatus.Ok:
+                case MangaSourceStatus.Cached:
+                    answered.Add(ToSourceResult(outcome, wanted));
+                    break;
+                case MangaSourceStatus.Unavailable:
+                    unavailable.Add(outcome.Source.Name);
+                    failed++;
+                    break;
+                default:
+                    failed++;
+                    break;
             }
-            finally
-            {
-                throttle.Release();
-            }
-        }).ToList();
-
-        try
-        {
-            await Task.WhenAll(searches).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            // Out of time: return the sources that answered.
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Jellio: a Suwayomi source search failed");
-        }
-
-        var answered = searches
-            .Where(search => search.IsCompletedSuccessfully && search.Result is not null)
-            .Select(search => search.Result!)
-            .ToList();
-        var failed = toSearch.Count - answered.Count;
-        if (failed > 0)
-        {
-            logger.LogInformation("Jellio: {Failed} of {Searched} Suwayomi sources failed or timed out searching {Query}", failed, toSearch.Count, query);
         }
 
         return Ok(new SearchResponse(
@@ -172,8 +141,119 @@ public partial class MangaRequestController(
                 .Where(source => source.Results.Count > 0)
                 .OrderByDescending(source => source.Results[0].Match)
                 .ThenBy(source => source.SourceName, StringComparer.OrdinalIgnoreCase)
-                .ToList()));
+                .ToList(),
+            unavailable));
     }
+
+    /// <summary>
+    /// The same search, answered as newline-delimited JSON while it runs: a
+    /// "start" line listing the sources (and which are skipped as
+    /// unavailable), one "source" line per source the moment it answers,
+    /// times out or fails, then a "done" line. The manga search screen
+    /// shows each source's results as its line arrives.
+    /// </summary>
+    [HttpGet("search/stream")]
+    public async Task SearchStream([FromQuery] string q, CancellationToken cancellationToken)
+    {
+        var query = q?.Trim();
+        if (string.IsNullOrEmpty(query) || query.Length > 120)
+        {
+            Response.StatusCode = 400;
+            await Response.WriteAsync("q must be 1 to 120 characters", cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var sources = await suwayomi.GetSourcesAsync(cancellationToken).ConfigureAwait(false);
+        if (sources is null)
+        {
+            Response.StatusCode = 502;
+            await Response.WriteAsync("Suwayomi could not be reached or is not configured", cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var wanted = Normalize(query);
+        var toSearch = sources.Matching.Take(MaxSources).ToList();
+        Response.ContentType = "application/x-ndjson; charset=utf-8";
+        Response.Headers.CacheControl = "no-cache";
+        // Reverse proxies (nginx) would otherwise hold the lines back.
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        await WriteLineAsync(
+            new
+            {
+                Type = "start",
+                Searched = toSearch.Count,
+                Languages = SuwayomiClient.Languages().Order(StringComparer.Ordinal).ToList(),
+                sources.InstalledLanguages,
+                TotalSources = sources.Total,
+                NsfwSources = sources.Nsfw,
+                Sources = toSearch.Select(source => new
+                {
+                    SourceId = source.Id,
+                    SourceName = source.Name,
+                    source.Lang,
+                    Unavailable = mangaSearch.IsUnavailable(source.Id),
+                }).ToList(),
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        var failed = 0;
+        var unavailable = 0;
+        await foreach (var outcome in mangaSearch.SearchAsync(toSearch, query, cancellationToken).ConfigureAwait(false))
+        {
+            if (outcome.Status is MangaSourceStatus.Failed or MangaSourceStatus.Timeout)
+            {
+                failed++;
+            }
+            else if (outcome.Status == MangaSourceStatus.Unavailable)
+            {
+                unavailable++;
+            }
+
+            var result = ToSourceResult(outcome, wanted);
+            await WriteLineAsync(
+                new
+                {
+                    Type = "source",
+                    result.SourceId,
+                    result.SourceName,
+                    result.Lang,
+                    Status = outcome.Status.ToString(),
+                    outcome.ElapsedMs,
+                    result.Results,
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        await WriteLineAsync(new { Type = "done", Failed = failed, Unavailable = unavailable }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task WriteLineAsync(object line, CancellationToken cancellationToken)
+    {
+        var json = JsonSerializer.Serialize(line, StreamJsonOptions) + "\n";
+        await Response.WriteAsync(json, cancellationToken).ConfigureAwait(false);
+        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static readonly JsonSerializerOptions StreamJsonOptions = new(JsonSerializerDefaults.General);
+
+    private static SourceResult ToSourceResult(MangaSourceOutcome outcome, string wanted) =>
+        new(
+            outcome.Source.Id,
+            outcome.Source.Name,
+            outcome.Source.Lang,
+            outcome.Results
+                .Select(manga => new MangaResult(
+                    manga.Id,
+                    manga.Title,
+                    manga.Author,
+                    manga.Status,
+                    manga.InLibrary,
+                    "/Jellio/manga/thumbnail/" + manga.Id,
+                    Similarity(wanted, Normalize(manga.Title))))
+                .OrderByDescending(result => result.Match)
+                .Take(ResultsPerSource)
+                .ToList());
 
     // Switch a series to another source (Mihon's migrate): the new one is
     // added and its chapters loaded, the reader's progress is carried over

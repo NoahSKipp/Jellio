@@ -1242,6 +1242,104 @@ export function searchMangaSources(query) {
   });
 }
 
+// The same search, source by source (search/stream, newline-delimited
+// JSON): onProgress({ type: 'start' | 'source' | 'done', source, summary })
+// fires as each source answers, times out, fails or is skipped as
+// unavailable. Resolves to the searchMangaSources shape plus Unavailable
+// (names of sources skipped for now) and Pending. An older server without
+// the stream answers through searchMangaSources in one go.
+export async function streamMangaSources(query, onProgress, signal) {
+  const summary = {
+    Searched: 0,
+    Failed: 0,
+    Languages: [],
+    InstalledLanguages: [],
+    TotalSources: 0,
+    NsfwSources: 0,
+    Sources: [],
+    Unavailable: [],
+    Pending: 0,
+  };
+  const notify = function (type, source) {
+    if (onProgress) onProgress({ type: type, source: source || null, summary: summary });
+  };
+  let response;
+  try {
+    response = await fetch(getServerAddress() + '/Jellio/manga/search/stream?q=' + encodeURIComponent(query), {
+      headers: Object.assign({ Accept: 'application/x-ndjson' }, getAuthHeaders()),
+      cache: 'no-store',
+      signal: signal,
+    });
+  } catch (err) {
+    if (err && err.name !== 'AbortError') err.isNetworkError = true;
+    throw err;
+  }
+  if (response.status === 404 || !response.body) {
+    const whole = await searchMangaSources(query);
+    Object.assign(summary, whole, { Unavailable: [], Pending: 0 });
+    notify('done');
+    return summary;
+  }
+  if (!response.ok) {
+    const err = new Error('Request failed: manga search');
+    err.status = response.status;
+    throw err;
+  }
+
+  function handle(line) {
+    if (line.Type === 'start') {
+      summary.Searched = line.Searched || 0;
+      summary.Languages = line.Languages || [];
+      summary.InstalledLanguages = line.InstalledLanguages || [];
+      summary.TotalSources = line.TotalSources || 0;
+      summary.NsfwSources = line.NsfwSources || 0;
+      summary.Pending = summary.Searched;
+      notify('start');
+    } else if (line.Type === 'source') {
+      summary.Pending = Math.max(0, summary.Pending - 1);
+      const source = { SourceId: line.SourceId, SourceName: line.SourceName, Lang: line.Lang, Status: line.Status, Results: line.Results || [] };
+      if (line.Status === 'Unavailable') {
+        summary.Unavailable.push(line.SourceName);
+        summary.Failed++;
+      } else if (line.Status === 'Failed' || line.Status === 'Timeout') {
+        summary.Failed++;
+      } else if (source.Results.length) {
+        summary.Sources.push(source);
+      }
+      notify('source', source);
+    } else if (line.Type === 'done') {
+      summary.Pending = 0;
+    }
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    let newline;
+    while ((newline = buffer.indexOf('\n')) !== -1) {
+      const text = buffer.slice(0, newline).trim();
+      buffer = buffer.slice(newline + 1);
+      if (text) handle(JSON.parse(text));
+    }
+  }
+  if (buffer.trim()) handle(JSON.parse(buffer));
+  summary.Pending = 0;
+  summary.Sources.sort(function (a, b) {
+    return (b.Results[0] ? b.Results[0].Match : 0) - (a.Results[0] ? a.Results[0].Match : 0) || String(a.SourceName).localeCompare(String(b.SourceName));
+  });
+  notify('done');
+  return summary;
+}
+
+// Where a source's group goes among those already shown: best match first.
+export function bestMangaMatch(source) {
+  return source && source.Results && source.Results[0] ? source.Results[0].Match || 0 : 0;
+}
+
 // Controllers/MangaRequestController.cs's import: a Mihon backup file,
 // sent as is. Resolves to { Job, PendingChapters }; rejects with the
 // server's own message (not a backup, nothing in its library, ...).

@@ -153,6 +153,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<Jellio.Services.Manga.TrackerStore>();
         services.AddHttpClient(nameof(Jellio.Services.Manga.SuwayomiClient));
         services.AddSingleton<Jellio.Services.Manga.SuwayomiClient>();
+        services.AddSingleton(sp => new Jellio.Services.Manga.MangaSearchService(
+            sp.GetRequiredService<Jellio.Services.Manga.SuwayomiClient>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Jellio.Services.Manga.MangaSearchService>>()));
         services.AddSingleton<Jellio.Services.Manga.MangaStreamService>();
         services.AddSingleton<Jellio.Services.Manga.MangaImportService>();
         services.AddSingleton<Jellio.Services.Manga.MangaCoverService>();

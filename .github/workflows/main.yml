@@ -34,6 +34,20 @@ jobs:
       - name: Run frontend tests
         run: node --test tests/frontend/*.test.mjs
 
+  dotnet-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Run .NET tests
+        run: dotnet test tests/Jellio.Tests/Jellio.Tests.csproj --logger "console;verbosity=normal"
+
   conventional-commits:
     runs-on: ubuntu-latest
     steps:

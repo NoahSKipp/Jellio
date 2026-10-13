@@ -10,7 +10,8 @@
 import {
   invalidateStreamLibrary,
   getMangaRequestStatus,
-  searchMangaSources,
+  streamMangaSources,
+  bestMangaMatch,
   requestMangaSeries,
   migrateMangaSeries,
 } from '../runtime/api.js';
@@ -161,26 +162,60 @@ export function openMangaRequestSheet(root, options) {
     pane.appendChild(results);
 
     let token = 0;
+    let abort = null;
+    // Each source's results show as it answers, best match first, with
+    // how many are still searching and which are skipped for now.
     function search(query, fallback) {
       const mine = ++token;
+      if (abort) abort.abort();
+      abort = new AbortController();
       results.textContent = '';
       status.textContent = 'Searching your Suwayomi sources…';
       submit.disabled = true;
-      searchMangaSources(query)
+      let shown = 0;
+      function place(source) {
+        const group = buildSource(source);
+        const match = bestMangaMatch(source);
+        group.dataset.match = String(match);
+        const after = Array.from(results.children).find(function (child) {
+          return Number(child.dataset.match || 0) < match;
+        });
+        results.insertBefore(group, after || null);
+        shown++;
+      }
+      function unavailableNote(summary) {
+        return summary.Unavailable.length ? 'Unavailable for now: ' + summary.Unavailable.join(', ') + '.' : '';
+      }
+      streamMangaSources(
+        query,
+        function (event) {
+          if (mine !== token) return;
+          const source = event.source;
+          if (event.type === 'source' && source && source.Results.length && (source.Status === 'Ok' || source.Status === 'Cached')) {
+            place(source);
+          }
+          const summary = event.summary;
+          if (summary.Pending > 0) {
+            status.textContent =
+              (shown ? 'Found on ' + shown + (shown === 1 ? ' source' : ' sources') + ' so far. ' : '') +
+              'Still searching ' + summary.Pending + (summary.Pending === 1 ? ' source…' : ' sources…') +
+              (unavailableNote(summary) ? ' ' + unavailableNote(summary) : '');
+          }
+        },
+        abort.signal,
+      )
         .then(function (response) {
           if (mine !== token) return;
-          const sources = response.Sources;
-          if (!sources.length && fallback && response.Searched > response.Failed) {
+          if (!shown) response.Sources.forEach(place);
+          if (!shown && fallback && response.Searched > response.Failed) {
             input.value = fallback;
             search(fallback, null);
             return;
           }
-          status.textContent = sources.length
-            ? 'Found on ' + sources.length + (sources.length === 1 ? ' source.' : ' sources.') + ' Pick one to read.'
-            : emptyReason(query, response);
-          sources.forEach(function (source) {
-            results.appendChild(buildSource(source));
-          });
+          const note = unavailableNote(response);
+          status.textContent = shown
+            ? 'Found on ' + shown + (shown === 1 ? ' source.' : ' sources.') + ' Pick one to read.' + (note ? ' ' + note : '')
+            : emptyReason(query, response) + (note ? ' ' + note : '');
         })
         .catch(function () {
           if (mine !== token) return;
