@@ -164,6 +164,7 @@ public class IndexHtmlPatchService(
     [
         "runtime/auth.js",
         "runtime/api.js",
+        "runtime/itemInfo.js",
         "runtime/cast.js",
         "runtime/router.js",
         "runtime/recommend.js",

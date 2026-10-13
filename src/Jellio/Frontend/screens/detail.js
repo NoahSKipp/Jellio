@@ -22,7 +22,9 @@ import {
   audiobookTitle,
   getCachedItemSync,
   getReadingProgress,
+  getMediaSources,
 } from '../runtime/api.js';
+import { watchSources } from '../runtime/itemInfo.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -1156,8 +1158,9 @@ export async function renderDetail(root, params) {
   if (item.CommunityRating) meta.appendChild(buildRatingBadge(item.CommunityRating));
   heroContent.appendChild(meta);
 
-  const techBadges = buildMediaTechBadges(item);
-  if (techBadges) heroContent.appendChild(techBadges);
+  // Filled in once the stream lookup below answers.
+  const badgeSlot = el('div', 'jellio-detail-badge-slot');
+  heroContent.appendChild(badgeSlot);
 
   if (item.Genres && item.Genres.length) {
     const genres = el('div', 'jellio-detail-genres', item.Genres.join(', '));
@@ -1631,6 +1634,34 @@ export async function renderDetail(root, params) {
   actionsIcons.appendChild(moreButton);
 
   heroContent.appendChild(actions);
+
+  // Streams are looked up only now, with the page already drawn: Play works
+  // throughout and the picker reuses this same lookup.
+  const playsVideo = !needsEpisodeResolution && !readerKind && (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Video');
+  if (playsVideo) {
+    const streamStatus = el('div', 'jellio-detail-stream-status');
+    heroContent.appendChild(streamStatus);
+    watchSources(
+      function () {
+        return getMediaSources(item.Id);
+      },
+      function (update) {
+        streamStatus.textContent = '';
+        if (update.state === 'finding') {
+          streamStatus.appendChild(el('span', 'jellio-detail-stream-spinner'));
+          streamStatus.appendChild(el('span', null, 'Finding streams…'));
+          return;
+        }
+        if (update.state === 'ready') {
+          streamStatus.hidden = true;
+          const badges = buildMediaTechBadges({ MediaSources: update.sources });
+          if (badges) badgeSlot.appendChild(badges);
+          return;
+        }
+        streamStatus.appendChild(el('span', null, update.state === 'empty' ? 'No streams found yet.' : 'Could not check for streams.'));
+      },
+    );
+  }
 
   hero.appendChild(heroContent);
   root.appendChild(hero);

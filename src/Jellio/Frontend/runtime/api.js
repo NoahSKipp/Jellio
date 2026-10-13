@@ -2,6 +2,7 @@
 // auth.js's own headers. Nothing here touches window.ApiClient: the whole
 // point of this runtime is that a screen's data never depends on native
 // jellyfin-web's own request/cache state, only on a real HTTP response.
+import { loadItemInfo } from './itemInfo.js';
 import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
 import { copyableVideoCodecs } from './transcodeClassifier.js';
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser } from './auth.js';
@@ -621,7 +622,7 @@ export function getItem(itemId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   return cached('item:' + itemId, function () {
-    return getJson('/Users/' + userId + '/Items/' + itemId);
+    return loadItemInfo(getJson, userId, itemId);
   }).catch(function (err) {
     return downloadedItem(itemId, err);
   });
@@ -671,15 +672,13 @@ export function getItemDetails(itemId, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const opts = options || {};
-  const baseFields = 'Overview,Genres,People,Studios,ProductionYear,RunTimeTicks,PremiereDate,RemoteTrailers,MediaStreams';
-  const fields = opts.includePlaybackFields ? baseFields + ',Trickplay,Chapters' : baseFields;
-  const params = new URLSearchParams({
-    Fields: fields,
-  });
-  const path = '/Users/' + userId + '/Items/' + itemId + '?' + params.toString();
   const cacheKey = 'details:' + itemId + (opts.includePlaybackFields ? ':full' : '');
+  // Info only (runtime/itemInfo.js): streams come from getMediaSources.
   return cached(cacheKey, function () {
-    return getJson(path, ITEM_DETAILS_TIMEOUT_MS);
+    return loadItemInfo(getJson, userId, itemId, {
+      includePlaybackFields: !!opts.includePlaybackFields,
+      timeoutMs: ITEM_DETAILS_TIMEOUT_MS,
+    });
   }, SHORT_CACHE_TTL_MS).catch(function (err) {
     return downloadedItem(itemId, err);
   });
@@ -2342,6 +2341,7 @@ export function prefetchStreams(itemId) {
 // Eliminates repetitive 1.5-3s round trips to Jellyfin/Gelato
 // resolvers when navigating between detail, stream picker, and player.
 const mediaSourcesCache = new Map();
+const mediaSourcesInFlight = new Map();
 const MEDIA_SOURCES_TTL_MS = 5 * 60 * 1000;
 
 export function invalidateMediaSourcesCache(itemId) {
@@ -2383,16 +2383,22 @@ export function getMediaSources(itemId, options) {
     }
     mediaSourcesCache.delete(idStr);
   }
+  // Callers asking while a lookup runs share it.
+  if (!options?.forceFresh && mediaSourcesInFlight.has(idStr)) return mediaSourcesInFlight.get(idStr);
   const params = new URLSearchParams({ Fields: 'MediaSources' });
-  return getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString()).then(
-    function (result) {
+  const request = getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString())
+    .then(function (result) {
       const sources = ((result && result.MediaSources) || []).filter(function (source) {
         return !isPlaceholderSource(source, result);
       });
-      mediaSourcesCache.set(idStr, { time: now, sources: sources });
+      mediaSourcesCache.set(idStr, { time: Date.now(), sources: sources });
       return sources;
-    },
-  );
+    })
+    .finally(function () {
+      if (mediaSourcesInFlight.get(idStr) === request) mediaSourcesInFlight.delete(idStr);
+    });
+  mediaSourcesInFlight.set(idStr, request);
+  return request;
 }
 
 // 1 second = 10,000,000 ticks, real .NET TimeSpan tick length every
