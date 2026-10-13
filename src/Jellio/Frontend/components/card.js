@@ -363,7 +363,7 @@ function buildLandscapeCard(item, options) {
 function bookFallbackCoverUrl(item) {
   if (item.Type !== 'Book' && item.Type !== 'AudioBook') return null;
   // A manga chapter read straight from its source: its series' cover.
-  if (item.Stream && item.Stream.MangaId) return getStreamCoverUrl(item.Stream.MangaId);
+  if (item.Stream && item.Stream.MangaId) return getStreamCoverUrl(item.Stream.MangaId, item.SeriesName);
   if (item.AlbumId && item.AlbumPrimaryImageTag) {
     return getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 });
   }

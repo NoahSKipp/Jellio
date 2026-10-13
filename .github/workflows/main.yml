@@ -46,7 +46,11 @@ jobs:
           dotnet-version: "9.0.x"
 
       - name: Run .NET tests
-        run: dotnet test tests/Jellio.Tests/Jellio.Tests.csproj --logger "console;verbosity=normal"
+        run: |
+          set -o pipefail
+          dotnet test tests/Jellio.Tests/Jellio.Tests.csproj --logger "console;verbosity=normal" | tee test.log
+          # Fails when no tests were found, not only when one fails.
+          grep -E "Passed!.*Passed: *[1-9]" test.log
 
   conventional-commits:
     runs-on: ubuntu-latest

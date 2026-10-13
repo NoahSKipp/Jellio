@@ -39,6 +39,48 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
         return source is null ? null : await LoadAsync(source, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// A series read from its Suwayomi source: Suwayomi's thumbnail, else
+    /// AniList's cover found by the series title (given, or looked up in
+    /// Suwayomi's library). Suwayomi fails to fetch a source's thumbnail
+    /// when the source's image host is blocked (Cloudflare), which left
+    /// those chapter cards blank.
+    /// </summary>
+    public async Task<(byte[] Bytes, string ContentType)?> GetStreamCoverAsync(int mangaId, string? title, CancellationToken cancellationToken)
+    {
+        var image = await suwayomi.GetThumbnailAsync(mangaId, cancellationToken).ConfigureAwait(false);
+        if (image is not null)
+        {
+            return image;
+        }
+
+        var name = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+        if (name is null)
+        {
+            var library = await suwayomi.GetLibraryAsync(cancellationToken).ConfigureAwait(false);
+            name = library?.FirstOrDefault(entry => entry.Id == mangaId).Title;
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        var wanted = Normalize(name);
+        var key = "title:" + wanted;
+        if (_sources.TryGetValue(key, out var known) && (known.Source is not null || DateTime.UtcNow - known.At < MissTtl))
+        {
+            return known.Source is null ? null : await LoadAsync(known.Source, cancellationToken).ConfigureAwait(false);
+        }
+
+        var series = await aniList.BrowseAsync("SEARCH_MATCH", null, null, name, 0, cancellationToken).ConfigureAwait(false);
+        var best = series?.FirstOrDefault(entry => Normalize(entry.Title) == wanted || (entry.AltTitle is not null && Normalize(entry.AltTitle) == wanted))
+            ?? series?.FirstOrDefault();
+        var source = best?.CoverUrl is { } cover ? "anilist:" + cover : null;
+        _sources[key] = (DateTime.UtcNow, source);
+        return source is null ? null : await LoadAsync(source, cancellationToken).ConfigureAwait(false);
+    }
+
     private async Task<string?> ResolveAsync(string seriesFolder, CancellationToken cancellationToken)
     {
         try

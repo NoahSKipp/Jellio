@@ -125,7 +125,7 @@ export function useSeriesCover(img, chapter, onMissing, streamMangaId) {
     if (fallback) img.src = fallback;
     else if (onMissing) onMissing();
   });
-  img.src = chapter && !chapter.Stream ? getMangaSeriesCoverUrl(chapter.Id) : getStreamCoverUrl(streamMangaId || chapter.Stream.MangaId);
+  img.src = chapter && !chapter.Stream ? getMangaSeriesCoverUrl(chapter.Id) : getStreamCoverUrl(streamMangaId || chapter.Stream.MangaId, chapter && chapter.SeriesName);
 }
 
 // A chapter read straight from its source (MangaStreamController), shaped

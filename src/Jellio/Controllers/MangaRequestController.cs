@@ -483,10 +483,12 @@ public partial class MangaRequestController(
         return File(image.Value.Bytes, image.Value.ContentType);
     }
 
+    // title: the series' name, for AniList's cover when the source's own
+    // thumbnail can't be fetched (MangaCoverService.GetStreamCoverAsync).
     [HttpGet("thumbnail/{mangaId:int}")]
-    public async Task<IActionResult> Thumbnail(int mangaId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Thumbnail(int mangaId, [FromQuery] string? title, CancellationToken cancellationToken)
     {
-        var image = await suwayomi.GetThumbnailAsync(mangaId, cancellationToken).ConfigureAwait(false);
+        var image = await coverService.GetStreamCoverAsync(mangaId, title, cancellationToken).ConfigureAwait(false);
         if (image is null)
         {
             return NotFound();

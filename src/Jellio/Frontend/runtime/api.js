@@ -1124,8 +1124,17 @@ export function getStreamPageUrl(chapterId, index) {
   );
 }
 
-export function getStreamCoverUrl(mangaId) {
-  return getServerAddress() + '/Jellio/manga/thumbnail/' + mangaId + '?ApiKey=' + encodeURIComponent(getAccessToken() || '');
+// title: the series' name, so the server can use AniList's cover when the
+// source's own thumbnail can't be fetched.
+export function getStreamCoverUrl(mangaId, title) {
+  return (
+    getServerAddress() +
+    '/Jellio/manga/thumbnail/' +
+    mangaId +
+    '?ApiKey=' +
+    encodeURIComponent(getAccessToken() || '') +
+    (title ? '&title=' + encodeURIComponent(title) : '')
+  );
 }
 
 // Downloads a streamed series (or some chapters) into the library.
