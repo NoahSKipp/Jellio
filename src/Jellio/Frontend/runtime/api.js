@@ -5,7 +5,7 @@
 import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
 import { copyableVideoCodecs } from './transcodeClassifier.js';
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser } from './auth.js';
-import { createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
+import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
 import {
   isOffline,
@@ -506,6 +506,13 @@ function activeRowCache() {
     wipeOnStart: wipeOnStart,
   });
   rowCache.onChange(onRowCacheChange);
+  // Back after a break, like a streaming app coming back to the front:
+  // rows shown in this tab are refreshed quietly and only redrawn where
+  // they changed. Not while this tab is playing; the player refreshes
+  // home rows when it closes.
+  createReturnWatcher({ document: document, window: window }, function () {
+    if (rowCache && rowCacheFlag && !rowCache.isPlayingHere) rowCache.revalidateStale();
+  });
   // The server's setting, read once the first rows are in.
   window.setTimeout(function () {
     getJellioConfig().catch(function () {});

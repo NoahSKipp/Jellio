@@ -118,6 +118,23 @@ export function ttlFor(cls) {
   return Object.prototype.hasOwnProperty.call(TTL_MS, cls) ? TTL_MS[cls] : 10 * MINUTE;
 }
 
+// Past this an answer isn't shown at all, not even while it refreshes:
+// after a long break the screen loads rows fresh, the way streaming apps
+// do, instead of showing days-old Continue Watching for a moment.
+const HOUR = 60 * MINUTE;
+export const MAX_AGE_MS = {
+  personal: 12 * HOUR,
+  user: 12 * HOUR,
+  latest: 12 * HOUR,
+  watchlist: 12 * HOUR,
+};
+const DEFAULT_MAX_AGE_MS = 7 * 24 * HOUR;
+
+export function isExpired(entry, nowMs) {
+  const max = Object.prototype.hasOwnProperty.call(MAX_AGE_MS, entry.cls) ? MAX_AGE_MS[entry.cls] : DEFAULT_MAX_AGE_MS;
+  return nowMs - entry.storedAt >= max;
+}
+
 export function isStale(entry, nowMs) {
   return nowMs - entry.storedAt >= Math.max(ttlFor(entry.cls), MIN_REVALIDATE_MS);
 }
@@ -486,6 +503,8 @@ export function createRowCache(options) {
   const index = new Map();
   let totalBytes = 0;
   const inflight = new Map();
+  // How this tab asked for each key, so it can refresh them after a break.
+  const known = new Map();
   const listeners = new Set();
   const generations = {};
   const remotePlaying = new Map();
@@ -564,16 +583,22 @@ export function createRowCache(options) {
     })
     .then(function (entries) {
       let foreign = false;
+      const expired = [];
       (entries || []).forEach(function (entry) {
         if (!entry || !entry.key || typeof entry.json !== 'string') return;
         if (!inScope(entry.key)) {
           foreign = true;
           return;
         }
+        if (isExpired(entry, now())) {
+          expired.push(entry.key);
+          return;
+        }
         setIndex(copyEntry(entry));
       });
       // Another user or server: start over.
       if (foreign || opts.wipeOnStart) return wipe({ broadcast: false });
+      if (expired.length) storage.remove(expired).catch(function () {});
       enforceLimits();
       return undefined;
     })
@@ -747,7 +772,13 @@ export function createRowCache(options) {
     const o = getOptions || {};
     await waitReady();
     const key = keyFor(path);
-    const entry = index.get(key);
+    known.set(key, { cls: cls, fetcher: fetcher, priority: o.priority });
+    let entry = index.get(key);
+    if (entry && isExpired(entry, now())) {
+      dropIndex(key);
+      if (storage) storage.remove([key]).catch(function () {});
+      entry = null;
+    }
     if (entry && entry.cls === cls) {
       entry.usedAt = now();
       if (isStale(entry, now())) {
@@ -760,6 +791,24 @@ export function createRowCache(options) {
     }
     stats.misses++;
     return fetchAndStore(key, cls, fetcher, o.priority, false);
+  }
+
+  // Back from a break (tab in front again, laptop awake, network back):
+  // every row this tab has shown that is past its refresh age is fetched
+  // again in the background, Continue Watching and Up Next always. Only
+  // answers that actually differ are announced, so rows that didn't
+  // change stay put. Returns how many refreshes started.
+  function revalidateStale() {
+    let started = 0;
+    known.forEach(function (request, key) {
+      const entry = index.get(key);
+      if (!entry || entry.cls !== request.cls || inflight.has(key)) return;
+      if (isExpired(entry, now()) || isStale(entry, now())) {
+        started++;
+        fetchAndStore(key, request.cls, request.fetcher, request.priority, true).catch(function () {});
+      }
+    });
+    return started;
   }
 
   function peek(path) {
@@ -897,6 +946,10 @@ export function createRowCache(options) {
     ready: ready,
     get: get,
     peek: peek,
+    revalidateStale: revalidateStale,
+    get isPlayingHere() {
+      return localPlaying;
+    },
     invalidate: invalidate,
     wipe: wipe,
     setScope: setScope,
@@ -957,4 +1010,68 @@ export function requestRowCacheWipe(env) {
         .catch(function () {});
     }
   } catch (err) {}
+}
+
+// Calls onReturn({ awayMs, reason }) when the page comes back after at
+// least minAwayMs: the tab in front again, the machine awake (timers
+// stalled while the tab was visible), a page restored from the
+// back/forward cache, or the network back. At most once per cooldown.
+export function createReturnWatcher(env, onReturn, options) {
+  const o = options || {};
+  const doc = env.document;
+  const win = env.window;
+  const now = o.now || Date.now;
+  const minAwayMs = o.minAwayMs == null ? 60000 : o.minAwayMs;
+  const tickMs = o.tickMs || 20000;
+  const cooldownMs = o.cooldownMs == null ? 10000 : o.cooldownMs;
+  const setIntervalFn = o.setInterval || setInterval;
+  const clearIntervalFn = o.clearInterval || clearInterval;
+  let lastTick = now();
+  let hiddenAt = doc && doc.visibilityState === 'hidden' ? now() : null;
+  let lastFired = -Infinity;
+
+  function fire(awayMs, reason) {
+    const t = now();
+    if (awayMs < minAwayMs || t - lastFired < cooldownMs) return;
+    lastFired = t;
+    try {
+      onReturn({ awayMs: awayMs, reason: reason });
+    } catch (err) {}
+  }
+  function onVisibility() {
+    if (doc.visibilityState === 'hidden') {
+      hiddenAt = now();
+      return;
+    }
+    const since = hiddenAt == null ? lastTick : hiddenAt;
+    hiddenAt = null;
+    lastTick = now();
+    fire(now() - since, 'visible');
+  }
+  // A visible tab's timer runs every tickMs; a much longer gap means the
+  // machine slept.
+  function onTick() {
+    const t = now();
+    const gap = t - lastTick;
+    lastTick = t;
+    if (doc.visibilityState !== 'hidden' && gap >= tickMs + minAwayMs) fire(gap, 'wake');
+  }
+  function onPageShow(event) {
+    if (event && event.persisted) fire(now() - lastTick, 'restored');
+    lastTick = now();
+  }
+  function onOnline() {
+    fire(Infinity, 'online');
+  }
+
+  doc.addEventListener('visibilitychange', onVisibility);
+  win.addEventListener('pageshow', onPageShow);
+  win.addEventListener('online', onOnline);
+  const timer = setIntervalFn(onTick, tickMs);
+  return function stop() {
+    doc.removeEventListener('visibilitychange', onVisibility);
+    win.removeEventListener('pageshow', onPageShow);
+    win.removeEventListener('online', onOnline);
+    clearIntervalFn(timer);
+  };
 }

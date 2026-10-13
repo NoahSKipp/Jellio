@@ -11,6 +11,8 @@ import {
   createMemoryStorage,
   createLimiter,
   pickStorage,
+  isExpired,
+  createReturnWatcher,
 } from '../../src/Jellio/Frontend/runtime/rowcache.js';
 
 const scope = { serverId: 'srv', userId: 'u1' };
@@ -441,4 +443,100 @@ test('a second tab with a warm cache paints rows before any network response arr
   } finally {
     mock.timers.reset();
   }
+});
+
+test('after a long break, old personal rows are not shown at all; old catalog rows are, while they refresh', async () => {
+  const c = clock();
+  const shared = new Map();
+  const first = cacheFor({ now: c.now, storage: createMemoryStorage(shared) });
+  await first.get(RESUME, 'personal', async () => ({ v: 'yesterday' }));
+  await first.get('/Users/u1/Items?ParentId=cat', 'rows', async () => ({ v: 'last week' }));
+  assert.equal(isExpired({ cls: 'personal', storedAt: 0 }, 12 * 3600000), true);
+  assert.equal(isExpired({ cls: 'rows', storedAt: 0 }, 6 * 24 * 3600000), false);
+
+  c.advance(13 * 3600000);
+  const later = cacheFor({ now: c.now, storage: createMemoryStorage(shared) });
+  await later.ready;
+  assert.equal(later.peek(RESUME), undefined, 'expired at load');
+  let fetched = 0;
+  assert.deepEqual(await later.get(RESUME, 'personal', async () => (fetched++, { v: 'today' })), { v: 'today' });
+  assert.equal(fetched, 1);
+  assert.deepEqual(await later.get('/Users/u1/Items?ParentId=cat', 'rows', async () => ({ v: 'new' })), { v: 'last week' });
+
+  for (let i = 0; i < 5; i++) await tick(); // its background refresh lands
+  assert.deepEqual(later.peek('/Users/u1/Items?ParentId=cat'), { v: 'new' });
+
+  // Same in a tab that stayed open: an expired entry is a miss on read.
+  c.advance(8 * 24 * 3600000);
+  assert.deepEqual(await later.get('/Users/u1/Items?ParentId=cat', 'rows', async () => ({ v: 'fresh' })), { v: 'fresh' });
+});
+
+test('coming back refreshes only what is due, and announces only what changed', async () => {
+  const c = clock();
+  const cache = cacheFor({ now: c.now });
+  const calls = { resume: 0, views: 0, genres: 0 };
+  let resumePayload = { v: 1 };
+  await cache.get(RESUME, 'personal', async () => (calls.resume++, resumePayload));
+  await cache.get(VIEWS, 'views', async () => (calls.views++, { v: 'views' }));
+  await cache.get('/Genres', 'genres', async () => (calls.genres++, { v: 'g' }));
+  const changes = [];
+  cache.onChange((event) => changes.push(event));
+
+  c.advance(15 * 60000); // views (10 min) is due, genres (30 min) isn't
+  resumePayload = { v: 2 };
+  assert.equal(cache.revalidateStale(), 2);
+  for (let i = 0; i < 5; i++) await tick();
+  assert.deepEqual(calls, { resume: 2, views: 2, genres: 1 });
+  assert.equal(changes.length, 1, 'views came back the same');
+  assert.deepEqual(changes[0].classes, ['personal']);
+  assert.equal(cache.revalidateStale(), 0, 'just refreshed');
+});
+
+test('return watcher: tab back after a minute, machine waking, restored page, network back', () => {
+  let t = 0;
+  const listeners = {};
+  const target = (name) => ({
+    addEventListener: (type, fn) => (listeners[name + ':' + type] = fn),
+    removeEventListener: () => {},
+  });
+  const doc = Object.assign(target('doc'), { visibilityState: 'visible' });
+  const win = target('win');
+  let tickFn;
+  const returns = [];
+  const stop = createReturnWatcher({ document: doc, window: win }, (info) => returns.push(info.reason), {
+    now: () => t,
+    setInterval: (fn) => ((tickFn = fn), 1),
+    clearInterval: () => {},
+    cooldownMs: 0,
+  });
+
+  // Hidden for 20 s: nothing.
+  doc.visibilityState = 'hidden';
+  listeners['doc:visibilitychange']();
+  t += 20000;
+  doc.visibilityState = 'visible';
+  listeners['doc:visibilitychange']();
+  assert.deepEqual(returns, []);
+
+  // Hidden for 5 minutes: refresh.
+  doc.visibilityState = 'hidden';
+  listeners['doc:visibilitychange']();
+  t += 5 * 60000;
+  doc.visibilityState = 'visible';
+  listeners['doc:visibilitychange']();
+  assert.deepEqual(returns, ['visible']);
+
+  // Regular ticks while visible: nothing. A two hour gap (lid closed): refresh.
+  t += 20000;
+  tickFn();
+  t += 2 * 3600000;
+  tickFn();
+  assert.deepEqual(returns, ['visible', 'wake']);
+
+  listeners['win:pageshow']({ persisted: false });
+  t += 3 * 60000;
+  listeners['win:pageshow']({ persisted: true });
+  listeners['win:online']();
+  assert.deepEqual(returns, ['visible', 'wake', 'restored', 'online']);
+  stop();
 });
