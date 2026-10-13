@@ -990,7 +990,7 @@ export async function renderHome(root, params) {
           // A pass straight through while the page settles doesn't count.
           if (visible) lazyTimer = window.setTimeout(requestLazyRows, 150);
         },
-        { rootMargin: '0px 0px 600px 0px' },
+        { rootMargin: '0px 0px 800px 0px' },
       );
       lazyObserver.observe(sentinel);
     } else {

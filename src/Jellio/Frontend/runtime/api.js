@@ -576,6 +576,9 @@ let firstRowPaintMs = null;
 export function markHomeRowPainted() {
   if (firstRowPaintMs != null) return;
   firstRowPaintMs = Math.round(typeof performance !== 'undefined' ? performance.now() : Date.now() - PAGE_STARTED_AT);
+  try {
+    performance.mark('jellio-first-row');
+  } catch (err) {}
 }
 
 // One line per page load in the console and the Jellyfin log: how the
