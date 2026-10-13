@@ -10765,6 +10765,13 @@
   display: none;
 }
 
+/* Still: the scenery stays, nothing moves. */
+.jellio-seasons-still *,
+.jellio-seasons-still *::before,
+.jellio-seasons-still *::after {
+  animation: none !important;
+}
+
 .jellio-seasons-wash {
   position: absolute;
   inset: 0;

@@ -1,6 +1,7 @@
 // Settings, this runtime's own screen, the sidebar's Settings link's
 // own real destination (components/navShared.js's own SETTINGS_LINK,
-// #/account). A category sidebar (Account/Playback/Sessions/About)
+// #/account). A category sidebar (Account/Playback/Reading/Sessions/
+// Display/About)
 // switches which of this file's own section builders below render into
 // the content pane, one category at a time, real feedback that this
 // page belonged in real defined groups on its own screen rather than
@@ -47,6 +48,7 @@ import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
 import { isAutoPipEnabled, setAutoPipEnabled } from '../runtime/pipSettings.js';
+import { MOTION_OPTIONS, getMotionPreference, setMotionPreference } from '../runtime/motionSettings.js';
 import {
   UPNEXT_COUNTDOWN_OPTIONS,
   getUpNextCountdownSeconds,
@@ -961,12 +963,34 @@ function buildHomeCacheCard() {
   return card;
 }
 
+// Seasonal effects, per browser (runtime/motionSettings.js), applied on
+// the spot by components/seasons.js.
+function buildDisplayCategory() {
+  const wrap = el('div', 'jellio-settings-category');
+  const { card, body } = buildCard('auto_awesome', 'Seasonal effects', 'The themed background shown around holidays, when your server has it turned on.');
+  body.appendChild(
+    buildSelectRow(
+      null,
+      'Motion',
+      'Full plays every effect. Reduced shows fewer, slower ones. Still keeps the scenery without animation. Off hides the theme completely. Auto uses Still when your system asks for reduced motion, otherwise Full.',
+      MOTION_OPTIONS,
+      getMotionPreference(),
+      function (value, select, status) {
+        setMotionPreference(value);
+        status.textContent = 'Saved for this browser.';
+      },
+    ),
+  );
+  wrap.appendChild(card);
+  wrap.appendChild(buildHomeCacheCard());
+  return wrap;
+}
+
 function buildAboutCategory() {
   const wrap = el('div', 'jellio-settings-category');
   const version = jellioVersion();
   const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
-  wrap.appendChild(buildHomeCacheCard());
   const native = window.jellioNative && window.jellioNative.updates;
   if (native) wrap.appendChild(buildAppUpdateCard(native));
   return wrap;
@@ -977,6 +1001,7 @@ const CATEGORY_ICONS = {
   playback: 'play_circle',
   reading: 'menu_book',
   sessions: 'devices',
+  display: 'palette',
   about: 'info',
 };
 
@@ -1015,6 +1040,7 @@ export async function renderSettings(root) {
       label: 'Sessions',
       build: function () { return buildSessionsCategory(sleepTimerCard, quickConnectCard); },
     },
+    { id: 'display', label: 'Display', build: buildDisplayCategory },
     { id: 'about', label: 'About', build: buildAboutCategory },
   ];
   categories.splice(2, 0, {

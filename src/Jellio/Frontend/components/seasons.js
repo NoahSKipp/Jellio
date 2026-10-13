@@ -13,6 +13,7 @@
 // .jellio-seasons explains the z-index: -1 trick that makes that true.
 import { getJellioConfig } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
+import { getMotionLevel, onMotionChange } from '../runtime/motionSettings.js';
 
 const THEME_ORDER = ['halloween', 'newyear', 'valentine', 'christmas'];
 
@@ -51,9 +52,6 @@ function rand(min, max) {
   return min + Math.random() * (max - min);
 }
 
-function reduceMotion() {
-  return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-}
 
 function buildWash(container) {
   container.appendChild(el('div', 'jellio-seasons-wash'));
@@ -70,8 +68,9 @@ function cssVar(container, name, fallback) {
 // dropping on silk, flickering jack-o'-lanterns, cobwebs, a blood moon and
 // embers. Lightning
 // is the one layer above the page: a flash that lights the whole screen
-// and a forked bolt, every so often. Counts drop on a phone; with
-// reduced motion only the wash stays.
+// and a forked bolt, every so often. Counts drop on a phone. Reduced
+// keeps a handful of creatures and no lightning; Still keeps the moon,
+// fog, pumpkins and cobwebs without any of them moving.
 const HALLOWEEN_ART = {
   bat: '<svg viewBox="0 0 64 34" aria-hidden="true"><g class="jellio-season-wing-r"><path d="M33 16C38 7 49 3 63 8C59 10 58 14 59 20C55 16 51 17 49 23C46 18 42 19 39 25C37 21 35 20 33 22Z" fill="#050308"/></g><g class="jellio-season-wing-l"><path d="M31 16C26 7 15 3 1 8C5 10 6 14 5 20C9 16 13 17 15 23C18 18 22 19 25 25C27 21 29 20 31 22Z" fill="#050308"/></g><path d="M27.5 9L26 1.5L30.5 6L32 4.5L33.5 6L38 1.5L36.5 9C37.5 12 37.5 17 35.5 22C34.5 26 33.2 29 32 33C30.8 29 29.5 26 28.5 22C26.5 17 26.5 12 27.5 9Z" fill="#050308"/><circle cx="30" cy="10.5" r="1" fill="#ff7518"/><circle cx="34" cy="10.5" r="1" fill="#ff7518"/></svg>',
   ghost: '<svg viewBox="0 0 60 72" aria-hidden="true"><defs><linearGradient id="jellio-season-ghost-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f0ff"/><stop offset="1" stop-color="#b9a8ff" stop-opacity=".25"/></linearGradient></defs><path d="M30 2C14 2 5 15 5 32V68L13 59L21 69L30 59L39 69L47 59L55 68V32C55 15 46 2 30 2Z" fill="url(#jellio-season-ghost-fill)"/><path d="M5 40C-3 44-5 52 1 58C6 55 7 50 5 46Z M55 40C63 44 65 52 59 58C54 55 53 50 55 46Z" fill="#d8ccff" opacity=".6"/><ellipse cx="22" cy="28" rx="4" ry="6" fill="#1b1230"/><ellipse cx="38" cy="28" rx="4" ry="6" fill="#1b1230"/><ellipse cx="30" cy="43" rx="5" ry="7.5" fill="#1b1230"/></svg>',
@@ -207,12 +206,13 @@ function mountHalloweenSky() {
   };
 }
 
-function mountHalloween(container) {
+function mountHalloween(container, level) {
   buildWash(container);
-  if (reduceMotion()) return undefined;
+  const still = level === 'still';
+  const reduced = level === 'reduced';
 
   const phone = window.innerWidth < 700;
-  const scale = phone ? 0.6 : 1;
+  const scale = (phone ? 0.6 : 1) * (reduced ? 0.3 : 1);
   const count = (n) => Math.max(1, Math.round(n * scale));
   const place = (node, parent) => {
     (parent || container).appendChild(node);
@@ -224,7 +224,8 @@ function mountHalloween(container) {
   place(el('div', 'jellio-season-fog'));
   place(el('div', 'jellio-season-flicker'));
 
-  ['var(--jellio-season-accent)', '#7cff6b', '#ff3b3b'].slice(0, phone ? 2 : 3).forEach(function (color) {
+  const eyeColors = still ? [] : ['var(--jellio-season-accent)', '#7cff6b', '#ff3b3b'].slice(0, reduced ? 1 : phone ? 2 : 3);
+  eyeColors.forEach(function (color) {
     const eyes = el('div', 'jellio-season-eyes');
     eyes.style.left = rand(15, 80) + 'vw';
     eyes.style.top = rand(34, 74) + 'vh';
@@ -235,7 +236,7 @@ function mountHalloween(container) {
     place(eyes);
   });
 
-  const bats = count(14);
+  const bats = still ? 0 : count(14);
   for (let i = 0; i < bats; i++) {
     const near = i < count(4);
     const bat = halloweenArt('span', 'jellio-season-bat', 'bat');
@@ -251,7 +252,7 @@ function mountHalloween(container) {
     place(bat);
   }
 
-  for (let i = 0; i < count(3); i++) {
+  for (let i = 0; i < (still ? 0 : count(3)); i++) {
     const ghost = halloweenArt('span', 'jellio-season-ghost', 'ghost');
     ghost.style.left = rand(8, 88) + 'vw';
     ghost.style.setProperty('--jellio-season-size', rand(34, 62) + 'px');
@@ -261,7 +262,7 @@ function mountHalloween(container) {
     place(ghost);
   }
 
-  for (let i = 0; i < count(2); i++) {
+  for (let i = 0; i < (still ? 0 : count(2)); i++) {
     const drop = el('div', 'jellio-season-spider');
     drop.style.left = rand(14, 88) + 'vw';
     drop.style.setProperty('--jellio-season-drop', rand(22, 55) + 'vh');
@@ -288,7 +289,7 @@ function mountHalloween(container) {
     place(web);
   });
 
-  for (let i = 0; i < count(26); i++) {
+  for (let i = 0; i < (still ? 0 : count(26)); i++) {
     const ember = el('span', 'jellio-season-ember');
     ember.style.left = rand(0, 100) + 'vw';
     ember.style.setProperty('--jellio-season-size', rand(2, 4.5) + 'px');
@@ -298,22 +299,31 @@ function mountHalloween(container) {
     place(ember);
   }
 
-  return mountHalloweenSky();
+  return still || reduced ? undefined : mountHalloweenSky();
 }
 
 // Shared by the Christmas and New Year canvases: a requestAnimationFrame
 // loop that stops while the tab is hidden, and a canvas kept at the size
 // of the window (and its pixel ratio) behind everything else.
-function startLoop(step) {
+// With an fps cap, frames in between are skipped and step gets how many
+// 60 fps frames passed, so things still move at the same speed.
+function startLoop(step, fps) {
   let frameId = 0;
   let running = true;
+  let last = 0;
+  const gap = fps ? 1000 / fps : 0;
   function frame(now) {
     if (!running) return;
-    step(now);
+    if (!last || now - last >= gap - 1) {
+      const k = last ? Math.min(4, (now - last) / (1000 / 60)) : 1;
+      last = now;
+      step(now, k);
+    }
     frameId = window.requestAnimationFrame(frame);
   }
   function onVisibility() {
     window.cancelAnimationFrame(frameId);
+    last = 0;
     if (!document.hidden && running) frameId = window.requestAnimationFrame(frame);
   }
   document.addEventListener('visibilitychange', onVisibility);
@@ -363,12 +373,13 @@ const NY_MIX = ['#d4af37', '#eef0f5', '#ffe08a', '#ff7a59', '#7fb2ff'];
 const NY_CONFETTI = ['#d4af37', '#eef0f5', '#ffe08a', '#c9a227', '#f6e7b4'];
 const NY_MIDNIGHT_KEY = 'jellioNewYearMidnight';
 
-function mountNewYear(container) {
+function mountNewYear(container, level) {
   buildWash(container);
-  if (reduceMotion()) return undefined;
+  const still = level === 'still';
+  const reduced = level === 'reduced';
 
   const phone = window.innerWidth < 700;
-  const scale = phone ? 0.6 : 1;
+  const scale = (phone ? 0.6 : 1) * (reduced ? 0.4 : 1);
   const count = (n) => Math.max(1, Math.round(n * scale));
 
   for (let i = 0; i < count(52); i++) {
@@ -380,9 +391,10 @@ function mountNewYear(container) {
     star.style.top = rand(0, 62) + 'vh';
     star.style.setProperty('--jellio-season-t', rand(2.5, 6) + 's');
     star.style.animationDelay = '-' + rand(0, 6) + 's';
+    if (still) star.style.opacity = String(rand(0.2, 0.75));
     container.appendChild(star);
   }
-  for (let i = 0; i < count(28); i++) {
+  for (let i = 0; i < (still ? 0 : count(28)); i++) {
     const bubble = el('span', 'jellio-season-bubble');
     const size = rand(4, 11);
     bubble.style.width = size + 'px';
@@ -406,6 +418,7 @@ function mountNewYear(container) {
     box.appendChild(svg);
     container.appendChild(box);
   });
+  if (still) return undefined;
 
   const canvas = fullCanvas(container);
   const ctx = canvas.ctx;
@@ -518,20 +531,20 @@ function mountNewYear(container) {
     }
   }
 
-  const stop = startLoop(function (now) {
+  const stop = startLoop(function (now, k) {
     const w = canvas.size.w;
     const h = canvas.size.h;
     if (now > nextLaunch) {
       launch();
-      if (Math.random() < 0.4) later(() => launch(), rand(150, 400));
-      nextLaunch = now + rand(1100, 2300) / 1.3;
+      if (!reduced && Math.random() < 0.4) later(() => launch(), rand(150, 400));
+      nextLaunch = now + (rand(1100, 2300) / 1.3) * (reduced ? 2.2 : 1);
     }
     ctx.clearRect(0, 0, w, h);
     ctx.globalCompositeOperation = 'source-over';
     confetti.forEach(function (c) {
-      c.y += c.vy;
-      c.x += Math.sin(now * 0.001 * c.sw + c.ph) * 0.6;
-      c.rot += c.vr;
+      c.y += c.vy * k;
+      c.x += Math.sin(now * 0.001 * c.sw + c.ph) * 0.6 * k;
+      c.rot += c.vr * k;
       if (c.y > h + 14) {
         c.y = -14;
         c.x = rand(0, w);
@@ -547,8 +560,8 @@ function mountNewYear(container) {
     });
     ctx.globalCompositeOperation = 'lighter';
     rockets = rockets.filter(function (r) {
-      r.y += r.vy;
-      r.vy *= 0.985;
+      r.y += r.vy * k;
+      r.vy *= Math.pow(0.985, k);
       r.tr.push([r.x, r.y]);
       if (r.tr.length > 12) r.tr.shift();
       ctx.strokeStyle = '#ffe9a8';
@@ -569,11 +582,11 @@ function mountNewYear(container) {
     parts = parts.filter(function (p) {
       p.tr.push([p.x, p.y]);
       if (p.tr.length > (p.long ? 9 : 4)) p.tr.shift();
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += p.g;
-      p.vx *= 0.992;
-      p.life -= p.d;
+      p.x += p.vx * k;
+      p.y += p.vy * k;
+      p.vy += p.g * k;
+      p.vx *= Math.pow(0.992, k);
+      p.life -= p.d * k;
       if (p.life <= 0) return false;
       ctx.strokeStyle = p.c;
       ctx.lineWidth = p.s;
@@ -593,7 +606,7 @@ function mountNewYear(container) {
     });
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-  });
+  }, reduced ? 15 : 0);
 
   return function cleanup() {
     stop();
@@ -606,17 +619,19 @@ function mountNewYear(container) {
 // Hearts drift up across the whole page now, not confined to one corner,
 // plus a few larger blurred "bokeh" hearts for depth; still slow and low
 // opacity, just a lot more of them than a single accent corner needs.
-function mountValentine(container) {
+function mountValentine(container, level) {
   buildWash(container);
-  if (reduceMotion()) return;
+  const still = level === 'still';
 
-  for (let i = 0; i < 18; i++) {
+  const total = still ? 10 : level === 'reduced' ? 8 : 18;
+  for (let i = 0; i < total; i++) {
     const big = i % 5 === 0;
     const heart = document.createElement('span');
-    heart.className = 'jellio-season-particle jellio-season-particle-rise ' + (big ? 'jellio-season-heart-soft' : 'jellio-season-heart');
+    heart.className = 'jellio-season-particle ' + (still ? '' : 'jellio-season-particle-rise ') + (big ? 'jellio-season-heart-soft' : 'jellio-season-heart');
     heart.textContent = '♥';
     heart.style.left = rand(0, 96) + 'vw';
-    heart.style.bottom = rand(-40, 0) + 'vh';
+    if (still) heart.style.top = rand(8, 88) + 'vh';
+    else heart.style.bottom = rand(-40, 0) + 'vh';
     heart.style.setProperty('--jellio-season-sway', rand(-28, 28) + 'px');
     heart.style.fontSize = (big ? rand(26, 38) : rand(12, 22)) + 'px';
     heart.style.opacity = big ? '0.22' : '0.42';
@@ -630,7 +645,8 @@ function mountValentine(container) {
 // swinging baubles in the corners, snow in three depths with wind that
 // gusts now and then, a snow drift along the bottom, frost in the bottom
 // corners, a warm hearth glow, and a shooting star with a few sparkles.
-// All of it behind the page; with reduced motion only the wash stays.
+// All of it behind the page. Reduced has a third of the snow at a lower
+// frame rate; Still keeps the lights, garlands, frost and drift unmoving.
 const XMAS_BULBS = ['#ff4d4d', '#ffd36b', '#4dff88', '#5aa8ff', '#ff8fd6'];
 
 function buildStringLights(container) {
@@ -717,12 +733,13 @@ function buildFrost(container) {
   });
 }
 
-function mountChristmas(container) {
+function mountChristmas(container, level) {
   buildWash(container);
-  if (reduceMotion()) return undefined;
+  const still = level === 'still';
+  const reduced = level === 'reduced';
 
   const phone = window.innerWidth < 700;
-  const scale = phone ? 0.6 : 1;
+  const scale = (phone ? 0.6 : 1) * (reduced ? 0.3 : 1);
 
   container.appendChild(el('div', 'jellio-season-hearth'));
   buildFrost(container);
@@ -731,11 +748,13 @@ function mountChristmas(container) {
     '<svg viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="jellio-season-drift-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset="1" stop-color="#9fb8d6"/></linearGradient></defs><path d="M0 120V70C80 40 160 38 260 62C360 86 440 36 560 40C680 44 740 84 860 66C960 50 1060 28 1200 58V120Z" fill="url(#jellio-season-drift-fill)" opacity=".92"/><path d="M0 120V92C120 70 220 86 340 82C480 78 560 58 700 70C840 82 960 62 1200 84V120Z" fill="#fff" opacity=".55"/></svg>';
   container.appendChild(drift);
 
-  const shoot = el('div', 'jellio-season-shoot');
-  shoot.style.left = rand(10, 40) + '%';
-  shoot.style.top = rand(8, 25) + '%';
-  container.appendChild(shoot);
-  for (let i = 0; i < Math.max(4, Math.round(11 * scale)); i++) {
+  if (!still) {
+    const shoot = el('div', 'jellio-season-shoot');
+    shoot.style.left = rand(10, 40) + '%';
+    shoot.style.top = rand(8, 25) + '%';
+    container.appendChild(shoot);
+  }
+  for (let i = 0; i < (still ? 0 : Math.max(reduced ? 3 : 4, Math.round(11 * scale))); i++) {
     const spark = el('div', 'jellio-season-spark');
     const size = rand(8, 16);
     spark.style.width = size + 'px';
@@ -759,6 +778,12 @@ function mountChristmas(container) {
     }, 200);
   };
   window.addEventListener('resize', onResize);
+  if (still) {
+    return function cleanup() {
+      window.clearTimeout(relight);
+      window.removeEventListener('resize', onResize);
+    };
+  }
 
   const canvas = fullCanvas(container);
   const ctx = canvas.ctx;
@@ -793,16 +818,16 @@ function mountChristmas(container) {
   };
   const started = performance.now();
   let gustUntil = 0;
-  const stop = startLoop(function (now) {
+  const stop = startLoop(function (now, k) {
     const w = canvas.size.w;
     const h = canvas.size.h;
     if (now > gustUntil && Math.random() < 0.0006) gustUntil = now + 3500;
     const wind = Math.sin((now - started) * 0.0004) * 0.35 + (now < gustUntil ? 1.4 : 0);
     ctx.clearRect(0, 0, w, h);
     flakes.forEach(function (f) {
-      f.y += f.v;
-      f.x += Math.sin(now * 0.001 * (1 + f.depth * 0.3) + f.ph) * (0.3 + f.depth * 0.25) + wind * (0.4 + f.depth * 0.5);
-      f.rot += 0.004 * (f.depth + 1);
+      f.y += f.v * k;
+      f.x += (Math.sin(now * 0.001 * (1 + f.depth * 0.3) + f.ph) * (0.3 + f.depth * 0.25) + wind * (0.4 + f.depth * 0.5)) * k;
+      f.rot += 0.004 * (f.depth + 1) * k;
       if (f.y > h + 12) {
         f.y = -12;
         f.x = rand(0, w);
@@ -825,7 +850,7 @@ function mountChristmas(container) {
       }
     });
     ctx.globalAlpha = 1;
-  });
+  }, reduced ? 15 : 0);
 
   return function cleanup() {
     stop();
@@ -846,24 +871,36 @@ let rootEl = null;
 let mountedContainer = null;
 let activeCleanup = null;
 let activeTheme = null;
+let activeLevel = null;
+let lastTheme = null;
 
 function teardownTheme() {
   if (activeCleanup) {
     activeCleanup();
     activeCleanup = null;
   }
-  if (mountedContainer) mountedContainer.textContent = '';
+  if (mountedContainer) {
+    mountedContainer.textContent = '';
+    mountedContainer.classList.remove('jellio-seasons-still');
+  }
   if (rootEl) delete rootEl.dataset.jellioSeason;
   activeTheme = null;
+  activeLevel = null;
 }
 
+// Off drops the theme entirely, colours included.
 function applyTheme(theme) {
-  if (theme === activeTheme) return;
+  lastTheme = theme;
+  const level = getMotionLevel();
+  const shown = level === 'off' ? null : theme;
+  if (shown === activeTheme && (!shown || level === activeLevel)) return;
   teardownTheme();
-  if (!theme) return;
-  activeTheme = theme;
-  rootEl.dataset.jellioSeason = theme;
-  activeCleanup = MOUNTERS[theme](mountedContainer) || null;
+  if (!shown) return;
+  activeTheme = shown;
+  activeLevel = level;
+  rootEl.dataset.jellioSeason = shown;
+  mountedContainer.classList.toggle('jellio-seasons-still', level === 'still');
+  activeCleanup = MOUNTERS[shown](mountedContainer, level) || null;
 }
 
 // runtime/api.js's own getJellioConfig() caches this for a few minutes
@@ -898,6 +935,9 @@ export function mountSeasons(root) {
   mountedContainer.className = 'jellio-seasons';
   root.appendChild(mountedContainer);
   refresh();
+  onMotionChange(function () {
+    applyTheme(lastTheme);
+  });
   // A reader who leaves this tab open across midnight (New Year's own
   // real edge case, or any other theme's own boundary), or across
   // whatever an admin just changed server side, still gets the right
