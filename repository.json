@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.77.3] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(detail)* Look for streams quietly\n\n### ⚡ Performance\n\n- *(detail)* Reopen title pages instantly from what was last seen\n",
+        "checksum": "613eb0a11ef01df6938cd478682f48eb",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.3/jellio_1.77.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-14T01:14:20Z",
+        "version": "1.77.3"
+      },
+      {
         "changelog": "## [1.77.2] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(home)* Show the show's art on episode cards in landscape rows\n\n### ⚡ Performance\n\n- *(detail)* Load title info without resolving streams\n\n### ◀️ Revert\n\n- Keep episode stills on Jellio's own episode cards\n",
         "checksum": "2b6baeb1935519fae153cd14cf5dd0e9",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.2/jellio_1.77.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T14:35:26Z",
         "version": "1.65.0"
-      },
-      {
-        "changelog": "## [1.64.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(now-playing)* Show which kind of device each session plays on\n\n### 🐛 Bug Fixes\n\n- *(offline)* Recover from a false offline state after leaving the tab\n",
-        "checksum": "4d1f1382879ba76110277750ebf8cd7a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.64.0/jellio_1.64.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T13:45:59Z",
-        "version": "1.64.0"
       }
     ]
   }
