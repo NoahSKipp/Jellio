@@ -208,6 +208,12 @@ public class PluginConfiguration : BasePluginConfiguration
     // into the Jellyfin library. Readers can still save single series.
     public bool SuwayomiDownloadRequests { get; set; }
 
+    // Sources to prefer, comma separated by name (for example
+    // "MangaDex, Comick"), when the same series is in Suwayomi's library
+    // from more than one: the first listed wins, then the one with the
+    // most chapters.
+    public string MangaSourcePriority { get; set; } = string.Empty;
+
     // Client id of an AniList API client (anilist.co/settings/developer),
     // for readers to link their list from the manga series page. It is
     // public, not a secret; each reader's own token stays on the server.

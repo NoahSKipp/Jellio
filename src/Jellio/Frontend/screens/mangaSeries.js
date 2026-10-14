@@ -34,6 +34,8 @@ import {
   passesChapterFilters,
   sortChapters,
   chapterLabelFor,
+  chapterSource,
+  splitBySource,
 } from '../components/mangaSeries.js';
 import { openScanlatorFilter } from '../components/scanlatorFilter.js';
 import { openChapterSettings } from '../components/chapterSettings.js';
@@ -114,10 +116,13 @@ export function renderMangaSeries(root, params, parentId) {
         );
         return;
       }
+      // Only files saved from the streamed entry's source join its list.
+      const bySource = splitBySource(savedChapters, streamed);
       const group = {
         key: key,
         title: saved ? saved.title : streamed ? streamed.Title : mangaSeriesTitle(loose[0]),
-        chapters: mergeStreamChapters(savedChapters, streamed),
+        chapters: mergeStreamChapters(bySource.matching, streamed),
+        otherSources: bySource.others,
         stream: summary,
       };
       setTitle(group.title + ' - Jellio');
@@ -854,6 +859,34 @@ export function renderMangaSeries(root, params, parentId) {
       applySettings({ descending: !cs.descending });
     });
     renderList();
+
+    // Saved files from a source other than the one being read: kept out of
+    // the list above, here behind a collapsed group.
+    if (group.otherSources && group.otherSources.length) {
+      const others = document.createElement('details');
+      others.className = 'jellio-manga-other-sources';
+      const names = Array.from(new Set(group.otherSources.map((item) => chapterSource(item) || 'Unknown source')));
+      others.appendChild(
+        el('summary', 'jellio-manga-other-sources-summary', 'Other sources (' + group.otherSources.length + ') · ' + names.join(', ')),
+      );
+      const otherList = el('ol', 'jellio-manga-chapter-list jellio-manga-other-sources-list');
+      group.otherSources.forEach(function (item) {
+        const row = el('li', 'jellio-manga-chapter');
+        const button = el('button', 'jellio-manga-chapter-button');
+        button.type = 'button';
+        const label = el('span', 'jellio-manga-chapter-label');
+        label.appendChild(el('span', 'jellio-manga-chapter-name', item.Name || ''));
+        label.appendChild(el('span', 'jellio-manga-chapter-scanlator', chapterSource(item) || 'Unknown source'));
+        button.appendChild(label);
+        button.addEventListener('click', function () {
+          openChapter(item);
+        });
+        row.appendChild(button);
+        otherList.appendChild(row);
+      });
+      others.appendChild(otherList);
+      body.appendChild(others);
+    }
 
     stopShelf = onShelfChange(function () {
       loadShelf('manga').then(function (next) {

@@ -15015,3 +15015,20 @@
   aspect-ratio: 2 / 3;
   border-radius: var(--jellio-card-radius);
 }
+
+/* Saved chapters from a source other than the one being read, collapsed
+   under the chapter list. */
+.jellio-manga-other-sources {
+  margin: 1.5em var(--jellio-safe-gutter, 16px) 0;
+}
+
+.jellio-manga-other-sources-summary {
+  cursor: pointer;
+  color: var(--jellio-text-secondary);
+  font-weight: 600;
+  padding: 0.6em 0;
+}
+
+.jellio-manga-other-sources-list {
+  margin-top: 0.4em;
+}

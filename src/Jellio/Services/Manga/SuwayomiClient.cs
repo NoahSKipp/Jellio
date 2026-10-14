@@ -23,6 +23,9 @@ public record SuwayomiSource(long Id, string Name, string Lang);
 // the NSFW flag. An empty result can then say which of the two it was.
 public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages, int Total, int Nsfw);
 
+// Source is the display name ("MangaDex (EN)"), SourceName the plain one.
+public record SuwayomiLibraryEntry(int Id, string Title, string? Source, string? SourceName, int ChapterCount);
+
 public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary, string? Url = null);
 
 public record SuwayomiChapter(int Id, string Url, string Name, string? Scanlator, float ChapterNumber, bool IsDownloaded);
@@ -205,6 +208,7 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
 
         var chapters = await FetchChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false) ?? [];
         _library = null;
+        _entries = null;
         return new SuwayomiRequestResult(true, false, 0, chapters.Count, chapters.Count == 0 ? "No chapters found on this source yet" : null);
     }
 
@@ -248,7 +252,9 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
                 (int)ReadLong(chapter["id"]),
                 (int)ReadLong(chapter["mangaId"]),
                 ChaptarrClient.ReadString(chapter["name"]) ?? string.Empty,
-                chapter["chapterNumber"] is JsonValue number && number.TryGetValue<double>(out var value) ? (float)value : -1f,
+                ChapterNumbers.Resolve(
+                    chapter["chapterNumber"] is JsonValue number && number.TryGetValue<double>(out var value) ? (float)value : -1f,
+                    ChaptarrClient.ReadString(chapter["name"])),
                 ChaptarrClient.ReadString(chapter["scanlator"]),
                 ChaptarrClient.ReadBool(chapter["isDownloaded"]),
                 (int)ReadLong(chapter["pageCount"]),
@@ -330,6 +336,7 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             new JsonObject { ["input"] = new JsonObject { ["id"] = mangaId, ["patch"] = new JsonObject { ["inLibrary"] = false } } },
             cancellationToken).ConfigureAwait(false);
         _library = null;
+        _entries = null;
         return removed is not null;
     }
 
@@ -351,7 +358,9 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
                 ChaptarrClient.ReadString(chapter["url"]) ?? string.Empty,
                 ChaptarrClient.ReadString(chapter["name"]) ?? string.Empty,
                 ChaptarrClient.ReadString(chapter["scanlator"]),
-                chapter["chapterNumber"] is JsonValue number && number.TryGetValue<double>(out var value) ? (float)value : -1f,
+                ChapterNumbers.Resolve(
+                    chapter["chapterNumber"] is JsonValue number && number.TryGetValue<double>(out var value) ? (float)value : -1f,
+                    ChaptarrClient.ReadString(chapter["name"])),
                 ChaptarrClient.ReadBool(chapter["isDownloaded"])))
             .Where(chapter => chapter.Id > 0)
             .ToList();
@@ -415,6 +424,50 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         _library = (DateTime.UtcNow, library);
         return library;
     }
+
+    // The library with each series' source and chapter count, for picking
+    // one entry when a title is in it more than once. Falls back to titles
+    // only on a Suwayomi that doesn't answer the longer query.
+    public async Task<IReadOnlyList<SuwayomiLibraryEntry>?> GetLibraryEntriesAsync(CancellationToken cancellationToken)
+    {
+        if (_entries is { } cached && DateTime.UtcNow - cached.At < TimeSpan.FromMinutes(1))
+        {
+            return cached.Entries;
+        }
+
+        var data = await QueryAsync(
+            "query { mangas(condition: { inLibrary: true }) { nodes { id title source { name displayName } chapters { totalCount } } } }",
+            null,
+            cancellationToken).ConfigureAwait(false);
+        List<SuwayomiLibraryEntry> entries;
+        if (data?["mangas"]?["nodes"] is JsonArray nodes)
+        {
+            entries = nodes.OfType<JsonObject>()
+                .Select(node => new SuwayomiLibraryEntry(
+                    (int)ReadLong(node["id"]),
+                    ChaptarrClient.ReadString(node["title"]) ?? string.Empty,
+                    ChaptarrClient.ReadString(node["source"]?["displayName"]),
+                    ChaptarrClient.ReadString(node["source"]?["name"]),
+                    (int)ReadLong(node["chapters"]?["totalCount"])))
+                .Where(entry => entry.Id > 0 && entry.Title.Length > 0)
+                .ToList();
+        }
+        else
+        {
+            var plain = await GetLibraryAsync(cancellationToken).ConfigureAwait(false);
+            if (plain is null)
+            {
+                return null;
+            }
+
+            entries = plain.Select(entry => new SuwayomiLibraryEntry(entry.Id, entry.Title, null, null, 0)).ToList();
+        }
+
+        _entries = (DateTime.UtcNow, entries);
+        return entries;
+    }
+
+    private (DateTime At, IReadOnlyList<SuwayomiLibraryEntry> Entries)? _entries;
 
     // A series by its source and the source's own URL for it (what a
     // Mihon backup records): Suwayomi's stored copy if it has one, else a

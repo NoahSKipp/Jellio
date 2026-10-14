@@ -67,7 +67,12 @@ public class MangaStreamController(
         }
 
         var mine = shelfStore.Library(userId);
-        var ids = titles.Where(title => mine.Contains(ShelfStore.SeriesShelfKey(title.Title))).Select(title => title.MangaId);
+        // One entry per title: GetTitlesAsync orders a title's entries so the
+        // preferred one comes first.
+        var ids = titles
+            .Where(title => mine.Contains(ShelfStore.SeriesShelfKey(title.Title)))
+            .GroupBy(title => title.Key)
+            .Select(group => group.First().MangaId);
         var library = await stream.GetSeriesAsync(ids, cancellationToken).ConfigureAwait(false);
         var progress = progressStore.GetAll(userId);
         var prefs = shelfStore.Load(userId).Series;

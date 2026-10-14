@@ -14,9 +14,11 @@ namespace Jellio.Services.Manga;
 // bookmarks and downloads on the device are keyed by.
 public record StreamChapter(string Id, int ChapterId, int MangaId, string Name, float Number, string? Scanlator, bool IsDownloaded, int PageCount, long UploadDate, int SourceOrder = 0);
 
-public record StreamSeries(int MangaId, string Title, string? Author, string? Status, string Key, IReadOnlyList<StreamChapter> Chapters);
+// Source and SourceName say where the chapters come from, so saved files
+// from another source aren't mixed in.
+public record StreamSeries(int MangaId, string Title, string? Author, string? Status, string Key, IReadOnlyList<StreamChapter> Chapters, string? Source = null, string? SourceName = null);
 
-public record StreamTitle(int MangaId, string Title, string Key);
+public record StreamTitle(int MangaId, string Title, string Key, string? Source = null, string? SourceName = null, int ChapterCount = 0);
 
 /// <summary>
 /// Manga read straight from Suwayomi's sources, the way Mihon reads:
@@ -58,16 +60,61 @@ public class MangaStreamService(SuwayomiClient suwayomi)
             return cached.Titles;
         }
 
-        var library = await suwayomi.GetLibraryAsync(cancellationToken).ConfigureAwait(false);
+        var library = await suwayomi.GetLibraryEntriesAsync(cancellationToken).ConfigureAwait(false);
         if (library is null)
         {
             return _titles?.Titles;
         }
 
-        var titles = library.Select(entry => new StreamTitle(entry.Id, entry.Title, ShelfStore.SeriesKey(entry.Title))).ToList();
+        var priority = (JellioPlugin.Instance?.Configuration.MangaSourcePriority ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var titles = OrderForPick(
+            library.Select(entry => new StreamTitle(entry.Id, entry.Title, ShelfStore.SeriesKey(entry.Title), entry.Source, entry.SourceName, entry.ChapterCount)),
+            priority);
         _titles = (DateTime.UtcNow, titles);
         return titles;
     }
+
+    // Several library entries for one title (the same series added from
+    // two sources): the preferred source first, then the most chapters,
+    // then the oldest entry, so every lookup by title picks the same one.
+    public static List<StreamTitle> OrderForPick(IEnumerable<StreamTitle> titles, IReadOnlyList<string> sourcePriority)
+    {
+        int Rank(StreamTitle title)
+        {
+            for (var i = 0; i < sourcePriority.Count; i++)
+            {
+                if (SourceMatches(sourcePriority[i], title.Source) || SourceMatches(sourcePriority[i], title.SourceName))
+                {
+                    return i;
+                }
+            }
+
+            return int.MaxValue;
+        }
+
+        return titles
+            .OrderBy(Rank)
+            .ThenByDescending(title => title.ChapterCount)
+            .ThenBy(title => title.MangaId)
+            .ToList();
+    }
+
+    // "mangadex" matches "MangaDex" and "MangaDex (EN)".
+    public static bool SourceMatches(string wanted, string? source)
+    {
+        if (string.IsNullOrWhiteSpace(wanted) || string.IsNullOrWhiteSpace(source))
+        {
+            return false;
+        }
+
+        var a = SourceKey(wanted);
+        var b = SourceKey(source);
+        return a.Length > 0 && (a == b || b.StartsWith(a + " ", StringComparison.Ordinal));
+    }
+
+    private static string SourceKey(string name) =>
+        string.Join(' ', System.Text.RegularExpressions.Regex.Split(name.ToLowerInvariant(), "[^a-z0-9]+").Where(part => part.Length > 0));
 
     // One series with its chapters; a series Suwayomi has never loaded
     // chapters for gets them fetched from the source now.
@@ -97,7 +144,7 @@ public class MangaStreamService(SuwayomiClient suwayomi)
             return cached.Series;
         }
 
-        var series = ToSeries(mangaId, title.Title, null, null, chapters);
+        var series = ToSeries(mangaId, title.Title, null, null, chapters) with { Source = title.Source, SourceName = title.SourceName };
         _series[mangaId] = (DateTime.UtcNow, series);
         foreach (var chapter in series.Chapters)
         {

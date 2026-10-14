@@ -125,6 +125,15 @@
             </div>
           </div>
 
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtMangaSourcePriority">Preferred manga sources</label>
+            <input is="emby-input" type="text" id="txtMangaSourcePriority" autocomplete="off" placeholder="MangaDex, Comick" />
+            <div class="fieldDescription">
+              When the same series is in Suwayomi's library from more than one source, the first source
+              listed here is read; otherwise the one with the most chapters. Comma separated.
+            </div>
+          </div>
+
           <div class="checkboxContainer checkboxContainer-withDescription">
             <label class="emby-checkbox-label">
               <input is="emby-checkbox" type="checkbox" id="chkSuwayomiDownloadRequests" />
@@ -636,6 +645,7 @@
           document.querySelector('#txtSuwayomiLanguages').value = withDefault(config.SuwayomiLanguages, 'en');
           document.querySelector('#chkSuwayomiIncludeNsfw').checked = withDefault(config.SuwayomiIncludeNsfw, false);
           document.querySelector('#chkSuwayomiDownloadRequests').checked = withDefault(config.SuwayomiDownloadRequests, false);
+          document.querySelector('#txtMangaSourcePriority').value = withDefault(config.MangaSourcePriority, '');
           document.querySelector('#chkSeasonalEffectsEnabled').checked = withDefault(config.SeasonalEffectsEnabled, true);
           loadThemesFrom(config);
           document.querySelector('#txtTmdbAccessToken').value = withDefault(config.TmdbAccessToken, '');
@@ -666,6 +676,7 @@
           config.SuwayomiLanguages = document.querySelector('#txtSuwayomiLanguages').value.trim() || 'en';
           config.SuwayomiIncludeNsfw = document.querySelector('#chkSuwayomiIncludeNsfw').checked;
           config.SuwayomiDownloadRequests = document.querySelector('#chkSuwayomiDownloadRequests').checked;
+          config.MangaSourcePriority = document.querySelector('#txtMangaSourcePriority').value.trim();
           config.SeasonalEffectsEnabled = document.querySelector('#chkSeasonalEffectsEnabled').checked;
           saveThemesTo(config);
           config.TmdbAccessToken = document.querySelector('#txtTmdbAccessToken').value.trim();

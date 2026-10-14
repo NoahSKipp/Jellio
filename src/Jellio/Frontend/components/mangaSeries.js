@@ -1,24 +1,19 @@
 import { getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
+import { chapterNameKey, compareChapters, isPrologue } from '../runtime/mangaChapters.js';
+
+export {
+  chapterSource,
+  compareChapters,
+  isPrologue,
+  mergeStreamChapters,
+  splitBySource,
+  streamChapterItem,
+} from '../runtime/mangaChapters.js';
 
 // Manga arrives as one file per chapter or volume (Suwayomi saves each
 // chapter as its own CBZ), so the Manga shelf groups files into series:
 // Jellyfin's SeriesName when it has one, otherwise the folder the files
 // sit in, which is how Suwayomi and most manga libraries are laid out.
-
-// The last number in a chapter's name, e.g. "Chapter 0.06" -> 0.06,
-// "Vol. 3 Ch. 21.5" -> 21.5. Compared as numbers so 0.06 sorts before
-// 0.1 and 9 before 10.
-function chapterNumber(item) {
-  const match = /(\d+(?:\.\d+)?)(?!.*\d)/.exec(item.Name || '');
-  return match ? parseFloat(match[1]) : NaN;
-}
-
-export function compareChapters(a, b) {
-  const x = chapterNumber(a);
-  const y = chapterNumber(b);
-  if (!isNaN(x) && !isNaN(y) && x !== y) return x - y;
-  return (a.SortName || a.Name || '').localeCompare(b.SortName || b.Name || '', undefined, { numeric: true });
-}
 
 function folderName(path) {
   const parts = String(path || '').split(/[\\/]/).filter(Boolean);
@@ -128,26 +123,6 @@ export function useSeriesCover(img, chapter, onMissing, streamMangaId) {
   img.src = chapter && !chapter.Stream ? getMangaSeriesCoverUrl(chapter.Id) : getStreamCoverUrl(streamMangaId || chapter.Stream.MangaId, chapter && chapter.SeriesName);
 }
 
-// A chapter read straight from its source (MangaStreamController), shaped
-// like a library item so the shelf, reader and downloads treat it alike.
-export function streamChapterItem(chapter, seriesTitle) {
-  return {
-    Id: chapter.Id,
-    Name: chapter.Name,
-    SortName: chapter.Name,
-    Type: 'Book',
-    SeriesName: seriesTitle,
-    DateCreated: chapter.UploadDate ? new Date(chapter.UploadDate).toISOString() : null,
-    ImageTags: {},
-    UserData: {},
-    Stream: { ChapterId: chapter.ChapterId, MangaId: chapter.MangaId, PageCount: chapter.PageCount },
-    ChapterNumber: chapter.Number,
-    Scanlator: chapter.Scanlator || '',
-    SourceOrder: chapter.SourceOrder,
-    IsDownloaded: !!chapter.IsDownloaded,
-  };
-}
-
 // A series' chapter settings (Mihon's): its own where it has set them,
 // else the reader's defaults. An older single filter (unread or
 // bookmarked) still counts until the new ones are set.
@@ -194,7 +169,7 @@ export function sortChapters(chapters, settings) {
 // "Chapter 12.5" for the number display, the source's title otherwise.
 export function chapterLabelFor(item, settings) {
   const number = chapterNumberOf(item);
-  if (settings.display === 'number' && number >= 0) return 'Chapter ' + String(Math.round(number * 1000) / 1000);
+  if (settings.display === 'number' && number >= 0 && !isPrologue(item.Name)) return 'Chapter ' + String(Math.round(number * 1000) / 1000);
   return item.Name;
 }
 
@@ -288,46 +263,3 @@ export function withDuplicateReads(chapters, progress) {
   return extended;
 }
 
-function chapterNameKey(name) {
-  return String(name || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-
-// A series' chapters from both places: the library's files (saved to the
-// server) win, carrying the streamed chapter's id for its progress;
-// everything else streams.
-export function mergeStreamChapters(libraryChapters, streamSeries) {
-  if (!streamSeries) return libraryChapters.slice().sort(compareChapters);
-  const byName = new Map();
-  libraryChapters.forEach((item) => byName.set(chapterNameKey(item.Name), item));
-  const used = new Set();
-  const merged = streamSeries.Chapters.map(function (chapter) {
-    const key = chapterNameKey(chapter.Name);
-    let saved = byName.get(key);
-    if (!saved) {
-      for (const [name, item] of byName) {
-        if (!used.has(item) && (name.endsWith(' ' + key) || key.endsWith(' ' + name))) {
-          saved = item;
-          break;
-        }
-      }
-    }
-    if (saved && !used.has(saved)) {
-      used.add(saved);
-      return Object.assign({}, saved, {
-        StreamId: chapter.Id,
-        ChapterNumber: chapter.Number,
-        Scanlator: chapter.Scanlator || '',
-        SourceOrder: chapter.SourceOrder,
-        IsDownloaded: !!chapter.IsDownloaded,
-      });
-    }
-    return streamChapterItem(chapter, streamSeries.Title);
-  });
-  libraryChapters.forEach((item) => {
-    if (!used.has(item)) merged.push(item);
-  });
-  return merged.sort(compareChapters);
-}
