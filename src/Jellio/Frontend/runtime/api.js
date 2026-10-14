@@ -2396,6 +2396,9 @@ export function isPlaceholderSource(source, item) {
   const path = String(source.Path || '');
   if (path && path !== '/stub' && !/^(gelato|stremio):/i.test(path)) return false;
   if (source.Size) return false;
+  // Not out yet: nothing without a file can be a real release.
+  const premiere = item && item.PremiereDate ? Date.parse(item.PremiereDate) : NaN;
+  if (premiere > Date.now()) return true;
   const name = String(source.Name || '').trim();
   if (!name) return true;
   const titles = [item && item.Name, item && item.SeriesName, item && item.OriginalTitle]
@@ -2420,7 +2423,7 @@ export function getMediaSources(itemId, options) {
   }
   // Callers asking while a lookup runs share it.
   if (!options?.forceFresh && mediaSourcesInFlight.has(idStr)) return mediaSourcesInFlight.get(idStr);
-  const params = new URLSearchParams({ Fields: 'MediaSources' });
+  const params = new URLSearchParams({ Fields: 'MediaSources,OriginalTitle' });
   const request = getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString())
     .then(function (result) {
       const sources = ((result && result.MediaSources) || []).filter(function (source) {

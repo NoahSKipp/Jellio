@@ -571,14 +571,17 @@ function renderNoStreams(root, item, onRetry, onClose) {
   wrap.appendChild(el('span', 'material-icons videocam_off jellio-stream-picker-empty-icon'));
   wrap.appendChild(el('h2', 'jellio-stream-picker-empty-title', 'No streams available'));
   const released = item && item.PremiereDate ? new Date(item.PremiereDate) : null;
+  const upcoming = released && released.getTime() > Date.now();
   const recent = released && Date.now() - released.getTime() < 120 * 24 * 60 * 60 * 1000;
   wrap.appendChild(
     el(
       'p',
       'jellio-stream-picker-empty-text',
-      recent || !released
-        ? 'There may not be a digital release yet. Check back once it’s out on digital.'
-        : 'Nothing was found for this title right now. Try again later.',
+      upcoming
+        ? 'Releases on ' + released.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + '. Streams usually show up once it’s out on digital.'
+        : recent || !released
+          ? 'There may not be a digital release yet. Check back once it’s out on digital.'
+          : 'Nothing was found for this title right now. Try again later.',
     ),
   );
   const actions = el('div', 'jellio-screen-retry-actions');
