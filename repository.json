@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.77.2] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(home)* Show the show's art on episode cards in landscape rows\n\n### ⚡ Performance\n\n- *(detail)* Load title info without resolving streams\n\n### ◀️ Revert\n\n- Keep episode stills on Jellio's own episode cards\n",
+        "checksum": "2b6baeb1935519fae153cd14cf5dd0e9",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.2/jellio_1.77.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-14T00:17:45Z",
+        "version": "1.77.2"
+      },
+      {
         "changelog": "## [1.77.1] - 2026-10-13\n\n### 🐛 Bug Fixes\n\n- *(calendar)* Find watched shows from episode history and wait longer for new seasons\n",
         "checksum": "7517f9c6e26a20466235dbe2e51e8e24",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.1/jellio_1.77.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T13:45:59Z",
         "version": "1.64.0"
-      },
-      {
-        "changelog": "## [1.63.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(books)* Add a Requests page and per-reader removal for books and audiobooks\n\n### 🐛 Bug Fixes\n\n- *(books)* Show Requested and Downloaded instead of Listen for books not in the library yet\n\n### 🎨 Styling\n\n- *(books)* Format the requests entry initializer\n",
-        "checksum": "b5973055790bb1f42267ede57b26dec4",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.63.0/jellio_1.63.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T00:22:05Z",
-        "version": "1.63.0"
       }
     ]
   }
