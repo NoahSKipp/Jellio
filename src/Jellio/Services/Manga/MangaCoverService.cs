@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -27,15 +28,19 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
     // after MissTtl).
     private readonly ConcurrentDictionary<string, (DateTime At, string? Source)> _sources = new(StringComparer.Ordinal);
 
-    public async Task<(byte[] Bytes, string ContentType)?> GetCoverAsync(string seriesFolder, CancellationToken cancellationToken)
+    public Task<(byte[] Bytes, string ContentType)?> GetCoverAsync(string seriesFolder, CancellationToken cancellationToken) =>
+        GetCoverAsync(seriesFolder, null, cancellationToken);
+
+    public async Task<(byte[] Bytes, string ContentType)?> GetCoverAsync(string seriesFolder, string? seriesTitle, CancellationToken cancellationToken)
     {
-        if (_sources.TryGetValue(seriesFolder, out var known) && (known.Source is not null || DateTime.UtcNow - known.At < MissTtl))
+        var cacheKey = string.IsNullOrWhiteSpace(seriesTitle) ? seriesFolder : $"{seriesFolder}::title:{seriesTitle.Trim()}";
+        if (_sources.TryGetValue(cacheKey, out var known) && (known.Source is not null || DateTime.UtcNow - known.At < MissTtl))
         {
             return known.Source is null ? null : await LoadAsync(known.Source, cancellationToken).ConfigureAwait(false);
         }
 
-        var source = await ResolveAsync(seriesFolder, cancellationToken).ConfigureAwait(false);
-        _sources[seriesFolder] = (DateTime.UtcNow, source);
+        var source = await ResolveAsync(seriesFolder, seriesTitle, cancellationToken).ConfigureAwait(false);
+        _sources[cacheKey] = (DateTime.UtcNow, source);
         return source is null ? null : await LoadAsync(source, cancellationToken).ConfigureAwait(false);
     }
 
@@ -81,7 +86,7 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
         return source is null ? null : await LoadAsync(source, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<string?> ResolveAsync(string seriesFolder, CancellationToken cancellationToken)
+    private async Task<string?> ResolveAsync(string seriesFolder, string? seriesTitle, CancellationToken cancellationToken)
     {
         try
         {
@@ -95,6 +100,19 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
                 {
                     return "file:" + file;
                 }
+
+                var parentDir = Directory.GetParent(seriesFolder)?.FullName;
+                if (!string.IsNullOrEmpty(parentDir) && Directory.Exists(parentDir))
+                {
+                    var parentFile = Directory.EnumerateFiles(parentDir)
+                        .FirstOrDefault(path =>
+                            CoverNames.Contains(Path.GetFileNameWithoutExtension(path), StringComparer.OrdinalIgnoreCase)
+                            && ImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase));
+                    if (parentFile is not null)
+                    {
+                        return "file:" + parentFile;
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -102,7 +120,19 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
             logger.LogDebug(ex, "Jellio: could not look for a cover in {Folder}", seriesFolder);
         }
 
-        var title = Path.GetFileName(seriesFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var title = !string.IsNullOrWhiteSpace(seriesTitle)
+            ? seriesTitle.Trim()
+            : Path.GetFileName(seriesFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+        if (IsSubfolderName(title))
+        {
+            var parentName = Path.GetFileName(Path.GetDirectoryName(seriesFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+            if (!string.IsNullOrWhiteSpace(parentName))
+            {
+                title = parentName;
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(title))
         {
             return null;
@@ -124,6 +154,9 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
             ?? series?.FirstOrDefault();
         return best?.CoverUrl is { } cover ? "anilist:" + cover : null;
     }
+
+    private static bool IsSubfolderName(string name) =>
+        Regex.IsMatch(name, @"^(?:vol(?:ume)?\.?\s*\d+|v\d+|season\s*\d+|s\d+|chapters?|ch\.?\s*\d+)$", RegexOptions.IgnoreCase);
 
     private async Task<(byte[] Bytes, string ContentType)?> LoadAsync(string source, CancellationToken cancellationToken)
     {

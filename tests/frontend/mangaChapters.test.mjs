@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   chapterSource,
   compareChapters,
+  isMangaChapter,
   mergeStreamChapters,
   sourceMatches,
   splitBySource,
@@ -74,4 +75,21 @@ test('Prologue N sorts in its own range, before Chapter 1 and apart from Chapter
   const names = ['Chapter 2', 'Prologue 2', 'Chapter 1', 'Prologue 1', 'Chapter 0.01'];
   const sorted = names.map((name) => ({ Name: name })).sort(compareChapters).map((c) => c.Name);
   assert.deepEqual(sorted, ['Prologue 1', 'Prologue 2', 'Chapter 0.01', 'Chapter 1', 'Chapter 2']);
+});
+
+test('isMangaChapter recognizes manga/comic chapters and distinguishes standard books', () => {
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'Chapter 9' }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'Chapter 2' }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'Vol. 1 Ch. 10' }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'Prologue' }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', Name: '12.5' }), false);
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'Episode 3' }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', SeriesName: 'Berserk', Name: 'The Black Swordsman' }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', Stream: { MangaId: 42 } }), true);
+  assert.equal(isMangaChapter({ Type: 'Book', Path: '/media/manga/Berserk/01.cbz' }), true);
+
+  // Standard books with no chapter markers, series, or manga path:
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'Nicomachean Ethics', Path: '/books/Aristotle/Nicomachean Ethics.epub' }), false);
+  assert.equal(isMangaChapter({ Type: 'Book', Name: 'The Republic' }), false);
+  assert.equal(isMangaChapter({ Type: 'Movie', Name: 'Chapter 2' }), false);
 });

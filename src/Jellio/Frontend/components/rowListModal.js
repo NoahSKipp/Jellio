@@ -7,7 +7,7 @@
 // close/Escape/click-outside behaviour) rather than a second dialog
 // language, with a plain vertical list inside: every item in the row,
 // at a glance, one click through to it.
-import { getImageUrl, getBookCoverUrl } from '../runtime/api.js';
+import { getImageUrl, getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -48,16 +48,33 @@ function buildListItem(item, select) {
   const tag = item.ImageTags && item.ImageTags.Primary;
   const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
   if (tag || (isBook && item.Id)) {
-    const img = document.createElement('img');
-    img.className = 'jellio-row-list-item-image';
-    // A book with no image of its own tries Chaptarr's cover for it.
-    img.src = tag ? getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 160 }) : getBookCoverUrl(item.Id);
-    img.alt = '';
-    img.loading = 'lazy';
-    img.addEventListener('error', function () {
-      img.replaceWith(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
-    });
-    row.appendChild(img);
+    const candidates = [];
+    if (tag) candidates.push(getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 160 }));
+    if (isBook && item.Id) {
+      if (item.Stream && item.Stream.MangaId) candidates.push(getStreamCoverUrl(item.Stream.MangaId, item.SeriesName));
+      candidates.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
+      candidates.push(getBookCoverUrl(item.Id));
+    }
+    const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
+    if (uniqueCandidates.length) {
+      const img = document.createElement('img');
+      img.className = 'jellio-row-list-item-image';
+      let candidateIndex = 0;
+      img.src = uniqueCandidates[0];
+      img.alt = '';
+      img.loading = 'lazy';
+      img.addEventListener('error', function () {
+        candidateIndex += 1;
+        if (candidateIndex < uniqueCandidates.length) {
+          img.src = uniqueCandidates[candidateIndex];
+        } else {
+          img.replaceWith(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
+        }
+      });
+      row.appendChild(img);
+    } else {
+      row.appendChild(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
+    }
   } else {
     row.appendChild(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
   }

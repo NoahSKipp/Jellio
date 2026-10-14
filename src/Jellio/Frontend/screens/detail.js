@@ -18,6 +18,7 @@ import {
   getSeriesNextUp,
   getBookMetadata,
   getBookCoverUrl,
+  getMangaSeriesCoverUrl,
   getAudiobookTracks,
   audiobookTitle,
   getCachedItemSync,
@@ -1114,13 +1115,22 @@ export async function renderDetail(root, params) {
   // Books and audiobooks never carry a backdrop, only a cover: show the
   // cover itself above the title, plus who wrote it.
   if (isBook) {
-    const coverUrl = bookCoverUrl(item, canonicalId) || (bookMeta && bookMeta.HasCover ? getBookCoverUrl(canonicalId) : null);
+    const coverUrl =
+      bookCoverUrl(item, canonicalId) ||
+      (bookMeta && bookMeta.HasCover ? getBookCoverUrl(canonicalId) : null) ||
+      getMangaSeriesCoverUrl(canonicalId, item.SeriesName);
     if (coverUrl) {
       const cover = document.createElement('img');
       cover.className = 'jellio-detail-book-cover';
       cover.src = coverUrl;
       cover.alt = '';
+      let triedMangaFallback = coverUrl === getMangaSeriesCoverUrl(canonicalId, item.SeriesName);
       cover.addEventListener('error', function () {
+        if (!triedMangaFallback) {
+          triedMangaFallback = true;
+          cover.src = getMangaSeriesCoverUrl(canonicalId, item.SeriesName);
+          return;
+        }
         cover.remove();
       });
       heroContent.appendChild(cover);

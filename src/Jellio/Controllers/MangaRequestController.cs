@@ -465,22 +465,52 @@ public partial class MangaRequestController(
     // The real cover of the series a chapter file belongs to (its folder),
     // for the Manga shelf's series cards (MangaCoverService).
     [HttpGet("series-cover/{itemId:guid}")]
-    public async Task<IActionResult> SeriesCover(Guid itemId, CancellationToken cancellationToken)
+    public async Task<IActionResult> SeriesCover(Guid itemId, [FromQuery] string? title, CancellationToken cancellationToken)
     {
-        var folder = libraryManager.GetItemById(itemId)?.Path is { Length: > 0 } path ? System.IO.Path.GetDirectoryName(path) : null;
-        if (string.IsNullOrEmpty(folder))
+        var item = libraryManager.GetItemById(itemId);
+        if (item is null)
         {
             return NotFound();
         }
 
-        var image = await coverService.GetCoverAsync(folder, cancellationToken).ConfigureAwait(false);
-        if (image is null)
+        var path = item.Path;
+        var folder = !string.IsNullOrEmpty(path)
+            ? (System.IO.Directory.Exists(path) ? path : System.IO.Path.GetDirectoryName(path))
+            : (item.ContainingFolderPath is { Length: > 0 } cfp ? cfp : null);
+
+        var seriesTitle = !string.IsNullOrWhiteSpace(title)
+            ? title
+            : (item as MediaBrowser.Controller.Entities.IHasSeries)?.SeriesName;
+
+        if (!string.IsNullOrEmpty(folder))
         {
-            return NotFound();
+            var image = await coverService.GetCoverAsync(folder, seriesTitle, cancellationToken).ConfigureAwait(false);
+            if (image is not null)
+            {
+                Response.Headers.CacheControl = "private, max-age=86400";
+                return File(image.Value.Bytes, image.Value.ContentType);
+            }
         }
 
-        Response.Headers.CacheControl = "private, max-age=86400";
-        return File(image.Value.Bytes, image.Value.ContentType);
+        var parent = item.GetParent();
+        if (parent is not null && parent.HasImage(MediaBrowser.Model.Entities.ImageType.Primary, 0))
+        {
+            var imageInfo = parent.GetImageInfo(MediaBrowser.Model.Entities.ImageType.Primary, 0);
+            if (imageInfo is not null && System.IO.File.Exists(imageInfo.Path))
+            {
+                Response.Headers.CacheControl = "private, max-age=86400";
+                var ext = System.IO.Path.GetExtension(imageInfo.Path).ToLowerInvariant();
+                var contentType = ext switch
+                {
+                    ".png" => "image/png",
+                    ".webp" => "image/webp",
+                    _ => "image/jpeg",
+                };
+                return PhysicalFile(imageInfo.Path, contentType);
+            }
+        }
+
+        return NotFound();
     }
 
     // title: the series' name, for AniList's cover when the source's own

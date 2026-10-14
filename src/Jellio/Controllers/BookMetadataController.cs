@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellio.Services.Chaptarr;
+using Jellio.Services.Manga;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Dto;
@@ -27,7 +28,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/books/item")]
 [Authorize]
-public class BookMetadataController(BookMetadataService metadataService, ChaptarrClient chaptarrClient, ILibraryManager libraryManager, IUserManager userManager, IDtoService dtoService) : ControllerBase
+public class BookMetadataController(BookMetadataService metadataService, ChaptarrClient chaptarrClient, ILibraryManager libraryManager, IUserManager userManager, IDtoService dtoService, MangaCoverService coverService) : ControllerBase
 {
     public record BookMetadataResponse(
         string Title,
@@ -283,19 +284,35 @@ public class BookMetadataController(BookMetadataService metadataService, Chaptar
         }
 
         var metadata = await metadataService.GetAsync(item).ConfigureAwait(false);
-        if (metadata?.CoverSource is null)
+        if (metadata?.CoverSource is not null)
         {
-            return NotFound();
+            var cover = await chaptarrClient.GetCoverImageAsync(metadata.CoverSource, cancellationToken).ConfigureAwait(false);
+            if (cover is not null)
+            {
+                Response.Headers.CacheControl = "private, max-age=86400";
+                return File(cover.Value.Bytes, cover.Value.ContentType);
+            }
         }
 
-        var cover = await chaptarrClient.GetCoverImageAsync(metadata.CoverSource, cancellationToken).ConfigureAwait(false);
-        if (cover is null)
+        // When Chaptarr has no cover (e.g. for manga chapter files or unindexed books),
+        // fall back to the series/folder cover.
+        var path = item.Path;
+        var folder = !string.IsNullOrEmpty(path)
+            ? (System.IO.Directory.Exists(path) ? path : System.IO.Path.GetDirectoryName(path))
+            : (item.ContainingFolderPath is { Length: > 0 } cfp ? cfp : null);
+
+        if (!string.IsNullOrEmpty(folder))
         {
-            return NotFound();
+            var seriesTitle = (item as IHasSeries)?.SeriesName;
+            var mangaCover = await coverService.GetCoverAsync(folder, seriesTitle, cancellationToken).ConfigureAwait(false);
+            if (mangaCover is not null)
+            {
+                Response.Headers.CacheControl = "private, max-age=86400";
+                return File(mangaCover.Value.Bytes, mangaCover.Value.ContentType);
+            }
         }
 
-        Response.Headers.CacheControl = "private, max-age=86400";
-        return File(cover.Value.Bytes, cover.Value.ContentType);
+        return NotFound();
     }
 
     private User? GetUser() =>

@@ -75,7 +75,15 @@ function posterUrls(item, imageId) {
   if (item.Type === 'Manga') {
     return [item.MangaId ? getStreamCoverUrl(item.MangaId) : getMangaSeriesCoverUrl(item.Id)];
   }
-  if (item.Type === 'Book') return [getImageUrl(item.Id, 'Primary', { maxWidth: 200 }), getBookCoverUrl(item.Id)];
+  if (item.Type === 'Book') {
+    const urls = [getImageUrl(item.Id, 'Primary', { maxWidth: 200 })];
+    if (item.MangaId || (item.Stream && item.Stream.MangaId)) {
+      urls.push(getStreamCoverUrl(item.MangaId || item.Stream.MangaId, item.SeriesName));
+    }
+    urls.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
+    urls.push(getBookCoverUrl(item.Id));
+    return Array.from(new Set(urls.filter(Boolean)));
+  }
   if (item.Type === 'AudioBook' && item.AlbumId) {
     return [getImageUrl(item.AlbumId, 'Primary', { maxWidth: 200 }), getImageUrl(item.Id, 'Primary', { maxWidth: 200 })];
   }

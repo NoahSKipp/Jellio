@@ -6,10 +6,12 @@ import {
   getUserImageUrl,
   getBookCoverUrl,
   getStreamCoverUrl,
+  getMangaSeriesCoverUrl,
   TICKS_PER_SECOND,
   prefetchStreams,
   seedItemCache,
 } from '../runtime/api.js';
+import { isMangaChapter } from '../runtime/mangaChapters.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   attachCardOptionsTrigger,
@@ -407,18 +409,66 @@ function buildLandscapeCard(item, options) {
   return card;
 }
 
-// Books rarely have a Jellyfin image of their own (Bookshelf's online
-// providers can't match most files): an audiobook track can borrow its
-// album's, anything else falls back to Chaptarr's cover for it, which
-// 404s into the placeholder when Chaptarr has none.
-function bookFallbackCoverUrl(item) {
-  if (item.Type !== 'Book' && item.Type !== 'AudioBook') return null;
-  // A manga chapter read straight from its source: its series' cover.
-  if (item.Stream && item.Stream.MangaId) return getStreamCoverUrl(item.Stream.MangaId, item.SeriesName);
-  if (item.AlbumId && item.AlbumPrimaryImageTag) {
-    return getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 });
+// Candidates in priority order for a card's image:
+// - Episodes/Movies/Series use their primary tag
+// - Audiobooks try track primary art, album cover, then book cover
+// - Manga chapters try chapter primary art (if any), then overall manga series cover
+//   (stream cover, series primary tag, parent primary tag, /Jellio/manga/series-cover/{id}),
+//   and fall back to book cover
+// - Standard books try item primary art, Chaptarr book cover, then folder/series cover
+function cardImageCandidates(item) {
+  if (!item) return [];
+  const urls = [];
+  const ownPrimaryTag = item.ImageTags && item.ImageTags.Primary;
+  const ownPrimaryUrl = ownPrimaryTag
+    ? getImageUrl(item.Id, 'Primary', { tag: ownPrimaryTag, maxWidth: 400, quality: 85 })
+    : null;
+
+  if (item.Type === 'AudioBook') {
+    if (ownPrimaryUrl) urls.push(ownPrimaryUrl);
+    if (item.AlbumId && item.AlbumPrimaryImageTag) {
+      urls.push(getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    }
+    if (item.Id) urls.push(getBookCoverUrl(item.Id));
+    return Array.from(new Set(urls.filter(Boolean)));
   }
-  return item.Id ? getBookCoverUrl(item.Id) : null;
+
+  if (item.Type === 'Book') {
+    const isChapter = isMangaChapter(item);
+    if (ownPrimaryUrl) urls.push(ownPrimaryUrl);
+
+    const mangaCovers = [];
+    if (item.Stream && item.Stream.MangaId) {
+      mangaCovers.push(getStreamCoverUrl(item.Stream.MangaId, item.SeriesName));
+    } else if (item.MangaId) {
+      mangaCovers.push(getStreamCoverUrl(item.MangaId, item.SeriesName));
+    }
+    if (item.SeriesId && item.SeriesPrimaryImageTag) {
+      mangaCovers.push(getImageUrl(item.SeriesId, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    }
+    if (item.ParentId && item.ParentPrimaryImageTag) {
+      mangaCovers.push(getImageUrl(item.ParentId, 'Primary', { tag: item.ParentPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    }
+    if (item.Id) {
+      mangaCovers.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
+    }
+
+    const bookCover = item.Id ? getBookCoverUrl(item.Id) : null;
+
+    if (isChapter) {
+      urls.push(...mangaCovers);
+      if (bookCover) urls.push(bookCover);
+    } else {
+      if (bookCover) urls.push(bookCover);
+      urls.push(...mangaCovers);
+    }
+    return Array.from(new Set(urls.filter(Boolean)));
+  }
+
+  if (ownPrimaryUrl) {
+    urls.push(ownPrimaryUrl);
+  }
+  return urls;
 }
 
 export function buildCard(item, options) {
@@ -437,29 +487,28 @@ export function buildCard(item, options) {
   const imageWrap = document.createElement('div');
   imageWrap.className = 'jellio-card-image-wrap';
 
-  const imageTag = item.ImageTags && item.ImageTags.Primary;
-  const imageUrl = imageTag
-    ? // quality: 85 alongside the existing maxWidth: every card grid can
-      // hold a hundred-plus of these at once, and a poster shrunk to
-      // this real display size loses nothing visible at a JPEG quality
-      // a shade under the server's own real default, real bytes saved on
-      // every single one of them for it.
-      getImageUrl(item.Id, 'Primary', { tag: imageTag, maxWidth: 400, quality: 85 })
-    : bookFallbackCoverUrl(item);
   function appendPlaceholder() {
     const placeholder = document.createElement('div');
     placeholder.className = 'jellio-card-image jellio-card-image-empty';
     imageWrap.insertBefore(placeholder, imageWrap.firstChild);
   }
-  if (imageUrl) {
+
+  const candidateUrls = cardImageCandidates(item);
+  let candidateIndex = 0;
+  if (candidateUrls.length > 0) {
     const img = document.createElement('img');
     img.className = 'jellio-card-image';
-    img.src = imageUrl;
+    img.src = candidateUrls[0];
     img.alt = item.Name || '';
     img.loading = 'lazy';
     img.addEventListener('error', function () {
-      img.remove();
-      appendPlaceholder();
+      candidateIndex += 1;
+      if (candidateIndex < candidateUrls.length) {
+        img.src = candidateUrls[candidateIndex];
+      } else {
+        img.remove();
+        appendPlaceholder();
+      }
     });
     imageWrap.appendChild(img);
   } else {

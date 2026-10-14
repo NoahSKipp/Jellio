@@ -143,3 +143,21 @@ export function mergeStreamChapters(libraryChapters, streamSeries) {
   });
   return merged.sort(compareChapters);
 }
+
+// Whether an item is a manga/comic chapter (CBZ/CBR/stream or folder chapter)
+// rather than a regular standalone book, to decide reading order and cover fallbacks.
+export function isMangaChapter(item) {
+  if (!item) return false;
+  if (item.Type !== 'Book' && item.Type !== 'AudioBook') return false;
+  if (item.Stream && item.Stream.MangaId) return true;
+  if (item.MangaId) return true;
+  if (typeof item.ChapterNumber === 'number' && item.ChapterNumber >= 0) return true;
+  if (item.SeriesName) return true;
+  const name = item.Name || '';
+  if (isPrologue(name)) return true;
+  if (/^\s*(?:chapter|ch\.|c\.|vol\.|volume|v\.|ep\.|episode|oneshot|one-shot)\b/i.test(name)) return true;
+  if (/\b(?:chapter|ch\.)\s*\d+/i.test(name)) return true;
+  const path = item.Path || '';
+  if (/(?:[\\/]|^)(?:mangas?|comics?|manhwa|manhua|webtoons?)(?:[\\/]|$)/i.test(path)) return true;
+  return false;
+}
