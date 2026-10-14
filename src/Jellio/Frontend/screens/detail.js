@@ -1028,6 +1028,18 @@ export async function renderDetail(root, params) {
     return;
   }
 
+  // Drawn from what was last seen: redraw once if the fresh copy differs.
+  const onRefreshed = function (event) {
+    if (!event.detail || (event.detail.itemId !== itemId && event.detail.itemId !== String(itemId))) return;
+    window.removeEventListener('jellio-item-refreshed', onRefreshed);
+    if (!root.isConnected || window.location.hash.indexOf('id=' + itemId) === -1) return;
+    renderDetail(root, params);
+  };
+  window.addEventListener('jellio-item-refreshed', onRefreshed);
+  window.setTimeout(function () {
+    window.removeEventListener('jellio-item-refreshed', onRefreshed);
+  }, 30000);
+
   // If we already know the item from card click or memory cache, render an instant
   // hero skeleton with title, backdrop, and year so the transition feels instant.
   const preview = getCachedItemSync(itemId);
@@ -1635,8 +1647,9 @@ export async function renderDetail(root, params) {
 
   heroContent.appendChild(actions);
 
-  // Streams are looked up only now, with the page already drawn: Play works
-  // throughout and the picker reuses this same lookup.
+  // Streams are looked up only now, with the page already drawn, quietly:
+  // the badges fill in when they arrive, a note shows only if none are
+  // found. Play works throughout and the picker reuses this same lookup.
   const playsVideo = !needsEpisodeResolution && !readerKind && (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Video');
   if (playsVideo) {
     const streamStatus = el('div', 'jellio-detail-stream-status');
@@ -1647,11 +1660,8 @@ export async function renderDetail(root, params) {
       },
       function (update) {
         streamStatus.textContent = '';
-        if (update.state === 'finding') {
-          streamStatus.appendChild(el('span', 'jellio-detail-stream-spinner'));
-          streamStatus.appendChild(el('span', null, 'Finding streams…'));
-          return;
-        }
+        streamStatus.hidden = update.state === 'finding';
+        if (update.state === 'finding') return;
         if (update.state === 'ready') {
           streamStatus.hidden = true;
           const badges = buildMediaTechBadges({ MediaSources: update.sources });

@@ -396,6 +396,38 @@ const SHORT_CACHE_TTL_MS = 8000;
 const cache = new Map();
 const CACHE_MAX_ENTRIES = 500;
 
+// Title info, seasons and episodes as last seen, for 30 minutes: a title
+// page reopened in that time draws from this at once while a fresh copy
+// loads, and 'jellio-item-refreshed' fires if the fresh one differs.
+const RECENT_TTL_MS = 30 * 60 * 1000;
+const recentValues = new Map();
+
+function rememberRecent(key, value) {
+  if (recentValues.size >= 300) recentValues.delete(recentValues.keys().next().value);
+  recentValues.delete(key);
+  recentValues.set(key, { ts: Date.now(), value: value });
+}
+
+function cachedRecent(key, fetcher, ttlMs, itemId) {
+  const hit = cache.get(key);
+  const fresh = hit && Date.now() - hit.ts < ttlMs;
+  const recent = recentValues.get(key);
+  if (!fresh && recent && Date.now() - recent.ts < RECENT_TTL_MS) {
+    cached(key, fetcher, ttlMs)
+      .then(function (value) {
+        const changed = JSON.stringify(value) !== JSON.stringify(recent.value);
+        rememberRecent(key, value);
+        if (changed) window.dispatchEvent(new CustomEvent('jellio-item-refreshed', { detail: { itemId: String(itemId) } }));
+      })
+      .catch(function () {});
+    return Promise.resolve(recent.value);
+  }
+  return cached(key, fetcher, ttlMs).then(function (value) {
+    rememberRecent(key, value);
+    return value;
+  });
+}
+
 function cached(key, fetcher, ttlMs) {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.ts < (ttlMs || CACHE_TTL_MS)) return hit.promise;
@@ -432,6 +464,7 @@ function invalidateCache(key) {
 // serving the previous reader's own cached answers.
 export function clearCache() {
   cache.clear();
+  recentValues.clear();
 }
 
 // ---- Home row cache (runtime/rowcache.js) ----------------------------------
@@ -527,6 +560,7 @@ function activeRowCache() {
 // home screen redraws the rows concerned (screens/home.js).
 function onRowCacheChange(event) {
   cache.clear();
+  recentValues.clear();
   document.dispatchEvent(new CustomEvent('jellio:rowcache-change', { detail: event }));
 }
 
@@ -563,6 +597,7 @@ function invalidateUserDataRowsThrottled(intervalMs) {
 // Settings > Clear cached rows, logout and the setting going off.
 export function clearCachedRows() {
   cache.clear();
+  recentValues.clear();
   if (rowCache) {
     rowCache.wipe();
   } else {
@@ -674,12 +709,12 @@ export function getItemDetails(itemId, options) {
   const opts = options || {};
   const cacheKey = 'details:' + itemId + (opts.includePlaybackFields ? ':full' : '');
   // Info only (runtime/itemInfo.js): streams come from getMediaSources.
-  return cached(cacheKey, function () {
+  return cachedRecent(cacheKey, function () {
     return loadItemInfo(getJson, userId, itemId, {
       includePlaybackFields: !!opts.includePlaybackFields,
       timeoutMs: ITEM_DETAILS_TIMEOUT_MS,
     });
-  }, SHORT_CACHE_TTL_MS).catch(function (err) {
+  }, SHORT_CACHE_TTL_MS, itemId).catch(function (err) {
     return downloadedItem(itemId, err);
   });
 }
@@ -1909,9 +1944,9 @@ export function getSeasons(seriesId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const path = '/Shows/' + seriesId + '/Seasons?userId=' + userId;
-  return cached(path, function () {
+  return cachedRecent(path, function () {
     return getJson(path);
-  }, SHORT_CACHE_TTL_MS).then(function (result) {
+  }, SHORT_CACHE_TTL_MS, seriesId).then(function (result) {
     return (result && result.Items) || [];
   });
 }
@@ -1935,9 +1970,9 @@ export function getEpisodes(seriesId, seasonId) {
     Fields: 'Overview,PrimaryImageAspectRatio',
   });
   const path = '/Shows/' + seriesId + '/Episodes?' + params.toString();
-  return cached(path, function () {
+  return cachedRecent(path, function () {
     return getJson(path);
-  }, SHORT_CACHE_TTL_MS).then(function (result) {
+  }, SHORT_CACHE_TTL_MS, seriesId).then(function (result) {
     return (result && result.Items) || [];
   });
 }
