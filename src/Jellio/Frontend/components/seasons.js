@@ -108,6 +108,16 @@ function cobwebSvg() {
   return '<svg viewBox="0 0 170 170" aria-hidden="true"><path d="' + d + '" fill="none" stroke="#e9e4ff" stroke-width="1" stroke-linecap="round" opacity=".8"/></svg>';
 }
 
+// Reading, listening and watching: no lightning or shake there, even where
+// the page isn't fullscreen (the reader on a phone).
+const IMMERSIVE_ROUTES = ['read', 'listen', 'play'];
+
+function immersiveRoute() {
+  if (rootEl && rootEl.classList.contains('jellio-root-fullscreen')) return true;
+  const route = (window.location.hash || '').replace(/^#\/?/, '').split(/[?/]/)[0];
+  return IMMERSIVE_ROUTES.indexOf(route) !== -1;
+}
+
 // Lightning above the page: a violet white flash that stutters twice, a
 // forked bolt drawn on a canvas, and a short shake of the page.
 function mountHalloweenSky() {
@@ -192,7 +202,7 @@ function mountHalloweenSky() {
 
   function schedule(first) {
     strikeTimer = window.setTimeout(function () {
-      if (!document.hidden) strike();
+      if (!document.hidden && !immersiveRoute()) strike();
       schedule(false);
     }, first ? rand(6000, 12000) : rand(12000, 26000));
   }
