@@ -21,7 +21,13 @@ import {
   withoutAnime,
   isHomeRowCacheEnabled,
   markHomeRowPainted,
+  getCommunityWatching,
 } from '../runtime/api.js';
+import {
+  isCommunityRowEnabled,
+  getCommunityExcludedUsers,
+  getSelectedGenres,
+} from '../runtime/recommendationSettings.js';
 import { buildRecommendationRows, titleKey } from '../runtime/recommend.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
@@ -177,7 +183,13 @@ function buildCatalogRows(catalogData, seen) {
 
 async function fetchGenreRows() {
   try {
-    const genres = await discoverGenres(null, 'Movie,Series', GENRE_ROWS);
+    const selected = getSelectedGenres();
+    let genres;
+    if (Array.isArray(selected) && selected.length > 0) {
+      genres = selected;
+    } else {
+      genres = await discoverGenres(null, 'Movie,Series', GENRE_ROWS);
+    }
     const [results, animeIds] = await Promise.all([
       Promise.allSettled(
         genres.map(function (genre) {
@@ -506,7 +518,7 @@ export function invalidateHomeSections() {
   cheapBuilt = [];
 }
 
-function invalidateAllHomeSections() {
+export function invalidateAllHomeSections() {
   invalidateHomeSections();
   expensiveSectionsPromise = null;
   expensiveBuilt = [];
@@ -681,6 +693,12 @@ async function buildExpensiveSections() {
     console.warn('Jellio: could not load recommendation rows', err);
     return [];
   });
+  const communityData = isCommunityRowEnabled()
+    ? getCommunityWatching(getCommunityExcludedUsers()).catch(function (err) {
+        console.warn('Jellio: could not load community watching row', err);
+        return [];
+      })
+    : Promise.resolve([]);
   // Its own (cached) collections fetch rather than waiting on the
   // personal rows above to finish first.
   const catalogData = getCollections()
@@ -700,6 +718,14 @@ async function buildExpensiveSections() {
       })
       .filter(Boolean),
   );
+  const rawCommunity = await communityData;
+  if (rawCommunity && rawCommunity.length > 0) {
+    const validCommunity = dedupe(withoutAnime(rawCommunity, animeIds), seen);
+    if (validCommunity.length > 0) {
+      const row = buildRow('What Others Are Watching', validCommunity);
+      if (row) pushAll([wrapRowForCustomization(row, 'rec:What Others Are Watching')]);
+    }
+  }
   pushAll(buildCatalogRows(await catalogData, seen));
   pushAll(buildGenreRows(await genreData, seen));
 

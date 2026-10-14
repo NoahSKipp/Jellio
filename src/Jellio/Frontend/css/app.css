@@ -1230,6 +1230,51 @@
   background: var(--jellio-secondary-color);
 }
 
+/* Community watcher avatar stack (components/card.js):
+   displays overlapping avatar thumbnails in top-right corner of the card. */
+.jellio-card-watchers {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.jellio-card-image-wrap:has(.jellio-card-watched) .jellio-card-watchers {
+  top: 2.2em;
+}
+
+.jellio-card-watcher-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #141414;
+  margin-left: -6px;
+  object-fit: cover;
+  background: #222;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jellio-card-watcher-initial {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--jellio-secondary-color, #7c3aed);
+}
+
+.jellio-card-watcher-extra {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--jellio-text-secondary, #aaa);
+  background: #333;
+}
+
 /* screens/home.js's own buildComingSoonCard(): the same real
    .jellio-card-image-wrap/.jellio-card-title/.jellio-card-subtitle
    shape every other poster card already uses, this row's own date
@@ -8323,6 +8368,155 @@
   .jellio-settings-row-control {
     margin-left: calc(1.6em + 1em);
   }
+}
+
+/* Recommendations settings category (screens/settings.js):
+   community user exclusion list and genre pill selector. */
+.jellio-settings-subcard {
+  padding: 1em 1.4em;
+  border-top: 1px solid var(--jellio-border-color);
+  background: rgb(0 0 0 / 0.15);
+}
+
+.jellio-settings-subcard-header {
+  margin-bottom: 0.8em;
+}
+
+.jellio-settings-subcard-title {
+  margin: 0;
+  font-size: 0.95em;
+  font-weight: 700;
+  color: var(--jellio-text-color);
+}
+
+.jellio-settings-subcard-description {
+  margin: 0.2em 0 0.8em;
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-settings-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.jellio-settings-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5em 0.8em;
+  border-radius: calc(var(--jellio-card-radius) / 2);
+  background: var(--jellio-bg-elevated);
+  transition: background-color 160ms var(--jellio-ease-out);
+}
+
+.jellio-settings-user-row:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-settings-user-avatar-wrap {
+  display: flex;
+  align-items: center;
+  margin-right: 0.8em;
+}
+
+.jellio-settings-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jellio-settings-user-initial {
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
+.jellio-settings-user-name {
+  flex: 1 1 auto;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--jellio-text-color);
+}
+
+.jellio-settings-genres-wrap {
+  padding: 1.2em 1.4em;
+}
+
+.jellio-settings-genre-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin: 1em 0;
+}
+
+.jellio-genre-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.45em 0.9em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text-color);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms var(--jellio-ease-out), border-color 160ms var(--jellio-ease-out), color 160ms var(--jellio-ease-out);
+}
+
+.jellio-genre-pill:hover {
+  border-color: var(--jellio-secondary-color);
+  background: rgb(255 255 255 / 0.12);
+}
+
+.jellio-genre-pill-active {
+  background: var(--jellio-secondary-color);
+  border-color: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+}
+
+.jellio-genre-pill-check {
+  font-size: 1.1em;
+}
+
+.jellio-settings-genre-actions {
+  margin-top: 1em;
+}
+
+.jellio-settings-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.5em 1.1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 160ms var(--jellio-ease-out), color 160ms var(--jellio-ease-out);
+}
+
+.jellio-settings-btn-secondary:hover {
+  border-color: var(--jellio-text-color);
+  color: var(--jellio-text-color);
+}
+
+.jellio-settings-empty-note {
+  font-size: 0.88em;
+  color: var(--jellio-text-secondary);
+  font-style: italic;
+  padding: 0.5em 0;
 }
 
 .jellio-sidebar-now-playing {

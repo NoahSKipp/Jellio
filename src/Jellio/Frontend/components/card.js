@@ -1,7 +1,15 @@
 // Shared item card, used by every screen that renders a poster grid or row
 // (home's own rows, the library grid). One definition so a later visual
 // change (a hover state, a progress bar) only has one place to happen.
-import { getImageUrl, getBookCoverUrl, getStreamCoverUrl, TICKS_PER_SECOND, prefetchStreams, seedItemCache } from '../runtime/api.js';
+import {
+  getImageUrl,
+  getUserImageUrl,
+  getBookCoverUrl,
+  getStreamCoverUrl,
+  TICKS_PER_SECOND,
+  prefetchStreams,
+  seedItemCache,
+} from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   attachCardOptionsTrigger,
@@ -62,6 +70,45 @@ function episodeSubtitle(item) {
   }
   if (code && item.Name) return code + ': ' + item.Name;
   return code || item.Name || '';
+}
+
+function buildWatchersBadge(watchers) {
+  if (!watchers || !watchers.length) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'jellio-card-watchers';
+  const names = watchers
+    .map(function (w) {
+      return w.UserName || 'User';
+    })
+    .join(', ');
+  wrap.title = 'Watching: ' + names;
+  wrap.setAttribute('aria-label', 'Watched by ' + names);
+
+  const displayWatchers = watchers.slice(0, 3);
+  displayWatchers.forEach(function (watcher) {
+    if (watcher.PrimaryImageTag) {
+      const img = document.createElement('img');
+      img.className = 'jellio-card-watcher-avatar';
+      img.src = getUserImageUrl(watcher.UserId, watcher.PrimaryImageTag, { maxWidth: 64 });
+      img.alt = watcher.UserName || '';
+      img.loading = 'lazy';
+      wrap.appendChild(img);
+    } else {
+      const initial = document.createElement('span');
+      initial.className = 'jellio-card-watcher-avatar jellio-card-watcher-initial';
+      initial.textContent = (watcher.UserName || 'U').charAt(0).toUpperCase();
+      wrap.appendChild(initial);
+    }
+  });
+
+  if (watchers.length > 3) {
+    const extra = document.createElement('span');
+    extra.className = 'jellio-card-watcher-avatar jellio-card-watcher-extra';
+    extra.textContent = '+' + (watchers.length - 3);
+    wrap.appendChild(extra);
+  }
+
+  return wrap;
 }
 
 // Real feedback: Play showing up on every card in a grid/row was one
@@ -333,6 +380,10 @@ function buildLandscapeCard(item, options) {
   }
 
   paintLandscapeProgress(imageWrap, item);
+  if (item.Watchers && item.Watchers.length > 0) {
+    const watchersBadge = buildWatchersBadge(item.Watchers);
+    if (watchersBadge) imageWrap.appendChild(watchersBadge);
+  }
   card.appendChild(imageWrap);
 
   card.addEventListener('click', function () {
@@ -432,6 +483,10 @@ export function buildCard(item, options) {
   }
 
   paintCardState(imageWrap, item);
+  if (item.Watchers && item.Watchers.length > 0) {
+    const watchersBadge = buildWatchersBadge(item.Watchers);
+    if (watchersBadge) imageWrap.appendChild(watchersBadge);
+  }
 
   function handleChanged(updatedItem) {
     paintCardState(imageWrap, updatedItem);

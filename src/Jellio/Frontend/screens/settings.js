@@ -41,7 +41,20 @@ import {
   getMangaImportStatus,
   clearCachedRows,
   isHomeRowCacheEnabled,
+  getCommunityUsers,
+  getAllGenres,
+  getUserImageUrl,
 } from '../runtime/api.js';
+import {
+  isCommunityRowEnabled,
+  setCommunityRowEnabled,
+  getCommunityExcludedUsers,
+  toggleCommunityExcludedUser,
+  getSelectedGenres,
+  toggleSelectedGenre,
+  setSelectedGenres,
+} from '../runtime/recommendationSettings.js';
+import { invalidateAllHomeSections } from './home.js';
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
@@ -963,6 +976,191 @@ function buildHomeCacheCard() {
   return card;
 }
 
+function buildRecommendationsCategory() {
+  const wrap = el('div', 'jellio-settings-category');
+
+  // --- Card 1: What Others Are Watching ---
+  const { card: communityCard, body: communityBody } = buildCard(
+    'group',
+    'What Others Are Watching',
+    'Show titles currently being watched or recently finished by other users on this server.',
+  );
+
+  let excludedSet = new Set(getCommunityExcludedUsers());
+
+  const rowToggle = buildToggleRow(
+    'visibility',
+    'Display row on Home',
+    'Show the "What Others Are Watching" row among your home screen recommendations.',
+    isCommunityRowEnabled(),
+    function (enabled) {
+      setCommunityRowEnabled(enabled);
+      invalidateAllHomeSections();
+      clearCachedRows();
+      if (usersSubcard) {
+        usersSubcard.style.display = enabled ? 'block' : 'none';
+      }
+    },
+  );
+  communityBody.appendChild(rowToggle);
+
+  const usersSubcard = el('div', 'jellio-settings-subcard');
+  if (!isCommunityRowEnabled()) {
+    usersSubcard.style.display = 'none';
+  }
+
+  const subcardHeader = el('div', 'jellio-settings-subcard-header');
+  subcardHeader.appendChild(el('h3', 'jellio-settings-subcard-title', 'Included Users'));
+  subcardHeader.appendChild(
+    el(
+      'p',
+      'jellio-settings-subcard-description',
+      'Choose whose activity appears in your community row. Uncheck any user to hide their activity.',
+    ),
+  );
+  usersSubcard.appendChild(subcardHeader);
+
+  const usersList = el('div', 'jellio-settings-user-list');
+  usersSubcard.appendChild(usersList);
+
+  const loadingNote = el('p', 'jellio-settings-empty-note', 'Loading server users...');
+  usersList.appendChild(loadingNote);
+
+  getCommunityUsers()
+    .then(function (users) {
+      usersList.textContent = '';
+      if (!users || users.length === 0) {
+        usersList.appendChild(el('p', 'jellio-settings-empty-note', 'No other users found on this server.'));
+        return;
+      }
+      users.forEach(function (user) {
+        const userRow = el('div', 'jellio-settings-user-row');
+
+        const avatarWrap = el('div', 'jellio-settings-user-avatar-wrap');
+        if (user.PrimaryImageTag) {
+          const img = el('img', 'jellio-settings-user-avatar');
+          img.src = getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 64 });
+          img.alt = user.Name || '';
+          avatarWrap.appendChild(img);
+        } else {
+          const initial = el('span', 'jellio-settings-user-avatar jellio-settings-user-initial', (user.Name || 'U').charAt(0).toUpperCase());
+          avatarWrap.appendChild(initial);
+        }
+        userRow.appendChild(avatarWrap);
+
+        const nameEl = el('span', 'jellio-settings-user-name', user.Name || 'User');
+        userRow.appendChild(nameEl);
+
+        const toggleLabel = el('label', 'jellio-settings-toggle');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'jellio-settings-toggle-input';
+        checkbox.checked = !excludedSet.has(user.Id);
+        checkbox.addEventListener('change', function () {
+          toggleCommunityExcludedUser(user.Id);
+          excludedSet = new Set(getCommunityExcludedUsers());
+          invalidateAllHomeSections();
+          clearCachedRows();
+        });
+        toggleLabel.appendChild(checkbox);
+        toggleLabel.appendChild(el('span', 'jellio-settings-toggle-track'));
+        userRow.appendChild(toggleLabel);
+
+        usersList.appendChild(userRow);
+      });
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load community users', err);
+      usersList.textContent = '';
+      usersList.appendChild(el('p', 'jellio-settings-empty-note', 'Could not load users list.'));
+    });
+
+  communityBody.appendChild(usersSubcard);
+  wrap.appendChild(communityCard);
+
+  // --- Card 2: Genre Recommendations ---
+  const { card: genreCard, body: genreBody } = buildCard(
+    'movie_filter',
+    'Genre Recommendations',
+    'Choose which genre rows appear on your Home screen. When none are selected, rows are chosen automatically based on your library.',
+  );
+
+  const genresWrap = el('div', 'jellio-settings-genres-wrap');
+  const pillsContainer = el('div', 'jellio-settings-genre-pills');
+  genresWrap.appendChild(pillsContainer);
+
+  const loadingGenres = el('p', 'jellio-settings-empty-note', 'Loading library genres...');
+  pillsContainer.appendChild(loadingGenres);
+
+  const actionsWrap = el('div', 'jellio-settings-genre-actions');
+  const resetBtn = el('button', 'jellio-settings-btn-secondary', 'Reset to automatic');
+  resetBtn.type = 'button';
+  actionsWrap.appendChild(resetBtn);
+  genresWrap.appendChild(actionsWrap);
+
+  getAllGenres(null, 'Movie,Series')
+    .then(function (genres) {
+      pillsContainer.textContent = '';
+      if (!genres || genres.length === 0) {
+        pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', 'No genres found in your library.'));
+        return;
+      }
+
+      function updatePills() {
+        const selected = new Set(getSelectedGenres());
+        Array.prototype.forEach.call(pillsContainer.children, function (pill) {
+          const g = pill.dataset.genre;
+          if (selected.has(g)) {
+            pill.classList.add('jellio-genre-pill-active');
+            pill.querySelector('.jellio-genre-pill-check').style.display = 'inline';
+          } else {
+            pill.classList.remove('jellio-genre-pill-active');
+            pill.querySelector('.jellio-genre-pill-check').style.display = 'none';
+          }
+        });
+      }
+
+      genres.forEach(function (genre) {
+        const pill = el('button', 'jellio-genre-pill');
+        pill.type = 'button';
+        pill.dataset.genre = genre;
+
+        const check = el('span', 'material-icons jellio-genre-pill-check', 'check');
+        check.style.display = 'none';
+        pill.appendChild(check);
+        pill.appendChild(el('span', '', genre));
+
+        pill.addEventListener('click', function () {
+          toggleSelectedGenre(genre);
+          invalidateAllHomeSections();
+          clearCachedRows();
+          updatePills();
+        });
+
+        pillsContainer.appendChild(pill);
+      });
+
+      resetBtn.addEventListener('click', function () {
+        setSelectedGenres([]);
+        invalidateAllHomeSections();
+        clearCachedRows();
+        updatePills();
+      });
+
+      updatePills();
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load library genres', err);
+      pillsContainer.textContent = '';
+      pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', 'Could not load library genres.'));
+    });
+
+  genreBody.appendChild(genresWrap);
+  wrap.appendChild(genreCard);
+
+  return wrap;
+}
+
 // Seasonal effects, per browser (runtime/motionSettings.js), applied on
 // the spot by components/seasons.js.
 function buildDisplayCategory() {
@@ -1001,6 +1199,7 @@ const CATEGORY_ICONS = {
   playback: 'play_circle',
   reading: 'menu_book',
   sessions: 'devices',
+  recommendations: 'auto_awesome',
   display: 'palette',
   about: 'info',
 };
@@ -1040,6 +1239,7 @@ export async function renderSettings(root) {
       label: 'Sessions',
       build: function () { return buildSessionsCategory(sleepTimerCard, quickConnectCard); },
     },
+    { id: 'recommendations', label: 'Recommendations', build: buildRecommendationsCategory },
     { id: 'display', label: 'Display', build: buildDisplayCategory },
     { id: 'about', label: 'About', build: buildAboutCategory },
   ];

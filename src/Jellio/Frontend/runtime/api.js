@@ -4504,3 +4504,25 @@ export function sendSessionGeneralCommand(sessionId, name, args) {
   });
 }
 
+// Community recommendations: items active users are watching or recently finished.
+export function getCommunityWatching(excludedUserIds) {
+  const params = new URLSearchParams();
+  if (excludedUserIds) params.set('excludedUserIds', excludedUserIds);
+  const query = params.toString();
+  return getJson('/Jellio/community/watching' + (query ? '?' + query : '')).then(function (result) {
+    return ((result && result.Items) || []).map(function (entry) {
+      const item = Object.assign({}, entry.Item);
+      item.Watchers = entry.Watchers || [];
+      return item;
+    });
+  });
+}
+
+// Community users list for settings filter.
+export function getCommunityUsers() {
+  return getJson('/Jellio/community/users').then(function (result) {
+    return Array.isArray(result) ? result : [];
+  });
+}
+
+
