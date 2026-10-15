@@ -1241,20 +1241,80 @@ function buildAboutCategory() {
   );
   const list = el('div', 'jellio-settings-changelog-list');
   const releases = Array.isArray(CHANGELOG_RELEASES) && CHANGELOG_RELEASES.length ? CHANGELOG_RELEASES : [LATEST_CHANGELOG];
-  releases.forEach(function (rel, idx) {
-    if (idx > 0) {
-      const header = el('div', 'jellio-settings-changelog-version-header', rel.subtitle);
-      header.style.cssText = 'font-weight: 700; font-size: 0.85rem; color: var(--jellio-text-muted, #888); margin-top: 14px; margin-bottom: 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);';
-      list.appendChild(header);
-    }
-    (rel.highlights || []).forEach(function (h) {
-      const item = el('div', 'jellio-settings-changelog-item');
-      item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
-      item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
-      list.appendChild(item);
-    });
+  const latestRelease = releases[0];
+  const previousReleases = releases.slice(1);
+
+  // Latest release highlights directly visible
+  (latestRelease.highlights || []).forEach(function (h) {
+    const item = el('div', 'jellio-settings-changelog-item');
+    item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
+    item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
+    list.appendChild(item);
   });
   whatsNewBody.appendChild(list);
+
+  // Previous releases nested in a collapsible section to prevent dominating screen height
+  if (previousReleases.length > 0) {
+    const prevWrap = el('div', 'jellio-settings-changelog-previous-wrap');
+    const prevToggle = document.createElement('button');
+    prevToggle.type = 'button';
+    prevToggle.className = 'jellio-settings-sub-expander';
+    prevToggle.setAttribute('aria-expanded', 'false');
+
+    const prevLabel = el('span', 'jellio-settings-sub-label', 'Previous Versions (' + previousReleases.length + ')');
+    const prevArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
+    prevToggle.appendChild(prevLabel);
+    prevToggle.appendChild(prevArrow);
+    prevWrap.appendChild(prevToggle);
+
+    const prevBody = el('div', 'jellio-settings-sub-body');
+    prevBody.style.display = 'none';
+
+    previousReleases.forEach(function (rel) {
+      const verCard = el('div', 'jellio-settings-version-card');
+      const verHeader = document.createElement('button');
+      verHeader.type = 'button';
+      verHeader.className = 'jellio-settings-version-header';
+      verHeader.setAttribute('aria-expanded', 'false');
+
+      const verTitle = el('span', 'jellio-settings-version-title', rel.subtitle || ('Version ' + rel.version));
+      const verArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
+      verHeader.appendChild(verTitle);
+      verHeader.appendChild(verArrow);
+      verCard.appendChild(verHeader);
+
+      const verContent = el('div', 'jellio-settings-changelog-list');
+      verContent.style.display = 'none';
+      verContent.style.paddingTop = '0';
+      (rel.highlights || []).forEach(function (h) {
+        const item = el('div', 'jellio-settings-changelog-item');
+        item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
+        item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
+        verContent.appendChild(item);
+      });
+      verCard.appendChild(verContent);
+
+      verHeader.addEventListener('click', function () {
+        const isExp = verHeader.getAttribute('aria-expanded') === 'true';
+        const next = !isExp;
+        verHeader.setAttribute('aria-expanded', String(next));
+        verContent.style.display = next ? '' : 'none';
+      });
+
+      prevBody.appendChild(verCard);
+    });
+
+    prevToggle.addEventListener('click', function () {
+      const isExp = prevToggle.getAttribute('aria-expanded') === 'true';
+      const next = !isExp;
+      prevToggle.setAttribute('aria-expanded', String(next));
+      prevBody.style.display = next ? '' : 'none';
+    });
+
+    prevWrap.appendChild(prevBody);
+    whatsNewBody.appendChild(prevWrap);
+  }
+
   wrap.appendChild(whatsNewCard);
 
   const native = window.jellioNative && window.jellioNative.updates;
