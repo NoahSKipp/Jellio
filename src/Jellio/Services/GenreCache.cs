@@ -65,7 +65,7 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
     }
 
     private Task<IReadOnlyList<GenreCount>> BuildCountsAsync(string key, User user, BaseItemKind[] types, Guid parentId) =>
-        _countsBuilding.GetOrAdd(key, _ => Task.Run(() =>
+        _countsBuilding.GetOrAdd(key, building => Task.Run(() =>
         {
             try
             {
@@ -128,7 +128,7 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
         });
         var options = new DtoOptions
         {
-            Fields = [ItemFields.ProductionYear, ItemFields.PrimaryImageAspectRatio, ItemFields.Genres],
+            Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.Genres],
             EnableUserData = true,
         };
         IReadOnlyList<BaseItemDto> dtos = dtoService.GetBaseItemDtos(items, options, user);
