@@ -649,10 +649,11 @@ async function buildCheapSections() {
 // ever forces buildCheapSections() above to run again, not this.
 // Every row below the personal ones goes on screen the moment its own
 // data arrives. Each kind has a fixed range of order keys (recommendations,
-// then What Others Are Watching, then catalogs, then genres), so a row that
+// with What Others Are Watching after Top Picks and the seasonal row but
+// ahead of the "Because you..." rows, then catalogs, then genres), so a row that
 // lands late still slots into its place. A title already shown in a row
 // that went up earlier isn't repeated further down.
-const EXPENSIVE_SLOTS = { recommendations: 0, community: 100, catalogs: 200, genres: 300 };
+const EXPENSIVE_SLOTS = { recommendations: 0, community: 15, catalogs: 200, genres: 300 };
 
 async function buildExpensiveSections() {
   const built = [];

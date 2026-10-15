@@ -13,7 +13,7 @@
 // people 94% and ordered by billing, community rating 94% but bunched
 // between 6.6 and 8.1 at the quartiles, why rating is only ever a
 // tiebreaker below: it barely separates anything.
-import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems, getPersonItems } from './api.js';
+import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems } from './api.js';
 import { getSeasonalRecommendationRow } from './seasonalRecommendations.js';
 
 const SEED_LIMIT = 4;
@@ -66,14 +66,12 @@ const MAX_PER_GENRE = 3;
 // rating is not a bad rating.
 const MIN_RATING = 5;
 
-// A genre or person needs to recur at least this many times across
+// A genre needs to recur at least this many times across
 // the reader's own real watch history before it is a real enough
 // pattern to build a whole row around, not just one title that
 // happened to have five genres tagged on it.
 const MIN_GENRE_COUNT = 3;
-const MIN_PERSON_COUNT = 2;
 const MAX_GENRE_ROWS = 1;
-const MAX_PERSON_ROWS = 1;
 
 // 1 hour in the same real ticks every RunTimeTicks field already uses
 // (api.js's own TICKS_PER_SECOND header documents the same real unit).
@@ -246,7 +244,7 @@ function pickSeedRows(seeds, entriesPerSeed, titleFor, exclude) {
   return rows;
 }
 
-// Genre and person, aggregated across the reader's own whole real
+// Genre, aggregated across the reader's own whole real
 // watch history sample rather than one seed at a time: a broader "you
 // generally like X" signal, alongside the per title "because you
 // watched" rows above, not a replacement for them.
@@ -280,27 +278,6 @@ function topGenres(history) {
     });
 }
 
-function topPeople(history) {
-  const counts = {};
-  history.forEach(function (item) {
-    (item.People || []).forEach(function (person) {
-      if (!person.Id || (person.Type !== 'Actor' && person.Type !== 'Director')) return;
-      const entry = counts[person.Id] || (counts[person.Id] = { id: person.Id, name: person.Name, count: 0 });
-      entry.count += 1;
-    });
-  });
-  return Object.keys(counts)
-    .map(function (id) {
-      return counts[id];
-    })
-    .filter(function (entry) {
-      return entry.count >= MIN_PERSON_COUNT;
-    })
-    .sort(function (a, b) {
-      return b.count - a.count;
-    });
-}
-
 // Real feedback: "Your {genre} picks" read as one more per-attribute
 // row sitting right next to the real per title ones ("Because you
 // watched X"), nothing telling the two families apart at a glance. The
@@ -331,28 +308,6 @@ function buildGenreRows(genres, itemsPerGenre, exclude) {
   return rows;
 }
 
-function fetchPersonItemsList(people) {
-  return Promise.all(
-    people.map(function (person) {
-      return getPersonItems(person.id, ROW_SIZE).catch(function (err) {
-        console.warn('Jellio: could not load top person row', err);
-        return null;
-      });
-    }),
-  );
-}
-
-function buildPersonRows(people, itemsPerPerson, exclude) {
-  const rows = [];
-  for (let i = 0; i < people.length; i++) {
-    const raw = itemsPerPerson[i];
-    if (!raw) continue;
-    const items = dedupe(raw.filter(notPlayed), exclude);
-    if (items.length) rows.push({ title: 'More with ' + people[i].name, items: items });
-  }
-  return rows;
-}
-
 // Every personalized row this app builds without a second backend: one
 // row per recently completed title ("Because you watched X"), one per
 // series still in progress ("Because you're watching X", from NextUp's
@@ -362,10 +317,10 @@ function buildPersonRows(people, itemsPerPerson, exclude) {
 // established: per title rows first (the strongest, most specific
 // signal), the two aggregate rows after.
 // Fixed order for the recommendation rows, whatever arrives first: Top
-// Picks, the seasonal row, "Because you watched", "Because you're
-// watching", then "More with". Each row's slot is its family's base plus
-// its index.
-export const RECOMMENDATION_SLOTS = { genres: 0, seasonal: 10, completed: 20, nextUp: 40, people: 60 };
+// Picks, the seasonal row, "Because you watched", then "Because you're
+// watching". Each row's slot is its family's base plus its index; slots 11
+// to 19 are free for rows placed between seasonal and the per-title rows.
+export const RECOMMENDATION_SLOTS = { genres: 0, seasonal: 10, completed: 20, nextUp: 40 };
 
 // The same rows as buildRecommendationRows, each handed to onRow(spec,
 // slot) the moment its own data arrives instead of all at the end. A
@@ -385,7 +340,6 @@ export async function streamRecommendationRows(exclude, onRow) {
   const completedSeeds = history.filter(notDisliked).slice(0, SEED_LIMIT);
   const nextUpSeeds = nextUp.filter(notDisliked);
   const genres = topGenres(history).slice(0, MAX_GENRE_ROWS);
-  const people = topPeople(history).slice(0, MAX_PERSON_ROWS);
 
   function emit(spec, slot) {
     if (spec && spec.items && spec.items.length) onRow(spec, slot);
@@ -410,13 +364,6 @@ export async function streamRecommendationRows(exclude, onRow) {
     jobs.push(
       fetchGenreItemsList([genre]).then(function (list) {
         emit(buildGenreRows([genre], list, exclude)[0], RECOMMENDATION_SLOTS.genres + i);
-      }),
-    );
-  });
-  people.forEach(function (person, i) {
-    jobs.push(
-      fetchPersonItemsList([person]).then(function (list) {
-        emit(buildPersonRows([person], list, exclude)[0], RECOMMENDATION_SLOTS.people + i);
       }),
     );
   });
@@ -450,7 +397,6 @@ export async function buildRecommendationRows(exclude) {
   const completedSeeds = history.filter(notDisliked).slice(0, SEED_LIMIT);
   const nextUpSeeds = nextUp.filter(notDisliked);
   const genres = topGenres(history).slice(0, MAX_GENRE_ROWS);
-  const people = topPeople(history).slice(0, MAX_PERSON_ROWS);
 
   // Real bug, audit-found: each of these four candidate pools is an
   // independent real network fetch, none of them reading or needing
@@ -462,11 +408,10 @@ export async function buildRecommendationRows(exclude) {
   // shared exclude object, same real priority and same real dedupe
   // guarantee as before, just no longer paying for a network wait
   // between every stage.
-  const [completedEntries, nextUpEntries, genreItemsList, personItemsList] = await Promise.all([
+  const [completedEntries, nextUpEntries, genreItemsList] = await Promise.all([
     fetchSeedCandidates(completedSeeds),
     fetchSeedCandidates(nextUpSeeds),
     fetchGenreItemsList(genres),
-    fetchPersonItemsList(people),
   ]);
 
   const completedRows = pickSeedRows(completedSeeds, completedEntries, function (seed) {
@@ -480,11 +425,10 @@ export async function buildRecommendationRows(exclude) {
   const genreRows = buildGenreRows(genres, genreItemsList, exclude);
   const seasonalRow = await getSeasonalRecommendationRow(exclude);
   const seasonalRows = seasonalRow ? [seasonalRow] : [];
-  const personRows = buildPersonRows(people, personItemsList, exclude);
 
   // Real feedback: "Top Picks for You" (genreRows' own aggregate row)
   // sits right after Studio Hubs, followed immediately by seasonal
   // recommendations when in season, and ahead of every per-title
   // "Because you watched/watching X" row.
-  return genreRows.concat(seasonalRows, completedRows, nextUpRows, personRows);
+  return genreRows.concat(seasonalRows, completedRows, nextUpRows);
 }
