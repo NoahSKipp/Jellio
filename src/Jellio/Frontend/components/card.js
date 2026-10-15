@@ -352,6 +352,7 @@ function buildLandscapeCard(item, options) {
     img.src = imageUrl;
     img.alt = '';
     img.loading = 'lazy';
+    img.decoding = 'async';
     img.addEventListener('error', function () {
       img.remove();
       appendLandscapePlaceholder();
@@ -500,7 +501,9 @@ export function buildCard(item, options) {
     img.className = 'jellio-card-image';
     img.src = candidateUrls[0];
     img.alt = item.Name || '';
-    img.loading = 'lazy';
+    img.loading = (options && options.priority) ? 'eager' : 'lazy';
+    img.decoding = 'async';
+    if (options && options.priority) img.fetchPriority = 'high';
     img.addEventListener('error', function () {
       candidateIndex += 1;
       if (candidateIndex < candidateUrls.length) {

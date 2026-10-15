@@ -212,15 +212,25 @@ export function dedupe(items, exclude) {
 // actual scoring/picking below (buildRecommendationRows' own real
 // reason for the split): that part does read and mutate the shared
 // exclude object and has to run in a fixed real order across every
-// row family, but the fetch that feeds it does not, and used to be
-// stuck behind that same ordering for no real reason of its own.
+// Memoized candidate pool per seed to prevent duplicate SQLite scans across navigations.
+const seedCandidatesCache = new Map();
+
 function fetchSeedCandidates(seeds) {
   return Promise.all(
     seeds.map(function (seed) {
-      return getRecommendationCandidates(seed, POOL_LIMIT).catch(function (err) {
-        console.warn('Jellio: could not load recommendation candidates', err);
-        return null;
-      });
+      if (!seed || !seed.Id) return Promise.resolve(null);
+      if (seedCandidatesCache.has(seed.Id)) {
+        return Promise.resolve(seedCandidatesCache.get(seed.Id));
+      }
+      return getRecommendationCandidates(seed, POOL_LIMIT)
+        .then(function (res) {
+          seedCandidatesCache.set(seed.Id, res);
+          return res;
+        })
+        .catch(function (err) {
+          console.warn('Jellio: could not load recommendation candidates', err);
+          return null;
+        });
     }),
   );
 }

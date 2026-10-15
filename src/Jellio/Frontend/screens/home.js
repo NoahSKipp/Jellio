@@ -578,67 +578,74 @@ function settle(promise) {
 async function buildCheapSections() {
   const built = [];
   cheapBuilt = built;
-  let order = 0;
 
-  function push(section) {
-    section.dataset.jellioHomeOrder = String(order++);
+  const ORDER = {
+    'continue-watching': 0,
+    'continue-reading': 1,
+    'continue-listening': 2,
+    'up-next': 3,
+    'coming-soon': 4,
+    'studio-hubs': 5,
+  };
+
+  function push(section, key) {
+    if (!section) return;
+    section.dataset.jellioHomeOrder = String(ORDER[key] !== undefined ? ORDER[key] : built.length);
     built.push(section);
-    // Delivered even if a newer build has since started: a home screen
-    // swaps rows by key, so the newer build's rows simply replace these.
     notifySections([section]);
   }
 
-  // Every request starts now, together, but each row goes on screen the
-  // moment it and the rows above it are ready: Continue Watching never
-  // waits on Coming Soon's calendar lookup, the slowest of these.
-  const resume = settle(getResumeItems(20));
-  const reading = settle(getContinueReading(20));
-  const listening = settle(getContinueListening(20));
-  const nextUp = settle(getNextUp(20));
-  const collectionsRequest = settle(getCollections());
-  const comingSoon = settle(buildComingSoonRow());
+  // Every request starts now, together, and renders to its predetermined slot
+  // the exact millisecond it arrives: Up Next and Continue Watching never wait
+  // on slower book scans or Coming Soon calendar lookups.
+  const resume = settle(getResumeItems(20)).then(function (result) {
+    if (result.status === 'fulfilled') {
+      const row = buildRow('Continue Watching', result.value, { continueWatching: true });
+      if (row) push(wrapRowForCustomization(row, 'continue-watching'), 'continue-watching');
+    }
+  });
 
-  // Continue Watching, then Up Next, then the recommendation rows,
-  // real feedback's own updated order: a title actually left mid
-  // playback is the more immediate real pickup than one only queued up
-  // next, ahead of anything the catalog itself has to say either way.
-  const resumeResult = await resume;
-  if (resumeResult.status === 'fulfilled') {
-    const row = buildRow('Continue Watching', resumeResult.value, { continueWatching: true });
-    if (row) push(wrapRowForCustomization(row, 'continue-watching'));
-  }
+  const reading = settle(getContinueReading(20)).then(function (result) {
+    if (result.status === 'fulfilled') {
+      const row = buildRow('Continue Reading', result.value, { openReader: true });
+      if (row) push(wrapRowForCustomization(row, 'continue-reading'), 'continue-reading');
+    }
+  });
 
-  // Both simply absent (buildRow returns null) on a server with no Books
-  // library, or for a reader who has not opened a book yet.
-  const readingResult = await reading;
-  if (readingResult.status === 'fulfilled') {
-    const row = buildRow('Continue Reading', readingResult.value, { openReader: true });
-    if (row) push(wrapRowForCustomization(row, 'continue-reading'));
-  }
+  const listening = settle(getContinueListening(20)).then(function (result) {
+    if (result.status === 'fulfilled') {
+      const row = buildRow('Continue Listening', result.value, { openReader: true });
+      if (row) push(wrapRowForCustomization(row, 'continue-listening'), 'continue-listening');
+    }
+  });
 
-  const listeningResult = await listening;
-  if (listeningResult.status === 'fulfilled') {
-    const row = buildRow('Continue Listening', listeningResult.value, { openReader: true });
-    if (row) push(wrapRowForCustomization(row, 'continue-listening'));
-  }
+  const nextUp = settle(getNextUp(20)).then(function (result) {
+    if (result.status === 'fulfilled') {
+      const row = buildRow('Up Next', result.value, { upNext: true });
+      if (row) push(wrapRowForCustomization(row, 'up-next'), 'up-next');
+    }
+  });
 
-  const nextUpResult = await nextUp;
-  if (nextUpResult.status === 'fulfilled') {
-    const row = buildRow('Up Next', nextUpResult.value, { upNext: true });
-    if (row) push(wrapRowForCustomization(row, 'up-next'));
-  }
+  const comingSoon = settle(buildComingSoonRow()).then(function (result) {
+    if (result.status === 'fulfilled' && result.value) {
+      push(wrapRowForCustomization(result.value, 'coming-soon'), 'coming-soon');
+    }
+  });
 
-  const comingSoonResult = await comingSoon;
-  if (comingSoonResult.status === 'fulfilled' && comingSoonResult.value) {
-    push(wrapRowForCustomization(comingSoonResult.value, 'coming-soon'));
-  }
+  let collections = null;
+  const collectionsJob = settle(getCollections()).then(function (result) {
+    collections = result.status === 'fulfilled' ? result.value : null;
+    if (collections) {
+      const hub = buildHubStrip(collections);
+      if (hub) push(wrapRowForCustomization(hub, 'studio-hubs'), 'studio-hubs');
+    }
+  });
 
-  const collectionsResult = await collectionsRequest;
-  const collections = collectionsResult.status === 'fulfilled' ? collectionsResult.value : null;
-  if (collections) {
-    const hub = buildHubStrip(collections);
-    if (hub) push(wrapRowForCustomization(hub, 'studio-hubs'));
-  }
+  await Promise.all([resume, reading, listening, nextUp, comingSoon, collectionsJob]);
+
+  built.sort(function (a, b) {
+    return Number(a.dataset.jellioHomeOrder || 0) - Number(b.dataset.jellioHomeOrder || 0);
+  });
 
   return { sections: built.slice(), collections: collections };
 }

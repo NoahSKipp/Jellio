@@ -87,7 +87,8 @@ public class FrontendController : ControllerBase
         // path everything else below already uses instead: a cheap 304
         // on every repeat load once a reader's own browser has the
         // current real bytes, a real fresh fetch the moment it does not.
-        var cacheable = extension.Equals(".woff2", StringComparison.OrdinalIgnoreCase);
+        var hasVersionParam = Request.Query.ContainsKey("v");
+        var cacheable = hasVersionParam || extension.Equals(".woff2", StringComparison.OrdinalIgnoreCase);
 
         if (!cacheable)
         {
