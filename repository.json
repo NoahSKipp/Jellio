@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.79.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(notifications)* Add changelog and what's new entry with release highlights\n\n### ⚡ Performance\n\n- *(web)* Decouple row slot rendering, memoize seed recommendations, add immutable asset caching and async image decoding\n",
+        "checksum": "9aa9757d807b754303bca8c44e1c9b7b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.79.0/jellio_1.79.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T12:12:57Z",
+        "version": "1.79.0"
+      },
+      {
         "changelog": "## [1.78.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(home)* Community row ahead of per-title recommendations, drop More with rows\n",
         "checksum": "30721f84af031586530f9fcdb9af2a98",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.78.0/jellio_1.78.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T21:52:43Z",
         "version": "1.69.0"
-      },
-      {
-        "changelog": "## [1.68.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(listen)* Show the time a click jumps to when hovering the mini player bar\n- *(listen)* Volume controls and hover time preview on both audiobook players\n",
-        "checksum": "f0b597e44376157e9c4190b5f6849959",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.68.0/jellio_1.68.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T21:31:27Z",
-        "version": "1.68.0"
       }
     ]
   }
