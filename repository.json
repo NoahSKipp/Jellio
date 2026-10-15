@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.77.7] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(genres)* Build fixes for the genre cache\n\n### ⚡ Performance\n\n- *(home)* Never wait on the community row, render every row as it arrives, cache genres on the server\n",
+        "checksum": "6ddaf7ba9cb620756aac08e90897cf86",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.7/jellio_1.77.7.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T00:34:03Z",
+        "version": "1.77.7"
+      },
+      {
         "changelog": "## [1.77.6] - 2026-10-15\n\n### Bug Fixes\n\n- *(card)* Fall back to overall manga series cover when chapter has no image\n- *(metadata)* Fall back to manga series and folder covers when Chaptarr has no cover",
         "checksum": "845336dec4fad4392233c265b84a8f93",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.6/jellio_1.77.6.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T20:38:37Z",
         "version": "1.67.1"
-      },
-      {
-        "changelog": "## [1.67.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(announcements)* Send an announcement to one user or to everyone\n",
-        "checksum": "bead9a26a38a6f9bffa112e51ad14d1c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.67.0/jellio_1.67.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T18:16:38Z",
-        "version": "1.67.0"
       }
     ]
   }
