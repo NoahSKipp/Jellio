@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.77.8] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(home)* Stream recommendation and library rows, restore community row\n",
+        "checksum": "ff2edc7a7ff0f35231491e28fd585c91",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.8/jellio_1.77.8.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T08:51:33Z",
+        "version": "1.77.8"
+      },
+      {
         "changelog": "## [1.77.7] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(genres)* Build fixes for the genre cache\n\n### ⚡ Performance\n\n- *(home)* Never wait on the community row, render every row as it arrives, cache genres on the server\n",
         "checksum": "6ddaf7ba9cb620756aac08e90897cf86",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.7/jellio_1.77.7.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T20:51:26Z",
         "version": "1.67.2"
-      },
-      {
-        "changelog": "## [1.67.1] - 2026-10-08\n\n### 🐛 Bug Fixes\n\n- *(listen)* Visible back-skip button and a single play/pause icon\n",
-        "checksum": "d655055e5edbc82f490212a0baa5b0e0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.67.1/jellio_1.67.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T20:38:37Z",
-        "version": "1.67.1"
       }
     ]
   }
