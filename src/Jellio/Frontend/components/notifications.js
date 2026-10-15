@@ -13,6 +13,7 @@ import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
+import { hasSeenLatestChangelog, markLatestChangelogSeen, getChangelogNotification } from '../runtime/changelog.js';
 
 // A release date changes once a day at most, real reason this polls far
 // less often than components/nowPlaying.js's own 10s (a live session can
@@ -43,6 +44,9 @@ let knownIds = null;
 // Guid.Empty for its own ItemId, nothing real to fetch a poster for or
 // navigate to.
 function messageFor(n) {
+  if (n.Kind === 'whatsnew') {
+    return n.Name;
+  }
   if (n.Kind === 'announcement') {
     return n.Name;
   }
@@ -56,13 +60,14 @@ function messageFor(n) {
 }
 
 function subtitleFor(n) {
+  if (n.Kind === 'whatsnew') return n.Detail || "What's new in Jellio";
   if (n.Kind === 'announcement') return 'From the server';
   if (n.Kind === 'manga') return n.Detail || 'New chapter';
   return n.Kind === 'episode' ? 'New episode' : 'Now streaming';
 }
 
 function openItem(n) {
-  if (n.Kind === 'announcement') return;
+  if (n.Kind === 'announcement' || n.Kind === 'whatsnew') return;
   hideNotificationsPanel();
   if (n.Kind === 'manga') {
     getMangaShelfHash().then(function (hash) {
@@ -82,16 +87,30 @@ function announcementImageUrl(n) {
 
 function buildRow(n) {
   const isAnnouncement = n.Kind === 'announcement';
-  const row = el('div', 'jellio-notifications-row' + (isAnnouncement ? ' jellio-notifications-row-announcement' : ''));
-  if (!isAnnouncement) {
+  const isWhatsNew = n.Kind === 'whatsnew';
+  const row = el(
+    'div',
+    'jellio-notifications-row' +
+      (isAnnouncement ? ' jellio-notifications-row-announcement' : '') +
+      (isWhatsNew ? ' jellio-notifications-row-whatsnew' : ''),
+  );
+  if (!isAnnouncement && !isWhatsNew) {
     row.tabIndex = 0;
     row.setAttribute('role', 'button');
     row.setAttribute('aria-label', 'Go to ' + (n.Name || 'title'));
+  } else if (isWhatsNew) {
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.setAttribute('aria-label', 'Toggle What\'s New highlights');
   }
 
   const poster = el('div', 'jellio-notifications-row-poster');
   if (isAnnouncement) {
     const icon = el('span', 'material-icons jellio-notifications-row-poster-icon campaign');
+    icon.setAttribute('aria-hidden', 'true');
+    poster.appendChild(icon);
+  } else if (isWhatsNew) {
+    const icon = el('span', 'material-icons jellio-notifications-row-poster-icon auto_awesome');
     icon.setAttribute('aria-hidden', 'true');
     poster.appendChild(icon);
   } else {
@@ -103,6 +122,16 @@ function buildRow(n) {
   const text = el('div', 'jellio-notifications-row-text');
   text.appendChild(el('p', 'jellio-notifications-row-title', n.Name || ''));
   text.appendChild(el('p', 'jellio-notifications-row-meta', subtitleFor(n)));
+  if (isWhatsNew && n.Highlights && n.Highlights.length) {
+    const highlightsWrap = el('div', 'jellio-notifications-highlights');
+    n.Highlights.forEach(function (h) {
+      const item = el('div', 'jellio-notifications-highlight-item');
+      item.appendChild(el('strong', 'jellio-notifications-highlight-title', h.title));
+      item.appendChild(el('span', 'jellio-notifications-highlight-desc', ': ' + h.description));
+      highlightsWrap.appendChild(item);
+    });
+    text.appendChild(highlightsWrap);
+  }
   const imageUrl = isAnnouncement ? announcementImageUrl(n) : null;
   if (imageUrl) {
     const img = document.createElement('img');
@@ -130,7 +159,7 @@ function buildRow(n) {
   });
   row.appendChild(deleteButton);
 
-  if (!isAnnouncement) {
+  if (!isAnnouncement && !isWhatsNew) {
     row.addEventListener('click', function () {
       openItem(n);
     });
@@ -226,15 +255,21 @@ function render(items) {
 // use, rather than waiting on the real round trip to update anything a
 // reader can see.
 function removeOne(id) {
+  if (id.startsWith('changelog:')) {
+    markLatestChangelogSeen();
+  }
   render(currentItems.filter(function (n) {
     return n.Id !== id;
   }));
-  deleteNotification(id).catch(function (err) {
-    console.warn('Jellio: could not dismiss notification', err);
-  });
+  if (!id.startsWith('changelog:')) {
+    deleteNotification(id).catch(function (err) {
+      console.warn('Jellio: could not dismiss notification', err);
+    });
+  }
 }
 
 function clearAll() {
+  markLatestChangelogSeen();
   render([]);
   clearAllNotifications().catch(function (err) {
     console.warn('Jellio: could not clear notifications', err);
@@ -244,17 +279,21 @@ function clearAll() {
 function poll() {
   getNotifications()
     .then(function (items) {
+      let merged = items ? items.slice() : [];
+      if (!hasSeenLatestChangelog()) {
+        merged.unshift(getChangelogNotification());
+      }
       if (knownIds) {
-        items.forEach(function (n) {
+        merged.forEach(function (n) {
           if (!knownIds.has(n.Id)) {
-            // Nothing real to open for an announcement, so this toast
+            // Nothing real to open for an announcement or changelog, so this toast
             // gets no onClick at all rather than one that would just
             // silently do nothing on click (showToast's own
             // jellio-toast-clickable styling would otherwise still
             // suggest it does something).
             showToast(
               messageFor(n),
-              n.Kind === 'announcement'
+              n.Kind === 'announcement' || n.Kind === 'whatsnew'
                 ? undefined
                 : function () {
                     openItem(n);
@@ -265,11 +304,11 @@ function poll() {
         });
       }
       knownIds = new Set(
-        items.map(function (n) {
+        merged.map(function (n) {
           return n.Id;
         }),
       );
-      render(items);
+      render(merged);
     })
     .catch(function () {
       // Leave whatever was last shown, same real tolerance

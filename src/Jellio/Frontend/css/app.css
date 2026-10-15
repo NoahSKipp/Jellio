@@ -8817,6 +8817,68 @@
   padding: 1em;
 }
 
+.jellio-notifications-row-whatsnew {
+  cursor: pointer;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.jellio-notifications-row-whatsnew:hover,
+.jellio-notifications-row-whatsnew:focus-visible {
+  background: rgb(255 255 255 / 0.09);
+}
+
+.jellio-notifications-row-whatsnew .jellio-notifications-row-poster {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.4), rgba(79, 70, 229, 0.4));
+  color: #fff;
+}
+
+.jellio-notifications-highlights {
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.jellio-notifications-highlight-item {
+  font-size: 0.82em;
+  line-height: 1.35;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-notifications-highlight-title {
+  color: var(--jellio-text-color);
+  font-weight: 600;
+}
+
+.jellio-settings-changelog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.jellio-settings-changelog-item {
+  padding: 0.6em 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.jellio-settings-changelog-item:last-child {
+  border-bottom: 0;
+}
+
+.jellio-settings-changelog-item-title {
+  font-weight: 600;
+  color: var(--jellio-text-color);
+  margin-bottom: 0.25em;
+}
+
+.jellio-settings-changelog-item-desc {
+  font-size: 0.9em;
+  color: var(--jellio-text-secondary);
+  line-height: 1.4;
+}
+
 /* screens/player.js's own .jellio-player-toast, scoped to that one
    screen's own root: this is the same real look, fixed to the page
    itself instead so components/notifications.js can reach it from

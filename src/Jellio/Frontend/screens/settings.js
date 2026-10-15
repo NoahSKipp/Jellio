@@ -54,6 +54,7 @@ import {
   toggleSelectedGenre,
   setSelectedGenres,
 } from '../runtime/recommendationSettings.js';
+import { LATEST_CHANGELOG } from '../runtime/changelog.js';
 import { invalidateAllHomeSections } from './home.js';
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
@@ -1189,6 +1190,18 @@ function buildAboutCategory() {
   const version = jellioVersion();
   const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
+
+  const { card: whatsNewCard, body: whatsNewBody } = buildCard('auto_awesome', "What's New", LATEST_CHANGELOG.subtitle);
+  const list = el('div', 'jellio-settings-changelog-list');
+  LATEST_CHANGELOG.highlights.forEach(function (h) {
+    const item = el('div', 'jellio-settings-changelog-item');
+    item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
+    item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
+    list.appendChild(item);
+  });
+  whatsNewBody.appendChild(list);
+  wrap.appendChild(whatsNewCard);
+
   const native = window.jellioNative && window.jellioNative.updates;
   if (native) wrap.appendChild(buildAppUpdateCard(native));
   return wrap;
