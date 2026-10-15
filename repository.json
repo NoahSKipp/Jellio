@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.80.1] - 2026-10-15\n",
+        "checksum": "ffdfd6f191f980c956d753eb33fc5ec9",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.80.1/jellio_1.80.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T21:46:30Z",
+        "version": "1.80.1"
+      },
+      {
         "changelog": "## [1.80.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(web)* Trigger whats new notification only on big releases and display latest in about\n- *(settings)* Nest previous changelog versions in collapsible sections\n- Add Screen Wake Lock, media keys, and macOS app changelog\n\n### 🐛 Bug Fixes\n\n- *(cards)* Add untagged primary and backdrop image fallbacks and hydrate community watching items\n\n### ⚡ Performance\n\n- *(web)* Lazy-load non-initial screen modules and tune modulepreload paths\n",
         "checksum": "8b95770fe9d05a7e3a7ef56f9f512bb0",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.80.0/jellio_1.80.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-09T12:34:09Z",
         "version": "1.70.1"
-      },
-      {
-        "changelog": "## [1.70.0] - 2026-10-09\n\n### 🚀 Features\n\n- *(announcements)* Attach a picture to an announcement\n",
-        "checksum": "a5d6aa2287010e42d240cea71f62171a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.0/jellio_1.70.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-09T02:25:26Z",
-        "version": "1.70.0"
       }
     ]
   }
