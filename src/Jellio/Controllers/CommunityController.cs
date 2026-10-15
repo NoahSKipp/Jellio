@@ -121,7 +121,9 @@ public class CommunityController(
         void RegisterWatcher(BaseItem rawItem, Guid userId, string activity, int priority, DateTime activityTime)
         {
             if (rawItem is null) return;
-            var targetItem = rawItem is Episode ep && ep.Series is not null ? (BaseItem)ep.Series : rawItem;
+            var targetItem = rawItem is Episode ep
+                ? (libraryManager.GetItemById(ep.SeriesId) ?? ep.Series ?? (BaseItem)ep)
+                : rawItem;
             if (!targetItem.IsVisible(caller)) return;
 
             var user = userMap.GetValueOrDefault(userId);
@@ -173,7 +175,6 @@ public class CommunityController(
                 Recursive = true,
                 OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
                 Limit = 8,
-                DtoOptions = new DtoOptions(false),
             });
 
             var sortedResumable = resumable
@@ -201,7 +202,6 @@ public class CommunityController(
                 Recursive = true,
                 OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
                 Limit = 12,
-                DtoOptions = new DtoOptions(false),
             });
 
             var sortedPlayed = played
@@ -220,6 +220,7 @@ public class CommunityController(
         {
             Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.Genres],
             EnableUserData = true,
+            EnableImages = true,
         };
 
         var orderedCandidates = candidates.Values
@@ -231,7 +232,8 @@ public class CommunityController(
         var resultItems = new List<CommunityWatchingItem>();
         foreach (var candidate in orderedCandidates)
         {
-            var dto = dtoService.GetBaseItemDto(candidate.Item, dtoOptions, caller);
+            var item = libraryManager.GetItemById(candidate.Item.Id) ?? candidate.Item;
+            var dto = dtoService.GetBaseItemDto(item, dtoOptions, caller);
             resultItems.Add(new CommunityWatchingItem(dto, candidate.Watchers));
         }
 

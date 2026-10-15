@@ -130,6 +130,7 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
         {
             Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.Genres],
             EnableUserData = true,
+            EnableImages = true,
         };
         IReadOnlyList<BaseItemDto> dtos = dtoService.GetBaseItemDtos(items, options, user);
         if (_rows.Count > 500)

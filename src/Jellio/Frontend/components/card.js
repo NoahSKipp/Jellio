@@ -279,26 +279,47 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
 // same real ParentThumbItemId/ParentThumbImageTag fallback that
 // file's own buildEpisodeCard() already fixed the same real id/type
 // mismatch bug for.
-function landscapeImageUrl(item) {
+function landscapeImageCandidates(item) {
+  if (!item || !item.Id) return [];
+  const urls = [];
   const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
   if (backdropTag) {
-    return getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 500, quality: 85 });
+    urls.push(getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 500, quality: 85 }));
   }
-  const primaryTag = item.ImageTags && item.ImageTags.Primary;
+  urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 500, quality: 85 }));
+
+  const primaryTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
   if (primaryTag) {
-    return getImageUrl(item.Id, 'Primary', { tag: primaryTag, maxWidth: 500, quality: 85 });
+    urls.push(getImageUrl(item.Id, 'Primary', { tag: primaryTag, maxWidth: 500, quality: 85 }));
   }
-  if (item.ParentThumbItemId && item.ParentThumbImageTag) {
-    return getImageUrl(item.ParentThumbItemId, 'Thumb', { tag: item.ParentThumbImageTag, maxWidth: 500, quality: 85 });
+  urls.push(getImageUrl(item.Id, 'Primary', { maxWidth: 500, quality: 85 }));
+
+  if (item.ParentThumbItemId) {
+    if (item.ParentThumbImageTag) {
+      urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { tag: item.ParentThumbImageTag, maxWidth: 500, quality: 85 }));
+    }
+    urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { maxWidth: 500, quality: 85 }));
   }
-  if (item.ParentBackdropItemId && item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
-    return getImageUrl(item.ParentBackdropItemId, 'Backdrop', {
-      tag: item.ParentBackdropImageTags[0],
-      maxWidth: 500,
-      quality: 85,
-    });
+  if (item.ParentBackdropItemId) {
+    if (item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
+      urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', {
+        tag: item.ParentBackdropImageTags[0],
+        maxWidth: 500,
+        quality: 85,
+      }));
+    }
+    urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 500, quality: 85 }));
   }
-  return null;
+  if (item.SeriesId) {
+    urls.push(getImageUrl(item.SeriesId, 'Backdrop', { maxWidth: 500, quality: 85 }));
+    urls.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 500, quality: 85 }));
+  }
+  return Array.from(new Set(urls.filter(Boolean)));
+}
+
+function landscapeImageUrl(item) {
+  const candidates = landscapeImageCandidates(item);
+  return candidates.length > 0 ? candidates[0] : null;
 }
 
 // Real RunTimeTicks/PlaybackPositionTicks, both already real fields on
@@ -341,21 +362,27 @@ function buildLandscapeCard(item, options) {
   card.setAttribute('aria-label', isEpisode ? item.SeriesName + ' - ' + episodeSubtitle(item) : item.Name || '');
 
   const imageWrap = el('div', 'jellio-card-landscape-image-wrap');
-  const imageUrl = landscapeImageUrl(item);
+  const candidateUrls = landscapeImageCandidates(item);
+  let candidateIndex = 0;
   function appendLandscapePlaceholder() {
     const placeholder = el('div', 'jellio-card-landscape-image jellio-card-image-empty');
     imageWrap.insertBefore(placeholder, imageWrap.firstChild);
   }
-  if (imageUrl) {
+  if (candidateUrls.length > 0) {
     const img = document.createElement('img');
     img.className = 'jellio-card-landscape-image';
-    img.src = imageUrl;
+    img.src = candidateUrls[0];
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
     img.addEventListener('error', function () {
-      img.remove();
-      appendLandscapePlaceholder();
+      candidateIndex += 1;
+      if (candidateIndex < candidateUrls.length) {
+        img.src = candidateUrls[candidateIndex];
+      } else {
+        img.remove();
+        appendLandscapePlaceholder();
+      }
     });
     imageWrap.appendChild(img);
   } else {
@@ -411,51 +438,56 @@ function buildLandscapeCard(item, options) {
 }
 
 // Candidates in priority order for a card's image:
-// - Episodes/Movies/Series use their primary tag
+// - Episodes/Movies/Series use their primary tag, then untagged primary,
+//   series primary, thumb, and backdrop
 // - Audiobooks try track primary art, album cover, then book cover
 // - Manga chapters try chapter primary art (if any), then overall manga series cover
 //   (stream cover, series primary tag, parent primary tag, /Jellio/manga/series-cover/{id}),
 //   and fall back to book cover
 // - Standard books try item primary art, Chaptarr book cover, then folder/series cover
 function cardImageCandidates(item) {
-  if (!item) return [];
+  if (!item || !item.Id) return [];
   const urls = [];
-  const ownPrimaryTag = item.ImageTags && item.ImageTags.Primary;
-  const ownPrimaryUrl = ownPrimaryTag
-    ? getImageUrl(item.Id, 'Primary', { tag: ownPrimaryTag, maxWidth: 400, quality: 85 })
-    : null;
+  const ownPrimaryTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
+  if (ownPrimaryTag) {
+    urls.push(getImageUrl(item.Id, 'Primary', { tag: ownPrimaryTag, maxWidth: 400, quality: 85 }));
+  }
+  urls.push(getImageUrl(item.Id, 'Primary', { maxWidth: 400, quality: 85 }));
 
   if (item.Type === 'AudioBook') {
-    if (ownPrimaryUrl) urls.push(ownPrimaryUrl);
-    if (item.AlbumId && item.AlbumPrimaryImageTag) {
-      urls.push(getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    if (item.AlbumId) {
+      if (item.AlbumPrimaryImageTag) {
+        urls.push(getImageUrl(item.AlbumId, 'Primary', { tag: item.AlbumPrimaryImageTag, maxWidth: 400, quality: 85 }));
+      }
+      urls.push(getImageUrl(item.AlbumId, 'Primary', { maxWidth: 400, quality: 85 }));
     }
-    if (item.Id) urls.push(getBookCoverUrl(item.Id));
+    urls.push(getBookCoverUrl(item.Id));
     return Array.from(new Set(urls.filter(Boolean)));
   }
 
   if (item.Type === 'Book') {
     const isChapter = isMangaChapter(item);
-    if (ownPrimaryUrl) urls.push(ownPrimaryUrl);
-
     const mangaCovers = [];
     if (item.Stream && item.Stream.MangaId) {
       mangaCovers.push(getStreamCoverUrl(item.Stream.MangaId, item.SeriesName));
     } else if (item.MangaId) {
       mangaCovers.push(getStreamCoverUrl(item.MangaId, item.SeriesName));
     }
-    if (item.SeriesId && item.SeriesPrimaryImageTag) {
-      mangaCovers.push(getImageUrl(item.SeriesId, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    if (item.SeriesId) {
+      if (item.SeriesPrimaryImageTag) {
+        mangaCovers.push(getImageUrl(item.SeriesId, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 400, quality: 85 }));
+      }
+      mangaCovers.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 400, quality: 85 }));
     }
-    if (item.ParentId && item.ParentPrimaryImageTag) {
-      mangaCovers.push(getImageUrl(item.ParentId, 'Primary', { tag: item.ParentPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    if (item.ParentId) {
+      if (item.ParentPrimaryImageTag) {
+        mangaCovers.push(getImageUrl(item.ParentId, 'Primary', { tag: item.ParentPrimaryImageTag, maxWidth: 400, quality: 85 }));
+      }
+      mangaCovers.push(getImageUrl(item.ParentId, 'Primary', { maxWidth: 400, quality: 85 }));
     }
-    if (item.Id) {
-      mangaCovers.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
-    }
+    mangaCovers.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
 
-    const bookCover = item.Id ? getBookCoverUrl(item.Id) : null;
-
+    const bookCover = getBookCoverUrl(item.Id);
     if (isChapter) {
       urls.push(...mangaCovers);
       if (bookCover) urls.push(bookCover);
@@ -466,10 +498,48 @@ function cardImageCandidates(item) {
     return Array.from(new Set(urls.filter(Boolean)));
   }
 
-  if (ownPrimaryUrl) {
-    urls.push(ownPrimaryUrl);
+  if (item.SeriesId) {
+    const seriesTag = item.SeriesPrimaryImageTag || (item.ImageTags && item.ImageTags.SeriesPrimary);
+    if (seriesTag) {
+      urls.push(getImageUrl(item.SeriesId, 'Primary', { tag: seriesTag, maxWidth: 400, quality: 85 }));
+    }
+    urls.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 400, quality: 85 }));
   }
-  return urls;
+
+  if (item.ParentThumbItemId) {
+    if (item.ParentThumbImageTag) {
+      urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { tag: item.ParentThumbImageTag, maxWidth: 400, quality: 85 }));
+    }
+    urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { maxWidth: 400, quality: 85 }));
+  }
+
+  if (item.ParentId) {
+    if (item.ParentPrimaryImageTag) {
+      urls.push(getImageUrl(item.ParentId, 'Primary', { tag: item.ParentPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    }
+    urls.push(getImageUrl(item.ParentId, 'Primary', { maxWidth: 400, quality: 85 }));
+  }
+
+  const thumbTag = (item.ImageTags && item.ImageTags.Thumb) || item.ThumbImageTag;
+  if (thumbTag) {
+    urls.push(getImageUrl(item.Id, 'Thumb', { tag: thumbTag, maxWidth: 400, quality: 85 }));
+  }
+  urls.push(getImageUrl(item.Id, 'Thumb', { maxWidth: 400, quality: 85 }));
+
+  const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
+  if (backdropTag) {
+    urls.push(getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 400, quality: 85 }));
+  }
+  urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 400, quality: 85 }));
+
+  if (item.ParentBackdropItemId) {
+    if (item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
+      urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { tag: item.ParentBackdropImageTags[0], maxWidth: 400, quality: 85 }));
+    }
+    urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 400, quality: 85 }));
+  }
+
+  return Array.from(new Set(urls.filter(Boolean)));
 }
 
 export function buildCard(item, options) {
