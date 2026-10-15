@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.79.1] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(settings)* Make What's New card expandable with chevron and inset list padding\n",
+        "checksum": "7824bcdb1cb04c49b9443189e9a4a009",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.79.1/jellio_1.79.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T16:59:43Z",
+        "version": "1.79.1"
+      },
+      {
         "changelog": "## [1.79.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(notifications)* Add changelog and what's new entry with release highlights\n\n### ⚡ Performance\n\n- *(web)* Decouple row slot rendering, memoize seed recommendations, add immutable asset caching and async image decoding\n",
         "checksum": "9aa9757d807b754303bca8c44e1c9b7b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.79.0/jellio_1.79.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-08T23:33:17Z",
         "version": "1.69.1"
-      },
-      {
-        "changelog": "## [1.69.0] - 2026-10-08\n\n### 🚀 Features\n\n- *(feed)* Every content type chip always shown, and finished manga series post\n\n### 🐛 Bug Fixes\n\n- *(feed)* Only post a finished manga series when the series is completed\n",
-        "checksum": "4d4eac0f534867125aa426b8d682a798",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.69.0/jellio_1.69.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T21:52:43Z",
-        "version": "1.69.0"
       }
     ]
   }
