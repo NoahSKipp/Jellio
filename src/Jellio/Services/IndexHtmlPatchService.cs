@@ -156,10 +156,8 @@ public class IndexHtmlPatchService(
     // wait down to effectively one. They carry the same ?v= the import
     // map (BuildImportMap) gives the real imports, since a preload hint
     // has to name the exact URL the import will request or the browser
-    // fetches both. Kept in sync by hand,
-    // same real convention components/sidebar.js's own LIBRARY_ROUTES
-    // comment already explains for the same reason: add a real file
-    // under Frontend/, add it here too.
+    // fetches both. Non-initial screens (player, reader, settings, etc.)
+    // are loaded dynamically on demand to preserve bandwidth during initial boot.
     private static readonly string[] ModulePreloadPaths =
     [
         "runtime/auth.js",
@@ -173,21 +171,22 @@ public class IndexHtmlPatchService(
         "runtime/transcodePolicy.js",
         "runtime/quality.js",
         "runtime/rowcache.js",
+        "runtime/rowGate.js",
+        "runtime/offline.js",
+        "runtime/grouplistSettings.js",
+        "runtime/adminStatus.js",
+        "runtime/introCreditsMenuSetting.js",
+        "runtime/syncPlay.js",
         "screens/login.js",
         "screens/home.js",
-        "runtime/rowGate.js",
-        "screens/library.js",
-        "screens/search.js",
-        "screens/detail.js",
-        "screens/player.js",
-        "screens/service.js",
-        "screens/settings.js",
-        "screens/person.js",
-        "screens/calendar.js",
         "components/sidebar.js",
         "components/mobileNav.js",
         "components/nowPlaying.js",
         "components/notifications.js",
+        "components/sounds.js",
+        "components/overlays.js",
+        "components/achievementNotifier.js",
+        "components/groupWatchInvites.js",
         "components/toast.js",
         "components/splash.js",
         "components/card.js",
@@ -205,6 +204,7 @@ public class IndexHtmlPatchService(
         "components/seasons.js",
         "components/homeCustomizer.js",
         "components/rowListModal.js",
+        "components/audioMiniPlayer.js",
     ];
 
     // Every module under runtime/, screens/ and components/, requested

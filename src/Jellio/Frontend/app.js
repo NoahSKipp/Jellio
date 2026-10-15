@@ -16,21 +16,6 @@ import {
 } from './runtime/api.js';
 import { renderLogin } from './screens/login.js';
 import { renderHome, preloadHomeSections } from './screens/home.js';
-import { renderLibrary } from './screens/library.js';
-import { renderSearch } from './screens/search.js';
-import { renderDetail } from './screens/detail.js';
-import { renderPlayer } from './screens/player.js';
-import { renderService } from './screens/service.js';
-import { renderSettings } from './screens/settings.js';
-import { renderPerson } from './screens/person.js';
-import { renderProfile } from './screens/profile.js';
-import { renderFeed } from './screens/feed.js';
-import { renderCalendar } from './screens/calendar.js';
-import { renderReader } from './screens/reader.js';
-import { renderListen } from './screens/listen.js';
-import { renderVocab } from './screens/vocab.js';
-import { renderDiscover } from './screens/discover.js';
-import { renderDownloads } from './screens/downloads.js';
 import { checkServer, isOffline } from './runtime/offline.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
@@ -79,33 +64,62 @@ function fadeInContent(content) {
   );
 }
 
+// Dynamic screen loaders: non-initial screens are imported on-demand to keep
+// the initial script bundle and parse time minimal on cold boots.
+const loadLibrary = () => import('./screens/library.js').then((m) => m.renderLibrary);
+const loadSearch = () => import('./screens/search.js').then((m) => m.renderSearch);
+const loadDetail = () => import('./screens/detail.js').then((m) => m.renderDetail);
+const loadPlayer = () => import('./screens/player.js').then((m) => m.renderPlayer);
+const loadService = () => import('./screens/service.js').then((m) => m.renderService);
+const loadSettings = () => import('./screens/settings.js').then((m) => m.renderSettings);
+const loadPerson = () => import('./screens/person.js').then((m) => m.renderPerson);
+const loadProfile = () => import('./screens/profile.js').then((m) => m.renderProfile);
+const loadFeed = () => import('./screens/feed.js').then((m) => m.renderFeed);
+const loadCalendar = () => import('./screens/calendar.js').then((m) => m.renderCalendar);
+const loadReader = () => import('./screens/reader.js').then((m) => m.renderReader);
+const loadListen = () => import('./screens/listen.js').then((m) => m.renderListen);
+const loadVocab = () => import('./screens/vocab.js').then((m) => m.renderVocab);
+const loadDiscover = () => import('./screens/discover.js').then((m) => m.renderDiscover);
+const loadDownloads = () => import('./screens/downloads.js').then((m) => m.renderDownloads);
+
+// Pre-warm common next screens during idle time after boot
+if (typeof window !== 'undefined') {
+  const scheduleIdle = window.requestIdleCallback
+    ? (fn) => window.requestIdleCallback(fn, { timeout: 3000 })
+    : (fn) => setTimeout(fn, 2000);
+  scheduleIdle(() => {
+    import('./screens/detail.js').catch(() => {});
+    import('./screens/library.js').catch(() => {});
+  });
+}
+
 // Every route path this runtime has a real screen for. Library routes
 // (movies/tv/music/books/homevideos/musicvideos, plus the generic list
 // fallback) are the same set components/sidebar.js's own LIBRARY_ROUTES
 // can produce, kept in sync by hand since there are only the two places.
 const SCREENS = {
   home: renderHome,
-  search: renderSearch,
-  item: renderDetail,
-  play: renderPlayer,
-  service: renderService,
-  account: renderSettings,
-  person: renderPerson,
-  profile: renderProfile,
-  feed: renderFeed,
-  calendar: renderCalendar,
-  read: renderReader,
-  listen: renderListen,
-  vocab: renderVocab,
-  discover: renderDiscover,
-  downloads: renderDownloads,
-  movies: renderLibrary,
-  tv: renderLibrary,
-  music: renderLibrary,
-  books: renderLibrary,
-  homevideos: renderLibrary,
-  musicvideos: renderLibrary,
-  list: renderLibrary,
+  search: async (content, params) => (await loadSearch())(content, params),
+  item: async (content, params) => (await loadDetail())(content, params),
+  play: async (content, params) => (await loadPlayer())(content, params),
+  service: async (content, params) => (await loadService())(content, params),
+  account: async (content, params) => (await loadSettings())(content, params),
+  person: async (content, params) => (await loadPerson())(content, params),
+  profile: async (content, params) => (await loadProfile())(content, params),
+  feed: async (content, params) => (await loadFeed())(content, params),
+  calendar: async (content, params) => (await loadCalendar())(content, params),
+  read: async (content, params) => (await loadReader())(content, params),
+  listen: async (content, params) => (await loadListen())(content, params),
+  vocab: async (content, params) => (await loadVocab())(content, params),
+  discover: async (content, params) => (await loadDiscover())(content, params),
+  downloads: async (content, params) => (await loadDownloads())(content, params),
+  movies: async (content, params) => (await loadLibrary())(content, params),
+  tv: async (content, params) => (await loadLibrary())(content, params),
+  music: async (content, params) => (await loadLibrary())(content, params),
+  books: async (content, params) => (await loadLibrary())(content, params),
+  homevideos: async (content, params) => (await loadLibrary())(content, params),
+  musicvideos: async (content, params) => (await loadLibrary())(content, params),
+  list: async (content, params) => (await loadLibrary())(content, params),
 };
 
 // The player owns the whole viewport, no persistent sidebar competing
