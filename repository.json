@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.80.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(web)* Trigger whats new notification only on big releases and display latest in about\n- *(settings)* Nest previous changelog versions in collapsible sections\n- Add Screen Wake Lock, media keys, and macOS app changelog\n\n### 🐛 Bug Fixes\n\n- *(cards)* Add untagged primary and backdrop image fallbacks and hydrate community watching items\n\n### ⚡ Performance\n\n- *(web)* Lazy-load non-initial screen modules and tune modulepreload paths\n",
+        "checksum": "8b95770fe9d05a7e3a7ef56f9f512bb0",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.80.0/jellio_1.80.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T21:45:25Z",
+        "version": "1.80.0"
+      },
+      {
         "changelog": "## [1.79.1] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(settings)* Make What's New card expandable with chevron and inset list padding\n",
         "checksum": "7824bcdb1cb04c49b9443189e9a4a009",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.79.1/jellio_1.79.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-09T02:25:26Z",
         "version": "1.70.0"
-      },
-      {
-        "changelog": "## [1.69.1] - 2026-10-08\n\n### 🐛 Bug Fixes\n\n- *(listen)* Keep the mini player above the mobile nav and its play icon visible\n",
-        "checksum": "7cb8df8e43b81916ca167fca3c907d7b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.69.1/jellio_1.69.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-08T23:33:17Z",
-        "version": "1.69.1"
       }
     ]
   }
