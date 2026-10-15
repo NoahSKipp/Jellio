@@ -54,8 +54,9 @@ import {
   toggleSelectedGenre,
   setSelectedGenres,
 } from '../runtime/recommendationSettings.js';
-import { LATEST_CHANGELOG, CHANGELOG_RELEASES } from '../runtime/changelog.js';
+import { LATEST_CHANGELOG, CHANGELOG_RELEASES, MACOS_CHANGELOG_RELEASES } from '../runtime/changelog.js';
 import { invalidateAllHomeSections } from './home.js';
+
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
@@ -996,6 +997,93 @@ function buildAppUpdateCard(native) {
     paint(state);
   });
   native.getState().then(paint).catch(function () {});
+
+  if (Array.isArray(MACOS_CHANGELOG_RELEASES) && MACOS_CHANGELOG_RELEASES.length > 0) {
+    const macWrap = el('div', 'jellio-settings-macos-changelog-wrap');
+    macWrap.style.marginTop = '16px';
+    macWrap.style.borderTop = '1px solid rgba(255, 255, 255, 0.08)';
+    macWrap.style.paddingTop = '14px';
+
+    const macHeader = el('div', 'jellio-settings-row-title', "What's New in this Mac app");
+    macHeader.style.marginBottom = '8px';
+    macWrap.appendChild(macHeader);
+
+    const macList = el('div', 'jellio-settings-changelog-list');
+    const latestMac = MACOS_CHANGELOG_RELEASES[0];
+    const prevMac = MACOS_CHANGELOG_RELEASES.slice(1);
+
+    (latestMac.highlights || []).forEach(function (h) {
+      const item = el('div', 'jellio-settings-changelog-item');
+      item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
+      item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
+      macList.appendChild(item);
+    });
+    macWrap.appendChild(macList);
+
+    if (prevMac.length > 0) {
+      const prevWrap = el('div', 'jellio-settings-changelog-previous-wrap');
+      const prevToggle = document.createElement('button');
+      prevToggle.type = 'button';
+      prevToggle.className = 'jellio-settings-sub-expander';
+      prevToggle.setAttribute('aria-expanded', 'false');
+
+      const prevLabel = el('span', 'jellio-settings-sub-label', 'Previous Mac Versions (' + prevMac.length + ')');
+      const prevArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
+      prevToggle.appendChild(prevLabel);
+      prevToggle.appendChild(prevArrow);
+      prevWrap.appendChild(prevToggle);
+
+      const prevBody = el('div', 'jellio-settings-sub-body');
+      prevBody.style.display = 'none';
+
+      prevMac.forEach(function (rel) {
+        const verCard = el('div', 'jellio-settings-version-card');
+        const verHeader = document.createElement('button');
+        verHeader.type = 'button';
+        verHeader.className = 'jellio-settings-version-header';
+        verHeader.setAttribute('aria-expanded', 'false');
+
+        const verTitle = el('span', 'jellio-settings-version-title', rel.subtitle || ('Version ' + rel.version));
+        const verArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
+        verHeader.appendChild(verTitle);
+        verHeader.appendChild(verArrow);
+        verCard.appendChild(verHeader);
+
+        const verContent = el('div', 'jellio-settings-changelog-list');
+        verContent.style.display = 'none';
+        verContent.style.paddingTop = '0';
+        (rel.highlights || []).forEach(function (h) {
+          const item = el('div', 'jellio-settings-changelog-item');
+          item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
+          item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
+          verContent.appendChild(item);
+        });
+        verCard.appendChild(verContent);
+
+        verHeader.addEventListener('click', function () {
+          const isExp = verHeader.getAttribute('aria-expanded') === 'true';
+          const next = !isExp;
+          verHeader.setAttribute('aria-expanded', String(next));
+          verContent.style.display = next ? '' : 'none';
+        });
+
+        prevBody.appendChild(verCard);
+      });
+
+      prevToggle.addEventListener('click', function () {
+        const isExp = prevToggle.getAttribute('aria-expanded') === 'true';
+        const next = !isExp;
+        prevToggle.setAttribute('aria-expanded', String(next));
+        prevBody.style.display = next ? '' : 'none';
+      });
+
+      prevWrap.appendChild(prevBody);
+      macWrap.appendChild(prevWrap);
+    }
+
+    body.appendChild(macWrap);
+  }
+
   return card;
 }
 

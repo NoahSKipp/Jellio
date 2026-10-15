@@ -1074,13 +1074,54 @@ export async function renderPlayer(root, params) {
   video.addEventListener('playing', function () {
     if (loadingLogo && video.readyState >= 3) hideLoadingLogo();
   });
+
+  // Screen Wake Lock API: keeps the display awake during active video playback.
+  let wakeLock = null;
+  function holdAwake(on) {
+    if (!on) {
+      if (wakeLock) {
+        wakeLock.release().catch(function () {});
+        wakeLock = null;
+      }
+      return;
+    }
+    if (wakeLock || !navigator.wakeLock) return;
+    navigator.wakeLock
+      .request('screen')
+      .then(function (lock) {
+        wakeLock = lock;
+        lock.addEventListener('release', function () {
+          if (wakeLock === lock) wakeLock = null;
+        });
+      })
+      .catch(function () {});
+  }
+  function onWakeVisibility() {
+    if (document.visibilityState === 'visible' && !video.paused && !video.ended) {
+      holdAwake(true);
+    }
+  }
+  document.addEventListener('visibilitychange', onWakeVisibility);
+
+  function notifyNativePlayback(active) {
+    if (window.jellioNative && typeof window.jellioNative.setPlaybackState === 'function') {
+      try {
+        window.jellioNative.setPlaybackState(active);
+      } catch (err) {}
+    }
+  }
+
   // Other tabs refresh their home rows one at a time while this plays.
   video.addEventListener('playing', function () {
     setPlaybackActive(true);
+    holdAwake(true);
+    notifyNativePlayback(true);
   });
   ['pause', 'ended', 'emptied'].forEach(function (type) {
     video.addEventListener(type, function () {
       setPlaybackActive(false);
+      holdAwake(false);
+      notifyNativePlayback(false);
     });
   });
   ['timeupdate', 'seeked', 'canplay'].forEach(function (type) {
@@ -3192,9 +3233,16 @@ export async function renderPlayer(root, params) {
       navigator.mediaSession.setActionHandler('stop', function () {
         backButton.click();
       });
+      navigator.mediaSession.setActionHandler('previoustrack', function () {
+        skipBackButton.click();
+      });
       if (nextEpisode) {
         navigator.mediaSession.setActionHandler('nexttrack', function () {
           navigateTo('#/item?id=' + nextEpisode.Id);
+        });
+      } else if (nextEpisodeButton && !nextEpisodeButton.disabled) {
+        navigator.mediaSession.setActionHandler('nexttrack', function () {
+          nextEpisodeButton.click();
         });
       }
     } catch (e) {
@@ -4057,6 +4105,22 @@ export async function renderPlayer(root, params) {
     if (event.altKey && (event.key === 'c' || event.key === 'C')) {
       event.preventDefault();
       toggleCastMenu();
+      return;
+    }
+    if (event.key === 'MediaPlayPause') {
+      event.preventDefault();
+      playPauseButton.click();
+      return;
+    }
+    if (event.key === 'MediaTrackNext' || event.key === 'MediaNextTrack') {
+      event.preventDefault();
+      if (nextEpisodeButton && !nextEpisodeButton.disabled) nextEpisodeButton.click();
+      else skipForwardButton.click();
+      return;
+    }
+    if (event.key === 'MediaTrackPrevious' || event.key === 'MediaPreviousTrack') {
+      event.preventDefault();
+      skipBackButton.click();
       return;
     }
     if (event.ctrlKey || event.altKey || event.metaKey) return;
@@ -5725,6 +5789,9 @@ export async function renderPlayer(root, params) {
   // reach it from earlier in this same function body.
   async function cleanup() {
     setPlaybackActive(false);
+    holdAwake(false);
+    document.removeEventListener('visibilitychange', onWakeVisibility);
+    notifyNativePlayback(false);
     if (unsubscribeCast) unsubscribeCast();
     if (getActiveCast()) disconnectCast().catch(function () {});
     document.removeEventListener('visibilitychange', onTabVisibility);
@@ -5754,7 +5821,7 @@ export async function renderPlayer(root, params) {
     if ('mediaSession' in navigator) {
       try {
         navigator.mediaSession.metadata = null;
-        ['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'stop', 'nexttrack'].forEach(function (act) {
+        ['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'stop', 'nexttrack', 'previoustrack'].forEach(function (act) {
           navigator.mediaSession.setActionHandler(act, null);
         });
         navigator.mediaSession.playbackState = 'none';

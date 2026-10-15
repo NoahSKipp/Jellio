@@ -67,6 +67,82 @@ export const CHANGELOG_RELEASES = [
 export const LATEST_CHANGELOG = CHANGELOG_RELEASES[0];
 export const LATEST_BIG_CHANGELOG = CHANGELOG_RELEASES.find((r) => isBigRelease(r.version)) || LATEST_CHANGELOG;
 
+export const MACOS_CHANGELOG_RELEASES = [
+  {
+    version: '0.5.0',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.5.0',
+    summary: 'Global media keys, display sleep prevention, and Apple Silicon hardware decoding.',
+    highlights: [
+      {
+        title: 'Global Media Keys',
+        description: 'Control playback from anywhere using keyboard media keys (Play/Pause, Next Track, Previous Track).',
+      },
+      {
+        title: 'Display Sleep Prevention',
+        description: 'Prevents display sleep automatically while a video is playing, without keeping your Mac awake when idle.',
+      },
+      {
+        title: 'Hardware Video Acceleration',
+        description: 'Enhanced Apple Silicon hardware decoding flags for zero-copy 4K and HEVC playback with minimal battery draw.',
+      },
+    ],
+  },
+  {
+    version: '0.4.1',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.4.1',
+    summary: 'Direct network routing fix.',
+    highlights: [
+      {
+        title: 'Direct Network Routing',
+        description: 'Streams and API calls connect directly to your server without proxying through the main Electron process.',
+      },
+    ],
+  },
+  {
+    version: '0.4.0',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.4.0',
+    summary: 'Native dock menu, download badges, and quit protection.',
+    highlights: [
+      {
+        title: 'Native Dock Menu & Alerts',
+        description: 'Quick navigation dock menu, running download badge counts, and graceful exit confirmations.',
+      },
+      {
+        title: 'Apple Silicon Zero-Copy Decoding',
+        description: 'Optimized GPU rasterization and zero-copy video buffer transfers for M-series chips.',
+      },
+    ],
+  },
+  {
+    version: '0.3.0',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.3.0',
+    summary: 'HEVC offline downloads support.',
+    highlights: [
+      {
+        title: 'HEVC Offline Downloads',
+        description: 'Download movies and episodes in HEVC format when supported by the server, saving disk space and bandwidth.',
+      },
+    ],
+  },
+  {
+    version: '0.2.0',
+    title: "What's New in Jellio for macOS",
+    subtitle: 'Version 0.2.0',
+    summary: 'In-app updater.',
+    highlights: [
+      {
+        title: 'In-App Automatic Updates',
+        description: 'Seamless background update checks and one-click installation directly from Settings > About.',
+      },
+    ],
+  },
+];
+
+
 function storageKey() {
   const userId = getCurrentUserId() || 'global';
   return 'jellio_last_seen_changelog_' + userId;
