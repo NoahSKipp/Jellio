@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.82.0] - 2026-10-15\n\n### 🚀 Features\n\n- Include full version history across all releases in changelog\n",
+        "checksum": "7df979c7f1bf0f446c90dfc89cb17edc",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.82.0/jellio_1.82.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-15T22:51:57Z",
+        "version": "1.82.0"
+      },
+      {
         "changelog": "## [1.81.0] - 2026-10-15\n\n### 🚀 Features\n\n- Add 1.80.0 changelog and clear stale changelog notifications on update\n",
         "checksum": "630b0ec233d9bf76e06f0bbf9570e316",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.81.0/jellio_1.81.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-09T15:21:01Z",
         "version": "1.70.3"
-      },
-      {
-        "changelog": "## [1.70.2] - 2026-10-09\n\n### 🐛 Bug Fixes\n\n- *(streams)* Say no streams are available instead of offering Gelato's placeholder\n",
-        "checksum": "c1fd9bfb72bc65ce9a5fcdedb09e70a7",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.2/jellio_1.70.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-09T14:45:13Z",
-        "version": "1.70.2"
       }
     ]
   }
