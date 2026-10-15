@@ -19,6 +19,30 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    version: '1.80.0',
+    title: "What's New in Jellio",
+    subtitle: 'Version 1.80.0',
+    summary: 'Screen Wake Lock, global media keys, desktop playback sync, and UI performance enhancements.',
+    highlights: [
+      {
+        title: 'Screen Wake Lock',
+        description: 'The video player now keeps your screen awake automatically during playback, even on long scenes without mouse movement.',
+      },
+      {
+        title: 'Global Media Keys & Desktop Sync',
+        description: 'Control playback using hardware media keys (Play/Pause, Next Track, Previous Track) and seamlessly sync state with the desktop app.',
+      },
+      {
+        title: "Expandable What's New",
+        description: 'Settings > About now features cleanly collapsed expandable cards for past release notes.',
+      },
+      {
+        title: 'Instant Screen Loading',
+        description: 'Secondary screens and modules load dynamically on demand, cutting initial startup and bundle parse time.',
+      },
+    ],
+  },
+  {
     version: '1.79.1',
     title: "What's New in Jellio",
     subtitle: 'Version 1.79.1',
@@ -161,11 +185,23 @@ export function hasSeenLatestChangelog() {
     return true;
   }
   try {
-    const seen = localStorage.getItem(storageKey());
+    const key = storageKey();
+    const seen = localStorage.getItem(key);
+    if (seen && seen !== LATEST_BIG_CHANGELOG.version) {
+      // Clear older version from storage so the new big release is fresh
+      localStorage.removeItem(key);
+      return false;
+    }
     return seen === LATEST_BIG_CHANGELOG.version;
   } catch (err) {
     return false;
   }
+}
+
+export function clearPreviousChangelogs() {
+  try {
+    localStorage.removeItem(storageKey());
+  } catch (_) {}
 }
 
 export function markLatestChangelogSeen() {

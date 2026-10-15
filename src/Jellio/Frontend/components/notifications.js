@@ -13,7 +13,7 @@ import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
-import { hasSeenLatestChangelog, markLatestChangelogSeen, getChangelogNotification, shouldShowChangelogNotification } from '../runtime/changelog.js';
+import { hasSeenLatestChangelog, markLatestChangelogSeen, getChangelogNotification, shouldShowChangelogNotification, LATEST_BIG_CHANGELOG } from '../runtime/changelog.js';
 
 // A release date changes once a day at most, real reason this polls far
 // less often than components/nowPlaying.js's own 10s (a live session can
@@ -279,11 +279,23 @@ function clearAll() {
 function poll() {
   getNotifications()
     .then(function (items) {
-      let merged = items ? items.slice() : [];
+      // Clear out any previous or stale changelog notifications from the list
+      let merged = items
+        ? items.filter(function (n) {
+            return !n.Id || !n.Id.startsWith('changelog:');
+          })
+        : [];
       if (shouldShowChangelogNotification()) {
         merged.unshift(getChangelogNotification());
       }
       if (knownIds) {
+        // Clear any previous changelog IDs from knownIds so that an update with a new big release
+        // changelog triggers a toast cleanly instead of being masked.
+        for (const id of Array.from(knownIds)) {
+          if (id.startsWith('changelog:') && id !== ('changelog:' + LATEST_BIG_CHANGELOG.version)) {
+            knownIds.delete(id);
+          }
+        }
         merged.forEach(function (n) {
           if (!knownIds.has(n.Id)) {
             // Nothing real to open for an announcement or changelog, so this toast
