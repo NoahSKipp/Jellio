@@ -361,6 +361,75 @@ function buildPersonRows(people, itemsPerPerson, exclude) {
 // to here in the same real priority order real feedback already
 // established: per title rows first (the strongest, most specific
 // signal), the two aggregate rows after.
+// Fixed order for the recommendation rows, whatever arrives first: Top
+// Picks, the seasonal row, "Because you watched", "Because you're
+// watching", then "More with". Each row's slot is its family's base plus
+// its index.
+export const RECOMMENDATION_SLOTS = { genres: 0, seasonal: 10, completed: 20, nextUp: 40, people: 60 };
+
+// The same rows as buildRecommendationRows, each handed to onRow(spec,
+// slot) the moment its own data arrives instead of all at the end. A
+// title a row already showed isn't repeated in a later one.
+export async function streamRecommendationRows(exclude, onRow) {
+  const [history, nextUp] = await Promise.all([
+    getRecentlyCompleted(HISTORY_SAMPLE_LIMIT).catch(function () {
+      return [];
+    }),
+    getNextUp(NEXTUP_SEED_LIMIT).catch(function () {
+      return [];
+    }),
+  ]);
+  function notDisliked(seed) {
+    return !(seed.UserData && seed.UserData.Likes === false);
+  }
+  const completedSeeds = history.filter(notDisliked).slice(0, SEED_LIMIT);
+  const nextUpSeeds = nextUp.filter(notDisliked);
+  const genres = topGenres(history).slice(0, MAX_GENRE_ROWS);
+  const people = topPeople(history).slice(0, MAX_PERSON_ROWS);
+
+  function emit(spec, slot) {
+    if (spec && spec.items && spec.items.length) onRow(spec, slot);
+  }
+
+  const jobs = [];
+  completedSeeds.forEach(function (seed, i) {
+    jobs.push(
+      fetchSeedCandidates([seed]).then(function (entries) {
+        emit(pickSeedRows([seed], entries, (s) => 'Because you watched ' + s.Name, exclude)[0], RECOMMENDATION_SLOTS.completed + i);
+      }),
+    );
+  });
+  nextUpSeeds.forEach(function (seed, i) {
+    jobs.push(
+      fetchSeedCandidates([seed]).then(function (entries) {
+        emit(pickSeedRows([seed], entries, (s) => "Because you're watching " + (s.SeriesName || s.Name), exclude)[0], RECOMMENDATION_SLOTS.nextUp + i);
+      }),
+    );
+  });
+  genres.forEach(function (genre, i) {
+    jobs.push(
+      fetchGenreItemsList([genre]).then(function (list) {
+        emit(buildGenreRows([genre], list, exclude)[0], RECOMMENDATION_SLOTS.genres + i);
+      }),
+    );
+  });
+  people.forEach(function (person, i) {
+    jobs.push(
+      fetchPersonItemsList([person]).then(function (list) {
+        emit(buildPersonRows([person], list, exclude)[0], RECOMMENDATION_SLOTS.people + i);
+      }),
+    );
+  });
+  jobs.push(
+    getSeasonalRecommendationRow(exclude)
+      .then(function (row) {
+        emit(row, RECOMMENDATION_SLOTS.seasonal);
+      })
+      .catch(function () {}),
+  );
+  await Promise.all(jobs);
+}
+
 export async function buildRecommendationRows(exclude) {
   const [history, nextUp] = await Promise.all([
     getRecentlyCompleted(HISTORY_SAMPLE_LIMIT).catch(function () {

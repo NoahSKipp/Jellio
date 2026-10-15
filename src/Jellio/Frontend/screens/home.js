@@ -29,7 +29,7 @@ import {
   getCommunityExcludedUsers,
   getSelectedGenres,
 } from '../runtime/recommendationSettings.js';
-import { buildRecommendationRows, titleKey } from '../runtime/recommend.js';
+import { streamRecommendationRows, titleKey } from '../runtime/recommend.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { buildRow } from '../components/row.js';
@@ -672,7 +672,9 @@ async function buildExpensiveSections() {
   if (isCommunityRowEnabled()) {
     Promise.all([getCommunityWatching(getCommunityExcludedUsers()), animeIdsPromise])
       .then(function (results) {
-        const valid = dedupe(withoutAnime(results[0] || [], results[1]), seen);
+        // Not deduped against the other rows: it lands after them and would
+        // usually come out empty, and the watchers make it a different row.
+        const valid = dedupe(withoutAnime(results[0] || [], results[1]), {});
         if (!valid.length) return;
         const row = buildRow('What Others Are Watching', valid);
         if (row) place(wrapRowForCustomization(row, 'rec:What Others Are Watching'), EXPENSIVE_SLOTS.community);
@@ -682,12 +684,12 @@ async function buildExpensiveSections() {
       });
   }
 
-  const recommendations = buildRecommendationRows(seen)
-    .then(async function (specs) {
-      const animeIds = await animeIdsPromise;
-      specs.forEach(function (spec, index) {
+  // Each recommendation row goes up as soon as its own data arrives.
+  const recommendations = animeIdsPromise
+    .then(function (animeIds) {
+      return streamRecommendationRows(seen, function (spec, slot) {
         const row = buildRow(spec.title, withoutAnime(spec.items, animeIds));
-        if (row) place(wrapRowForCustomization(row, 'rec:' + spec.title), EXPENSIVE_SLOTS.recommendations + index);
+        if (row) place(wrapRowForCustomization(row, 'rec:' + spec.title), EXPENSIVE_SLOTS.recommendations + slot);
       });
     })
     .catch(function (err) {

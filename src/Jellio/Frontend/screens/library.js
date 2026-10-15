@@ -293,34 +293,35 @@ export async function renderLibrary(root, params) {
       console.warn('Jellio: could not load genre filter options', err);
     });
 
+  // Each genre row goes up as soon as its own items arrive, kept in genre
+  // order, instead of waiting for the slowest one.
+  function placeGenreRow(row, order) {
+    row.dataset.jellioGenreOrder = String(order);
+    const after = Array.from(rows.children).find(function (child) {
+      return child.dataset.jellioGenreOrder !== undefined && Number(child.dataset.jellioGenreOrder) > order;
+    });
+    rows.insertBefore(row, after || (skeleton.parentNode === rows ? skeleton : null));
+  }
+
   discoverGenres(parentId, itemType, GENRE_ROWS)
     .then(function (genres) {
-      return Promise.all([
-        Promise.allSettled(
-          genres.map(function (genre) {
-            return getGenreItems(parentId, itemType, genre, ROW_LIMIT);
-          }),
-        ),
-        excludeAnimeIds,
-      ]).then(function (results) {
-        const genreItemLists = results[0];
-        const animeIds = results[1];
-        genreItemLists.forEach(function (result, index) {
-          if (result.status === 'fulfilled') {
-            let items = result.value;
+      return Promise.allSettled(
+        genres.map(function (genre, index) {
+          return Promise.all([getGenreItems(parentId, itemType, genre, ROW_LIMIT), excludeAnimeIds]).then(function (results) {
+            const animeIds = results[1];
+            let items = results[0];
             if (animeIds && animeIds.size) {
               items = withoutAnime(items, animeIds);
             }
-            const row = buildRow(genres[index], items, null, function () {
-              return getGenreItems(parentId, itemType, genres[index], ROW_LIST_LIMIT).then(function (all) {
+            const row = buildRow(genre, items, null, function () {
+              return getGenreItems(parentId, itemType, genre, ROW_LIST_LIMIT).then(function (all) {
                 return withoutAnime(all, animeIds);
               });
             });
-            if (row) rows.insertBefore(row, skeleton.parentNode === rows ? skeleton : null);
-          }
-        });
-        removeSkeleton();
-      });
+            if (row) placeGenreRow(row, index);
+          });
+        }),
+      ).then(removeSkeleton);
     })
     .catch(function (err) {
       console.warn('Jellio: could not load genre rows', err);
