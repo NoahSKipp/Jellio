@@ -2689,6 +2689,26 @@ export const LATEST_BIG_CHANGELOG = CHANGELOG_RELEASES.find((r) => isBigRelease(
 
 export const MACOS_CHANGELOG_RELEASES = [
   {
+    "version": "0.6.0",
+    "title": "What's New in Jellio for macOS",
+    "subtitle": "Version 0.6.0",
+    "summary": "Native What's New window with complete version history and menu integration.",
+    "highlights": [
+      {
+        "title": "Native Expandable Version History",
+        "description": "Inspect the complete release history across all past versions in an interactive, cleanly collapsible modal."
+      },
+      {
+        "title": "Menu Bar What's New Shortcut",
+        "description": "Easily review the latest feature additions and changes anytime from the Jellio application menu and Help menu."
+      },
+      {
+        "title": "Notification & State Cleanup",
+        "description": "Stale update notifications and changelog dismiss flags are automatically cleared when major releases arrive."
+      }
+    ]
+  },
+  {
     "version": "0.5.0",
     "title": "What's New in Jellio for macOS",
     "subtitle": "Version 0.5.0",
