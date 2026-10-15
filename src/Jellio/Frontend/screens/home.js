@@ -1,6 +1,7 @@
 // First real screen, proof of the whole architecture end to end: its own
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
 // read or waited on.
+import { createRowGate } from '../runtime/rowGate.js';
 import {
   getCurrentUser,
   getResumeItems,
@@ -120,7 +121,7 @@ function titleFor(name, kind) {
 // network fetch together, catalog, genre and recommendation alike,
 // and only sequence the synchronous dedupe step afterward, in the
 // priority order real feedback actually cares about.
-async function fetchCatalogRows(collections) {
+function chooseCatalogs(collections) {
   let usable = collections.filter(function (collection) {
     // A service catalog already has a tile in the hub strip and a page
     // behind it (buildHubStrip below, screens/service.js), so a
@@ -143,84 +144,64 @@ async function fetchCatalogRows(collections) {
     return animeSeen <= MAX_ANIME_CATALOG_ROWS;
   });
 
-  usable = usable.slice(0, MAX_CATALOG_ROWS);
-
-  const [results, animeIds] = await Promise.all([
-    Promise.allSettled(
-      usable.map(function (collection) {
-        return getCollectionItems(collection.Id, collectionKind(collection), CATALOG_ROW_LIMIT);
-      }),
-    ),
-    getAnimeIds(),
-  ]);
-
-  return results
-    .map(function (result, index) {
-      if (result.status !== 'fulfilled') return null;
-      const collection = usable[index];
-      return {
-        id: collection.Id,
-        kind: collectionKind(collection),
-        title: titleFor(collection.Name, collectionKind(collection)),
-        items: withoutAnime(result.value, animeIds),
-      };
-    })
-    .filter(Boolean);
+  return usable.slice(0, MAX_CATALOG_ROWS);
 }
 
-function buildCatalogRows(catalogData, seen) {
-  const sections = [];
-  catalogData.forEach(function (entry) {
-    const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
-      return Promise.all([getCollectionItems(entry.id, entry.kind, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
-        return withoutAnime(results[0], results[1]);
-      });
+function buildCatalogRow(entry, seen) {
+  const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
+    return Promise.all([getCollectionItems(entry.id, entry.kind, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
+      return withoutAnime(results[0], results[1]);
     });
-    if (row) sections.push(wrapRowForCustomization(row, 'catalog:' + entry.id));
   });
-  return sections;
+  return row ? wrapRowForCustomization(row, 'catalog:' + entry.id) : null;
 }
 
-async function fetchGenreRows() {
+// The genres for the home rows: the reader's own pick, else the last
+// discovered set kept in this browser (refreshed quietly behind it), else
+// discovered now. A cold tab doesn't have to work them out again.
+const HOME_GENRES_KEY = 'jellioHomeGenres';
+const HOME_GENRES_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function storedHomeGenres() {
   try {
-    const selected = getSelectedGenres();
-    let genres;
-    if (Array.isArray(selected) && selected.length > 0) {
-      genres = selected;
-    } else {
-      genres = await discoverGenres(null, 'Movie,Series', GENRE_ROWS);
+    const stored = JSON.parse(window.localStorage.getItem(HOME_GENRES_KEY) || 'null');
+    if (stored && Array.isArray(stored.genres) && stored.genres.length && Date.now() - stored.at < HOME_GENRES_MAX_AGE_MS) {
+      return stored.genres;
     }
-    const [results, animeIds] = await Promise.all([
-      Promise.allSettled(
-        genres.map(function (genre) {
-          return getGenreItems(null, 'Movie,Series', genre, GENRE_ROW_LIMIT);
-        }),
-      ),
-      getAnimeIds(),
-    ]);
-    return results
-      .map(function (result, index) {
-        if (result.status !== 'fulfilled') return null;
-        return { title: genres[index], items: withoutAnime(result.value, animeIds) };
-      })
-      .filter(Boolean);
   } catch (err) {
-    console.warn('Jellio: could not load home genre rows', err);
-    return [];
+    // Unreadable or blocked storage: discover them instead.
   }
+  return null;
 }
 
-function buildGenreRows(genreData, seen) {
-  const sections = [];
-  genreData.forEach(function (entry) {
-    const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
-      return Promise.all([getGenreItems(null, 'Movie,Series', entry.title, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
-        return withoutAnime(results[0], results[1]);
-      });
-    });
-    if (row) sections.push(wrapRowForCustomization(row, 'genre:' + entry.title));
+function chooseHomeGenres() {
+  const selected = getSelectedGenres();
+  if (Array.isArray(selected) && selected.length > 0) return Promise.resolve(selected);
+  const discovered = discoverGenres(null, 'Movie,Series', GENRE_ROWS).then(function (genres) {
+    if (genres.length) {
+      try {
+        window.localStorage.setItem(HOME_GENRES_KEY, JSON.stringify({ at: Date.now(), genres: genres }));
+      } catch (err) {
+        // Not kept; discovered again next time.
+      }
+    }
+    return genres;
   });
-  return sections;
+  const stored = storedHomeGenres();
+  if (stored) {
+    discovered.catch(function () {});
+    return Promise.resolve(stored);
+  }
+  return discovered;
+}
+
+function buildGenreRow(entry, seen) {
+  const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
+    return Promise.all([getGenreItems(null, 'Movie,Series', entry.title, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
+      return withoutAnime(results[0], results[1]);
+    });
+  });
+  return row ? wrapRowForCustomization(row, 'genre:' + entry.title) : null;
 }
 
 // The logo is requested optimistically and the name sits behind it in
@@ -666,70 +647,95 @@ async function buildCheapSections() {
 // expensive half (recommendation/catalog/genre rows), cached separately
 // via expensiveSectionsPromise above so a playback session ending only
 // ever forces buildCheapSections() above to run again, not this.
+// Every row below the personal ones goes on screen the moment its own
+// data arrives. Each kind has a fixed range of order keys (recommendations,
+// then What Others Are Watching, then catalogs, then genres), so a row that
+// lands late still slots into its place. A title already shown in a row
+// that went up earlier isn't repeated further down.
+const EXPENSIVE_SLOTS = { recommendations: 0, community: 100, catalogs: 200, genres: 300 };
+
 async function buildExpensiveSections() {
   const built = [];
   expensiveBuilt = built;
-  let order = EXPENSIVE_ORDER_BASE;
+  const seen = {};
+  const animeIdsPromise = getAnimeIds();
+  const rowGate = createRowGate(2);
 
-  function pushAll(newSections) {
-    newSections.forEach(function (section) {
-      section.dataset.jellioHomeOrder = String(order++);
-      built.push(section);
-    });
-    if (newSections.length) notifySections(newSections);
+  function place(section, slot) {
+    if (!section) return;
+    section.dataset.jellioHomeOrder = String(EXPENSIVE_ORDER_BASE + slot);
+    built.push(section);
+    notifySections([section]);
   }
 
-  // Shared with buildCatalogRows/buildGenreRows below via dedupe(): a
-  // title a recommendation row already picked should not also turn up
-  // in a catalog or genre row further down the same page, and a title
-  // a catalog row picked should not also turn up in a genre row. Only
-  // that final dedupe actually needs this priority order though; none
-  // of these three phases' own real network fetches depend on the
-  // other two at all, so all three fire together here, and each phase
-  // goes on screen as soon as it and the phases above it are done.
-  const seen = {};
-
-  const recommendationRows = buildRecommendationRows(seen).catch(function (err) {
-    console.warn('Jellio: could not load recommendation rows', err);
-    return [];
-  });
-  const communityData = isCommunityRowEnabled()
-    ? getCommunityWatching(getCommunityExcludedUsers()).catch(function (err) {
-        console.warn('Jellio: could not load community watching row', err);
-        return [];
+  // Never awaited: a slow community lookup can't hold the other rows up.
+  if (isCommunityRowEnabled()) {
+    Promise.all([getCommunityWatching(getCommunityExcludedUsers()), animeIdsPromise])
+      .then(function (results) {
+        const valid = dedupe(withoutAnime(results[0] || [], results[1]), seen);
+        if (!valid.length) return;
+        const row = buildRow('What Others Are Watching', valid);
+        if (row) place(wrapRowForCustomization(row, 'rec:What Others Are Watching'), EXPENSIVE_SLOTS.community);
       })
-    : Promise.resolve([]);
-  // Its own (cached) collections fetch rather than waiting on the
-  // personal rows above to finish first.
-  const catalogData = getCollections()
-    .then(fetchCatalogRows)
+      .catch(function (err) {
+        console.warn('Jellio: could not load community watching row', err);
+      });
+  }
+
+  const recommendations = buildRecommendationRows(seen)
+    .then(async function (specs) {
+      const animeIds = await animeIdsPromise;
+      specs.forEach(function (spec, index) {
+        const row = buildRow(spec.title, withoutAnime(spec.items, animeIds));
+        if (row) place(wrapRowForCustomization(row, 'rec:' + spec.title), EXPENSIVE_SLOTS.recommendations + index);
+      });
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load recommendation rows', err);
+    })
+    .finally(function () {
+      rowGate.open();
+    });
+
+  const catalogs = getCollections()
+    .then(function (collections) {
+      return Promise.all(
+        chooseCatalogs(collections).map(function (collection, index) {
+          const kind = collectionKind(collection);
+          const slot = EXPENSIVE_SLOTS.catalogs + index;
+          return Promise.all([rowGate(slot, () => getCollectionItems(collection.Id, kind, CATALOG_ROW_LIMIT)), animeIdsPromise])
+            .then(function (results) {
+              const entry = { id: collection.Id, kind: kind, title: titleFor(collection.Name, kind), items: withoutAnime(results[0], results[1]) };
+              place(buildCatalogRow(entry, seen), slot);
+            })
+            .catch(function () {});
+        }),
+      );
+    })
     .catch(function (err) {
       console.warn('Jellio: could not load catalog rows', err);
-      return [];
     });
-  const genreData = fetchGenreRows();
 
-  const animeIds = await getAnimeIds();
-  pushAll(
-    (await recommendationRows)
-      .map(function (spec) {
-        const row = buildRow(spec.title, withoutAnime(spec.items, animeIds));
-        return row ? wrapRowForCustomization(row, 'rec:' + spec.title) : null;
-      })
-      .filter(Boolean),
-  );
-  const rawCommunity = await communityData;
-  if (rawCommunity && rawCommunity.length > 0) {
-    const validCommunity = dedupe(withoutAnime(rawCommunity, animeIds), seen);
-    if (validCommunity.length > 0) {
-      const row = buildRow('What Others Are Watching', validCommunity);
-      if (row) pushAll([wrapRowForCustomization(row, 'rec:What Others Are Watching')]);
-    }
-  }
-  pushAll(buildCatalogRows(await catalogData, seen));
-  pushAll(buildGenreRows(await genreData, seen));
+  const genres = chooseHomeGenres()
+    .then(function (list) {
+      return Promise.all(
+        list.map(function (genre, index) {
+          const slot = EXPENSIVE_SLOTS.genres + index;
+          return Promise.all([rowGate(slot, () => getGenreItems(null, 'Movie,Series', genre, GENRE_ROW_LIMIT)), animeIdsPromise])
+            .then(function (results) {
+              place(buildGenreRow({ title: genre, items: withoutAnime(results[0], results[1]) }, seen), slot);
+            })
+            .catch(function () {});
+        }),
+      );
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load home genre rows', err);
+    });
 
-  return built.slice();
+  await Promise.all([recommendations, catalogs, genres]);
+  // The live list: a community row that turns up later is in it too.
+  return built;
 }
 
 // app.js's own preloadInitialData() calls this directly while the

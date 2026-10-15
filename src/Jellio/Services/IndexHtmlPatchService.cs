@@ -174,6 +174,7 @@ public class IndexHtmlPatchService(
         "runtime/rowcache.js",
         "screens/login.js",
         "screens/home.js",
+        "runtime/rowGate.js",
         "screens/library.js",
         "screens/search.js",
         "screens/detail.js",

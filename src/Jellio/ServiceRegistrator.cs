@@ -66,6 +66,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<AchievementService>();
         services.AddHostedService(sp => sp.GetRequiredService<AchievementService>());
         services.AddSingleton<ProfileSettingsStore>();
+        services.AddSingleton<CommunityWatchingCache>();
+        services.AddSingleton<GenreCache>();
 
         // Same no-state-of-its-own shape AchievementStore above already
         // has, no hosted service of its own: GrouplistController is

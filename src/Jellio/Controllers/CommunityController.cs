@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
+using Jellio.Services;
 using Jellio.Services.Achievements;
 using Jellyfin.Data.Enums;
+using Jellyfin.Database.Implementations.Enums;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -15,6 +18,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Jellio.Controllers;
 
@@ -32,7 +36,9 @@ public class CommunityController(
     IUserManager userManager,
     IUserDataManager userDataManager,
     IDtoService dtoService,
-    ProfileSettingsStore profileSettingsStore) : ControllerBase
+    ProfileSettingsStore profileSettingsStore,
+    CommunityWatchingCache cache,
+    ILogger<CommunityController> logger) : ControllerBase
 {
     public record CommunityUserDto(Guid Id, string Name, string? PrimaryImageTag);
 
@@ -77,6 +83,13 @@ public class CommunityController(
             return Unauthorized();
         }
 
+        var cacheKey = callerUserId.ToString("N") + "|" + string.Join(',', (excludedUserIds ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Order(StringComparer.OrdinalIgnoreCase));
+        if (cache.TryGet(cacheKey, out var cachedResponse) && cachedResponse is CommunityWatchingResponse hit)
+        {
+            return Ok(hit);
+        }
+
+        var timer = Stopwatch.StartNew();
         var excludedSet = new HashSet<Guid>();
         if (!string.IsNullOrWhiteSpace(excludedUserIds))
         {
@@ -95,7 +108,9 @@ public class CommunityController(
 
         if (eligibleUsers.Count == 0)
         {
-            return Ok(new CommunityWatchingResponse([]));
+            var empty = new CommunityWatchingResponse([]);
+            cache.Set(cacheKey, empty);
+            return Ok(empty);
         }
 
         var eligibleUserIds = eligibleUsers.Select(u => u.Id).ToHashSet();
@@ -146,7 +161,9 @@ public class CommunityController(
             }
         }
 
-        // 2. In-progress / Resumable items per user
+        // 2. In-progress / Resumable items per user. The database sorts by
+        // date played and returns only the few needed: this used to load
+        // every resumable item and look up each one's user data.
         foreach (var user in eligibleUsers)
         {
             var resumable = libraryManager.GetItemList(new InternalItemsQuery(user)
@@ -154,6 +171,9 @@ public class CommunityController(
                 IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
                 IsResumable = true,
                 Recursive = true,
+                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
+                Limit = 8,
+                DtoOptions = new DtoOptions(false),
             });
 
             var sortedResumable = resumable
@@ -167,7 +187,10 @@ public class CommunityController(
             }
         }
 
-        // 3. Recently finished items per user (played within last 14 days)
+        // 3. Recently finished items per user (played within last 14 days).
+        // This was the hot loop: every item each user had ever played was
+        // loaded and its user data read, only to keep the six newest. Now
+        // the database sorts by date played and returns a dozen.
         var fourteenDaysAgo = DateTime.UtcNow.AddDays(-14);
         foreach (var user in eligibleUsers)
         {
@@ -176,6 +199,9 @@ public class CommunityController(
                 IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
                 IsPlayed = true,
                 Recursive = true,
+                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
+                Limit = 12,
+                DtoOptions = new DtoOptions(false),
             });
 
             var sortedPlayed = played
@@ -209,6 +235,13 @@ public class CommunityController(
             resultItems.Add(new CommunityWatchingItem(dto, candidate.Watchers));
         }
 
-        return Ok(new CommunityWatchingResponse(resultItems));
+        var response = new CommunityWatchingResponse(resultItems);
+        cache.Set(cacheKey, response);
+        logger.LogInformation(
+            "Jellio: community watching built in {Ms} ms for {Users} users, {Items} items",
+            timer.ElapsedMilliseconds,
+            eligibleUsers.Count,
+            resultItems.Count);
+        return Ok(response);
     }
 }

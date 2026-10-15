@@ -3810,15 +3810,43 @@ function scanGenres(parentId, itemType) {
 // feedback's own explicit ask for "all genres" there rather than the
 // same handful the row heuristic below settles on, and as the real
 // existence check discoverGenres matches COMMON_GENRES against.
-export function getAllGenres(parentId, itemType) {
-  return scanGenres(parentId, itemType).then(function (items) {
-    const seen = {};
-    items.forEach(function (item) {
-      (item.Genres || []).forEach(function (genre) {
-        seen[genre] = true;
+// Every genre with how many items carry it, worked out and cached on the
+// server (Controllers/GenresController.cs) instead of downloading thousands
+// of items here. Falls back to the scan below if that endpoint fails.
+export function getGenreCounts(parentId, itemType) {
+  const params = new URLSearchParams({ types: itemType });
+  if (parentId) params.set('parentId', parentId);
+  const path = '/Jellio/genres?' + params.toString();
+  return cached(path, function () {
+    return rowJson(path, 'genres', { timeout: 30000 });
+  }).then(function (result) {
+    return (result && result.Genres) || [];
+  });
+}
+
+function genreCountsOrScan(parentId, itemType) {
+  return getGenreCounts(parentId, itemType).catch(function () {
+    return scanGenres(parentId, itemType).then(function (items) {
+      const counts = {};
+      items.forEach(function (item) {
+        (item.Genres || []).forEach(function (genre) {
+          counts[genre] = (counts[genre] || 0) + 1;
+        });
+      });
+      return Object.keys(counts).map(function (name) {
+        return { Name: name, Count: counts[name] };
       });
     });
-    return Object.keys(seen).sort();
+  });
+}
+
+export function getAllGenres(parentId, itemType) {
+  return genreCountsOrScan(parentId, itemType).then(function (counts) {
+    return counts.map(function (entry) {
+      return entry.Name;
+    }).sort(function (a, b) {
+      return a.localeCompare(b);
+    });
   });
 }
 
@@ -3830,22 +3858,19 @@ export function getAllGenres(parentId, itemType) {
 // way the original codebase's own homeRows.js discoverGenres() does,
 // not one library.
 function discoverGenresByCount(parentId, itemType, limit) {
-  return scanGenres(parentId, itemType)
-    .then(function (items) {
-      const counts = {};
-      items.forEach(function (item) {
-        (item.Genres || []).forEach(function (genre) {
-          counts[genre] = (counts[genre] || 0) + 1;
-        });
-      });
-      return Object.keys(counts)
-        .filter(function (genre) {
-          return counts[genre] >= 8;
+  return genreCountsOrScan(parentId, itemType)
+    .then(function (counts) {
+      return counts
+        .filter(function (entry) {
+          return entry.Count >= 8;
         })
         .sort(function (a, b) {
-          return counts[b] - counts[a];
+          return b.Count - a.Count;
         })
-        .slice(0, limit || 6);
+        .slice(0, limit || 6)
+        .map(function (entry) {
+          return entry.Name;
+        });
     })
     .catch(function () {
       return [];
@@ -3896,7 +3921,26 @@ export function discoverGenres(parentId, itemType, limit) {
     });
 }
 
+// A genre row, from the server's few-minute cache of the same query
+// (Controllers/GenresController.cs), else asked of Jellyfin directly.
 export function getGenreItems(parentId, itemType, genre, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const cachedParams = new URLSearchParams({ genre: genre, types: itemType, limit: String(limit || 20) });
+  if (parentId) cachedParams.set('parentId', parentId);
+  const cachedPath = '/Jellio/genres/items?' + cachedParams.toString();
+  return cached(cachedPath, function () {
+    return rowJson(cachedPath, 'genres');
+  })
+    .then(function (result) {
+      return collapseAudiobookTracks((result && result.Items) || []);
+    })
+    .catch(function () {
+      return getGenreItemsDirect(parentId, itemType, genre, limit);
+    });
+}
+
+function getGenreItemsDirect(parentId, itemType, genre, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -4506,11 +4550,15 @@ export function sendSessionGeneralCommand(sessionId, name, args) {
 }
 
 // Community recommendations: items active users are watching or recently finished.
+const COMMUNITY_TIMEOUT_MS = 45000;
+
 export function getCommunityWatching(excludedUserIds) {
   const params = new URLSearchParams();
   if (excludedUserIds) params.set('excludedUserIds', excludedUserIds);
   const query = params.toString();
-  return getJson('/Jellio/community/watching' + (query ? '?' + query : '')).then(function (result) {
+  // Can take a while on a busy server: its own long timeout, and the home
+  // screen never waits on it (screens/home.js).
+  return getJson('/Jellio/community/watching' + (query ? '?' + query : ''), COMMUNITY_TIMEOUT_MS).then(function (result) {
     return ((result && result.Items) || []).map(function (entry) {
       const item = Object.assign({}, entry.Item);
       item.Watchers = entry.Watchers || [];
