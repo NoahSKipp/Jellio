@@ -4,9 +4,9 @@
 import { getCurrentUserId } from './auth.js';
 
 export const LATEST_CHANGELOG = {
-  version: '1.78.0',
+  version: '1.79.0',
   title: "What's New in Jellio",
-  subtitle: 'Version 1.78.0',
+  subtitle: 'Version 1.79.0',
   summary: 'New Recommendations row, custom recommendation settings, manga chapter art fallback, and performance optimizations.',
   highlights: [
     {

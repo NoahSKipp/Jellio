@@ -111,6 +111,48 @@ function buildCard(iconName, title, description) {
   return { card: card, body: body };
 }
 
+function buildExpandableCard(iconName, title, description, initialExpanded) {
+  const isExpanded = Boolean(initialExpanded);
+  const card = el('div', 'jellio-settings-card' + (isExpanded ? ' jellio-settings-card-open' : ''));
+  const headerBtn = document.createElement('button');
+  headerBtn.type = 'button';
+  headerBtn.className = 'jellio-settings-card-header jellio-settings-card-header-clickable';
+  headerBtn.setAttribute('aria-expanded', String(isExpanded));
+
+  if (iconName) {
+    headerBtn.appendChild(el('span', 'jellio-settings-card-icon material-icons ' + iconName));
+  }
+  const heading = el('div', 'jellio-settings-card-heading');
+  heading.appendChild(el('h2', 'jellio-settings-card-title', title));
+  if (description) heading.appendChild(el('p', 'jellio-settings-card-description', description));
+  headerBtn.appendChild(heading);
+
+  const chevron = el('span', 'jellio-settings-expand-arrow material-icons', 'keyboard_arrow_down');
+  headerBtn.appendChild(chevron);
+  card.appendChild(headerBtn);
+
+  const body = el('div', 'jellio-settings-card-body');
+  if (!isExpanded) {
+    body.style.display = 'none';
+  }
+  card.appendChild(body);
+
+  headerBtn.addEventListener('click', function () {
+    const currentlyExpanded = headerBtn.getAttribute('aria-expanded') === 'true';
+    const nextState = !currentlyExpanded;
+    headerBtn.setAttribute('aria-expanded', String(nextState));
+    if (nextState) {
+      body.style.display = '';
+      card.classList.add('jellio-settings-card-open');
+    } else {
+      body.style.display = 'none';
+      card.classList.remove('jellio-settings-card-open');
+    }
+  });
+
+  return { card: card, body: body, headerBtn: headerBtn };
+}
+
 // The three real row shapes every card below is built from: a plain
 // info/control row, a whole-row button (Change avatar, Open admin
 // dashboard, real chevron trailing it), and a leading icon + title/
@@ -1191,7 +1233,12 @@ function buildAboutCategory() {
   const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
 
-  const { card: whatsNewCard, body: whatsNewBody } = buildCard('auto_awesome', "What's New", LATEST_CHANGELOG.subtitle);
+  const { card: whatsNewCard, body: whatsNewBody } = buildExpandableCard(
+    'auto_awesome',
+    "What's New",
+    LATEST_CHANGELOG.subtitle,
+    false,
+  );
   const list = el('div', 'jellio-settings-changelog-list');
   LATEST_CHANGELOG.highlights.forEach(function (h) {
     const item = el('div', 'jellio-settings-changelog-item');
