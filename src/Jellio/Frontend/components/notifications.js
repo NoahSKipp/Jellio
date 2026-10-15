@@ -13,7 +13,7 @@ import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
-import { hasSeenLatestChangelog, markLatestChangelogSeen, getChangelogNotification } from '../runtime/changelog.js';
+import { hasSeenLatestChangelog, markLatestChangelogSeen, getChangelogNotification, shouldShowChangelogNotification } from '../runtime/changelog.js';
 
 // A release date changes once a day at most, real reason this polls far
 // less often than components/nowPlaying.js's own 10s (a live session can
@@ -280,7 +280,7 @@ function poll() {
   getNotifications()
     .then(function (items) {
       let merged = items ? items.slice() : [];
-      if (!hasSeenLatestChangelog()) {
+      if (shouldShowChangelogNotification()) {
         merged.unshift(getChangelogNotification());
       }
       if (knownIds) {

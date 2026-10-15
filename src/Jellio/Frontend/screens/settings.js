@@ -54,7 +54,7 @@ import {
   toggleSelectedGenre,
   setSelectedGenres,
 } from '../runtime/recommendationSettings.js';
-import { LATEST_CHANGELOG } from '../runtime/changelog.js';
+import { LATEST_CHANGELOG, CHANGELOG_RELEASES } from '../runtime/changelog.js';
 import { invalidateAllHomeSections } from './home.js';
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
@@ -1240,11 +1240,19 @@ function buildAboutCategory() {
     false,
   );
   const list = el('div', 'jellio-settings-changelog-list');
-  LATEST_CHANGELOG.highlights.forEach(function (h) {
-    const item = el('div', 'jellio-settings-changelog-item');
-    item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
-    item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
-    list.appendChild(item);
+  const releases = Array.isArray(CHANGELOG_RELEASES) && CHANGELOG_RELEASES.length ? CHANGELOG_RELEASES : [LATEST_CHANGELOG];
+  releases.forEach(function (rel, idx) {
+    if (idx > 0) {
+      const header = el('div', 'jellio-settings-changelog-version-header', rel.subtitle);
+      header.style.cssText = 'font-weight: 700; font-size: 0.85rem; color: var(--jellio-text-muted, #888); margin-top: 14px; margin-bottom: 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);';
+      list.appendChild(header);
+    }
+    (rel.highlights || []).forEach(function (h) {
+      const item = el('div', 'jellio-settings-changelog-item');
+      item.appendChild(el('div', 'jellio-settings-changelog-item-title', h.title));
+      item.appendChild(el('div', 'jellio-settings-changelog-item-desc', h.description));
+      list.appendChild(item);
+    });
   });
   whatsNewBody.appendChild(list);
   wrap.appendChild(whatsNewCard);
