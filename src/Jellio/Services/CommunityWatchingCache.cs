@@ -24,7 +24,8 @@ public sealed class CommunityWatchingCache : IDisposable
     public CommunityWatchingCache(ISessionManager sessionManager)
     {
         _sessionManager = sessionManager;
-        _sessionManager.PlaybackStopped += OnPlaybackStopped;
+        _sessionManager.PlaybackStart += OnPlayback;
+        _sessionManager.PlaybackStopped += OnPlayback;
     }
 
     public bool TryGet(string key, out object? value)
@@ -73,12 +74,13 @@ public sealed class CommunityWatchingCache : IDisposable
 
     public void Dispose()
     {
-        _sessionManager.PlaybackStopped -= OnPlaybackStopped;
+        _sessionManager.PlaybackStart -= OnPlayback;
+        _sessionManager.PlaybackStopped -= OnPlayback;
     }
 
-    private void OnPlaybackStopped(object? sender, PlaybackProgressEventArgs e)
+    private void OnPlayback(object? sender, PlaybackProgressEventArgs e)
     {
-        // When someone stops playing, clear response entries so updated state can be returned.
+        // When someone starts or stops playing, clear response entries so updated state can be returned.
         // Historical database entries expire naturally after 5 minutes or on full clear.
         _entries.Clear();
     }
