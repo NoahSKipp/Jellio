@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.2",
+    "summary": "Stream resolution improvements and placeholder detection fixes.",
+    "highlights": [
+      {
+        "title": "Stream Detection Refinement",
+        "description": "Refined stream detection preserves valid .strm and debrid releases while cleanly filtering placeholder stubs."
+      }
+    ]
+  },
+  {
     "version": "1.83.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.0",
