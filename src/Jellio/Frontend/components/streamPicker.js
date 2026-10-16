@@ -22,7 +22,7 @@
 // real MediaSourceInfo, Gelato normalizes every source down to that one
 // shape server side before this runtime ever sees it), real feedback
 // asked for that specifically left out rather than guessed at.
-import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy } from '../runtime/api.js';
+import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy, isPlaceholderSource } from '../runtime/api.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
@@ -625,6 +625,10 @@ export async function openStreamPicker(item, options) {
   }
 
   if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
+
+  sources = (sources || []).filter(function (source) {
+    return !isPlaceholderSource(source, item);
+  });
 
   if (!sources.length) {
     shell.status.textContent = '';

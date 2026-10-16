@@ -36,6 +36,7 @@ import {
   getItemDetails,
   getPlaybackInfo,
   getMediaSources,
+  isPlaceholderSource,
   buildStreamUrl,
   buildCastStreamUrl,
   canBrowserDirectPlay,
@@ -738,7 +739,7 @@ export async function renderPlayer(root, params) {
   // TranscodingJobHelper it was not just the same request arriving
   // twice, and no new real ffmpeg process ever started for it.
   let playSessionId = playbackInfo && playbackInfo.PlaySessionId;
-  if (!mediaSource) {
+  if (!mediaSource || isPlaceholderSource(mediaSource, item)) {
     console.warn('Jellio: no playable media source for', itemId);
     renderPlaybackError(
       root,

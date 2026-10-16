@@ -2388,26 +2388,59 @@ export function invalidateMediaSourcesCache(itemId) {
   }
 }
 
+function normalizeTitleForComparison(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/\.(strm|mkv|mp4|avi)$/i, '')
+    .replace(/\s*\(\d{4}\)$/, '')
+    .replace(/\s+\d{4}$/, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
 // With no releases found, Gelato lists the title's own placeholder so the
-// list is never empty: no file behind it ("/stub" or a gelato:// path),
-// no size, and named after the title itself (or not at all) rather than
-// by the addon the way a real release is. It can't play.
+// list is never empty: no file behind it ("/stub", ".strm", or a gelato:// path),
+// no size (or tiny stub file < 1MB), and named after the title itself (or not at all)
+// rather than by the addon the way a real release is. It can't play.
 export function isPlaceholderSource(source, item) {
   if (!source) return false;
-  const path = String(source.Path || '');
-  if (path && path !== '/stub' && !/^(gelato|stremio):/i.test(path)) return false;
-  if (source.Size) return false;
-  // Not out yet: nothing without a file can be a real release.
+  const path = String(source.Path || '').trim();
+  const isStubPath =
+    !path ||
+    path === '/stub' ||
+    path.toLowerCase().includes('/stub') ||
+    /^(gelato|stremio):/i.test(path) ||
+    path.toLowerCase().endsWith('.strm');
+
+  // A real video release is never under 1MB. Placeholder .strm files or stubs are 0 bytes or a few bytes.
+  const hasNoRealSize = !source.Size || source.Size < 1024 * 1024;
+  const hasNoVideoStream = !(source.MediaStreams || []).some(function (s) {
+    return s.Type === 'Video';
+  });
+
+  if (!isStubPath && !hasNoRealSize) return false;
+
+  // Not out yet: nothing without a real playable file can be a real release.
   const premiere = item && item.PremiereDate ? Date.parse(item.PremiereDate) : NaN;
   if (premiere > Date.now()) return true;
-  const name = String(source.Name || '').trim();
-  if (!name) return true;
+
+  const rawName = String(source.Name || '').trim();
+  if (!rawName) return true;
+
+  const normName = normalizeTitleForComparison(rawName);
   const titles = [item && item.Name, item && item.SeriesName, item && item.OriginalTitle]
     .filter(Boolean)
-    .map(function (title) {
-      return String(title).trim().toLowerCase();
-    });
-  return titles.indexOf(name.toLowerCase()) !== -1;
+    .map(normalizeTitleForComparison);
+
+  if (titles.some(function (t) { return t && (t === normName || t.includes(normName) || normName.includes(t)); })) {
+    return true;
+  }
+
+  if (isStubPath && (hasNoRealSize || hasNoVideoStream)) {
+    return true;
+  }
+
+  return false;
 }
 
 export function getMediaSources(itemId, options) {
@@ -2424,7 +2457,7 @@ export function getMediaSources(itemId, options) {
   }
   // Callers asking while a lookup runs share it.
   if (!options?.forceFresh && mediaSourcesInFlight.has(idStr)) return mediaSourcesInFlight.get(idStr);
-  const params = new URLSearchParams({ Fields: 'MediaSources,OriginalTitle' });
+  const params = new URLSearchParams({ Fields: 'MediaSources,OriginalTitle,PremiereDate,ProductionYear' });
   const request = getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString())
     .then(function (result) {
       const sources = ((result && result.MediaSources) || []).filter(function (source) {
