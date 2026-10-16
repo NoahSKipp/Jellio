@@ -19,9 +19,9 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
-    "version": "1.82.0",
+    "version": "1.83.0",
     "title": "What's New in Jellio",
-    "subtitle": "Version 1.82.0",
+    "subtitle": "Version 1.83.0",
     "summary": "Community watching performance boost, placeholder stream handling, and customize improvements.",
     "highlights": [
       {
@@ -35,6 +35,18 @@ export const CHANGELOG_RELEASES = [
       {
         "title": "Home Customize Title Cleanup",
         "description": "Row titles in home edit mode now cleanly display row names without trailing chevron symbols."
+      }
+    ]
+  },
+  {
+    "version": "1.82.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.82.0",
+    "summary": "Streaming optimizations and stability improvements.",
+    "highlights": [
+      {
+        "title": "Streaming Optimization",
+        "description": "Stream resolution improvements and performance enhancements."
       }
     ]
   },
