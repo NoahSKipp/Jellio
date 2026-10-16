@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.3] - 2026-10-16\n\n### 🐛 Bug Fixes\n\n- *(streams)* Relax single-stub stream detection and add Digital Release Filter card\n",
+        "checksum": "d8b3c85a0a3511b0d10b044013d9c1ff",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.3/jellio_1.83.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-16T22:48:10Z",
+        "version": "1.83.3"
+      },
+      {
         "changelog": "## [1.83.2] - 2026-10-16\n\n### 🐛 Bug Fixes\n\n- *(streams)* Refine placeholder source detection to preserve strm releases\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Add 1.83.2 release notes\n",
         "checksum": "5e7d433c14f0db88a43f5f942271e160",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.2/jellio_1.83.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-09T19:22:38Z",
         "version": "1.71.0"
-      },
-      {
-        "changelog": "## [1.70.6] - 2026-10-09\n\n### 🐛 Bug Fixes\n\n- *(streams)* Recognise Gelato's placeholder by the title's own name\n",
-        "checksum": "cb434f382ad66c616a4d95b5d867be72",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.6/jellio_1.70.6.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-09T17:55:43Z",
-        "version": "1.70.6"
       }
     ]
   }
