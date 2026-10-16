@@ -730,7 +730,8 @@ export async function renderPlayer(root, params) {
     return undefined;
   }
 
-  let mediaSource = playbackInfo && playbackInfo.MediaSources && playbackInfo.MediaSources[0];
+  const playbackSources = (playbackInfo && playbackInfo.MediaSources) || [];
+  let mediaSource = playbackSources[0];
   // Real field on Jellyfin's own PlaybackInfoResponse, kept for the
   // whole time this title stays open the same way every real
   // jellyfin-web session already does, real feedback traced a live
@@ -739,7 +740,7 @@ export async function renderPlayer(root, params) {
   // TranscodingJobHelper it was not just the same request arriving
   // twice, and no new real ffmpeg process ever started for it.
   let playSessionId = playbackInfo && playbackInfo.PlaySessionId;
-  if (!mediaSource || isPlaceholderSource(mediaSource, item)) {
+  if (!mediaSource || (!preferredMediaSourceId && playbackSources.length === 1 && isPlaceholderSource(mediaSource))) {
     console.warn('Jellio: no playable media source for', itemId);
     renderPlaybackError(
       root,

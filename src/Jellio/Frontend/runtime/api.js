@@ -5,6 +5,7 @@
 import { loadItemInfo } from './itemInfo.js';
 import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
 import { copyableVideoCodecs } from './transcodeClassifier.js';
+import { hasStreamInfo, filterPlayableSources } from './quality.js';
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser } from './auth.js';
 import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
@@ -2388,62 +2389,13 @@ export function invalidateMediaSourcesCache(itemId) {
   }
 }
 
-function normalizeTitleForComparison(s) {
-  return String(s || '')
-    .toLowerCase()
-    .replace(/\.(strm|mkv|mp4|avi)$/i, '')
-    .replace(/\s*\(\d{4}\)$/, '')
-    .replace(/\s+\d{4}$/, '')
-    .replace(/[^a-z0-9]/g, '')
-    .trim();
-}
+export { filterPlayableSources };
 
-function isReleaseName(name) {
-  if (!name) return false;
-  return /\b(1080p|720p|2160p|4k|uhd|fhd|hd|web-?dl|web-?rip|bluray|bdrip|remux|hdr10?\+?|dv|dolby|x264|x265|h264|h265|hevc|av1|torrentio|debrid|realdebrid|alldebrid|premiumize)\b|s\d{1,2}e\d{1,2}/i.test(name);
-}
-
-// With no releases found, Gelato lists the title's own placeholder so the
-// list is never empty: no file behind it ("/stub" or a gelato:// path),
-// no size, and named after the title itself (or not at all)
-// rather than by the addon the way a real release is. It can't play.
-export function isPlaceholderSource(source, item) {
+// With no releases found, Gelato lists a single placeholder source with no
+// quality, audio, video, or size info at all.
+export function isPlaceholderSource(source) {
   if (!source) return false;
-
-  // Probed video stream means it is definitely a real playable media source
-  if ((source.MediaStreams || []).some(function (s) { return s.Type === 'Video' && (s.Width || 0) > 0; })) {
-    return false;
-  }
-
-  const rawName = String(source.Name || '').trim();
-  if (isReleaseName(rawName)) {
-    return false;
-  }
-
-  const path = String(source.Path || '').trim();
-  const isExplicitStub =
-    !path ||
-    path === '/stub' ||
-    path.toLowerCase().includes('/stub') ||
-    /^(gelato|stremio):\/\//i.test(path);
-
-  const premiere = item && item.PremiereDate ? Date.parse(item.PremiereDate) : NaN;
-  const unreleased = !isNaN(premiere) && premiere > Date.now();
-
-  const normName = normalizeTitleForComparison(rawName);
-  const titles = [item && item.Name, item && item.SeriesName, item && item.OriginalTitle]
-    .filter(Boolean)
-    .map(normalizeTitleForComparison)
-    .filter(Boolean);
-
-  if (unreleased && (isExplicitStub || !source.Size || !normName || titles.indexOf(normName) !== -1)) {
-    return true;
-  }
-
-  const isBareTitle = !normName || titles.indexOf(normName) !== -1;
-  const hasNoRealFile = isExplicitStub || !source.Size || source.Size === 0;
-
-  return isBareTitle && hasNoRealFile;
+  return !hasStreamInfo(source);
 }
 
 export function getMediaSources(itemId, options) {
@@ -2463,10 +2415,12 @@ export function getMediaSources(itemId, options) {
   const params = new URLSearchParams({ Fields: 'MediaSources,OriginalTitle,PremiereDate,ProductionYear' });
   const request = getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString())
     .then(function (result) {
-      const sources = ((result && result.MediaSources) || []).filter(function (source) {
-        return !isPlaceholderSource(source, result);
-      });
-      mediaSourcesCache.set(idStr, { time: Date.now(), sources: sources });
+      const sources = filterPlayableSources(result && result.MediaSources);
+      if (sources.length) {
+        mediaSourcesCache.set(idStr, { time: Date.now(), sources: sources });
+      } else {
+        mediaSourcesCache.delete(idStr);
+      }
       return sources;
     })
     .finally(function () {

@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.3",
+    "summary": "Nuvio-style Digital Release Filter card and relaxed single-stub stream detection.",
+    "highlights": [
+      {
+        "title": "Digital Release Filter Card",
+        "description": "When no playable streams are found, the stream picker now displays a Digital Release Filter card with refresh and provider controls."
+      },
+      {
+        "title": "Relaxed Stream Detection",
+        "description": "Only treats a title as having no streams when a single media source returns with no quality, codec, bitrate, or audio metadata."
+      }
+    ]
+  },
+  {
     "version": "1.83.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.2",

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { labelQuality, sourceQuality } from '../../src/Jellio/Frontend/runtime/quality.js';
+import { labelQuality, sourceQuality, hasStreamInfo, filterPlayableSources } from '../../src/Jellio/Frontend/runtime/quality.js';
 
 const named = (name, video) => ({ Name: name, MediaStreams: video ? [Object.assign({ Type: 'Video' }, video)] : [] });
 
@@ -27,4 +27,31 @@ for (const [name, video, expected] of cases) {
 test('label quality only reads the first line', () => {
   assert.equal(labelQuality(named('Torrentio\nShow.1080p')), null);
   assert.equal(labelQuality(named('⚡ HD (720p)')), 'HD');
+});
+
+test('filterPlayableSources only drops a single stream when it has no quality/audio/video/size info at all', () => {
+  // 1 stream with no info at all -> empty ("No streams available")
+  assert.deepEqual(filterPlayableSources([{ Id: 'stub-1', Name: 'Some Movie Title', MediaStreams: [] }]), []);
+
+  // 1 stream with quality/audio/video/size info -> kept
+  const withQuality = [{ Id: 's1', Name: 'Movie_1080p_WEB-DL', MediaStreams: [] }];
+  assert.deepEqual(filterPlayableSources(withQuality), withQuality);
+
+  const withAudio = [{ Id: 's2', Name: 'Stream', MediaStreams: [{ Type: 'Audio', Codec: 'aac', Channels: 2 }] }];
+  assert.deepEqual(filterPlayableSources(withAudio), withAudio);
+
+  const withFlag = [{ Id: 's3', Name: '⚡ Instant 🇬🇧', MediaStreams: [] }];
+  assert.deepEqual(filterPlayableSources(withFlag), withFlag);
+
+  const withSize = [{ Id: 's4', Name: 'Some Movie Title', Size: 1500000000, MediaStreams: [] }];
+  assert.deepEqual(filterPlayableSources(withSize), withSize);
+
+  // Multiple streams -> never dropped even if individual names have no parsed tags
+  const multiple = [
+    { Id: 'm1', Name: 'Some Movie Title', MediaStreams: [] },
+    { Id: 'm2', Name: 'Another Source', MediaStreams: [] },
+  ];
+  assert.deepEqual(filterPlayableSources(multiple), multiple);
+  assert.equal(hasStreamInfo(multiple[0]), false);
+  assert.equal(hasStreamInfo(withQuality[0]), true);
 });

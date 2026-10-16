@@ -48,3 +48,57 @@ export function sourceQuality(source) {
   }
   return matchName(String(source.Name || ''));
 }
+
+const STREAM_INFO_NAME_PATTERN =
+  /(^|[^a-z0-9])(2160p|1440p|1080[pi]|720p|576p|540p|480p|360p|240p|4k|uhd|qhd|2k|fhd|hd|sd|dvdrip|web-?dl|web-?rip|bluray|blu-ray|bdrip|brrip|remux|hdtv|hevc|[xh]\.?265|[xh]\.?264|avc|av1|vp9|hdr10?\+?|dv|dovi|dolby|hlg|10\s?bit|aac|e?-?ac-?3|ddp|dd\+|dts(-?hd|-?x)?|truehd|atmos|flac|opus|mp3|l?pcm|[257]\.[01]|stereo|mono|multi|dual([-.\s]?audio)?|\d+(\.\d+)?\s*(gb|mb|gib|mib|mbps|kbps))([^a-z0-9]|$)/i;
+
+function hasFlagEmoji(text) {
+  const chars = Array.from(text || '');
+  for (let i = 0; i < chars.length - 1; i++) {
+    const a = chars[i].codePointAt(0);
+    const b = chars[i + 1].codePointAt(0);
+    if (a >= 0x1f1e6 && a <= 0x1f1ff && b >= 0x1f1e6 && b <= 0x1f1ff) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// True if a MediaSource carries any discernible quality, video, audio, or
+// size/bitrate info (from probed MediaStreams, file size/bitrate, or release
+// labels/flags in its Name). A bare unprobed placeholder stub has none.
+export function hasStreamInfo(source) {
+  if (!source) return false;
+  if (sourceQuality(source)) return true;
+  if ((source.Size || 0) > 0 || (source.Bitrate || 0) > 0) return true;
+
+  const streams = source.MediaStreams || [];
+  const hasProbedStream = streams.some(function (s) {
+    if (!s) return false;
+    if (s.Type === 'Video') {
+      return (s.Width || 0) > 0 || (s.Height || 0) > 0 || !!s.Codec || (s.BitRate || 0) > 0 || !!s.VideoRange || !!s.VideoRangeType;
+    }
+    if (s.Type === 'Audio') {
+      return !!s.Codec || (s.Channels || 0) > 0 || !!s.Language || (s.BitRate || 0) > 0;
+    }
+    return s.Type === 'Subtitle';
+  });
+  if (hasProbedStream) return true;
+
+  const name = String(source.Name || '');
+  if (STREAM_INFO_NAME_PATTERN.test(name)) return true;
+  if (hasFlagEmoji(name)) return true;
+
+  return false;
+}
+
+// Only treat a MediaSources list as empty ("No streams available") when it
+// contains a single entry and that entry carries no quality, audio, video, or
+// size info at all.
+export function filterPlayableSources(sources) {
+  const list = Array.isArray(sources) ? sources.filter(Boolean) : [];
+  if (list.length === 1 && !hasStreamInfo(list[0])) {
+    return [];
+  }
+  return list;
+}

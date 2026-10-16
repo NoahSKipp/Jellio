@@ -22,11 +22,11 @@
 // real MediaSourceInfo, Gelato normalizes every source down to that one
 // shape server side before this runtime ever sees it), real feedback
 // asked for that specifically left out rather than guessed at.
-import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy, isPlaceholderSource } from '../runtime/api.js';
+import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy } from '../runtime/api.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
-import { QUALITY_ORDER, labelQuality, sourceQuality } from '../runtime/quality.js';
+import { QUALITY_ORDER, labelQuality, sourceQuality, filterPlayableSources } from '../runtime/quality.js';
 
 export { sourceQuality };
 import { navigateTo } from '../runtime/router.js';
@@ -563,38 +563,34 @@ function buildChipRow(entries, onSelect) {
   return filterRow;
 }
 
-// Like Nuvio: nothing playable found, so say so instead of offering a
-// stream that can't play. Usually the title isn't out digitally yet.
-function renderNoStreams(root, item, onRetry, onClose) {
-  root.textContent = '';
-  const wrap = el('div', 'jellio-stream-picker-empty');
-  wrap.appendChild(el('span', 'material-icons videocam_off jellio-stream-picker-empty-icon'));
-  wrap.appendChild(el('h2', 'jellio-stream-picker-empty-title', 'No streams available'));
-  const released = item && item.PremiereDate ? new Date(item.PremiereDate) : null;
-  const upcoming = released && released.getTime() > Date.now();
-  const recent = released && Date.now() - released.getTime() < 120 * 24 * 60 * 60 * 1000;
-  wrap.appendChild(
+function buildRefreshChip(onRefresh) {
+  const btn = el('button', 'jellio-stream-picker-filter-chip');
+  btn.type = 'button';
+  btn.setAttribute('aria-label', 'Refresh streams');
+  btn.title = 'Refresh streams';
+  const icon = el('span', 'material-icons refresh');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.fontSize = '1.15em';
+  icon.style.verticalAlign = 'middle';
+  btn.appendChild(icon);
+  btn.addEventListener('click', onRefresh);
+  return btn;
+}
+
+function buildDigitalReleaseFilterCard(onRefresh) {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'jellio-stream-picker-card';
+  card.appendChild(el('div', 'jellio-stream-picker-card-title', '📅 Digital Release Filter'));
+  card.appendChild(
     el(
-      'p',
-      'jellio-stream-picker-empty-text',
-      upcoming
-        ? 'Releases on ' + released.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + '. Streams usually show up once it’s out on digital.'
-        : recent || !released
-          ? 'There may not be a digital release yet. Check back once it’s out on digital.'
-          : 'Nothing was found for this title right now. Try again later.',
+      'div',
+      'jellio-stream-picker-card-desc',
+      '⚠ No streams found. Perhaps there is no digital release available for this media yet.',
     ),
   );
-  const actions = el('div', 'jellio-screen-retry-actions');
-  const retry = el('button', 'jellio-detail-error-back', 'Try again');
-  retry.type = 'button';
-  retry.addEventListener('click', onRetry);
-  actions.appendChild(retry);
-  const close = el('button', 'jellio-detail-error-back', 'Close');
-  close.type = 'button';
-  close.addEventListener('click', onClose);
-  actions.appendChild(close);
-  wrap.appendChild(actions);
-  root.appendChild(wrap);
+  card.addEventListener('click', onRefresh);
+  return card;
 }
 
 // A picker with nothing real to pick between is not worth showing at
@@ -607,6 +603,9 @@ function renderNoStreams(root, item, onRetry, onClose) {
 export async function openStreamPicker(item, options) {
   closeStreamPicker();
   const opts = options || {};
+  const refreshStreams = function () {
+    openStreamPicker(item, Object.assign({}, opts, { forceFresh: true }));
+  };
 
   const shell = buildOverlayShell(item);
   renderLoading(shell.status);
@@ -626,89 +625,83 @@ export async function openStreamPicker(item, options) {
 
   if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
 
-  sources = (sources || []).filter(function (source) {
-    return !isPlaceholderSource(source, item);
-  });
-
-  if (!sources.length) {
-    shell.status.textContent = '';
-    renderNoStreams(shell.status, item, function () {
-      openStreamPicker(item, Object.assign({}, opts, { forceFresh: true }));
-    }, closeStreamPicker);
-    return;
-  }
+  sources = filterPlayableSources(sources);
 
   // Video transcode policy (plugin settings): in Avoid and Block each
   // stream is checked for whether the server would have to re-encode its
   // video here; those go after the ones it can copy, and in Block they're
   // left out.
-  try {
-    await loadVideoTranscodePolicy();
-  } catch (err) {}
-  const avoiding = avoidingVideoTranscodes();
   const methods = new Map();
-  if (avoiding) {
-    sources.forEach(function (source) {
-      // Unprobed addon streams are judged from their name; nothing to go
-      // on in either means no badge.
-      if (!videoInfoOf(source)) return;
-      const classification = classifySource(source, canBrowserDirectPlay(source));
-      methods.set(source.Id, { method: classification.playMethod, classification: classification });
-    });
-    if (getVideoTranscodePolicy() === 'Block') {
-      const playable = sources.filter(function (source) {
-        return !methods.has(source.Id) || methods.get(source.Id).method !== 'Transcode';
+  if (sources.length) {
+    try {
+      await loadVideoTranscodePolicy();
+    } catch (err) {}
+    const avoiding = avoidingVideoTranscodes();
+    if (avoiding) {
+      sources.forEach(function (source) {
+        // Unprobed addon streams are judged from their name; nothing to go
+        // on in either means no badge.
+        if (!videoInfoOf(source)) return;
+        const classification = classifySource(source, canBrowserDirectPlay(source));
+        methods.set(source.Id, { method: classification.playMethod, classification: classification });
       });
-      if (!playable.length) {
-        if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
-        shell.status.textContent = '';
-        renderRetry(
-          shell.status,
-          'Every stream for this title would need the server to re-encode the video, which is turned off on this server.',
-          null,
-          { onBack: closeStreamPicker, backLabel: 'Close' },
-        );
-        return;
+      if (getVideoTranscodePolicy() === 'Block') {
+        const playable = sources.filter(function (source) {
+          return !methods.has(source.Id) || methods.get(source.Id).method !== 'Transcode';
+        });
+        if (!playable.length) {
+          if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
+          shell.status.textContent = '';
+          renderRetry(
+            shell.status,
+            'Every stream for this title would need the server to re-encode the video, which is turned off on this server.',
+            null,
+            { onBack: closeStreamPicker, backLabel: 'Close' },
+          );
+          return;
+        }
+        sources = playable;
       }
-      sources = playable;
     }
-  }
 
-  // Streams that recently failed to play go last, flagged below; in Avoid,
-  // streams that need a video re-encode go after the rest.
-  sources = sources
-    .map(function (source, index) {
-      return {
-        source: source,
-        index: index,
-        rank: (isBadSource(item.Id, source) ? 2 : 0) + (methods.has(source.Id) && methods.get(source.Id).method === 'Transcode' ? 1 : 0),
-      };
-    })
-    .sort(function (a, b) {
-      return a.rank - b.rank || a.index - b.index;
-    })
-    .map(function (entry) {
-      return entry.source;
-    });
+    // Streams that recently failed to play go last, flagged below; in Avoid,
+    // streams that need a video re-encode go after the rest.
+    sources = sources
+      .map(function (source, index) {
+        return {
+          source: source,
+          index: index,
+          rank: (isBadSource(item.Id, source) ? 2 : 0) + (methods.has(source.Id) && methods.get(source.Id).method === 'Transcode' ? 1 : 0),
+        };
+      })
+      .sort(function (a, b) {
+        return a.rank - b.rank || a.index - b.index;
+      })
+      .map(function (entry) {
+        return entry.source;
+      });
 
-  if (!opts.forceChoice && sources.length === 1) {
-    closeStreamPicker();
-    navigateTo(playHash(item.Id, sources[0].Id));
-    return;
-  }
-
-  if (!opts.forceChoice && isRememberStreamEnabled()) {
-    const remembered = readRememberedSources()[item.Id];
-    const rememberedId = remembered && remembered.mediaSourceId;
-    const stillOffered = rememberedId && sources.some(function (source) {
-      return source.Id === rememberedId && !isBadSource(item.Id, source);
-    });
-    if (stillOffered) {
+    if (!opts.forceChoice && sources.length === 1) {
       closeStreamPicker();
-      navigateTo(playHash(item.Id, rememberedId));
+      navigateTo(playHash(item.Id, sources[0].Id));
       return;
     }
+
+    if (!opts.forceChoice && isRememberStreamEnabled()) {
+      const remembered = readRememberedSources()[item.Id];
+      const rememberedId = remembered && remembered.mediaSourceId;
+      const stillOffered = rememberedId && sources.some(function (source) {
+        return source.Id === rememberedId && !isBadSource(item.Id, source);
+      });
+      if (stillOffered) {
+        closeStreamPicker();
+        navigateTo(playHash(item.Id, rememberedId));
+        return;
+      }
+    }
   }
+
+  if (document.getElementById(OVERLAY_ID) !== shell.overlay) return;
 
   const overlay = shell.overlay;
   shell.status.remove();
@@ -744,12 +737,7 @@ export async function openStreamPicker(item, options) {
 
   const panel = el('div', 'jellio-stream-picker-panel');
 
-  // Real Jellyfin field, the same one screens/player.js's own resume
-  // already reads off item.UserData to seek on real playback start:
-  // this is a fast path onto that same real behaviour, not a second
-  // resume mechanism, picking the remembered/first source and letting
-  // the player's own existing resume logic do the actual seek.
-  const resumeTicks = item.UserData && item.UserData.PlaybackPositionTicks;
+  const resumeTicks = sources.length && item.UserData && item.UserData.PlaybackPositionTicks;
   if (resumeTicks) {
     const resumeButton = el('button', 'jellio-stream-picker-resume', 'Resume from ' + formatResumeLabel(resumeTicks));
     resumeButton.type = 'button';
@@ -771,6 +759,24 @@ export async function openStreamPicker(item, options) {
   let selectedLanguage = null;
   let selectedQuality = null;
   const list = el('div', 'jellio-stream-picker-list');
+
+  if (!sources.length) {
+    const emptyFilterRow = el('div', 'jellio-stream-picker-filters');
+    emptyFilterRow.appendChild(buildRefreshChip(refreshStreams));
+    const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', 'All');
+    allChip.type = 'button';
+    emptyFilterRow.appendChild(allChip);
+    panel.appendChild(emptyFilterRow);
+
+    const filterCard = buildDigitalReleaseFilterCard(refreshStreams);
+    list.appendChild(filterCard);
+    panel.appendChild(list);
+    overlay.appendChild(panel);
+    window.setTimeout(function () {
+      try { filterCard.focus(); } catch (e) {}
+    }, 50);
+    return;
+  }
 
   function renderList() {
     list.textContent = '';
@@ -804,7 +810,10 @@ export async function openStreamPicker(item, options) {
     selectedLanguage = code;
     renderList();
   });
-  if (filterRow) panel.appendChild(filterRow);
+  if (filterRow) {
+    filterRow.insertBefore(buildRefreshChip(refreshStreams), filterRow.firstChild);
+    panel.appendChild(filterRow);
+  }
   const qualityRow = buildQualityFilterRow(sources, function (quality) {
     selectedQuality = quality;
     renderList();
