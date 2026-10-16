@@ -136,7 +136,15 @@ export function wrapRowForCustomization(rowElement, key) {
 
 function rowDisplayName(wrapper) {
   const title = wrapper.querySelector('.jellio-row-title');
-  return (title && title.textContent) || 'Row';
+  if (!title) return 'Row';
+  const clone = title.cloneNode(true);
+  const icons = clone.querySelectorAll('.jellio-row-title-chevron, .material-icons');
+  for (let i = 0; i < icons.length; i++) {
+    if (icons[i].parentNode) {
+      icons[i].parentNode.removeChild(icons[i]);
+    }
+  }
+  return clone.textContent.trim() || 'Row';
 }
 
 function buildRowBar(wrapper, key, hidden, canMoveUp, canMoveDown, onChange) {
