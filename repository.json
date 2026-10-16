@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.0] - 2026-10-16\n\n### 🚀 Features\n\n- *(changelog)* Add 1.82.0 release notes to What's New\n\n### 🐛 Bug Fixes\n\n- *(tests)* Restore PlaybackStart listener in CommunityWatchingCache\n\n### ⚡ Performance\n\n- *(community)* Optimize community watching with parallel queries, two-tier cache, and client pre-warming\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Sync macOS 0.6.0 release entry\n- *(changelog)* Prepare 1.83.0 release entry\n\n### 💼 Other\n\n- Fix row title display name in home customize mode: strip expand chevron icon text\n- Fix placeholder stream detection: recognise .strm stubs, match release titles, and show no streams available\n",
+        "checksum": "ecd7fb833c2d678da1b1caf6150fc208",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.0/jellio_1.83.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-16T14:13:08Z",
+        "version": "1.83.0"
+      },
+      {
         "changelog": "## [1.82.0] - 2026-10-15\n\n### 🚀 Features\n\n- Include full version history across all releases in changelog\n",
         "checksum": "7df979c7f1bf0f446c90dfc89cb17edc",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.82.0/jellio_1.82.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-09T16:02:51Z",
         "version": "1.70.4"
-      },
-      {
-        "changelog": "## [1.70.3] - 2026-10-09\n",
-        "checksum": "a31b06a7067679ce0656d489c7c265ea",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.70.3/jellio_1.70.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-09T15:21:01Z",
-        "version": "1.70.3"
       }
     ]
   }
