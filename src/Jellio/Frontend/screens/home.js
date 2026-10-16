@@ -23,6 +23,7 @@ import {
   isHomeRowCacheEnabled,
   markHomeRowPainted,
   getCommunityWatching,
+  invalidateCommunityWatchingCache,
 } from '../runtime/api.js';
 import {
   isCommunityRowEnabled,
@@ -501,6 +502,7 @@ export function invalidateHomeSections() {
 
 export function invalidateAllHomeSections() {
   invalidateHomeSections();
+  invalidateCommunityWatchingCache();
   expensiveSectionsPromise = null;
   expensiveBuilt = [];
 }
@@ -772,6 +774,10 @@ export function preloadHomeSections() {
       cheapSectionsPromise = null;
       return { sections: [], collections: null };
     });
+    // Pre-warm the community watching cache in the background so it is ready when the reader scrolls down
+    if (isCommunityRowEnabled()) {
+      getCommunityWatching(getCommunityExcludedUsers()).catch(function () {});
+    }
   }
   // With the row cache on, the rows below the fold (recommendation,
   // catalog and genre rows) wait until the screen scrolls near them:

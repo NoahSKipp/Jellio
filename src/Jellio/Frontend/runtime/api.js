@@ -4584,20 +4584,50 @@ export function sendSessionGeneralCommand(sessionId, name, args) {
 
 // Community recommendations: items active users are watching or recently finished.
 const COMMUNITY_TIMEOUT_MS = 45000;
+const communityWatchingCache = new Map();
+const communityWatchingInFlight = new Map();
+const COMMUNITY_CACHE_TTL_MS = 60000;
+
+export function invalidateCommunityWatchingCache() {
+  communityWatchingCache.clear();
+}
 
 export function getCommunityWatching(excludedUserIds) {
   const params = new URLSearchParams();
   if (excludedUserIds) params.set('excludedUserIds', excludedUserIds);
   const query = params.toString();
-  // Can take a while on a busy server: its own long timeout, and the home
-  // screen never waits on it (screens/home.js).
-  return getJson('/Jellio/community/watching' + (query ? '?' + query : ''), COMMUNITY_TIMEOUT_MS).then(function (result) {
-    return ((result && result.Items) || []).map(function (entry) {
-      const item = Object.assign({}, entry.Item);
-      item.Watchers = entry.Watchers || [];
-      return item;
+  const cacheKey = query || '__all__';
+
+  const now = Date.now();
+  if (communityWatchingCache.has(cacheKey)) {
+    const entry = communityWatchingCache.get(cacheKey);
+    if (now - entry.time < COMMUNITY_CACHE_TTL_MS) {
+      return Promise.resolve(entry.items);
+    }
+    communityWatchingCache.delete(cacheKey);
+  }
+
+  if (communityWatchingInFlight.has(cacheKey)) {
+    return communityWatchingInFlight.get(cacheKey);
+  }
+
+  // Priority slot: jumps ahead of background catalog and genre queries
+  const request = getJson('/Jellio/community/watching' + (query ? '?' + query : ''), COMMUNITY_TIMEOUT_MS, null, true)
+    .then(function (result) {
+      const items = ((result && result.Items) || []).map(function (entry) {
+        const item = Object.assign({}, entry.Item);
+        item.Watchers = entry.Watchers || [];
+        return item;
+      });
+      communityWatchingCache.set(cacheKey, { time: Date.now(), items: items });
+      return items;
+    })
+    .finally(function () {
+      communityWatchingInFlight.delete(cacheKey);
     });
-  });
+
+  communityWatchingInFlight.set(cacheKey, request);
+  return request;
 }
 
 // Community users list for settings filter.

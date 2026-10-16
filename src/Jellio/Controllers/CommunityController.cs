@@ -58,6 +58,14 @@ public class CommunityController(
         List<CommunityWatchingItem> Items
     );
 
+    public record HistoricalActivity(
+        Guid ItemId,
+        Guid UserId,
+        string Activity,
+        int Priority,
+        DateTime Date
+    );
+
     [HttpGet("users")]
     public ActionResult<List<CommunityUserDto>> GetUsers()
     {
@@ -163,56 +171,67 @@ public class CommunityController(
             }
         }
 
-        // 2. In-progress / Resumable items per user. The database sorts by
-        // date played and returns only the few needed: this used to load
-        // every resumable item and look up each one's user data.
-        foreach (var user in eligibleUsers)
+        // 2 & 3: In-progress / Resumable items and recently finished items across eligible users.
+        // Uses a 5-minute historical cache so expensive SQLite database queries across all users
+        // do not run on every page visit or playback start.
+        if (!cache.TryGetHistory<List<HistoricalActivity>>(out var history) || history == null)
         {
-            var resumable = libraryManager.GetItemList(new InternalItemsQuery(user)
-            {
-                IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
-                IsResumable = true,
-                Recursive = true,
-                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
-                Limit = 8,
-            });
+            var fourteenDaysAgo = DateTime.UtcNow.AddDays(-14);
+            history = eligibleUsers
+                .AsParallel()
+                .SelectMany(user =>
+                {
+                    var userHistory = new List<HistoricalActivity>();
 
-            var sortedResumable = resumable
-                .Select(item => new { Item = item, Date = userDataManager.GetUserData(user, item)?.LastPlayedDate ?? DateTime.MinValue })
-                .OrderByDescending(x => x.Date)
-                .Take(8);
+                    var resumable = libraryManager.GetItemList(new InternalItemsQuery(user)
+                    {
+                        IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
+                        IsResumable = true,
+                        Recursive = true,
+                        OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
+                        Limit = 8,
+                    });
 
-            foreach (var entry in sortedResumable)
-            {
-                RegisterWatcher(entry.Item, user.Id, "watching", 1, entry.Date);
-            }
+                    foreach (var item in resumable)
+                    {
+                        var date = userDataManager.GetUserData(user, item)?.LastPlayedDate ?? DateTime.MinValue;
+                        userHistory.Add(new HistoricalActivity(item.Id, user.Id, "watching", 1, date));
+                    }
+
+                    var played = libraryManager.GetItemList(new InternalItemsQuery(user)
+                    {
+                        IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
+                        IsPlayed = true,
+                        Recursive = true,
+                        OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
+                        Limit = 12,
+                    });
+
+                    foreach (var item in played)
+                    {
+                        var date = userDataManager.GetUserData(user, item)?.LastPlayedDate ?? DateTime.MinValue;
+                        if (date >= fourteenDaysAgo)
+                        {
+                            userHistory.Add(new HistoricalActivity(item.Id, user.Id, "finished", 2, date));
+                        }
+                    }
+
+                    return userHistory;
+                })
+                .ToList();
+
+            cache.SetHistory(history);
         }
 
-        // 3. Recently finished items per user (played within last 14 days).
-        // This was the hot loop: every item each user had ever played was
-        // loaded and its user data read, only to keep the six newest. Now
-        // the database sorts by date played and returns a dozen.
-        var fourteenDaysAgo = DateTime.UtcNow.AddDays(-14);
-        foreach (var user in eligibleUsers)
+        foreach (var entry in history)
         {
-            var played = libraryManager.GetItemList(new InternalItemsQuery(user)
+            if (eligibleUserIds.Contains(entry.UserId))
             {
-                IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
-                IsPlayed = true,
-                Recursive = true,
-                OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
-                Limit = 12,
-            });
-
-            var sortedPlayed = played
-                .Select(item => new { Item = item, Date = userDataManager.GetUserData(user, item)?.LastPlayedDate ?? DateTime.MinValue })
-                .Where(x => x.Date >= fourteenDaysAgo)
-                .OrderByDescending(x => x.Date)
-                .Take(6);
-
-            foreach (var entry in sortedPlayed)
-            {
-                RegisterWatcher(entry.Item, user.Id, "finished", 2, entry.Date);
+                var item = libraryManager.GetItemById(entry.ItemId);
+                if (item != null)
+                {
+                    RegisterWatcher(item, entry.UserId, entry.Activity, entry.Priority, entry.Date);
+                }
             }
         }
 
