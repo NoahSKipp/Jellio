@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.4",
+    "summary": "Placeholder stub filtering fix and removal of single-stream auto-pick.",
+    "highlights": [
+      {
+        "title": "Accurate Placeholder Filtering",
+        "description": "Unprobed stubs with default Unknown video ranges or sub-megabyte stub sizes are now cleanly recognized as empty and routed to the Digital Release Filter card."
+      },
+      {
+        "title": "Always Show Stream Picker",
+        "description": "Removed automatic playback when only a single stream is returned so you can always inspect or refresh the available source first."
+      }
+    ]
+  },
+  {
     "version": "1.83.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.3",

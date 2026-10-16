@@ -50,7 +50,7 @@ export function sourceQuality(source) {
 }
 
 const STREAM_INFO_NAME_PATTERN =
-  /(^|[^a-z0-9])(2160p|1440p|1080[pi]|720p|576p|540p|480p|360p|240p|4k|uhd|qhd|2k|fhd|hd|sd|dvdrip|web-?dl|web-?rip|bluray|blu-ray|bdrip|brrip|remux|hdtv|hevc|[xh]\.?265|[xh]\.?264|avc|av1|vp9|hdr10?\+?|dv|dovi|dolby|hlg|10\s?bit|aac|e?-?ac-?3|ddp|dd\+|dts(-?hd|-?x)?|truehd|atmos|flac|opus|mp3|l?pcm|[257]\.[01]|stereo|mono|multi|dual([-.\s]?audio)?|\d+(\.\d+)?\s*(gb|mb|gib|mib|mbps|kbps))([^a-z0-9]|$)/i;
+  /(^|[^a-z0-9])(web-?dl|web-?rip|bluray|blu-ray|bdrip|brrip|remux|hdtv|hevc|[xh]\.?265|[xh]\.?264|avc|av1|vp9|hdr10?\+?|dovi|dolby\s?vision|hlg|10\s?bit|aac|e?-?ac-?3|ddp|dd\+|dts(-?hd|-?x)?|truehd|atmos|flac|l?pcm|[257]\.[01]|dual[-.\s]?audio|multi[-.\s]?audio|\d+(\.\d+)?\s*(gb|mb|gib|mib|mbps|kbps))([^a-z0-9]|$)/i;
 
 function hasFlagEmoji(text) {
   const chars = Array.from(text || '');
@@ -64,24 +64,32 @@ function hasFlagEmoji(text) {
   return false;
 }
 
+function isRealValue(val) {
+  if (!val) return false;
+  const clean = String(val).trim().toLowerCase();
+  return clean !== '' && clean !== 'unknown' && clean !== 'und';
+}
+
 // True if a MediaSource carries any discernible quality, video, audio, or
-// size/bitrate info (from probed MediaStreams, file size/bitrate, or release
-// labels/flags in its Name). A bare unprobed placeholder stub has none.
+// real size (>= 1 MB) info. Note that Jellyfin C# serializes VideoRange and
+// VideoRangeType as "Unknown" on unprobed stubs, and placeholder .strm files
+// can have a few bytes of Size (< 1 MB), so neither of those counts as real
+// stream info.
 export function hasStreamInfo(source) {
   if (!source) return false;
   if (sourceQuality(source)) return true;
-  if ((source.Size || 0) > 0 || (source.Bitrate || 0) > 0) return true;
+  if ((source.Size || 0) >= 1024 * 1024) return true;
 
   const streams = source.MediaStreams || [];
   const hasProbedStream = streams.some(function (s) {
     if (!s) return false;
     if (s.Type === 'Video') {
-      return (s.Width || 0) > 0 || (s.Height || 0) > 0 || !!s.Codec || (s.BitRate || 0) > 0 || !!s.VideoRange || !!s.VideoRangeType;
+      return (s.Width || 0) > 0 || (s.Height || 0) > 0 || (s.BitRate || 0) > 0;
     }
     if (s.Type === 'Audio') {
-      return !!s.Codec || (s.Channels || 0) > 0 || !!s.Language || (s.BitRate || 0) > 0;
+      return isRealValue(s.Codec) || (s.Channels || 0) > 0 || isRealValue(s.Language);
     }
-    return s.Type === 'Subtitle';
+    return false;
   });
   if (hasProbedStream) return true;
 

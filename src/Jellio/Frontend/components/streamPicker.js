@@ -681,12 +681,6 @@ export async function openStreamPicker(item, options) {
         return entry.source;
       });
 
-    if (!opts.forceChoice && sources.length === 1) {
-      closeStreamPicker();
-      navigateTo(playHash(item.Id, sources[0].Id));
-      return;
-    }
-
     if (!opts.forceChoice && isRememberStreamEnabled()) {
       const remembered = readRememberedSources()[item.Id];
       const rememberedId = remembered && remembered.mediaSourceId;

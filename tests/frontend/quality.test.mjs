@@ -32,6 +32,18 @@ test('label quality only reads the first line', () => {
 test('filterPlayableSources only drops a single stream when it has no quality/audio/video/size info at all', () => {
   // 1 stream with no info at all -> empty ("No streams available")
   assert.deepEqual(filterPlayableSources([{ Id: 'stub-1', Name: 'Some Movie Title', MediaStreams: [] }]), []);
+  assert.deepEqual(
+    filterPlayableSources([
+      {
+        Id: 'stub-re',
+        Name: 'Resident Evil',
+        Size: 128,
+        Bitrate: 1000,
+        MediaStreams: [{ Type: 'Video', VideoRange: 'Unknown', VideoRangeType: 'Unknown' }],
+      },
+    ]),
+    [],
+  );
 
   // 1 stream with quality/audio/video/size info -> kept
   const withQuality = [{ Id: 's1', Name: 'Movie_1080p_WEB-DL', MediaStreams: [] }];
