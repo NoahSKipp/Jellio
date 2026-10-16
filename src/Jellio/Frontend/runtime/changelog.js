@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.82.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.82.0",
+    "summary": "Community watching performance boost, placeholder stream handling, and customize improvements.",
+    "highlights": [
+      {
+        "title": "Lightning-Fast Community Watching",
+        "description": "Multi-tier server caching, parallelized user queries, and background pre-warming make What Others Are Watching load in milliseconds."
+      },
+      {
+        "title": "Placeholder Stream Protection",
+        "description": "Unreleased titles and library stubs now cleanly display digital release prompts inside the stream picker instead of attempting to play invalid files."
+      },
+      {
+        "title": "Home Customize Title Cleanup",
+        "description": "Row titles in home edit mode now cleanly display row names without trailing chevron symbols."
+      }
+    ]
+  },
+  {
     "version": "1.81.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.81.0",
