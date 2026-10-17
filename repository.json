@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.4] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(streams)* Remove single-stream autopick and ignore default stub fields in hasStreamInfo\n",
+        "checksum": "0944e2ae7d01a7f2fffeb526ed4dc483",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.4/jellio_1.83.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-17T00:00:23Z",
+        "version": "1.83.4"
+      },
+      {
         "changelog": "## [1.83.3] - 2026-10-16\n\n### 🐛 Bug Fixes\n\n- *(streams)* Relax single-stub stream detection and add Digital Release Filter card\n",
         "checksum": "d8b3c85a0a3511b0d10b044013d9c1ff",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.3/jellio_1.83.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-10T22:20:44Z",
         "version": "1.72.0"
-      },
-      {
-        "changelog": "## [1.71.0] - 2026-10-09\n\n### 🚀 Features\n\n- *(achievements)* Make the top tier of each badge group harder to reach\n",
-        "checksum": "0422fce167a113a24e66ac329dee0312",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.71.0/jellio_1.71.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-09T19:22:38Z",
-        "version": "1.71.0"
       }
     ]
   }
