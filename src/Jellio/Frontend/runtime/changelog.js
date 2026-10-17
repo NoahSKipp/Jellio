@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.10",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.10",
+    "summary": "Fix genre row items endpoint MissingMethodException on Jellyfin 12 and add resilient DTO mapping fallback.",
+    "highlights": [
+      {
+        "title": "Jellyfin 12 DTO Compatibility",
+        "description": "Resolved a binary interface mismatch in IDtoService.GetBaseItemDtos by dynamically adapting to parameter count variations and adding graceful fallback to single-item conversion."
+      }
+    ]
+  },
+  {
     "version": "1.83.9",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.9",
