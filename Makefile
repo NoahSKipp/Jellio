@@ -14,9 +14,13 @@ release:
 	@echo "Updating version in build.yaml..."
 	sed -i 's/^version: .*/version: "$(NEW_VERSION:v%=%)"/' build.yaml
 	git add build.yaml
-	git commit -m "chore(release): bump version to $(NEW_VERSION)"
-	@echo "Pushing to git..."
-	git push
+	@if git diff --cached --quiet; then \
+		echo "build.yaml already at $(NEW_VERSION:v%=%), nothing to commit."; \
+	else \
+		git commit -m "chore(release): bump version to $(NEW_VERSION)"; \
+		echo "Pushing to git..."; \
+		git push; \
+	fi
 	@echo "Creating GitHub release..."
 	gh release create $(NEW_VERSION) --title "$(NEW_VERSION)" --notes-file /tmp/release_notes.md
 	@echo "Release $(NEW_VERSION) created successfully!"
