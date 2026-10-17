@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.9] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Resolve duplicate failoverTried declaration and add syntax suite\n",
+        "checksum": "f3600e643dcf810d0dfbe0b639906f46",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.9/jellio_1.83.9.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-17T13:54:31Z",
+        "version": "1.83.9"
+      },
+      {
         "changelog": "## [1.83.8] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Deduplicate sync rows, key health by release name, and fail over early on negotiation error\n",
         "checksum": "477264cee4522aa5456d99803fce1103",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.8/jellio_1.83.8.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-12T21:50:52Z",
         "version": "1.74.2"
-      },
-      {
-        "changelog": "## [1.74.1] - 2026-10-12\n\n### 🐛 Bug Fixes\n\n- *(player)* Clearer stream badges, HD detection and failover overlay\n",
-        "checksum": "bd2ac471251ff0b9145958aed77d7ece",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.74.1/jellio_1.74.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-12T14:08:21Z",
-        "version": "1.74.1"
       }
     ]
   }
