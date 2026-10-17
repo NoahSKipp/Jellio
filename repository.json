@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.5] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Key bad streams by release description and fallback to transcode on direct play failure\n",
+        "checksum": "3d1335fc1653e9b6c3707b2f5f0d1f2a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.5/jellio_1.83.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-17T01:23:33Z",
+        "version": "1.83.5"
+      },
+      {
         "changelog": "## [1.83.4] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(streams)* Remove single-stream autopick and ignore default stub fields in hasStreamInfo\n",
         "checksum": "0944e2ae7d01a7f2fffeb526ed4dc483",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.4/jellio_1.83.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-12T09:01:53Z",
         "version": "1.73.0"
-      },
-      {
-        "changelog": "## [1.72.0] - 2026-10-10\n\n### 🚀 Features\n\n- *(player)* Adjustable pre-buffer for smoother 4K playback\n",
-        "checksum": "f8f9b5f5bd01b61cc127b7e4d9d7d432",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.72.0/jellio_1.72.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-10T22:20:44Z",
-        "version": "1.72.0"
       }
     ]
   }
