@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.11",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.11",
+    "summary": "Fix stream negotiation failover, restore transcode fallback retry, and repair failover Stop button cancellation.",
+    "highlights": [
+      {
+        "title": "Resilient Stream Playback & Failover",
+        "description": "Probing and negotiation timeouts no longer falsely mark streams as bad or trigger cascading failovers. Restored automatic server remux fallback when direct play fails before the first frame, and user-selected streams are immediately unflagged so they can be replayed."
+      },
+      {
+        "title": "Failover Stop Button Fix",
+        "description": "Clicking Stop on the retry overlay now immediately tears down the player and cancels pending negotiations, preventing unwanted retries."
+      }
+    ]
+  },
+  {
     "version": "1.83.10",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.10",

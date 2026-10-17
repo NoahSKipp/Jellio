@@ -771,6 +771,10 @@ export async function renderPlayer(root, params) {
   const preferredMediaSourceId = params.get('mediaSourceId') || undefined;
   const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
 
+  if (preferredMediaSourceId && !failoverTried.length) {
+    unmarkBadSource(itemId, { Id: preferredMediaSourceId });
+  }
+
   let failoverOverlay = null;
   if (failoverTried.length) {
     failoverOverlay = el('div', 'jellio-player-failover');
@@ -783,6 +787,11 @@ export async function renderPlayer(root, params) {
     const stop = el('button', 'jellio-player-failover-stop', 'Stop');
     stop.type = 'button';
     stop.addEventListener('click', function () {
+      screenTornDown = true;
+      if (failoverOverlay) {
+        failoverOverlay.remove();
+        failoverOverlay = null;
+      }
       navigateTo('#/item?id=' + itemId);
     });
     box.appendChild(stop);
@@ -796,10 +805,10 @@ export async function renderPlayer(root, params) {
   } catch (err) {
     if (screenTornDown) return undefined;
     console.warn('Jellio: could not negotiate playback', err);
-    if (!getCurrentGroup()) {
-      const failedId = preferredMediaSourceId || itemId;
-      markBadSource(itemId, { Id: failedId });
-      const tried = failoverTried.concat(failedId ? [failedId] : []);
+    const isTimeoutOrAbort = err && (err.name === 'AbortError' || /timeout/i.test(err.message || ''));
+    if (!getCurrentGroup() && !isTimeoutOrAbort && preferredMediaSourceId) {
+      markBadSource(itemId, { Id: preferredMediaSourceId });
+      const tried = failoverTried.concat([preferredMediaSourceId]);
       let sources = [];
       try {
         sources = await getMediaSources(itemId, { forceFresh: true });
@@ -5126,7 +5135,9 @@ export async function renderPlayer(root, params) {
     if (stop) {
       stop.onclick = function () {
         failoverStarted = true;
+        screenTornDown = true;
         if (startTimer) window.clearTimeout(startTimer);
+        cleanup();
         navigateTo('#/item?id=' + itemId);
       };
     }
@@ -5356,6 +5367,7 @@ export async function renderPlayer(root, params) {
   // broke it after the fact gets the same toast switchSource()'s own
   // failures already use, the rest of this screen still being worth
   // keeping in front of the reader at that point.
+  let retriedWithTranscode = false;
   video.addEventListener('error', function () {
     if (screenTornDown) return;
     // Real gap found live: this handler discarded the browser's own
@@ -5376,6 +5388,53 @@ export async function renderPlayer(root, params) {
     );
     if (hasReportedStart) {
       showPlayerToast('Playback stopped unexpectedly. Try a different stream.');
+      return;
+    }
+    // A stream attempted via direct play can fail on containers or audio codecs
+    // (e.g. MKV or EAC3) that this browser engine cannot decode directly.
+    // Fall back to a server remux/transcode of this same source once before marking
+    // it bad and failing over to the next candidate.
+    if (!streamIsTranscoded && !retriedWithTranscode && !failoverStarted && getVideoTranscodePolicy() !== 'Block') {
+      retriedWithTranscode = true;
+      streamIsTranscoded = true;
+      if (startTimer) {
+        window.clearTimeout(startTimer);
+        startTimer = null;
+      }
+      showLoadingLogo();
+      getPlaybackInfo(itemId, startTicks, mediaSource.Id, currentAudioStreamIndex)
+        .then(function (info) {
+          if (screenTornDown || failoverStarted) return;
+          const negotiated = pickNegotiatedSource(info, mediaSource.Id);
+          if (negotiated) {
+            mediaSource = negotiated;
+            playSessionId = info.PlaySessionId;
+          }
+          const fallbackUsesHls = willUseHls(mediaSource, true);
+          needsStartOffset = !fallbackUsesHls;
+          streamOffsetTicks = needsStartOffset ? startTicks : 0;
+          pendingNativeSeekSeconds = fallbackUsesHls && startTicks > 0 ? startTicks / TICKS_PER_SECOND : null;
+          video.src = buildStreamUrl(itemId, mediaSource, startTicks, {
+            audioStreamIndex: currentAudioStreamIndex,
+            forceTranscode: true,
+            playSessionId: playSessionId,
+          });
+          video.load();
+          showLoadingLogo();
+          waitForPlayableBuffer(attemptPlay);
+        })
+        .catch(function () {
+          if (screenTornDown || failoverStarted) return;
+          failoverToNextStream('transcode fallback negotiation failed').then(function (handled) {
+            if (handled) return;
+            cleanup();
+            renderPlaybackError(
+              root,
+              itemId,
+              'This stream could not be played. Try a different one from Change Stream.',
+            );
+          });
+        });
       return;
     }
     failoverToNextStream('error before the first frame').then(function (handled) {
