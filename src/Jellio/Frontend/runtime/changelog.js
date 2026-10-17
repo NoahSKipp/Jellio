@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.7",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.7",
+    "summary": "Fix stream health keying to isolate bad streams by unique ID and restore Chromium Matroska direct play.",
+    "highlights": [
+      {
+        "title": "Accurate Stream Health Isolation",
+        "description": "Failed streams are now keyed strictly by their unique media source ID, preventing a single failed stream from flagging other streams for the same title, and automatically purging legacy poisoned keys."
+      },
+      {
+        "title": "Restored Matroska Direct Play & Smooth Loading",
+        "description": "Restored native Matroska container probing for Chromium browsers so compatible streams direct-play without server transcode stalls, and kept loading artwork active until video frames genuinely render."
+      }
+    ]
+  },
+  {
     "version": "1.83.6",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.6",
