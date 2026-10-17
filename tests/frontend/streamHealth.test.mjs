@@ -76,7 +76,7 @@ test('single-line source names only key by id and never by shared tier name', ()
 test('legacy name: and desc: entries are automatically purged from localStorage on load', () => {
   const future = Date.now() + 3600_000;
   const store = installMockLocalStorage({
-    jellio_bad_streams: JSON.stringify({
+    jellio_bad_streams_v2: JSON.stringify({
       'episode-1': {
         'name:🚀 FHD': future,
         'desc:Show.S01E01': future,
@@ -97,7 +97,7 @@ test('legacy name: and desc: entries are automatically purged from localStorage 
   assert.equal(isBadSource('episode-1', healthyFhd), false);
   assert.equal(isBadSource('episode-1', badById), true);
 
-  const persisted = JSON.parse(store.get('jellio_bad_streams'));
+  const persisted = JSON.parse(store.get('jellio_bad_streams_v2'));
   assert.equal('name:🚀 FHD' in (persisted['episode-1'] || {}), false);
   assert.equal('desc:Show.S01E01' in (persisted['episode-1'] || {}), false);
   assert.equal('id:src-bad' in (persisted['episode-1'] || {}), true);
@@ -112,4 +112,25 @@ test('looksLikePlaceholder flags short error clips under 3 minutes but never rea
   assert.equal(looksLikePlaceholder(300, 60 * 60), false);
   // Short expected runtime (< 10 min) is never treated as placeholder
   assert.equal(looksLikePlaceholder(60, 5 * 60), false);
+});
+
+test('marks stored under the pre-v2 key are dropped entirely', () => {
+  const future = Date.now() + 3600_000;
+  const store = installMockLocalStorage({
+    jellio_bad_streams: JSON.stringify({ 'episode-1': { 'id:src-old': future, 'release:A\nB': future } }),
+  });
+  assert.equal(isBadSource('episode-1', { Id: 'src-old', Name: 'A\nB' }), false);
+  assert.equal(store.has('jellio_bad_streams'), false);
+});
+
+test('a timeout-only mark is short-lived and never poisons other rows of the same release', () => {
+  installMockLocalStorage();
+  const release = '💿 HD\nShow.S01E01.720p.WEB-GROUP';
+  markBadSource('episode-1', { Id: 'src-a', Name: release }, { soft: true });
+  assert.equal(isBadSource('episode-1', { Id: 'src-a', Name: release }), true);
+  assert.equal(isBadSource('episode-1', { Id: 'src-b', Name: release }), false);
+  const entries = JSON.parse(globalThis.localStorage.getItem('jellio_bad_streams_v2'))['episode-1'];
+  assert.ok(entries['id:src-a'] < Date.now() + 3 * 3600_000);
+  markBadSource('episode-1', { Id: 'src-a', Name: release });
+  assert.equal(isBadSource('episode-1', { Id: 'src-b', Name: release }), true);
 });

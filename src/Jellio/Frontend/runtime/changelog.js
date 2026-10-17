@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.13",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.13",
+    "summary": "Playback works again, and streams wrongly flagged as broken during the outage are trusted again.",
+    "highlights": [
+      {
+        "title": "Streams Play Again",
+        "description": "A stalled stream cache on the server made every stream time out, so Jellio cycled through all of them and reported that none worked. The cache is fixed and now restarts itself if it ever stalls, and stream lists no longer fill up with expired links."
+      },
+      {
+        "title": "Forgiving Stream Health",
+        "description": "Streams marked as broken during the outage are cleared. A stream that only times out is now remembered for two hours instead of two days, and only that exact stream is skipped, never other copies of the same release."
+      }
+    ]
+  },
+  {
     "version": "1.83.11",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.11",

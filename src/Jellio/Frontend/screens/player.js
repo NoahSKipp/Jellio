@@ -5062,7 +5062,7 @@ export async function renderPlayer(root, params) {
     failoverStarted = true;
     if (startTimer) window.clearTimeout(startTimer);
     console.warn('Jellio: stream failed (' + reason + '), trying the next one', mediaSource && mediaSource.Id);
-    markBadSource(itemId, mediaSource);
+    markBadSource(itemId, mediaSource, { soft: /^no picture after/.test(reason) });
     const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
     let language = currentSourceLanguage();
     if (!language) {
