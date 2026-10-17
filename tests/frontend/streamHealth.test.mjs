@@ -21,26 +21,45 @@ function installMockLocalStorage(initial = {}) {
   return store;
 }
 
-test('marking one stream bad never poisons other streams even with identical descriptions', () => {
+test('marking one stream bad never poisons different releases sharing the same tier or provider', () => {
   installMockLocalStorage();
   const itemId = 'episode-1';
   const streamA = {
     Id: 'src-a',
-    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL\n⚡ RealDebrid | 1.8 GB',
+    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL-ReleaseA\n⚡ RealDebrid | 1.8 GB',
   };
   const streamB = {
     Id: 'src-b',
-    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL\n⚡ RealDebrid | 1.8 GB',
+    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL-ReleaseB\n⚡ RealDebrid | 1.8 GB',
   };
 
   markBadSource(itemId, streamA);
 
   assert.equal(isBadSource(itemId, streamA), true);
-  assert.equal(isBadSource(itemId, streamB), false, 'other streams must remain playable even with identical names');
+  assert.equal(isBadSource(itemId, streamB), false, 'different release must remain playable');
 
   unmarkBadSource(itemId, streamA);
   assert.equal(isBadSource(itemId, streamA), false, 'unmarked stream must be clean');
 });
+
+test('duplicate sync rows of the exact same multi-line release fail together', () => {
+  installMockLocalStorage();
+  const itemId = 'episode-sync';
+  const syncClone1 = {
+    Id: 'sync-row-1',
+    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL-D02KU\n💾 1.8 GB 💢 Treasure Maps',
+  };
+  const syncClone2 = {
+    Id: 'sync-row-2',
+    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL-D02KU\n💾 1.8 GB 💢 Treasure Maps',
+  };
+
+  markBadSource(itemId, syncClone1);
+
+  assert.equal(isBadSource(itemId, syncClone1), true);
+  assert.equal(isBadSource(itemId, syncClone2), true, 'duplicate sync row of failed release must also be marked bad');
+});
+
 
 test('single-line source names only key by id and never by shared tier name', () => {
   installMockLocalStorage();

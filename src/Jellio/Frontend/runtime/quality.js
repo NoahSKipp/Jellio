@@ -108,5 +108,44 @@ export function filterPlayableSources(sources) {
   if (list.length === 1 && !hasStreamInfo(list[0])) {
     return [];
   }
-  return list;
+
+  // Deduplicate repeated sync clones of the exact same scraper release.
+  // When Gelato runs SyncStreams, it saves new rows into SQLite without deleting
+  // stale rows from earlier syncs. Within each unique multi-line Name (header +
+  // release info), keep the last (newest synced) row so its proxy URL is fresh,
+  // but retain any probed MediaStreams, RunTimeTicks, or Size from an earlier clone.
+  const seenMultiLine = new Map();
+  const result = [];
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    const name = String(s.Name || '').trim();
+    if (name.indexOf('\n') === -1) {
+      result.push(s);
+      continue;
+    }
+    if (seenMultiLine.has(name)) {
+      const existingIdx = seenMultiLine.get(name);
+      const existing = result[existingIdx];
+      const sHasProbed = (s.MediaStreams || []).some(function (m) {
+        return m && m.Type === 'Video';
+      });
+      const exHasProbed = (existing.MediaStreams || []).some(function (m) {
+        return m && m.Type === 'Video';
+      });
+      const merged = Object.assign({}, s);
+      if (!sHasProbed && exHasProbed) {
+        merged.MediaStreams = existing.MediaStreams;
+        if (!merged.RunTimeTicks && existing.RunTimeTicks) merged.RunTimeTicks = existing.RunTimeTicks;
+        if (!merged.Size && existing.Size) merged.Size = existing.Size;
+        if (!merged.Container && existing.Container) merged.Container = existing.Container;
+      }
+      result[existingIdx] = merged;
+    } else {
+      seenMultiLine.set(name, result.length);
+      result.push(s);
+    }
+  }
+
+  return result;
 }
+

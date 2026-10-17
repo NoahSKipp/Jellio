@@ -19,7 +19,24 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.8",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.8",
+    "summary": "Fix stream duplicate accumulation, multi-line release health isolation, and pre-negotiation failover.",
+    "highlights": [
+      {
+        "title": "Scraper Sync Stream Deduplication",
+        "description": "Repeated sync clones of the same scraper release are now cleanly deduplicated, keeping the newest synced proxy URL while preserving probed video and audio details."
+      },
+      {
+        "title": "Seamless Stream Failover & Remuxing",
+        "description": "Probed Matroska streams now consistently use server-side stream-copy remuxing to avoid static direct-play stalls, the failover overlay displays continuously during negotiation, and failed streams advance immediately to the next candidate."
+      }
+    ]
+  },
+  {
     "version": "1.83.7",
+
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.7",
     "summary": "Fix stream health keying to isolate bad streams by unique ID and restore Chromium Matroska direct play.",

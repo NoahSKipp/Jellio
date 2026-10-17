@@ -43,13 +43,21 @@ function save(map) {
   } catch (err) {}
 }
 
-// Key strictly by unique source.Id so one failing stream never poisons other
-// streams on the same title.
+// Key strictly by unique source.Id, and for multi-line scraper names
+// (which contain the exact release filename, size, indexer, and age on line 2+),
+// also key by the full trimmed release name so stale or duplicate sync rows of
+// the same dead release are all marked bad together.
 function keysFor(source) {
   const keys = [];
-  if (source && source.Id) keys.push('id:' + source.Id);
+  if (!source) return keys;
+  if (source.Id) keys.push('id:' + source.Id);
+  const name = String(source.Name || '').trim();
+  if (name.indexOf('\n') !== -1) {
+    keys.push('release:' + name);
+  }
   return keys;
 }
+
 
 export function markBadSource(itemId, source) {
   if (!itemId || !source) return;

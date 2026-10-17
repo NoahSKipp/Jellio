@@ -769,6 +769,26 @@ export async function renderPlayer(root, params) {
   // a one-source item), same default negotiation as before the picker
   // existed.
   const preferredMediaSourceId = params.get('mediaSourceId') || undefined;
+  const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
+
+  let failoverOverlay = null;
+  if (failoverTried.length) {
+    failoverOverlay = el('div', 'jellio-player-failover');
+    const box = el('div', 'jellio-player-failover-box');
+    box.appendChild(el('div', 'jellio-player-failover-spinner'));
+    box.appendChild(el('div', 'jellio-player-failover-title', 'That stream didn’t work'));
+    box.appendChild(
+      el('div', 'jellio-player-failover-text', 'Trying the next one (attempt ' + (failoverTried.length + 1) + ')…'),
+    );
+    const stop = el('button', 'jellio-player-failover-stop', 'Stop');
+    stop.type = 'button';
+    stop.addEventListener('click', function () {
+      navigateTo('#/item?id=' + itemId);
+    });
+    box.appendChild(stop);
+    failoverOverlay.appendChild(box);
+    root.appendChild(failoverOverlay);
+  }
 
   let playbackInfo;
   try {
@@ -776,12 +796,34 @@ export async function renderPlayer(root, params) {
   } catch (err) {
     if (screenTornDown) return undefined;
     console.warn('Jellio: could not negotiate playback', err);
+    if (!getCurrentGroup()) {
+      const failedId = preferredMediaSourceId || itemId;
+      markBadSource(itemId, { Id: failedId });
+      const tried = failoverTried.concat(failedId ? [failedId] : []);
+      let sources = [];
+      try {
+        sources = await getMediaSources(itemId, { forceFresh: true });
+      } catch (e) {}
+      if (screenTornDown) return undefined;
+      const candidates = sources.filter(function (s) {
+        return tried.indexOf(s.Id) === -1 && !isBadSource(itemId, s);
+      });
+      if (candidates.length > 0) {
+        navigateTo(
+          playHash(itemId, candidates[0].Id) +
+            '&tried=' + encodeURIComponent(tried.join(',')) +
+            (params.get('lang') ? '&lang=' + encodeURIComponent(params.get('lang')) : ''),
+        );
+        return undefined;
+      }
+    }
     renderPlaybackError(root, itemId, describeNetworkFailure('the stream', err), function () {
       renderPlayer(root, params);
     });
     return undefined;
   }
   if (screenTornDown) return undefined;
+
 
   function pickNegotiatedSource(info, wantedId) {
     const list = (info && info.MediaSources) || [];
@@ -906,6 +948,9 @@ export async function renderPlayer(root, params) {
   if (screenTornDown) return undefined;
 
   root.textContent = '';
+  if (failoverOverlay) {
+    root.appendChild(failoverOverlay);
+  }
 
   // Real feedback found the same real gap this pass fixed for
   // mid-playback seeking already applies to a saved resume position
@@ -3679,7 +3724,7 @@ export async function renderPlayer(root, params) {
   // still ramping up); a confirmed-cached source has no such ramp-up to
   // wait out, so it gets a token cushion instead of the full one.
   const CONFIRMED_CACHED_TARGET_SECONDS = 1;
-  const CONFIRMED_CACHED_TIMEOUT_MS = 8000;
+  const CONFIRMED_CACHED_TIMEOUT_MS = 2500;
   function isConfirmedCachedSource() {
     return !!(mediaSource && mediaSource.Formats && mediaSource.Formats.indexOf('gelato-cached') !== -1);
   }
@@ -5072,28 +5117,22 @@ export async function renderPlayer(root, params) {
     return true;
   }
 
-  // Shown while a retry is loading: what happened, which attempt this is,
-  // and a way out.
-  let failoverOverlay = null;
-  if (failoverTried.length) {
-    failoverOverlay = el('div', 'jellio-player-failover');
-    const box = el('div', 'jellio-player-failover-box');
-    box.appendChild(el('div', 'jellio-player-failover-spinner'));
-    box.appendChild(el('div', 'jellio-player-failover-title', 'That stream didn’t work'));
-    box.appendChild(
-      el('div', 'jellio-player-failover-text', 'Trying the next one (attempt ' + (failoverTried.length + 1) + '): ' + sourceLabel(mediaSource)),
-    );
-    const stop = el('button', 'jellio-player-failover-stop', 'Stop');
-    stop.type = 'button';
-    stop.addEventListener('click', function () {
-      failoverStarted = true;
-      if (startTimer) window.clearTimeout(startTimer);
-      navigateTo('#/item?id=' + itemId);
-    });
-    box.appendChild(stop);
-    failoverOverlay.appendChild(box);
-    root.appendChild(failoverOverlay);
+  // Update the failover overlay label once the negotiated mediaSource is known.
+  if (failoverOverlay && mediaSource) {
+    const textEl = failoverOverlay.querySelector('.jellio-player-failover-text');
+    if (textEl) {
+      textEl.textContent = 'Trying the next one (attempt ' + (failoverTried.length + 1) + '): ' + sourceLabel(mediaSource);
+    }
+    const stop = failoverOverlay.querySelector('.jellio-player-failover-stop');
+    if (stop) {
+      stop.onclick = function () {
+        failoverStarted = true;
+        if (startTimer) window.clearTimeout(startTimer);
+        navigateTo('#/item?id=' + itemId);
+      };
+    }
   }
+
 
   function hideFailoverOverlay() {
     if (!failoverOverlay) return;
@@ -5318,7 +5357,6 @@ export async function renderPlayer(root, params) {
   // broke it after the fact gets the same toast switchSource()'s own
   // failures already use, the rest of this screen still being worth
   // keeping in front of the reader at that point.
-  let retriedWithTranscode = false;
   video.addEventListener('error', function () {
     if (screenTornDown) return;
     // Real gap found live: this handler discarded the browser's own
@@ -5341,53 +5379,6 @@ export async function renderPlayer(root, params) {
       showPlayerToast('Playback stopped unexpectedly. Try a different stream.');
       return;
     }
-    // A previously played stream has probed MediaStreams in Jellyfin, which can
-    // cause canBrowserDirectPlay to try Static=true on a container/codec the
-    // browser or proxy cannot play directly. Fall back to a server remux/transcode
-    // of this same source once before marking it bad and failing over.
-    if (!streamIsTranscoded && !retriedWithTranscode && !failoverStarted && getVideoTranscodePolicy() !== 'Block') {
-      retriedWithTranscode = true;
-      streamIsTranscoded = true;
-      if (startTimer) {
-        window.clearTimeout(startTimer);
-        startTimer = null;
-      }
-      showLoadingLogo();
-      getPlaybackInfo(itemId, startTicks, mediaSource.Id, currentAudioStreamIndex)
-        .then(function (info) {
-          if (screenTornDown || failoverStarted) return;
-          const negotiated = pickNegotiatedSource(info, mediaSource.Id);
-          if (negotiated) {
-            mediaSource = negotiated;
-            playSessionId = info.PlaySessionId;
-          }
-          const fallbackUsesHls = willUseHls(mediaSource, true);
-          needsStartOffset = !fallbackUsesHls;
-          streamOffsetTicks = needsStartOffset ? startTicks : 0;
-          pendingNativeSeekSeconds = fallbackUsesHls && startTicks > 0 ? startTicks / TICKS_PER_SECOND : null;
-          video.src = buildStreamUrl(itemId, mediaSource, startTicks, {
-            audioStreamIndex: currentAudioStreamIndex,
-            forceTranscode: true,
-            playSessionId: playSessionId,
-          });
-          video.load();
-          showLoadingLogo();
-          waitForPlayableBuffer(attemptPlay);
-        })
-        .catch(function () {
-          if (screenTornDown || failoverStarted) return;
-          failoverToNextStream('transcode fallback negotiation failed').then(function (handled) {
-            if (handled) return;
-            cleanup();
-            renderPlaybackError(
-              root,
-              itemId,
-              'This stream could not be played. Try a different one from Change Stream.',
-            );
-          });
-        });
-      return;
-    }
     failoverToNextStream('error before the first frame').then(function (handled) {
       if (handled) return;
       cleanup();
@@ -5398,6 +5389,7 @@ export async function renderPlayer(root, params) {
       );
     });
   });
+
 
   video.addEventListener('loadedmetadata', function () {
     // pendingNativeSeekSeconds covers both real cases that need this:

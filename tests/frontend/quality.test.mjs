@@ -67,3 +67,24 @@ test('filterPlayableSources only drops a single stream when it has no quality/au
   assert.equal(hasStreamInfo(multiple[0]), false);
   assert.equal(hasStreamInfo(withQuality[0]), true);
 });
+
+test('filterPlayableSources deduplicates multi-line sync clones and keeps newest row with probed streams', () => {
+  const clones = [
+    { Id: 'old-sync', Name: '🚀 FHD\nShow.S01E01.1080p\n💾 1 GB', MediaStreams: [] },
+    {
+      Id: 'probed-sync',
+      Name: '🚀 FHD\nShow.S01E01.1080p\n💾 1 GB',
+      MediaStreams: [{ Type: 'Video', Codec: 'h264' }],
+      Size: 1073741824,
+    },
+    { Id: 'newest-sync', Name: '🚀 FHD\nShow.S01E01.1080p\n💾 1 GB', MediaStreams: [] },
+    { Id: 'other-release', Name: '🚀 4K\nShow.S01E01.2160p\n💾 4 GB', MediaStreams: [] },
+  ];
+  const deduped = filterPlayableSources(clones);
+  assert.equal(deduped.length, 2);
+  assert.equal(deduped[0].Id, 'newest-sync');
+  assert.equal(deduped[0].MediaStreams.length, 1);
+  assert.equal(deduped[0].Size, 1073741824);
+  assert.equal(deduped[1].Id, 'other-release');
+});
+

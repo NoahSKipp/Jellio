@@ -2510,7 +2510,7 @@ function supportsMatroskaContainer() {
 // "mkv" is the one real extension that endpoint (and every real client
 // or proxy sniffing this URL's own file extension) actually recognises.
 function normalizeStreamContainer(rawContainer) {
-  const container = String(rawContainer || '').toLowerCase().split(',')[0].trim();
+  const container = String(rawContainer || '').toLowerCase();
   if (container === 'mov') return 'mp4';
   return MATROSKA_CONTAINERS.has(container) ? 'mkv' : container;
 }
@@ -2579,9 +2579,8 @@ const CONTAINER_MIME = {
   m4v: 'video/mp4',
   mov: 'video/mp4',
   webm: 'video/webm',
-  mkv: 'video/x-matroska',
-  matroska: 'video/x-matroska',
 };
+
 
 const H264_PROFILES = {
   baseline: '42',
