@@ -5037,7 +5037,6 @@ export async function renderPlayer(root, params) {
     avoidingVideoTranscodes() && sourceClassification.needsVideoTranscode
       ? Math.max(prebufferSettings().startTimeoutMs, 12000)
       : 25000;
-  const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
   const failoverLanguage = params.get('lang') || '';
   let failoverStarted = false;
   let startTimer = null;

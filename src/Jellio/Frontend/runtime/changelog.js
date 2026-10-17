@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.9",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.9",
+    "summary": "Fix syntax error in player module that blocked playback screen rendering.",
+    "highlights": [
+      {
+        "title": "Player Module Syntax Fix",
+        "description": "Resolved a duplicate variable declaration in the player screen module that prevented the playback page from loading."
+      }
+    ]
+  },
+  {
     "version": "1.83.8",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.8",
