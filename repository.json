@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.8] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Deduplicate sync rows, key health by release name, and fail over early on negotiation error\n",
+        "checksum": "477264cee4522aa5456d99803fce1103",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.8/jellio_1.83.8.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-17T12:24:13Z",
+        "version": "1.83.8"
+      },
+      {
         "changelog": "## [1.83.7] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Key bad streams by unique source ID, restore Matroska direct play, and unmark on playback start\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.83.7\n- *(release)* Avoid failing make release when build.yaml is already at target version\n",
         "checksum": "fa7d6aea26403b33db61afada8095850",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.7/jellio_1.83.7.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-12T14:08:21Z",
         "version": "1.74.1"
-      },
-      {
-        "changelog": "## [1.74.0] - 2026-10-12\n\n### 🚀 Features\n\n- *(player)* Video transcode policy to avoid server-side video re-encodes\n- *(player)* Judge unprobed streams by their AIOStreams name\n- *(player)* Log Jellyfin's transcode reasons and the client\n- *(player)* Mark streams that need a video re-encode in the Sources panel\n",
-        "checksum": "ec91b872625af805ce1c7a9d0c1162d3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.74.0/jellio_1.74.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-12T10:18:57Z",
-        "version": "1.74.0"
       }
     ]
   }
