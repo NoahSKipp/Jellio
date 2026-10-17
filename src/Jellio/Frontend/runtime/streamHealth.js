@@ -18,10 +18,9 @@ function load() {
         return;
       }
       Object.keys(entries).forEach(function (key) {
-        // Legacy 'name:' keys stored the first line of source.Name (the shared
-        // addon/quality badge like "FHD" or "4K"), which falsely poisoned every
-        // stream in that quality tier across the entire item.
-        if (key.indexOf('name:') === 0) {
+        // Legacy 'name:' and 'desc:' keys poisoned other streams in the same
+        // tier or episode when stream names shared line 1 or generic descriptions.
+        if (key.indexOf('name:') === 0 || key.indexOf('desc:') === 0) {
           delete entries[key];
           dirty = true;
         }
@@ -44,15 +43,11 @@ function save(map) {
   } catch (err) {}
 }
 
-// A source's id can change when Gelato refreshes its rows; its release
-// description (lines 2+ of source.Name) identifies the specific release file
-// without matching the shared addon/quality badge on line 1.
+// Key strictly by unique source.Id so one failing stream never poisons other
+// streams on the same title.
 function keysFor(source) {
   const keys = [];
   if (source && source.Id) keys.push('id:' + source.Id);
-  const lines = String((source && source.Name) || '').split('\n');
-  const desc = lines.slice(1).join('\n').trim();
-  if (desc) keys.push('desc:' + desc);
   return keys;
 }
 
@@ -73,6 +68,24 @@ export function markBadSource(itemId, source) {
   });
   map[itemId] = entries;
   save(map);
+}
+
+export function unmarkBadSource(itemId, source) {
+  if (!itemId || !source) return;
+  const map = load();
+  const entries = map[itemId];
+  if (!entries) return;
+  let dirty = false;
+  keysFor(source).forEach(function (key) {
+    if (entries[key]) {
+      delete entries[key];
+      dirty = true;
+    }
+  });
+  if (dirty) {
+    if (!Object.keys(entries).length) delete map[itemId];
+    save(map);
+  }
 }
 
 export function isBadSource(itemId, source) {

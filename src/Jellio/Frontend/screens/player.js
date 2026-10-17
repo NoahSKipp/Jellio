@@ -84,7 +84,7 @@ import {
 import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
-import { markBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
+import { markBadSource, unmarkBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { sourceLabel, buildOutlookBadge, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
@@ -1122,10 +1122,6 @@ export async function renderPlayer(root, params) {
       if (logoSeesPlayback()) hideLoadingLogo();
     }, 400);
   }
-
-  video.addEventListener('playing', function () {
-    if ((loadingLogo || loadingBackdrop) && video.readyState >= 3) hideLoadingLogo();
-  });
 
   // Screen Wake Lock API: keeps the display awake during active video playback.
   let wakeLock = null;
@@ -5482,6 +5478,7 @@ export async function renderPlayer(root, params) {
 
     if (!hasReportedStart) {
       hasReportedStart = true;
+      unmarkBadSource(itemId, mediaSource);
       reportPlaybackStart(itemId, mediaSource.Id, currentPositionTicks());
       requestProbedDuration();
       if (deferredAutoSubtitleStream) {

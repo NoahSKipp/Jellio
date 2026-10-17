@@ -1,7 +1,7 @@
 // node --test tests/frontend
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { markBadSource, isBadSource, looksLikePlaceholder } from '../../src/Jellio/Frontend/runtime/streamHealth.js';
+import { markBadSource, unmarkBadSource, isBadSource, looksLikePlaceholder } from '../../src/Jellio/Frontend/runtime/streamHealth.js';
 
 function installMockLocalStorage(initial = {}) {
   const store = new Map(Object.entries(initial));
@@ -21,27 +21,25 @@ function installMockLocalStorage(initial = {}) {
   return store;
 }
 
-test('marking one FHD stream bad does not poison other FHD streams with the same line-1 header', () => {
+test('marking one stream bad never poisons other streams even with identical descriptions', () => {
   installMockLocalStorage();
   const itemId = 'episode-1';
   const streamA = {
     Id: 'src-a',
-    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL.DDP5.1.H.264-GroupA.mkv\n⚡ RealDebrid | 1.8 GB',
+    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL\n⚡ RealDebrid | 1.8 GB',
   };
   const streamB = {
     Id: 'src-b',
-    Name: '🚀 FHD\nShow.S01E01.1080p.AMZN.WEB-DL.DDP5.1.H.264-GroupB.mkv\n⚡ RealDebrid | 2.1 GB',
-  };
-  const streamASameReleaseNewId = {
-    Id: 'src-a-refreshed',
-    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL.DDP5.1.H.264-GroupA.mkv\n⚡ RealDebrid | 1.8 GB',
+    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL\n⚡ RealDebrid | 1.8 GB',
   };
 
   markBadSource(itemId, streamA);
 
   assert.equal(isBadSource(itemId, streamA), true);
-  assert.equal(isBadSource(itemId, streamB), false, 'other FHD streams must remain playable');
-  assert.equal(isBadSource(itemId, streamASameReleaseNewId), true, 'same release with a refreshed Gelato ID is still recognized via lines 2+');
+  assert.equal(isBadSource(itemId, streamB), false, 'other streams must remain playable even with identical names');
+
+  unmarkBadSource(itemId, streamA);
+  assert.equal(isBadSource(itemId, streamA), false, 'unmarked stream must be clean');
 });
 
 test('single-line source names only key by id and never by shared tier name', () => {
@@ -56,13 +54,13 @@ test('single-line source names only key by id and never by shared tier name', ()
   assert.equal(isBadSource(itemId, streamB), false);
 });
 
-test('legacy name: entries are automatically purged from localStorage on load', () => {
+test('legacy name: and desc: entries are automatically purged from localStorage on load', () => {
   const future = Date.now() + 3600_000;
   const store = installMockLocalStorage({
     jellio_bad_streams: JSON.stringify({
       'episode-1': {
         'name:🚀 FHD': future,
-        'name:🚀 4K': future,
+        'desc:Show.S01E01': future,
         'id:src-bad': future,
       },
     }),
@@ -70,11 +68,11 @@ test('legacy name: entries are automatically purged from localStorage on load', 
 
   const healthyFhd = {
     Id: 'src-good',
-    Name: '🚀 FHD\nShow.S01E01.1080p.WEB-DL.mkv',
+    Name: '🚀 FHD\nShow.S01E01',
   };
   const badById = {
     Id: 'src-bad',
-    Name: '🚀 FHD\nShow.S01E01.1080p.Other.mkv',
+    Name: '🚀 FHD\nShow.S01E01',
   };
 
   assert.equal(isBadSource('episode-1', healthyFhd), false);
@@ -82,7 +80,7 @@ test('legacy name: entries are automatically purged from localStorage on load', 
 
   const persisted = JSON.parse(store.get('jellio_bad_streams'));
   assert.equal('name:🚀 FHD' in (persisted['episode-1'] || {}), false);
-  assert.equal('name:🚀 4K' in (persisted['episode-1'] || {}), false);
+  assert.equal('desc:Show.S01E01' in (persisted['episode-1'] || {}), false);
   assert.equal('id:src-bad' in (persisted['episode-1'] || {}), true);
 });
 
