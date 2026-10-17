@@ -9,8 +9,8 @@
     "versions": [
       {
         "changelog": "## [1.83.13] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Clear outage-poisoned bad-stream marks and keep timeout marks soft\n",
-        "checksum": "0b60c50c1d5ce3916ce5bc7c2cbbf99b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.13/jellio_1.83.12.0.zip",
+        "checksum": "734fa42962c155e87b04b6d66e7f2c66",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.13/jellio_1.83.13.0.zip",
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T20:50:36Z",
         "version": "1.83.13"
