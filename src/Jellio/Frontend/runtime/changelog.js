@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.6",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.6",
+    "summary": "Matroska stream remuxing, loading backdrop persistence, and deferred subtitle extraction fixes.",
+    "highlights": [
+      {
+        "title": "Matroska Remux Playback",
+        "description": "Probed MKV streams now consistently use server-side fragmented MP4 remuxing rather than attempting direct Matroska playback in browsers that only support metadata parsing."
+      },
+      {
+        "title": "Persistent Loading Artwork & Deferred Subtitles",
+        "description": "The title backdrop and pulsing logo now appear immediately during stream negotiation and stay visible until video frames are ready to play, while embedded subtitle extraction waits until playback starts."
+      }
+    ]
+  },
+  {
     "version": "1.83.5",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.5",

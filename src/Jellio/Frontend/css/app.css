@@ -5482,6 +5482,16 @@
 /* Ported from Nuvio's own loading screen: the title's real logo art
    breathing in place over the poster while the first stream is still
    loading, standing in for a plain spinner. */
+.jellio-player-loading-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: #000;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  pointer-events: none;
+}
+
 .jellio-player-loading-logo {
   position: absolute;
   left: 50%;

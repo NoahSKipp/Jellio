@@ -2579,8 +2579,6 @@ const CONTAINER_MIME = {
   m4v: 'video/mp4',
   mov: 'video/mp4',
   webm: 'video/webm',
-  mkv: 'video/x-matroska',
-  matroska: 'video/x-matroska',
 };
 
 const H264_PROFILES = {
@@ -2635,7 +2633,7 @@ export function canBrowserDirectPlay(mediaSource) {
   if (mediaSource.SupportsDirectPlay === false && mediaSource.SupportsDirectStream === false) {
     return false;
   }
-  const container = normalizeStreamContainer(mediaSource.Container);
+  const container = String(mediaSource.Container || '').toLowerCase().split(',')[0].trim();
   const streams = mediaSource.MediaStreams || [];
   const video = streams.filter(function (stream) {
     return stream.Type === 'Video';
@@ -2651,8 +2649,7 @@ export function canBrowserDirectPlay(mediaSource) {
 
   const canProbe = typeof document !== 'undefined' && typeof document.createElement('video').canPlayType === 'function';
   if (!canProbe) {
-    const legacyMatroska = MATROSKA_CONTAINERS.has(container) && supportsMatroskaContainer();
-    if (!['mp4', 'webm', 'm4v'].includes(container) && !legacyMatroska) return false;
+    if (!['mp4', 'webm', 'm4v'].includes(container)) return false;
     if (video && !LEGACY_VIDEO_CODECS.has(String(video.Codec || '').toLowerCase())) return false;
     if (audio && !LEGACY_AUDIO_CODECS.has(String(audio.Codec || '').toLowerCase())) return false;
     return true;

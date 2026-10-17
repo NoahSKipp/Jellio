@@ -710,6 +710,57 @@ export async function renderPlayer(root, params) {
   const isEpisodeItem = item.Type === 'Episode' && !!item.SeriesName;
   setTitle((isEpisodeItem ? item.SeriesName : item.Name) + ' - Jellio');
 
+  // Real feedback: this used to read straight off the item passed in,
+  // which for an Episode is the episode's own real DTO, its own
+  // BackdropImageTags almost always empty and its own ImageTags.Primary
+  // the episode's own thumbnail, not the show's own real artwork every
+  // other player chrome (Nuvio's own pause screen included) actually
+  // shows here. SeriesId/ParentBackdropImageTags/SeriesPrimaryImageTag
+  // are the real fields Jellyfin's own Episode DTO already carries for
+  // exactly this, confirmed against BaseItemDto before writing this,
+  // not guessed at; a movie has no series to prefer over its own.
+  function seriesAwareArtworkUrl(maxWidth) {
+    const artId = isEpisodeItem && item.SeriesId ? item.SeriesId : itemId;
+    const backdropTag = isEpisodeItem
+      ? item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]
+      : item.BackdropImageTags && item.BackdropImageTags[0];
+    const primaryTag = isEpisodeItem ? item.SeriesPrimaryImageTag : item.ImageTags && item.ImageTags.Primary;
+    const tag = backdropTag || primaryTag;
+    if (!tag) return null;
+    return getImageUrl(artId, backdropTag ? 'Backdrop' : 'Primary', { tag: tag, maxWidth: maxWidth });
+  }
+
+  // Same real series-aware fallback as the backdrop above, the one
+  // other real image type Jellyfin's own metadata providers save
+  // against a title (ParentLogoImageTag for an Episode, ImageTags.Logo
+  // for a movie or the series itself): a transparent title treatment,
+  // not guaranteed to exist for every real title the way a backdrop
+  // usually is, so this can come back null.
+  function seriesAwareLogoUrl(maxWidth) {
+    const artId = isEpisodeItem && item.SeriesId ? item.SeriesId : itemId;
+    const tag = isEpisodeItem ? item.ParentLogoImageTag : item.ImageTags && item.ImageTags.Logo;
+    if (!tag) return null;
+    return getImageUrl(artId, 'Logo', { tag: tag, maxWidth: maxWidth });
+  }
+
+  const posterUrl = seriesAwareArtworkUrl(1600);
+  const logoUrl = seriesAwareLogoUrl(800);
+
+  // Show the backdrop and pulsing logo immediately while PlaybackInfo is
+  // still negotiating on the server, instead of leaving the generic black
+  // screen + white spinner up for the entire negotiation or failover wait.
+  root.textContent = '';
+  if (posterUrl) {
+    const preBackdrop = el('div', 'jellio-player-loading-backdrop');
+    preBackdrop.style.backgroundImage = 'url(' + posterUrl + ')';
+    root.appendChild(preBackdrop);
+  }
+  if (logoUrl) {
+    const preLogo = el('div', 'jellio-player-loading-logo');
+    preLogo.style.backgroundImage = 'url(' + logoUrl + ')';
+    root.appendChild(preLogo);
+  }
+
   // components/streamPicker.js's own real choice, when there was more
   // than one to choose from: negotiates that exact source instead of
   // whichever one GetPlaybackMediaSources would have defaulted to.
@@ -723,12 +774,14 @@ export async function renderPlayer(root, params) {
   try {
     playbackInfo = await getPlaybackInfo(itemId, startTicks, preferredMediaSourceId);
   } catch (err) {
+    if (screenTornDown) return undefined;
     console.warn('Jellio: could not negotiate playback', err);
     renderPlaybackError(root, itemId, describeNetworkFailure('the stream', err), function () {
       renderPlayer(root, params);
     });
     return undefined;
   }
+  if (screenTornDown) return undefined;
 
   function pickNegotiatedSource(info, wantedId) {
     const list = (info && info.MediaSources) || [];
@@ -805,8 +858,6 @@ export async function renderPlayer(root, params) {
     }
   }
 
-  root.textContent = '';
-
   // Real feedback: a saved default audio language preference
   // (screens/settings.js's own Language section) only actually reaches
   // this MediaSource if Jellyfin's own PlaybackInfo negotiation
@@ -838,15 +889,9 @@ export async function renderPlayer(root, params) {
     // explicit AudioStreamIndex on the stream request itself, the same
     // real constraint switchAudioTrack below already works around
     // unconditionally. Gated on more than one real audio track existing
-    // and either needing a transcode anyway or differing from the file's
-    // default track so a direct playable stream whose default track is
-    // already the preferred language plays as is without forcing ffmpeg.
-    const initialDirectPlay = canBrowserDirectPlay(mediaSource) && !(startTicks > 0);
-    if (
-      matchedIndex != null &&
-      getAudioStreams(mediaSource).length > 1 &&
-      (!initialDirectPlay || matchedIndex !== mediaSource.DefaultAudioStreamIndex)
-    ) {
+    // so a single-track source does not pay an extra PlaybackInfo round
+    // trip or a forced transcode for nothing.
+    if (matchedIndex != null && getAudioStreams(mediaSource).length > 1) {
       const rematched = await getPlaybackInfo(itemId, startTicks, mediaSource.Id, matchedIndex);
       const rematchedSource = pickNegotiatedSource(rematched, mediaSource.Id);
       if (rematchedSource) {
@@ -858,6 +903,9 @@ export async function renderPlayer(root, params) {
   } catch (err) {
     console.warn('Jellio: could not match preferred audio language', err);
   }
+  if (screenTornDown) return undefined;
+
+  root.textContent = '';
 
   // Real feedback found the same real gap this pass fixed for
   // mid-playback seeking already applies to a saved resume position
@@ -958,39 +1006,6 @@ export async function renderPlayer(root, params) {
   // would be wrong for everyone else already in the group.
   const hasResumePosition = startTicks > 0 && !syncPlaylistItemId;
 
-  // Real feedback: this used to read straight off the item passed in,
-  // which for an Episode is the episode's own real DTO, its own
-  // BackdropImageTags almost always empty and its own ImageTags.Primary
-  // the episode's own thumbnail, not the show's own real artwork every
-  // other player chrome (Nuvio's own pause screen included) actually
-  // shows here. SeriesId/ParentBackdropImageTags/SeriesPrimaryImageTag
-  // are the real fields Jellyfin's own Episode DTO already carries for
-  // exactly this, confirmed against BaseItemDto before writing this,
-  // not guessed at; a movie has no series to prefer over its own.
-  function seriesAwareArtworkUrl(maxWidth) {
-    const artId = isEpisodeItem && item.SeriesId ? item.SeriesId : itemId;
-    const backdropTag = isEpisodeItem
-      ? item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]
-      : item.BackdropImageTags && item.BackdropImageTags[0];
-    const primaryTag = isEpisodeItem ? item.SeriesPrimaryImageTag : item.ImageTags && item.ImageTags.Primary;
-    const tag = backdropTag || primaryTag;
-    if (!tag) return null;
-    return getImageUrl(artId, backdropTag ? 'Backdrop' : 'Primary', { tag: tag, maxWidth: maxWidth });
-  }
-
-  // Same real series-aware fallback as the backdrop above, the one
-  // other real image type Jellyfin's own metadata providers save
-  // against a title (ParentLogoImageTag for an Episode, ImageTags.Logo
-  // for a movie or the series itself): a transparent title treatment,
-  // not guaranteed to exist for every real title the way a backdrop
-  // usually is, so this can come back null.
-  function seriesAwareLogoUrl(maxWidth) {
-    const artId = isEpisodeItem && item.SeriesId ? item.SeriesId : itemId;
-    const tag = isEpisodeItem ? item.ParentLogoImageTag : item.ImageTags && item.ImageTags.Logo;
-    if (!tag) return null;
-    return getImageUrl(artId, 'Logo', { tag: tag, maxWidth: maxWidth });
-  }
-
   const video = document.createElement('video');
   video.className = 'jellio-player-video';
   // Ask the browser to keep loading ahead, paused included.
@@ -1016,7 +1031,6 @@ export async function renderPlayer(root, params) {
   // frame, real feedback landed on this screen as the show's own real
   // artwork replaced by a blank box for however long the first real
   // frame takes to arrive.
-  const posterUrl = seriesAwareArtworkUrl(1600);
   if (posterUrl) video.poster = posterUrl;
 
   // Ported from the same real Nuvio loading screen this whole pass
@@ -1029,46 +1043,69 @@ export async function renderPlayer(root, params) {
   // or the toast next to it timed out looking abandoned. showLoadingLogo
   // is now called at every one of those real reload points too, not
   // just the first one.
+  let loadingBackdrop = null;
   let loadingLogo = null;
-  const logoUrl = seriesAwareLogoUrl(800);
   let logoWatchdog = null;
   let logoLastTime = 0;
   let logoLastFrames = 0;
   let logoShownAt = 0;
 
-  // The logo goes as soon as the video is really running, whichever way
-  // that shows: 'playing', or the clock moving while unpaused. Checked
-  // on a short timer as well as on events, since a reload that resumes
-  // before the logo goes up, or a webview that fires few media events,
-  // leaves the events with nothing to react to.
+  // The logo and backdrop stay up until the video is genuinely rendering
+  // frames, so the browser's black <video> box and native buffering circle
+  // never replace the artwork while waiting for the first frame.
   function logoSeesPlayback() {
-    if (!loadingLogo || video.paused || video.ended || video.seeking) return false;
-    // Frames being drawn count too, whatever the clock and events say.
+    if ((!loadingLogo && !loadingBackdrop) || video.paused || video.ended || video.seeking || video.readyState < 3) {
+      logoLastTime = video.currentTime;
+      return false;
+    }
     const quality = typeof video.getVideoPlaybackQuality === 'function' ? video.getVideoPlaybackQuality() : null;
     if (quality) {
       if (quality.totalVideoFrames < logoLastFrames) logoLastFrames = quality.totalVideoFrames;
       else if (quality.totalVideoFrames - logoLastFrames >= 3) return true;
     }
-    const moved = Math.abs(video.currentTime - logoLastTime) > 0.05;
+    const delta = video.currentTime - logoLastTime;
     logoLastTime = video.currentTime;
-    return moved || (video.readyState >= 3 && Date.now() - logoShownAt > 1500 && video.currentTime > 0);
+    return delta > 0.05 && delta < 2;
   }
 
   function showLoadingLogo() {
-    if (!logoUrl) return;
-    if (loadingLogo) loadingLogo.remove();
-    loadingLogo = el('div', 'jellio-player-loading-logo');
-    loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
-    root.appendChild(loadingLogo);
+    if (loadingBackdrop) {
+      loadingBackdrop.remove();
+      loadingBackdrop = null;
+    }
+    if (posterUrl && video.readyState < 3) {
+      loadingBackdrop = el('div', 'jellio-player-loading-backdrop');
+      loadingBackdrop.style.backgroundImage = 'url(' + posterUrl + ')';
+      if (video.parentNode === root && video.nextSibling) {
+        root.insertBefore(loadingBackdrop, video.nextSibling);
+      } else {
+        root.appendChild(loadingBackdrop);
+      }
+    }
+    if (loadingLogo) {
+      loadingLogo.remove();
+      loadingLogo = null;
+    }
+    if (logoUrl) {
+      loadingLogo = el('div', 'jellio-player-loading-logo');
+      loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
+      const anchor = loadingBackdrop || video;
+      if (anchor.parentNode === root && anchor.nextSibling) {
+        root.insertBefore(loadingLogo, anchor.nextSibling);
+      } else {
+        root.appendChild(loadingLogo);
+      }
+    }
+    if (!loadingLogo && !loadingBackdrop) return;
     logoLastTime = video.currentTime;
     logoLastFrames = typeof video.getVideoPlaybackQuality === 'function' ? video.getVideoPlaybackQuality().totalVideoFrames : 0;
     logoShownAt = Date.now();
     if (typeof video.requestVideoFrameCallback === 'function') {
-      const shown = loadingLogo;
+      const shown = loadingLogo || loadingBackdrop;
       let frames = 0;
       const onFrame = function () {
-        if (loadingLogo !== shown) return;
-        if (!video.paused && ++frames >= 3) {
+        if ((loadingLogo || loadingBackdrop) !== shown) return;
+        if (!video.paused && video.readyState >= 3 && ++frames >= 3) {
           hideLoadingLogo();
           return;
         }
@@ -1078,7 +1115,7 @@ export async function renderPlayer(root, params) {
     }
     window.clearInterval(logoWatchdog);
     logoWatchdog = window.setInterval(function () {
-      if (!loadingLogo) {
+      if (!loadingLogo && !loadingBackdrop) {
         window.clearInterval(logoWatchdog);
         return;
       }
@@ -1087,7 +1124,7 @@ export async function renderPlayer(root, params) {
   }
 
   video.addEventListener('playing', function () {
-    if (loadingLogo && video.readyState >= 3) hideLoadingLogo();
+    if ((loadingLogo || loadingBackdrop) && video.readyState >= 3) hideLoadingLogo();
   });
 
   // Screen Wake Lock API: keeps the display awake during active video playback.
@@ -1156,6 +1193,10 @@ export async function renderPlayer(root, params) {
   // attemptPlay's own final failure branch calls this directly now.
   function hideLoadingLogo() {
     window.clearInterval(logoWatchdog);
+    if (loadingBackdrop) {
+      loadingBackdrop.remove();
+      loadingBackdrop = null;
+    }
     if (loadingLogo) {
       loadingLogo.remove();
       loadingLogo = null;
@@ -2347,6 +2388,7 @@ export async function renderPlayer(root, params) {
   // attaching here instead, the moment this menu first builds, starts
   // that fetch as early as this screen possibly can - concurrent with
   // waitForPlayableBuffer's own buffering below, not gated behind it.
+  let deferredAutoSubtitleStream = null;
   (async function () {
     let matched = null;
     try {
@@ -2358,7 +2400,13 @@ export async function renderPlayer(root, params) {
     }
     if (matched) activeSubtitleStreamIndex = matched.Index;
     rebuildSubtitleMenu();
-    if (matched) attachSubtitleTrack(matched, 0);
+    if (matched) {
+      if (matched.DeliveryMethod === 'External' || hasReportedStart) {
+        attachSubtitleTrack(matched, 0);
+      } else {
+        deferredAutoSubtitleStream = matched;
+      }
+    }
   })();
 
   registerPopover(subtitleButton, subtitleMenu);
@@ -3596,7 +3644,9 @@ export async function renderPlayer(root, params) {
           return;
         }
         console.warn('Jellio: could not start playback', err);
-        hideLoadingLogo();
+        if (hasReportedStart) {
+          hideLoadingLogo();
+        }
         showPlayerToast('Could not start playback. Try pressing play again.');
       });
     }
@@ -3633,7 +3683,7 @@ export async function renderPlayer(root, params) {
   // still ramping up); a confirmed-cached source has no such ramp-up to
   // wait out, so it gets a token cushion instead of the full one.
   const CONFIRMED_CACHED_TARGET_SECONDS = 1;
-  const CONFIRMED_CACHED_TIMEOUT_MS = 2500;
+  const CONFIRMED_CACHED_TIMEOUT_MS = 8000;
   function isConfirmedCachedSource() {
     return !!(mediaSource && mediaSource.Formats && mediaSource.Formats.indexOf('gelato-cached') !== -1);
   }
@@ -4012,6 +4062,7 @@ export async function renderPlayer(root, params) {
   function hideControls() {
     const blocked =
       video.paused ||
+      !hasReportedStart ||
       !shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden') ||
       popovers.some(function (entry) {
         return !entry.menu.classList.contains('jellio-player-popover-hidden');
@@ -5301,22 +5352,44 @@ export async function renderPlayer(root, params) {
     if (!streamIsTranscoded && !retriedWithTranscode && !failoverStarted && getVideoTranscodePolicy() !== 'Block') {
       retriedWithTranscode = true;
       streamIsTranscoded = true;
-      const fallbackUsesHls = willUseHls(mediaSource, true);
-      needsStartOffset = !fallbackUsesHls;
-      streamOffsetTicks = needsStartOffset ? startTicks : 0;
-      pendingNativeSeekSeconds = fallbackUsesHls && startTicks > 0 ? startTicks / TICKS_PER_SECOND : null;
       if (startTimer) {
         window.clearTimeout(startTimer);
         startTimer = null;
       }
-      video.src = buildStreamUrl(itemId, mediaSource, startTicks, {
-        audioStreamIndex: currentAudioStreamIndex,
-        forceTranscode: true,
-        playSessionId: playSessionId,
-      });
-      video.load();
       showLoadingLogo();
-      waitForPlayableBuffer(attemptPlay);
+      getPlaybackInfo(itemId, startTicks, mediaSource.Id, currentAudioStreamIndex)
+        .then(function (info) {
+          if (screenTornDown || failoverStarted) return;
+          const negotiated = pickNegotiatedSource(info, mediaSource.Id);
+          if (negotiated) {
+            mediaSource = negotiated;
+            playSessionId = info.PlaySessionId;
+          }
+          const fallbackUsesHls = willUseHls(mediaSource, true);
+          needsStartOffset = !fallbackUsesHls;
+          streamOffsetTicks = needsStartOffset ? startTicks : 0;
+          pendingNativeSeekSeconds = fallbackUsesHls && startTicks > 0 ? startTicks / TICKS_PER_SECOND : null;
+          video.src = buildStreamUrl(itemId, mediaSource, startTicks, {
+            audioStreamIndex: currentAudioStreamIndex,
+            forceTranscode: true,
+            playSessionId: playSessionId,
+          });
+          video.load();
+          showLoadingLogo();
+          waitForPlayableBuffer(attemptPlay);
+        })
+        .catch(function () {
+          if (screenTornDown || failoverStarted) return;
+          failoverToNextStream('transcode fallback negotiation failed').then(function (handled) {
+            if (handled) return;
+            cleanup();
+            renderPlaybackError(
+              root,
+              itemId,
+              'This stream could not be played. Try a different one from Change Stream.',
+            );
+          });
+        });
       return;
     }
     failoverToNextStream('error before the first frame').then(function (handled) {
@@ -5411,6 +5484,13 @@ export async function renderPlayer(root, params) {
       hasReportedStart = true;
       reportPlaybackStart(itemId, mediaSource.Id, currentPositionTicks());
       requestProbedDuration();
+      if (deferredAutoSubtitleStream) {
+        const sub = deferredAutoSubtitleStream;
+        deferredAutoSubtitleStream = null;
+        if (activeSubtitleStreamIndex === sub.Index && !activeTrack) {
+          attachSubtitleTrack(sub, 0);
+        }
+      }
     }
 
     const activeGroup = getCurrentGroup();
