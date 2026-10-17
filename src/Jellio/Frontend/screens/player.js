@@ -730,8 +730,19 @@ export async function renderPlayer(root, params) {
     return undefined;
   }
 
+  function pickNegotiatedSource(info, wantedId) {
+    const list = (info && info.MediaSources) || [];
+    if (wantedId) {
+      const match = list.find(function (s) {
+        return s && s.Id === wantedId;
+      });
+      if (match) return match;
+    }
+    return list[0] || null;
+  }
+
   const playbackSources = (playbackInfo && playbackInfo.MediaSources) || [];
-  let mediaSource = playbackSources[0];
+  let mediaSource = pickNegotiatedSource(playbackInfo, preferredMediaSourceId);
   // Real field on Jellyfin's own PlaybackInfoResponse, kept for the
   // whole time this title stays open the same way every real
   // jellyfin-web session already does, real feedback traced a live
@@ -826,16 +837,18 @@ export async function renderPlayer(root, params) {
     // real ffmpeg track selection never actually reads it, only a real
     // explicit AudioStreamIndex on the stream request itself, the same
     // real constraint switchAudioTrack below already works around
-    // unconditionally. Matched or not against the default, this now
-    // always renegotiates with the real index explicit, the one thing
-    // that actually gets a match to play rather than just look picked.
-    // Gated on more than one real audio track existing at all: a single
-    // track file has no real choice to make regardless of what it is
-    // tagged as, forcing a transcode over it would only add real server
-    // load and HLS/segment overhead a plain direct play never needed.
-    if (matchedIndex != null && getAudioStreams(mediaSource).length > 1) {
+    // unconditionally. Gated on more than one real audio track existing
+    // and either needing a transcode anyway or differing from the file's
+    // default track so a direct playable stream whose default track is
+    // already the preferred language plays as is without forcing ffmpeg.
+    const initialDirectPlay = canBrowserDirectPlay(mediaSource) && !(startTicks > 0);
+    if (
+      matchedIndex != null &&
+      getAudioStreams(mediaSource).length > 1 &&
+      (!initialDirectPlay || matchedIndex !== mediaSource.DefaultAudioStreamIndex)
+    ) {
       const rematched = await getPlaybackInfo(itemId, startTicks, mediaSource.Id, matchedIndex);
-      const rematchedSource = rematched && rematched.MediaSources && rematched.MediaSources[0];
+      const rematchedSource = pickNegotiatedSource(rematched, mediaSource.Id);
       if (rematchedSource) {
         mediaSource = rematchedSource;
         playSessionId = rematched.PlaySessionId;
@@ -2581,7 +2594,7 @@ export async function renderPlayer(root, params) {
     try {
       reportPlaybackStopped(itemId, mediaSource.Id, resumeTicks);
       const info = await getPlaybackInfo(itemId, resumeTicks, mediaSource.Id, stream.Index);
-      const negotiated = info && info.MediaSources && info.MediaSources[0];
+      const negotiated = pickNegotiatedSource(info, mediaSource.Id);
       if (!negotiated) {
         showPlayerToast('That audio track is no longer available.');
         return;
@@ -3726,7 +3739,7 @@ export async function renderPlayer(root, params) {
     try {
       reportPlaybackStopped(itemId, mediaSource.Id, targetTicks);
       const info = await getPlaybackInfo(itemId, targetTicks, mediaSource.Id, currentAudioStreamIndex, burnedInSubtitleIndex);
-      const negotiated = info && info.MediaSources && info.MediaSources[0];
+      const negotiated = pickNegotiatedSource(info, mediaSource.Id);
       if (!negotiated) {
         showPlayerToast('Could not seek, that stream is no longer available.');
         return;
@@ -3814,7 +3827,7 @@ export async function renderPlayer(root, params) {
     reportPlaybackStopped(itemId, mediaSource.Id, resumeTicks);
     try {
       const info = await getPlaybackInfo(itemId, resumeTicks, source.Id);
-      const negotiated = info && info.MediaSources && info.MediaSources[0];
+      const negotiated = pickNegotiatedSource(info, source.Id);
       if (!negotiated) {
         showPlayerToast('That stream is no longer available.');
         return;
@@ -3844,7 +3857,7 @@ export async function renderPlayer(root, params) {
         if (matchedAudioIndex != null) {
           try {
             const rematched = await getPlaybackInfo(itemId, resumeTicks, source.Id, matchedAudioIndex);
-            const rematchedSource = rematched && rematched.MediaSources && rematched.MediaSources[0];
+            const rematchedSource = pickNegotiatedSource(rematched, source.Id);
             if (rematchedSource) {
               mediaSource = rematchedSource;
               playSessionId = rematched.PlaySessionId;
@@ -4539,7 +4552,7 @@ export async function renderPlayer(root, params) {
         hasReportedStart = false;
         getPlaybackInfo(itemId, 0, mediaSource.Id, currentAudioStreamIndex)
           .then(function (info) {
-            const negotiated = info && info.MediaSources && info.MediaSources[0];
+            const negotiated = pickNegotiatedSource(info, mediaSource.Id);
             if (!negotiated) {
               showPlayerToast('Could not start over, that stream is no longer available.');
               return;
@@ -5053,18 +5066,12 @@ export async function renderPlayer(root, params) {
   }
 
   // The served file's own length against the title's runtime. Only for a
-  // file played as is: a transcode's duration grows as it encodes.
+  // file played as is: a transcode's or HLS stream's duration grows as it encodes.
   function checkForPlaceholder() {
-    if (failoverStarted || streamIsTranscoded) return;
+    if (failoverStarted || streamIsTranscoded || supportsNativeHls()) return;
     if (looksLikePlaceholder(video.duration, expectedRuntimeSeconds)) {
       failoverToNextStream('placeholder clip of ' + Math.round(video.duration) + 's');
     }
-  }
-  // The server's own probe of the stream already gives its length.
-  if (mediaSource && mediaSource.RunTimeTicks && looksLikePlaceholder(mediaSource.RunTimeTicks / TICKS_PER_SECOND, expectedRuntimeSeconds)) {
-    window.setTimeout(function () {
-      failoverToNextStream('server reports a ' + Math.round(mediaSource.RunTimeTicks / TICKS_PER_SECOND) + 's stream');
-    }, 0);
   }
   video.addEventListener('loadedmetadata', checkForPlaceholder);
   video.addEventListener('durationchange', checkForPlaceholder);
@@ -5205,7 +5212,8 @@ export async function renderPlayer(root, params) {
 
   // A converted stream can't report its length, so the server reads it
   // from the source once (Jellio/real-duration/probe) and the player
-  // takes that instead.
+  // takes that instead. Deferred until playback has actually started so
+  // ffprobe does not compete with initial stream startup.
   let durationProbeRequested = false;
   function requestProbedDuration() {
     if (durationProbeRequested || videoDurationIsFinal()) return;
@@ -5223,7 +5231,6 @@ export async function renderPlayer(root, params) {
         // The library's own length (or none) stays in use.
       });
   }
-  requestProbedDuration();
 
   function reconcileDuration() {
     const real = video.duration;
@@ -5264,6 +5271,7 @@ export async function renderPlayer(root, params) {
   // broke it after the fact gets the same toast switchSource()'s own
   // failures already use, the rest of this screen still being worth
   // keeping in front of the reader at that point.
+  let retriedWithTranscode = false;
   video.addEventListener('error', function () {
     if (screenTornDown) return;
     // Real gap found live: this handler discarded the browser's own
@@ -5284,6 +5292,31 @@ export async function renderPlayer(root, params) {
     );
     if (hasReportedStart) {
       showPlayerToast('Playback stopped unexpectedly. Try a different stream.');
+      return;
+    }
+    // A previously played stream has probed MediaStreams in Jellyfin, which can
+    // cause canBrowserDirectPlay to try Static=true on a container/codec the
+    // browser or proxy cannot play directly. Fall back to a server remux/transcode
+    // of this same source once before marking it bad and failing over.
+    if (!streamIsTranscoded && !retriedWithTranscode && !failoverStarted && getVideoTranscodePolicy() !== 'Block') {
+      retriedWithTranscode = true;
+      streamIsTranscoded = true;
+      const fallbackUsesHls = willUseHls(mediaSource, true);
+      needsStartOffset = !fallbackUsesHls;
+      streamOffsetTicks = needsStartOffset ? startTicks : 0;
+      pendingNativeSeekSeconds = fallbackUsesHls && startTicks > 0 ? startTicks / TICKS_PER_SECOND : null;
+      if (startTimer) {
+        window.clearTimeout(startTimer);
+        startTimer = null;
+      }
+      video.src = buildStreamUrl(itemId, mediaSource, startTicks, {
+        audioStreamIndex: currentAudioStreamIndex,
+        forceTranscode: true,
+        playSessionId: playSessionId,
+      });
+      video.load();
+      showLoadingLogo();
+      waitForPlayableBuffer(attemptPlay);
       return;
     }
     failoverToNextStream('error before the first frame').then(function (handled) {
@@ -5324,7 +5357,7 @@ export async function renderPlayer(root, params) {
   // never send a Content-Length/proper duration hint at all (chunked
   // debrid delivery), so video.duration stays Infinity for the whole
   // real sitting and reconcileDuration() above never actually settles
-  // durationSeconds off the library's own inflated metadata guess —
+  // durationSeconds off the library's own inflated metadata guess -
   // the exact same real report (37 of a real 41 minute episode, still
   // showing 22m left, nothing credited) that started this. 'ended' is
   // the one real signal that needs no known duration at all: the
@@ -5377,6 +5410,7 @@ export async function renderPlayer(root, params) {
     if (!hasReportedStart) {
       hasReportedStart = true;
       reportPlaybackStart(itemId, mediaSource.Id, currentPositionTicks());
+      requestProbedDuration();
     }
 
     const activeGroup = getCurrentGroup();

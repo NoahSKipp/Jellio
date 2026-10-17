@@ -2510,7 +2510,7 @@ function supportsMatroskaContainer() {
 // "mkv" is the one real extension that endpoint (and every real client
 // or proxy sniffing this URL's own file extension) actually recognises.
 function normalizeStreamContainer(rawContainer) {
-  const container = String(rawContainer || '').toLowerCase();
+  const container = String(rawContainer || '').toLowerCase().split(',')[0].trim();
   if (container === 'mov') return 'mp4';
   return MATROSKA_CONTAINERS.has(container) ? 'mkv' : container;
 }
@@ -2635,7 +2635,7 @@ export function canBrowserDirectPlay(mediaSource) {
   if (mediaSource.SupportsDirectPlay === false && mediaSource.SupportsDirectStream === false) {
     return false;
   }
-  const container = String(mediaSource.Container || '').toLowerCase();
+  const container = normalizeStreamContainer(mediaSource.Container);
   const streams = mediaSource.MediaStreams || [];
   const video = streams.filter(function (stream) {
     return stream.Type === 'Video';

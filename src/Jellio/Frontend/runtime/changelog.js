@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.83.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.5",
+    "summary": "Stream failover accuracy and replay reliability fixes for previously played streams.",
+    "highlights": [
+      {
+        "title": "Accurate Bad Stream Tracking",
+        "description": "Failed streams are now keyed by their unique source ID and release filename rather than the shared quality tier header, preventing a single failed stream from flagging all streams in that tier."
+      },
+      {
+        "title": "Reliable Replay for Probed Streams",
+        "description": "Previously played streams now fall back to server transcoding if direct play fails before the first frame, normalize comma-separated container names, and cap placeholder detection to short clips under 3 minutes."
+      }
+    ]
+  },
+  {
     "version": "1.83.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.4",
