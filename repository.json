@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.83.6] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Remux Matroska streams and keep loading artwork visible until playback starts\n",
+        "checksum": "220eeb769ccc27521dced93f7eb9e9c3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.6/jellio_1.83.6.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-17T02:44:54Z",
+        "version": "1.83.6"
+      },
+      {
         "changelog": "## [1.83.5] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Key bad streams by release description and fallback to transcode on direct play failure\n",
         "checksum": "3d1335fc1653e9b6c3707b2f5f0d1f2a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.5/jellio_1.83.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-12T09:06:35Z",
         "version": "1.73.1"
-      },
-      {
-        "changelog": "## [1.73.0] - 2026-10-12\n\n### 🚀 Features\n\n- *(player)* Try the next stream when one doesn't play\n",
-        "checksum": "c22f82f7bd42accb45dd324cf193a08c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.73.0/jellio_1.73.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-12T09:01:53Z",
-        "version": "1.73.0"
       }
     ]
   }
