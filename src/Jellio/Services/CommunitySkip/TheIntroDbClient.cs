@@ -19,10 +19,12 @@ namespace Jellio.Services.CommunitySkip;
 // directly off ProviderIds.Tmdb, no Simkl id-resolution round trip
 // needed at all, and every Gelato import already carries one
 // (PluginConfiguration.cs's own existing TmdbAccessToken comment
-// already confirmed this live).
+// already confirmed this live). On v4 TheIntroDB keys its data by
+// TVDB id, so that one is sent too whenever the item has it and the
+// API picks tvdb -> tmdb -> imdb itself.
 public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheIntroDbClient> logger)
 {
-    private const string BaseUrl = "https://api.theintrodb.org/v3/media";
+    private const string BaseUrl = "https://api.theintrodb.org/v4/media";
 
     // Same real ceiling their own client enforces (30 requests per 10s,
     // clamped a touch under it here): every single episode/movie this
@@ -35,10 +37,11 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
     private static DateTime _rateLimitedUntilUtc = DateTime.MinValue;
 
     public async Task<MediaResponse?> GetSegmentsAsync(
-        int tmdbId,
+        TheIntroDbIds ids,
         bool isMovie,
         int? season,
         int? episode,
+        string? mapping,
         long? durationMs,
         CancellationToken cancellationToken)
     {
@@ -53,10 +56,35 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
             return null;
         }
 
-        var query = "?tmdb_id=" + tmdbId;
+        var parameters = new List<string>();
+        if (!string.IsNullOrWhiteSpace(ids.TvdbId))
+        {
+            parameters.Add("tvdb_id=" + Uri.EscapeDataString(ids.TvdbId));
+        }
+
+        if (ids.TmdbId is { } tmdbId)
+        {
+            parameters.Add("tmdb_id=" + tmdbId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(ids.ImdbId))
+        {
+            parameters.Add("imdb_id=" + Uri.EscapeDataString(ids.ImdbId));
+        }
+
+        if (parameters.Count == 0)
+        {
+            return null;
+        }
+
+        var query = "?" + string.Join('&', parameters);
         if (!isMovie)
         {
             query += "&season=" + season + "&episode=" + episode;
+            if (mapping is not null)
+            {
+                query += "&mapping=" + mapping;
+            }
         }
 
         if (durationMs is > 0)
@@ -115,6 +143,22 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
         }
     }
 
+    // Jellyfin's Series.DisplayOrder to v4's mapping (default, official,
+    // dvd, alternate, absolute, regional). Unset or unknown orders send
+    // nothing, which v4 treats as default.
+    public static string? MappingFor(string? displayOrder)
+    {
+        return displayOrder?.Trim().ToLowerInvariant() switch
+        {
+            "aired" or "official" => "official",
+            "dvd" or "altdvd" or "alternatedvd" => "dvd",
+            "absolute" => "absolute",
+            "alternate" or "streaming" => "alternate",
+            "regional" or "production" => "regional",
+            _ => null,
+        };
+    }
+
     private static async Task WaitForRateLimitAsync(CancellationToken cancellationToken)
     {
         await RateLimitLock.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -136,12 +180,19 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
     }
 }
 
+public record TheIntroDbIds(int? TmdbId, string? TvdbId, string? ImdbId)
+{
+    public bool Any => TmdbId is not null || !string.IsNullOrWhiteSpace(TvdbId) || !string.IsNullOrWhiteSpace(ImdbId);
+}
+
 // JSON shapes matching TheIntroDB API's own real GET /media response
 // exactly (Api/MediaResponse.cs and Api/SegmentTimestamp.cs, read
 // directly from their own real source before writing this): intro/
 // recap keep start_ms optional (defaults to the real start of the
 // episode) but require end_ms; credits/preview require start_ms but
 // leave end_ms optional (means "runs to the real end of the media").
+// v4 can also answer with a version or episode list instead; those
+// carry none of these arrays and read as no segments.
 public class MediaResponse
 {
     [JsonPropertyName("intro")]

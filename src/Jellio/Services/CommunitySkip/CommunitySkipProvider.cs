@@ -74,6 +74,9 @@ public class CommunitySkipProvider(
         var tmdbIdString = TmdbIdFor(episode);
         return GetSkipIntervalsCoreAsync(
             tmdbIdString,
+            ProviderIdFor(episode, "Tvdb"),
+            ProviderIdFor(episode, "Imdb"),
+            TheIntroDbClient.MappingFor(episode.Series?.DisplayOrder),
             isMovie: false,
             episode.ParentIndexNumber,
             episode.IndexNumber,
@@ -95,6 +98,9 @@ public class CommunitySkipProvider(
         var tmdbIdString = movie.ProviderIds.TryGetValue("Tmdb", out var id) && !string.IsNullOrWhiteSpace(id) ? id : null;
         return GetSkipIntervalsCoreAsync(
             tmdbIdString,
+            ProviderIdFor(movie, "Tvdb"),
+            ProviderIdFor(movie, "Imdb"),
+            mapping: null,
             isMovie: true,
             season: null,
             episode: null,
@@ -106,6 +112,9 @@ public class CommunitySkipProvider(
 
     private async Task<CommunitySkipResult?> GetSkipIntervalsCoreAsync(
         string? tmdbIdString,
+        string? tvdbId,
+        string? imdbId,
+        string? mapping,
         bool isMovie,
         int? season,
         int? episode,
@@ -120,8 +129,10 @@ public class CommunitySkipProvider(
 
         var tiers = new List<List<CommunitySkipInterval>>();
 
-        var theIntroDbIntervals = hasTmdbTarget
-            ? await GetTheIntroDbIntervalsAsync(tmdbId!.Value, isMovie, season, episode, durationSeconds, itemName, cancellationToken).ConfigureAwait(false)
+        var theIntroDbIds = new TheIntroDbIds(tmdbId, tvdbId, imdbId);
+        var hasTheIntroDbTarget = theIntroDbIds.Any && (isMovie || (season is not null && episode is not null));
+        var theIntroDbIntervals = hasTheIntroDbTarget
+            ? await GetTheIntroDbIntervalsAsync(theIntroDbIds, isMovie, season, episode, mapping, durationSeconds, itemName, cancellationToken).ConfigureAwait(false)
             : [];
         tiers.Add(theIntroDbIntervals);
 
@@ -174,10 +185,11 @@ public class CommunitySkipProvider(
     }
 
     private async Task<List<CommunitySkipInterval>> GetTheIntroDbIntervalsAsync(
-        int tmdbId,
+        TheIntroDbIds ids,
         bool isMovie,
         int? season,
         int? episode,
+        string? mapping,
         double durationSeconds,
         string? itemName,
         CancellationToken cancellationToken)
@@ -186,7 +198,7 @@ public class CommunitySkipProvider(
         {
             var durationMs = durationSeconds > 0 ? (long?)(durationSeconds * 1000) : null;
             var response = await theIntroDbClient
-                .GetSegmentsAsync(tmdbId, isMovie, season, episode, durationMs, cancellationToken)
+                .GetSegmentsAsync(ids, isMovie, season, episode, mapping, durationMs, cancellationToken)
                 .ConfigureAwait(false);
             return ConvertTheIntroDb(response, durationSeconds);
         }
@@ -427,6 +439,12 @@ public class CommunitySkipProvider(
         }
 
         return chosen;
+    }
+
+    private static string? ProviderIdFor(BaseItem item, string provider)
+    {
+        var owner = item is Episode { Series: { } series } ? series : item;
+        return owner.ProviderIds.TryGetValue(provider, out var id) && !string.IsNullOrWhiteSpace(id) ? id : null;
     }
 
     private static string? TmdbIdFor(Episode episode)
