@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.84.0] - 2026-10-18\n\n### 🚀 Features\n\n- *(skip)* Move TheIntroDB lookups to the v4 API\n",
+        "checksum": "24da595f78470c1a26088d3b9b6b8fc3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.0/jellio_1.84.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-18T23:29:56Z",
+        "version": "1.84.0"
+      },
+      {
         "changelog": "## [1.83.14] - 2026-10-18\n\n### 🐛 Bug Fixes\n\n- *(genres)* One entry per title in genre rows, with overviews\n",
         "checksum": "841f762f7ba9bafe4193e99331b86695",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.14/jellio_1.83.14.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-14T00:17:45Z",
         "version": "1.77.2"
-      },
-      {
-        "changelog": "## [1.77.1] - 2026-10-13\n\n### 🐛 Bug Fixes\n\n- *(calendar)* Find watched shows from episode history and wait longer for new seasons\n",
-        "checksum": "7517f9c6e26a20466235dbe2e51e8e24",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.1/jellio_1.77.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-13T20:04:57Z",
-        "version": "1.77.1"
       }
     ]
   }
