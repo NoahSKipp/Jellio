@@ -125,15 +125,18 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
             ParentId = parentId,
             Genres = [genre],
             OrderBy = [(ItemSortBy.CommunityRating, SortOrder.Descending)],
-            Limit = limit,
+            // Headroom: several versions of one title can come back as separate
+            // items and are folded into one below.
+            Limit = limit * 3,
         });
+        var distinct = DistinctTitles(items).Take(limit).ToList();
         var options = new DtoOptions
         {
-            Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.Genres],
+            Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.Genres, ItemFields.Overview],
             EnableUserData = true,
             EnableImages = true,
         };
-        IReadOnlyList<BaseItemDto> dtos = ConvertToBaseItemDtos(items, options, user);
+        IReadOnlyList<BaseItemDto> dtos = ConvertToBaseItemDtos(distinct, options, user);
         if (_rows.Count > 500)
         {
             _rows.Clear();
@@ -141,6 +144,29 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
 
         _rows[key] = (DateTime.UtcNow, dtos);
         return dtos;
+    }
+
+    // One entry per title: the same film in several versions (or imported
+    // twice) shares a presentation key, or at least an id or a name and year.
+    public static IEnumerable<BaseItem> DistinctTitles(IEnumerable<BaseItem> items)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in items)
+        {
+            var keys = new List<string> { "i:" + item.Id.ToString("N"), "t:" + (item.Name ?? string.Empty).Trim() + "|" + item.ProductionYear };
+            if (!string.IsNullOrEmpty(item.PresentationUniqueKey))
+            {
+                keys.Add("p:" + item.PresentationUniqueKey);
+            }
+
+            if (keys.Any(seen.Contains))
+            {
+                continue;
+            }
+
+            keys.ForEach(key => seen.Add(key));
+            yield return item;
+        }
     }
 
     private static readonly MethodInfo? DtoBatchMethod = typeof(IDtoService)
