@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.84.1] - 2026-10-18\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.83.14 and 1.84.0 release notes\n",
+        "checksum": "16b2be160881d5ac552248dce20e515b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.1/jellio_1.84.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-18T23:45:38Z",
+        "version": "1.84.1"
+      },
+      {
         "changelog": "## [1.84.0] - 2026-10-18\n\n### 🚀 Features\n\n- *(skip)* Move TheIntroDB lookups to the v4 API\n",
         "checksum": "24da595f78470c1a26088d3b9b6b8fc3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.0/jellio_1.84.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-14T01:14:20Z",
         "version": "1.77.3"
-      },
-      {
-        "changelog": "## [1.77.2] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(home)* Show the show's art on episode cards in landscape rows\n\n### ⚡ Performance\n\n- *(detail)* Load title info without resolving streams\n\n### ◀️ Revert\n\n- Keep episode stills on Jellio's own episode cards\n",
-        "checksum": "2b6baeb1935519fae153cd14cf5dd0e9",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.2/jellio_1.77.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-14T00:17:45Z",
-        "version": "1.77.2"
       }
     ]
   }
