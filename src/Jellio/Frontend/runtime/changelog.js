@@ -19,6 +19,38 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.84.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.84.0",
+    "summary": "Skip Intro and Skip Credits now find timestamps for more shows.",
+    "highlights": [
+      {
+        "title": "More Skip Intro Coverage",
+        "description": "Jellio now uses the newest version of TheIntroDB, the community database behind Skip Intro and Skip Credits. More shows and movies have timestamps, and titles that only had a TVDB or IMDb id are now covered too."
+      },
+      {
+        "title": "Right Episode, Any Order",
+        "description": "Shows set to DVD, absolute or another episode order in Jellyfin now get the skip times for the episode you are actually watching."
+      }
+    ]
+  },
+  {
+    "version": "1.83.14",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.83.14",
+    "summary": "Genre rows show each title once and include descriptions.",
+    "highlights": [
+      {
+        "title": "No More Duplicate Titles",
+        "description": "Genre rows no longer show the same movie or show more than once, so every row is filled with different titles."
+      },
+      {
+        "title": "Descriptions in Genre Rows",
+        "description": "Titles in genre rows now come with their description, so it shows up right away when you browse them."
+      }
+    ]
+  },
+  {
     "version": "1.83.13",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.83.13",
