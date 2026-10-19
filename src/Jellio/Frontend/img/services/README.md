@@ -8,7 +8,7 @@ Every SVG here is taken unmodified from [Simple Icons](https://github.com/simple
 whose icon files are released under CC0 1.0 Universal. That licence is
 reproduced in `LICENSE.md` beside them.
 
-Most come from 16.28.0. Two do not, because that release no longer carries
+Most come from 16.28.0. `sky-go.svg` is that release's `sky.svg`, the Sky mark, renamed for the Sky Go tile. Two do not, because that release no longer carries
 them: `prime-video.svg` is from 13.21.0 and `hulu.svg` from 9.21.0. Same
 project, same licence, older tag.
 
@@ -45,6 +45,7 @@ lowercased with non-alphanumerics collapsed to a single hyphen:
 | Disney+ | `disney.svg` |
 | Prime Video | `prime-video.svg` |
 | Peacock | `peacock.svg` |
+| Sky Go | `sky-go.svg` |
 
 `Frontend\**\*` in the csproj embeds the folder, so a new file needs no
 build change. It must be monochrome: the tiles force it white with a CSS
