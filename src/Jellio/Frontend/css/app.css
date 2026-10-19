@@ -7765,7 +7765,9 @@
   background-color: var(--jellio-bg-elevated);
   background-size: cover;
   background-position: center 20%;
-  overflow: hidden;
+  /* Clipped sideways only: the logo's glow may fade out below the header. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .jellio-service-hero::before {
@@ -7831,11 +7833,11 @@
   left: 50%;
   top: 50%;
   z-index: -1;
-  width: 3em;
-  height: 3em;
+  width: 9em;
+  height: 4.6em;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(var(--jellio-service-brand, 255 255 255) / 0.32) 0%, transparent 60%);
+  background: radial-gradient(ellipse closest-side, rgb(var(--jellio-service-brand, 255 255 255) / 0.34) 0%, rgb(var(--jellio-service-brand, 255 255 255) / 0.12) 55%, transparent 100%);
   pointer-events: none;
 }
 
