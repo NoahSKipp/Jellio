@@ -74,6 +74,31 @@ export function logoUrl(name) {
   return '/Jellio/frontend/img/services/' + logoSlug(name) + '.svg' + (version ? '?v=' + version : '');
 }
 
+// Each service's brand colour, for the wash behind its hub header.
+// Kept in step with Jellio TV's Services.kt.
+const SERVICE_COLORS = {
+  Netflix: '229 9 20',
+  'HBO Max': '88 34 180',
+  Max: '0 43 231',
+  'Disney+': '17 60 207',
+  'Prime Video': '0 168 225',
+  'Apple TV+': '142 142 147',
+  Hulu: '28 231 131',
+  'Paramount+': '0 100 255',
+  Peacock: '255 184 0',
+  Crunchyroll: '244 117 33',
+  'AMC+': '245 196 0',
+  Starz: '110 110 115',
+  Shudder: '200 16 46',
+  'Discovery+': '33 117 217',
+  'Sky Go': '0 114 201',
+};
+
+// "r g b" for rgb(... / alpha) in CSS, or null for an unknown service.
+export function serviceColor(name) {
+  return SERVICE_COLORS[name] || null;
+}
+
 export function groupByService(items) {
   const groups = {};
   items.forEach(function (item) {

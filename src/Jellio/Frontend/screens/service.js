@@ -4,7 +4,7 @@
 // library page the way the original codebase's own streamingHub.js had
 // to (this runtime owns real routing, no native page to borrow).
 import { getCollections, getCollectionItems, collectionKind, getImageUrl } from '../runtime/api.js';
-import { groupByService, logoUrl, rowTitle } from '../components/services.js';
+import { groupByService, logoUrl, rowTitle, serviceColor } from '../components/services.js';
 import { buildCard } from '../components/card.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -43,6 +43,8 @@ function pickHeroItem(rows) {
 
 function buildHeader(service, heroItem) {
   const hero = el('div', 'jellio-service-hero');
+  const brand = serviceColor(service);
+  if (brand) hero.style.setProperty('--jellio-service-brand', brand);
   if (heroItem) {
     hero.style.backgroundImage = 'url(' + getImageUrl(heroItem.Id, 'Backdrop', { tag: heroItem.BackdropImageTags[0], maxWidth: 1920 }) + ')';
   }

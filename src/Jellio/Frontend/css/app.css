@@ -7772,13 +7772,16 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgb(13 13 13 / 0.1) 0%,
-    rgb(13 13 13 / 0.3) 40%,
-    rgb(13 13 13 / 0.65) 70%,
-    var(--jellio-bg-color) 98%
-  );
+  /* The service's colour washes in from the top, over the backdrop. */
+  background:
+    linear-gradient(180deg, rgb(var(--jellio-service-brand, 13 13 13) / 0.3) 0%, transparent 60%),
+    linear-gradient(
+      180deg,
+      rgb(13 13 13 / 0.1) 0%,
+      rgb(13 13 13 / 0.3) 40%,
+      rgb(13 13 13 / 0.65) 70%,
+      var(--jellio-bg-color) 98%
+    );
 }
 
 /* The one real bit of "zing" this screen asked for: a soft glow tucked
@@ -7797,7 +7800,7 @@
   width: 22em;
   height: 22em;
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 255 255 / 0.14) 0%, transparent 70%);
+  background: radial-gradient(circle, rgb(var(--jellio-service-brand, 255 255 255) / 0.18) 0%, transparent 70%);
   pointer-events: none;
 }
 
