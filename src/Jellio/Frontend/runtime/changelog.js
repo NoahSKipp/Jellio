@@ -2930,6 +2930,22 @@ export const LATEST_BIG_CHANGELOG = CHANGELOG_RELEASES.find((r) => isBigRelease(
 
 export const MACOS_CHANGELOG_RELEASES = [
   {
+    "version": "0.6.1",
+    "title": "What's New in Jellio for macOS",
+    "subtitle": "Version 0.6.1",
+    "summary": "Jellio opens faster.",
+    "highlights": [
+      {
+        "title": "Faster Start",
+        "description": "The Jellio window now appears as soon as you open the app instead of waiting for your server, and the connection to your server is set up while the window opens."
+      },
+      {
+        "title": "Lighter First Load",
+        "description": "The Dock download count no longer checks your downloads while Jellio is still loading."
+      }
+    ]
+  },
+  {
     "version": "0.6.0",
     "title": "What's New in Jellio for macOS",
     "subtitle": "Version 0.6.0",
