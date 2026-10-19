@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.86.2] - 2026-10-19\n\n### 🐛 Bug Fixes\n\n- *(auth)* Report Jellio's real version to Jellyfin instead of 0.1.0\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.86.2 release notes\n",
+        "checksum": "a461a9822a41531e4ad6f3778636b26f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.86.2/jellio_1.86.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-19T20:20:24Z",
+        "version": "1.86.2"
+      },
+      {
         "changelog": "## [1.86.1] - 2026-10-19\n\n### 🐛 Bug Fixes\n\n- *(player)* Credits at the start of an episode no longer trigger Skip Credits and Next Episode\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.86.1 release notes\n",
         "checksum": "d4050029415e88ec84e22abe4fb400c3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.86.1/jellio_1.86.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-15T09:10:10Z",
         "version": "1.78.0"
-      },
-      {
-        "changelog": "## [1.77.8] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(home)* Stream recommendation and library rows, restore community row\n",
-        "checksum": "ff2edc7a7ff0f35231491e28fd585c91",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.8/jellio_1.77.8.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-15T08:51:33Z",
-        "version": "1.77.8"
       }
     ]
   }
