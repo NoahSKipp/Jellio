@@ -32,6 +32,16 @@ one is a hand trace rather than anything official. MIT covers Harbor's
 copyright in the file. It does not touch the trademark, which no
 downstream licence can grant.
 
+`amc.svg`, `shudder.svg` and `discovery.svg` (AMC+, Shudder, Discovery+) are
+in neither project. They come from [Custom Brand Icons](https://github.com/elax46/custom-brand-icons)
+by Emanuele & rchiileea, version 1.2.65 as packaged in `@iconify-json/cbi`
+(icons `amc`, `shudder`, `discovery-plus`), with only an `<svg>` wrapper
+added around each icon body. Those three files, unlike the rest of this
+folder, are licensed [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/):
+attribution, non-commercial use only, and adaptations under the same terms.
+Jellio is non-commercial; anyone redistributing it commercially has to drop
+or replace them.
+
 Tiles without a logo fall back to the service name set in type, so the strip
 works either way.
 
@@ -45,6 +55,9 @@ lowercased with non-alphanumerics collapsed to a single hyphen:
 | Disney+ | `disney.svg` |
 | Prime Video | `prime-video.svg` |
 | Peacock | `peacock.svg` |
+| AMC+ | `amc.svg` |
+| Shudder | `shudder.svg` |
+| Discovery+ | `discovery.svg` |
 | Sky Go | `sky-go.svg` |
 
 `Frontend\**\*` in the csproj embeds the folder, so a new file needs no
