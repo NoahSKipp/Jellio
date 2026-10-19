@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.86.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.86.1",
+    "summary": "No more Skip Credits and Next Episode right as an episode starts.",
+    "highlights": [
+      {
+        "title": "Skip Prompts at the Right Time",
+        "description": "Episodes with an \"Opening Credits\" chapter, or bad credits timestamps, showed Skip Intro, Skip Credits and Next Episode all at once as they began. Credits now only count in the second half of an episode."
+      }
+    ]
+  },
+  {
     "version": "1.86.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.86.0",
