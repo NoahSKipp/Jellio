@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.86.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.86.0",
+    "summary": "A calmer sidebar and quicker, more colourful Studio Hubs.",
+    "highlights": [
+      {
+        "title": "One-Tone Sidebar",
+        "description": "The sidebar now uses the same colour as the page, like Jellio TV, and only lifts off with a shadow while it's open."
+      },
+      {
+        "title": "Studio Hubs in Their Colours",
+        "description": "Each Studio Hub's header is tinted in the service's own colour, from Netflix red to Crunchyroll orange."
+      },
+      {
+        "title": "Faster Studio Hubs",
+        "description": "Hub rows show up one by one as soon as each catalog answers, instead of the whole page waiting for the slowest one."
+      }
+    ]
+  },
+  {
     "version": "1.85.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.85.0",
