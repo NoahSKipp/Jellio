@@ -9736,6 +9736,24 @@
   opacity: 1;
 }
 
+/* runtime/dom.js's fadeInBackdrop: the new image fades in under the
+   element's own scrim and content, then becomes its real background. */
+.jellio-backdrop-fade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: inherit;
+  background-position: inherit;
+  opacity: 0;
+  transition: opacity 400ms ease-out;
+  pointer-events: none;
+}
+
+.jellio-backdrop-fade-visible {
+  opacity: 1;
+}
+
 .jellio-hero-nav {
   position: absolute;
   top: 0;

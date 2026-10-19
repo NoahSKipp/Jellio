@@ -12,7 +12,7 @@ import { navigateTo } from '../runtime/router.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { makeRowTitleClickable } from '../components/rowListModal.js';
-import { el } from '../runtime/dom.js';
+import { el, fadeInBackdrop } from '../runtime/dom.js';
 
 const ROW_LIMIT = 24;
 // components/rowListModal.js's own "browse everything": a real full
@@ -46,7 +46,7 @@ function buildHeader(service, heroItem) {
   const brand = serviceColor(service);
   if (brand) hero.style.setProperty('--jellio-service-brand', brand);
   if (heroItem) {
-    hero.style.backgroundImage = 'url(' + getImageUrl(heroItem.Id, 'Backdrop', { tag: heroItem.BackdropImageTags[0], maxWidth: 1920 }) + ')';
+    fadeInBackdrop(hero, getImageUrl(heroItem.Id, 'Backdrop', { tag: heroItem.BackdropImageTags[0], maxWidth: 1920 }));
   }
 
   const content = el('div', 'jellio-service-hero-content');
@@ -206,7 +206,7 @@ export async function renderService(root, params) {
     return;
   }
 
-  let header = buildHeader(service, null);
+  const header = buildHeader(service, null);
   root.appendChild(header);
   const chipsMount = el('div');
   root.appendChild(chipsMount);
@@ -266,9 +266,10 @@ export async function renderService(root, params) {
       return;
     }
 
-    const finalHeader = buildHeader(service, pickHeroItem(filled));
-    header.replaceWith(finalHeader);
-    header = finalHeader;
+    const heroItem = pickHeroItem(filled);
+    if (heroItem) {
+      fadeInBackdrop(header, getImageUrl(heroItem.Id, 'Backdrop', { tag: heroItem.BackdropImageTags[0], maxWidth: 1920 }));
+    }
     chipsMount.replaceWith(buildChips(topGenres(filled, 10), function (filter) {
       applyFilter(rowsMount, filter);
     }));

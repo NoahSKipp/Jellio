@@ -41,7 +41,7 @@ import { loadShelf, saveSeriesPrefs } from '../runtime/shelf.js';
 import { openTrackerDialog } from '../components/trackerDialog.js';
 import { showToast } from '../components/toast.js';
 import { formatRuntime } from '../runtime/format.js';
-import { el } from '../runtime/dom.js';
+import { el, fadeInBackdrop } from '../runtime/dom.js';
 
 // A failed item lookup used to just console.warn and return, leaving
 // root exactly as blank as root.textContent = '' left it: a series's
@@ -995,7 +995,7 @@ function renderDetailSkeleton(root, preview) {
   const hero = el('div', 'jellio-detail-hero');
   const backdropUrl = heroBackdropUrl(preview, preview.Id);
   if (backdropUrl) {
-    hero.style.backgroundImage = 'url(' + backdropUrl + ')';
+    fadeInBackdrop(hero, backdropUrl);
   }
   const heroContent = el('div', 'jellio-detail-hero-content');
   const titleText = preview.Type === 'Episode' && preview.SeriesName
@@ -1107,7 +1107,7 @@ export async function renderDetail(root, params) {
   const hero = el('div', 'jellio-detail-hero');
   const backdropUrl = heroBackdropUrl(item, canonicalId);
   if (backdropUrl) {
-    hero.style.backgroundImage = 'url(' + backdropUrl + ')';
+    fadeInBackdrop(hero, backdropUrl);
   }
 
   const heroContent = el('div', 'jellio-detail-hero-content');

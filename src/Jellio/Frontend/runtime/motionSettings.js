@@ -43,6 +43,13 @@ export function getMotionLevel() {
   return resolveMotionLevel(getMotionPreference(), reduced);
 }
 
+// Small UI transitions (screen fades, backdrop crossfades): on unless the
+// system asks for reduced motion or Jellio's motion is set to Still or Off.
+export function transitionsAllowed() {
+  const level = getMotionLevel();
+  return level === 'full' || level === 'reduced';
+}
+
 export function onMotionChange(listener) {
   window.addEventListener(EVENT, listener);
   window.addEventListener('storage', function (event) {
