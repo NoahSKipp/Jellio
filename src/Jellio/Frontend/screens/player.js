@@ -4447,7 +4447,8 @@ export async function renderPlayer(root, params) {
       return end > start ? { Start: start, End: end } : null;
     }
     const introduction = findSegment(/^(intro|introduction|opening)/i);
-    const credits = findSegment(/credit|outro/i);
+    // "Opening Credits" is the intro, not the end credits.
+    const credits = findSegment(/^(?!.*open).*(credit|outro|ending)/i);
     if (!introduction && !credits) {
       console.warn(
         'Jellio: item has Chapters but none matched an intro/credits name',
@@ -4519,6 +4520,16 @@ export async function renderPlayer(root, params) {
     return !!(segment && segment.End > 0 && segment.End > segment.Start);
   }
 
+  // Credits starting in the first half of an episode are bad data (an
+  // "Opening Credits" chapter, a wrong community entry): they would show
+  // Skip Credits and Next Episode as it starts, so they don't count and a
+  // later source gets to fill in the real ones.
+  function isValidCredits(segment) {
+    if (!isValidSegment(segment)) return false;
+    const runtimeSeconds = (item.RunTimeTicks || 0) / TICKS_PER_SECOND;
+    return !runtimeSeconds || segment.Start >= runtimeSeconds * 0.5;
+  }
+
   // Real bug, found live against Re:Zero: every one of this chain's own
   // real tiers used to be "first one that returns anything wins
   // outright," even when that first tier only actually had ONE of
@@ -4548,12 +4559,14 @@ export async function renderPlayer(root, params) {
     if (!candidate) return current;
     return {
       Introduction: isValidSegment(current && current.Introduction) ? current.Introduction : candidate.Introduction,
-      Credits: isValidSegment(current && current.Credits) ? current.Credits : candidate.Credits,
+      Credits: isValidCredits(current && current.Credits)
+        ? current.Credits
+        : isValidCredits(candidate.Credits) ? candidate.Credits : { Start: 0, End: 0 },
     };
   }
 
   function segmentsComplete(segments) {
-    return !!(segments && isValidSegment(segments.Introduction) && isValidSegment(segments.Credits));
+    return !!(segments && isValidSegment(segments.Introduction) && isValidCredits(segments.Credits));
   }
 
   // Real feedback, explicit: a real community timestamp database
