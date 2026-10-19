@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.86.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.86.3",
+    "summary": "The Studio Hub glow sits behind the logo.",
+    "highlights": [
+      {
+        "title": "Centred Hub Glow",
+        "description": "The coloured glow in a Studio Hub's header is now centred behind the service's logo instead of off to its side."
+      }
+    ]
+  },
+  {
     "version": "1.86.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.86.2",
