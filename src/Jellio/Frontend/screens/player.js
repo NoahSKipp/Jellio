@@ -81,7 +81,7 @@ import {
   setPlaybackActive,
   syncTracker,
 } from '../runtime/api.js';
-import { getUpNextTriggerSeconds, getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
+import { getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
 import { markBadSource, unmarkBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
@@ -248,25 +248,6 @@ function applySubtitleStyle(video, style) {
     background.color +
     ' !important; }';
 }
-
-// Fallback only, when Intro Skipper has no Credits segment for this
-// episode: runtime/upNextSettings.js's own real default (45s before
-// the end), readable and changeable from screens/settings.js's own
-// Playback category. Real credits segments below make this the less
-// common path, not the whole rule. Read fresh inside shouldShowUpNextNow
-// below rather than cached once at module load: this whole file's own
-// render function runs again for every new playback within the same
-// real session, and a reader who just changed this in Settings should
-// not need a full reload for the very next episode to honour it.
-// Real feedback: 15s read as far too short, an inaccurate or early
-// real Intro Skipper Credits detection (shouldShowUpNextNow below
-// trusts that segment outright the moment it exists) already showing
-// the card sooner than the episode actually warranted, then this same
-// short a countdown cutting the current episode off before a reader
-// even had a real chance to notice the card and dismiss it. A full
-// real minute gives that same reader room to actually see and cancel
-// it instead.
-const UPNEXT_COUNTDOWN_SECONDS = 60;
 
 function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   const overlay = el('div', 'jellio-player-upnext jellio-player-upnext-hidden');
@@ -4501,9 +4482,8 @@ export async function renderPlayer(root, params) {
   // a real Credits segment (already fetched for the skip button above)
   // is what actually starts the outro, and showing the card there
   // reads as timed to the episode rather than to an arbitrary count
-  // of seconds left. The fixed-seconds rule this used to run
-  // unconditionally is now only the fallback for an episode Intro
-  // Skipper has no segment data for at all.
+  // of seconds left. Without a credits timestamp the card never shows
+  // during playback.
   function shouldShowUpNextNow(currentTime, duration) {
     if (!duration) return false;
     const credits = skipSegments && skipSegments.Credits;

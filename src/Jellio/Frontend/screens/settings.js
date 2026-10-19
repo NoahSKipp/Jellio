@@ -68,9 +68,6 @@ import {
   UPNEXT_COUNTDOWN_OPTIONS,
   getUpNextCountdownSeconds,
   setUpNextCountdownSeconds,
-  UPNEXT_TRIGGER_OPTIONS,
-  getUpNextTriggerSeconds,
-  setUpNextTriggerSeconds,
 } from '../runtime/upNextSettings.js';
 import {
   isAutoDeleteWatchedEnabled,
@@ -456,19 +453,6 @@ function buildPlaybackCard() {
       String(getUpNextCountdownSeconds()),
       function (value, select, status) {
         setUpNextCountdownSeconds(Number(value));
-        status.textContent = 'Saved, takes effect on the next episode.';
-      },
-    ),
-  );
-  body.appendChild(
-    buildSelectRow(
-      null,
-      'Up Next display timing',
-      'When no credits segment is detected, how far before the end of the episode the Up Next card appears.',
-      UPNEXT_TRIGGER_OPTIONS,
-      String(getUpNextTriggerSeconds()),
-      function (value, select, status) {
-        setUpNextTriggerSeconds(Number(value));
         status.textContent = 'Saved, takes effect on the next episode.';
       },
     ),
