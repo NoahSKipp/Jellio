@@ -9,14 +9,19 @@ using MediaBrowser.Controller.Library;
 namespace Jellio.Services;
 
 /// <summary>
-/// Which titles are anime: everything in an anime catalog collection
-/// (Gelato writes ProviderIds.Stremio as "anime.{catalogId}"; older or
-/// hand-made collections are matched by name, as runtime/api.js's
+/// Which titles are anime: everything Gelato tagged "anime" (an anime
+/// database id, an Anime genre, or animation made in Japan), plus
+/// everything in an anime catalog collection (Gelato writes
+/// ProviderIds.Stremio as "anime.{catalogId}"; older or hand-made
+/// collections are matched by name, as runtime/api.js's
 /// isAnimeCollection does). Shared by AnimeController and the calendar,
 /// cached for a few minutes.
 /// </summary>
 public static partial class AnimeCatalog
 {
+    // GelatoManager.AnimeTag.
+    private const string AnimeTag = "anime";
+
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
     private static readonly object CacheLock = new();
     private static (DateTime At, HashSet<Guid> Ids)? _cache;
@@ -38,6 +43,16 @@ public static partial class AnimeCatalog
         });
 
         var ids = new HashSet<Guid>();
+        foreach (var item in libraryManager.GetItemList(new InternalItemsQuery
+        {
+            IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
+            Tags = [AnimeTag],
+            Recursive = true,
+        }))
+        {
+            ids.Add(item.Id);
+        }
+
         foreach (var collection in collections.OfType<Folder>().Where(IsAnimeCollection))
         {
             foreach (var child in collection.GetLinkedChildren())
