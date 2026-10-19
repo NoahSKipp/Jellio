@@ -21,7 +21,29 @@ const SESSION_KEY = STORAGE_PREFIX + 'session';
 const NATIVE_CREDENTIALS_KEY = 'jellyfin_credentials';
 
 const CLIENT_NAME = 'Jellio';
-const CLIENT_VERSION = '0.1.0';
+
+// What Jellyfin's Devices and Dashboard show: the Mac app's own version
+// there, otherwise the plugin's, which the server stamps onto app.js as ?v=.
+function clientName() {
+  return typeof window !== 'undefined' && window.jellioNative && window.jellioNative.platform === 'macos'
+    ? 'Jellio for macOS'
+    : CLIENT_NAME;
+}
+
+function clientVersion() {
+  const native = typeof window !== 'undefined' && window.jellioNative && window.jellioNative.appVersion;
+  if (native) return native;
+  const script = typeof document !== 'undefined' && document.querySelector('script[src*="/Jellio/frontend/app.js"]');
+  if (script) {
+    try {
+      const version = new URL(script.src, window.location.origin).searchParams.get('v');
+      if (version) return version;
+    } catch (err) {
+      // Fall through.
+    }
+  }
+  return '0.0.0';
+}
 
 // "Chrome on Android phone", "Safari on iPad", "Firefox on Windows": enough
 // for Now Playing to tell a phone from a PC from a TV.
@@ -231,9 +253,9 @@ function syncNativeApiClientState(accessToken, user) {
     if (window.ApiClient && typeof window.ApiClient.setAuthenticationInfo === 'function') {
       window.ApiClient.setAuthenticationInfo(accessToken, user.Id);
       window.ApiClient._deviceId = getDeviceId();
-      window.ApiClient._appName = CLIENT_NAME;
+      window.ApiClient._appName = clientName();
       window.ApiClient._deviceName = getDeviceName();
-      window.ApiClient._appVersion = CLIENT_VERSION;
+      window.ApiClient._appVersion = clientVersion();
     }
   } catch (err) {
     // Native's own guard stays wrong for the rest of this page's life
@@ -305,10 +327,10 @@ export function forgetRememberedUser(userId) {
 
 function buildAuthHeaderForToken(token) {
   const parts = [
-    'Client="' + CLIENT_NAME + '"',
+    'Client="' + clientName() + '"',
     'Device="' + getDeviceName() + '"',
     'DeviceId="' + getDeviceId() + '"',
-    'Version="' + CLIENT_VERSION + '"',
+    'Version="' + clientVersion() + '"',
   ];
   if (token) parts.push('Token="' + token + '"');
   return 'MediaBrowser ' + parts.join(', ');
@@ -395,10 +417,10 @@ export function clearSession() {
 export function buildAuthHeader() {
   const token = getAccessToken();
   const parts = [
-    'Client="' + CLIENT_NAME + '"',
+    'Client="' + clientName() + '"',
     'Device="' + getDeviceName() + '"',
     'DeviceId="' + getDeviceId() + '"',
-    'Version="' + CLIENT_VERSION + '"',
+    'Version="' + clientVersion() + '"',
   ];
   if (token) {
     parts.push('Token="' + token + '"');
