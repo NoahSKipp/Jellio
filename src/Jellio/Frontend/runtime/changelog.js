@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.84.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.84.2",
+    "summary": "A leftover Up Next setting is gone.",
+    "highlights": [
+      {
+        "title": "Simpler Up Next Settings",
+        "description": "The Up Next display timing setting is removed. Up Next appears when the credits start, and only for episodes with credits timestamps, so the setting no longer did anything."
+      }
+    ]
+  },
+  {
     "version": "1.84.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.84.0",
