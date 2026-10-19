@@ -206,36 +206,38 @@ export async function renderService(root, params) {
     return;
   }
 
-  root.appendChild(buildHeader(service, null));
-  const skeletonMount = el('div', 'jellio-rows');
+  let header = buildHeader(service, null);
+  root.appendChild(header);
+  const chipsMount = el('div');
+  root.appendChild(chipsMount);
+  const rowsMount = el('div', 'jellio-rows');
   const skeleton = buildHomeSkeleton(4);
-  skeletonMount.appendChild(skeleton);
-  root.appendChild(skeletonMount);
+  rowsMount.appendChild(skeleton);
+  root.appendChild(rowsMount);
 
-  // Not awaited: app.js's own sync() queue only starts the next real
-  // navigation once this function's own returned promise resolves, and
-  // this fetch is one real request per matched catalog, several on a
-  // real streaming hub tile. Awaiting it here meant a reader could not
-  // leave a slow-loading service page for anywhere else until every
-  // one of those had either resolved or timed out, same real bug
-  // screens/library.js's own genre rows and screens/home.js's own
-  // catalog rows already document and fix the same way. Unlike those
-  // two, the real content this callback builds replaces root's own
-  // top level content wholesale rather than filling in a shell this
-  // function already returned control past, so a late arrival after
-  // the reader has already left this screen needs an explicit guard
-  // here, the same real shape screens/player.js's own screenTornDown
-  // already uses for its error screen: without it, a slow response
-  // still landing after a real navigation elsewhere would wipe out
-  // whatever that next screen had already rendered into the same root.
+  // Not awaited, so a slow catalog never keeps the reader on this page,
+  // and guarded by tornDown so a late answer never writes into the next
+  // screen. Each row goes up as soon as its own catalog answers, in a
+  // slot that keeps the catalogs' order; the hero and genre chips follow
+  // once they have all answered.
   let tornDown = false;
+  const slots = matching.map(function () {
+    const slot = el('div');
+    rowsMount.appendChild(slot);
+    return slot;
+  });
+  let shownRows = 0;
 
   const filled = [];
   Promise.all(
-    matching.map(function (entry) {
+    matching.map(function (entry, index) {
       return getCollectionItems(entry.collection.Id, entry.kind, ROW_LIMIT)
         .then(function (items) {
-          if (items.length) filled.push(Object.assign({}, entry, { items: items }));
+          if (tornDown || !items.length) return;
+          const row = Object.assign({}, entry, { items: items });
+          filled.push(row);
+          if (skeleton.parentNode) skeleton.remove();
+          slots[index].replaceWith(buildRowSection(row, shownRows++));
         })
         .catch(function (err) {
           console.warn('Jellio: could not load service catalog', err);
@@ -243,7 +245,6 @@ export async function renderService(root, params) {
     }),
   ).then(function () {
     if (tornDown) return;
-    root.textContent = '';
 
     // Every catalog for this service came back empty. Jellyfin's
     // CleanupCollectionAndPlaylistPathsTask empties every Gelato collection
@@ -251,6 +252,7 @@ export async function renderService(root, params) {
     // it to find, so this is a real state a server sits in, not a bug to
     // paper over with a blank page.
     if (!filled.length) {
+      root.textContent = '';
       root.appendChild(buildHeader(service, null));
       root.appendChild(
         el(
@@ -264,15 +266,12 @@ export async function renderService(root, params) {
       return;
     }
 
-    root.appendChild(buildHeader(service, pickHeroItem(filled)));
-    const rowsMount = el('div', 'jellio-rows');
-    root.appendChild(buildChips(topGenres(filled, 10), function (filter) {
+    const finalHeader = buildHeader(service, pickHeroItem(filled));
+    header.replaceWith(finalHeader);
+    header = finalHeader;
+    chipsMount.replaceWith(buildChips(topGenres(filled, 10), function (filter) {
       applyFilter(rowsMount, filter);
     }));
-    filled.forEach(function (row, index) {
-      rowsMount.appendChild(buildRowSection(row, index));
-    });
-    root.appendChild(rowsMount);
   });
 
   return function () {
