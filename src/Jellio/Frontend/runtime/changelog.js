@@ -26,7 +26,7 @@ export const CHANGELOG_RELEASES = [
     "highlights": [
       {
         "title": "Centred Hub Glow",
-        "description": "The coloured glow in a Studio Hub's header is now centred behind the service's logo instead of off to its side."
+        "description": "The coloured glow in a Studio Hub's header is now centred behind the service's logo instead of off to its side, and radiates out further."
       }
     ]
   },
