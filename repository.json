@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.84.3] - 2026-10-19\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Sync macOS 0.6.1 release entry\n",
+        "checksum": "3a81de5a9927323261777dc5015443c9",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.3/jellio_1.84.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-19T08:56:37Z",
+        "version": "1.84.3"
+      },
+      {
         "changelog": "## [1.84.2] - 2026-10-19\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.84.2 release notes\n\n### 🚜 Refactor\n\n- *(settings)* Remove the unused Up Next display timing setting\n",
         "checksum": "297837343f2659f6f37447d2cd7dcf0f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.2/jellio_1.84.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-14T18:29:49Z",
         "version": "1.77.5"
-      },
-      {
-        "changelog": "## [1.77.4] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(streams)* No placeholder streams for unreleased titles\n",
-        "checksum": "e2639bb4acbc063b1f91e6cbb040f04a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.4/jellio_1.77.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-14T01:49:51Z",
-        "version": "1.77.4"
       }
     ]
   }
