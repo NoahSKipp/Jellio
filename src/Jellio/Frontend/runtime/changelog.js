@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.85.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.85.0",
+    "summary": "Anime stays out of your other rows, and every Studio Hub has its logo.",
+    "highlights": [
+      {
+        "title": "Anime Stays in Anime",
+        "description": "Anime is now recognised much more reliably: anything from an anime catalog, with an anime database id, an Anime genre or made as animation in Japan. It no longer turns up in Home, Movies and Series. Update Gelato too, and run its Tag anime task once (it also runs on its own at startup)."
+      },
+      {
+        "title": "More Studio Hub Logos",
+        "description": "AMC+, Shudder, Discovery+ and Sky Go now show their logos instead of their name, on the web and on Jellio TV."
+      }
+    ]
+  },
+  {
     "version": "1.84.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.84.2",
