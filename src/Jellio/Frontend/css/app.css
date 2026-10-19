@@ -185,8 +185,10 @@
   box-sizing: border-box;
   padding: 20px 10px;
   overflow: hidden;
-  background: var(--jellio-bg-elevated);
-  border-right: 1px solid var(--jellio-border-color);
+  /* The page's own colour, like Jellio TV: one surface with the content,
+     set apart only by the shadow while it is open. */
+  background: var(--jellio-bg-color);
+  border-right: 1px solid transparent;
   transition: width 180ms var(--jellio-ease-out), box-shadow 180ms ease;
 }
 
