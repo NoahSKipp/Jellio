@@ -35,6 +35,10 @@ export const CHANGELOG_RELEASES = [
       {
         "title": "Faster Studio Hubs",
         "description": "Hub rows show up one by one as soon as each catalog answers, instead of the whole page waiting for the slowest one."
+      },
+      {
+        "title": "Smoother Transitions",
+        "description": "Backdrops on title pages and Studio Hubs fade in instead of popping in, and the Home hero's title and description fade between slides. Set Motion to Still or Off in Settings > Display to turn them off."
       }
     ]
   },
