@@ -7784,26 +7784,6 @@
     );
 }
 
-/* The one real bit of "zing" this screen asked for: a soft glow tucked
-   behind the wordmark/logo. A plain white glow rather than tinting it
-   off --jellio-secondary-color: that token defaults to a near white
-   itself, and CSS's own relative color syntax to safely derive a
-   translucent version of whatever an admin (or a future theme) sets
-   it to has real, still patchy browser support this runtime cannot
-   assume, an embedded TV/mobile client webview among its own real
-   readers. */
-.jellio-service-hero::after {
-  content: '';
-  position: absolute;
-  left: calc(var(--jellio-safe-gutter) - 4em);
-  bottom: -6em;
-  width: 22em;
-  height: 22em;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(var(--jellio-service-brand, 255 255 255) / 0.18) 0%, transparent 70%);
-  pointer-events: none;
-}
-
 .jellio-service-hero-content {
   position: relative;
   z-index: 1;
@@ -7832,7 +7812,7 @@
 
 .jellio-service-name {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.4em;
   margin: 0.2em 0 0;
@@ -7841,6 +7821,22 @@
   line-height: 1;
   letter-spacing: -0.01em;
   text-shadow: 0 2px 24px rgb(0 0 0 / 0.4);
+}
+
+/* A soft glow in the service's colour, centred behind the logo or name.
+   The heading hugs its content, so its middle is the logo's middle. */
+.jellio-service-name::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: 3em;
+  height: 3em;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(var(--jellio-service-brand, 255 255 255) / 0.32) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .jellio-service-logo {
