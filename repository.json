@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.84.2] - 2026-10-19\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.84.2 release notes\n\n### 🚜 Refactor\n\n- *(settings)* Remove the unused Up Next display timing setting\n",
+        "checksum": "297837343f2659f6f37447d2cd7dcf0f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.2/jellio_1.84.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-19T01:01:02Z",
+        "version": "1.84.2"
+      },
+      {
         "changelog": "## [1.84.1] - 2026-10-18\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.83.14 and 1.84.0 release notes\n",
         "checksum": "16b2be160881d5ac552248dce20e515b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.1/jellio_1.84.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-14T01:49:51Z",
         "version": "1.77.4"
-      },
-      {
-        "changelog": "## [1.77.3] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(detail)* Look for streams quietly\n\n### ⚡ Performance\n\n- *(detail)* Reopen title pages instantly from what was last seen\n",
-        "checksum": "613eb0a11ef01df6938cd478682f48eb",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.3/jellio_1.77.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-14T01:14:20Z",
-        "version": "1.77.3"
       }
     ]
   }
