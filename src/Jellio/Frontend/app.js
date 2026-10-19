@@ -15,6 +15,7 @@ import {
   invalidateUserDataRows,
 } from './runtime/api.js';
 import { renderLogin } from './screens/login.js';
+import { transitionsAllowed } from './runtime/motionSettings.js';
 import { renderHome, preloadHomeSections } from './screens/home.js';
 import { checkServer, isOffline } from './runtime/offline.js';
 import { renderSidebar } from './components/sidebar.js';
@@ -54,7 +55,7 @@ const ROOT_ID = 'jellioRoot';
 const REDUCED_MOTION = Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function fadeInContent(content) {
-  if (REDUCED_MOTION || !content || typeof content.animate !== 'function') return;
+  if (REDUCED_MOTION || !transitionsAllowed() || !content || typeof content.animate !== 'function') return;
   content.animate(
     [
       { opacity: 0, transform: 'translateY(10px)' },

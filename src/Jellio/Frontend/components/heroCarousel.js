@@ -13,6 +13,7 @@ import { navigateTo } from '../runtime/router.js';
 import { formatRuntime } from '../runtime/format.js';
 import { toggleWatchlist } from './cardOptionsMenu.js';
 import { el } from '../runtime/dom.js';
+import { transitionsAllowed } from '../runtime/motionSettings.js';
 
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
@@ -123,6 +124,7 @@ export function buildHeroCarousel(options) {
   let timer = null;
   let hovered = false;
 
+  let shownOnce = false;
   function render() {
     if (!items.length) return;
     const item = items[index];
@@ -145,6 +147,10 @@ export function buildHeroCarousel(options) {
     title.textContent = item.Name || '';
     meta.textContent = metaLine(item);
     overview.textContent = item.Overview || '';
+    if (shownOnce && transitionsAllowed() && typeof content.animate === 'function') {
+      content.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
+    }
+    shownOnce = true;
 
     function syncWatchlistUI() {
       const isWatchlisted = Boolean(item.UserData && item.UserData.IsFavorite);
