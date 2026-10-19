@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.85.0] - 2026-10-19\n\n### 🚀 Features\n\n- *(anime)* Treat titles Gelato tagged as anime as anime everywhere\n\n### 🐛 Bug Fixes\n\n- *(hubs)* Give the Sky Go hub its logo\n- *(hubs)* Give the AMC+, Shudder and Discovery+ hubs their logos\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.85.0 release notes\n",
+        "checksum": "9a6295d89ec661b42f36e593493230d1",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.85.0/jellio_1.85.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-19T09:44:29Z",
+        "version": "1.85.0"
+      },
+      {
         "changelog": "## [1.84.3] - 2026-10-19\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Sync macOS 0.6.1 release entry\n",
         "checksum": "3a81de5a9927323261777dc5015443c9",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.3/jellio_1.84.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-14T23:43:33Z",
         "version": "1.77.6"
-      },
-      {
-        "changelog": "## [1.77.5] - 2026-10-14\n\n### 🐛 Bug Fixes\n\n- *(seasonal)* No lightning while reading, listening or watching\n- *(manga)* Read a chapter's number from its name when the source gives none\n- *(manga)* Keep saved chapters from other sources out of a streamed series\n",
-        "checksum": "96ab5dd5a70b7c65e12f3a71c1da875a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.77.5/jellio_1.77.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-14T18:29:49Z",
-        "version": "1.77.5"
       }
     ]
   }
