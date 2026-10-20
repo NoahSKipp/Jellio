@@ -175,7 +175,7 @@ function buildAddTile(index) {
   const avatar = document.createElement('button');
   avatar.type = 'button';
   avatar.className = 'jellio-login-profile-avatar jellio-login-profile-avatar-add';
-  avatar.setAttribute('aria-label', 'Sign in as another user');
+  avatar.setAttribute('aria-label', t('auth_other_user'));
   const icon = el('span', 'material-icons add');
   icon.setAttribute('aria-hidden', 'true');
   avatar.appendChild(icon);
@@ -203,7 +203,7 @@ export async function openAccountSwitcher() {
   overlay.className = 'jellio-avatar-picker-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Switch profile');
+  overlay.setAttribute('aria-label', t('auth_switch_profile'));
   overlay.addEventListener('click', handleOutsideClick);
   document.addEventListener('keydown', handleKeydown);
 

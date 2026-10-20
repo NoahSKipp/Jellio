@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Watchlist release notifications: Jellio's own NotificationsController,
 // one real notification the first day a Watchlist entry's own release
 // date actually arrives (a movie's digital release, an episode's own air
@@ -231,9 +232,9 @@ function render(items) {
   panel.textContent = '';
 
   const header = el('div', 'jellio-notifications-header');
-  header.appendChild(el('span', 'jellio-notifications-header-title', 'Notifications'));
+  header.appendChild(el('span', 'jellio-notifications-header-title', t('notifications_title')));
   if (items.length) {
-    const clearButton = el('button', 'jellio-notifications-clear', 'Clear all');
+    const clearButton = el('button', 'jellio-notifications-clear', t('notifications_clear_all'));
     clearButton.type = 'button';
     clearButton.addEventListener('click', clearAll);
     header.appendChild(clearButton);
@@ -241,7 +242,7 @@ function render(items) {
   panel.appendChild(header);
 
   if (!items.length) {
-    panel.appendChild(el('div', 'jellio-notifications-empty', 'Nothing new'));
+    panel.appendChild(el('div', 'jellio-notifications-empty', t('notifications_nothing_new')));
     return;
   }
 

@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The general activity feed, from the reference table: "a dedicated Feed
 // tab... showcasing [everyone's] recent actions." Server wide rather than
 // a real friends graph this plugin has no concept of at all, backed by
@@ -45,17 +46,17 @@ function appendWatchDescription(container, entry) {
     return;
   }
   if (entry.ItemType === 'Episode' && entry.SeriesName) {
-    container.appendChild(document.createTextNode('Watched '));
+    container.appendChild(document.createTextNode(t('feed_watched') + ' '));
     if (entry.EpisodeCount > 1) {
       const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
       const range =
         entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
-          ? 'Episodes ' + entry.FirstEpisodeNumber + '-' + entry.LastEpisodeNumber
-          : entry.EpisodeCount + ' episodes';
+          ? t('feed_episodes_range', { first: entry.FirstEpisodeNumber, last: entry.LastEpisodeNumber })
+          : t('feed_episodes_count', { count: entry.EpisodeCount });
       container.appendChild(document.createTextNode(season + range + ' of '));
     } else if (entry.FirstEpisodeNumber != null) {
       const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
-      container.appendChild(document.createTextNode(season + 'Episode ' + entry.FirstEpisodeNumber + ' of '));
+      container.appendChild(document.createTextNode(season + t('feed_episode_single', { num: entry.FirstEpisodeNumber }) + ' '));
     }
     container.appendChild(el('span', 'jellio-feed-title', entry.SeriesName));
   } else {
@@ -69,7 +70,7 @@ function appendWatchDescription(container, entry) {
 // list beats two separate ones. Same real Privacy gate as watch rows,
 // applied server side before either kind ever reaches this file.
 function appendBadgeDescription(container, entry) {
-  container.appendChild(document.createTextNode('Unlocked '));
+  container.appendChild(document.createTextNode(t('feed_unlocked') + ' '));
   const title = el('span', 'jellio-feed-title', entry.BadgeName);
   title.style.color = 'var(--jellio-rarity-' + (entry.BadgeRarity || 'common').toLowerCase() + ')';
   container.appendChild(title);

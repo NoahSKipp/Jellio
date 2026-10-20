@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // #/downloads: everything kept on this device (runtime/offline.js), by
 // kind, with progress for what's still downloading. Also the screen
 // Jellio opens on when the server can't be reached.
@@ -20,12 +21,14 @@ import { formatBytes, formatTimeLeft } from '../components/downloads.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
-const SECTIONS = [
-  { kind: 'book', title: 'Books', icon: 'auto_stories' },
-  { kind: 'manga', title: 'Manga', icon: 'collections_bookmark' },
-  { kind: 'audiobook', title: 'Audiobooks', icon: 'headphones' },
-  { kind: 'video', title: 'Movies & TV', icon: 'movie' },
-];
+function getSections() {
+  return [
+    { kind: 'book', title: t('downloads_books'), icon: 'auto_stories' },
+    { kind: 'manga', title: t('downloads_manga'), icon: 'collections_bookmark' },
+    { kind: 'audiobook', title: t('downloads_audiobooks'), icon: 'headphones' },
+    { kind: 'video', title: t('downloads_video'), icon: 'movie' },
+  ];
+}
 
 function openHash(record) {
   if (record.Kind === 'audiobook') return '#/listen?id=' + record.Item.Id;
@@ -43,12 +46,12 @@ function statusLine(record) {
   }
   if (record.Status === 'error') return 'Failed: ' + (record.Error || 'unknown error');
   if (record.Status === 'queued' && record.Waiting) return record.Waiting;
-  if (record.Status === 'queued') return isOffline() ? 'Waiting for the server' : 'Waiting to download';
+  if (record.Status === 'queued') return isOffline() ? t('downloads_waiting_server') : t('downloads_waiting_download');
   const total = record.TotalBytes || record.EstimatedBytes;
   const left = formatTimeLeft(timeLeftSeconds(record));
   return total
-    ? 'Downloading ' + formatBytes(record.DoneBytes) + ' of ' + (record.TotalBytes ? '' : '~') + formatBytes(total) + (left ? ' · ' + left : '')
-    : 'Downloading · ' + formatBytes(record.DoneBytes);
+    ? t('downloads_downloading') + ' ' + formatBytes(record.DoneBytes) + ' ' + t('feed_of') + ' ' + (record.TotalBytes ? '' : '~') + formatBytes(total) + (left ? ' · ' + left : '')
+    : t('downloads_downloading') + ' · ' + formatBytes(record.DoneBytes);
 }
 
 export function renderDownloads(root) {
@@ -71,8 +74,8 @@ export function renderDownloads(root) {
     banner.hidden = !isOffline();
     if (!isOffline()) return;
     banner.appendChild(el('span', 'material-icons cloud_off'));
-    banner.appendChild(el('span', null, 'The server can’t be reached. Your downloads still work, and progress syncs when it’s back.'));
-    const retry = el('button', 'jellio-downloads-retry', 'Try again');
+    banner.appendChild(el('span', null, t('downloads_offline_banner')));
+    const retry = el('button', 'jellio-downloads-retry', t('action_retry'));
     retry.type = 'button';
     retry.addEventListener('click', function () {
       retry.disabled = true;
@@ -152,7 +155,7 @@ export function renderDownloads(root) {
     remove.setAttribute('aria-label', record.Status === 'done' ? 'Remove download' : 'Cancel download');
     remove.appendChild(el('span', 'material-icons ' + (record.Status === 'done' ? 'delete_outline' : 'close')));
     remove.addEventListener('click', function () {
-      if (record.Status === 'done' && !window.confirm('Remove “' + record.Title + '” from this device?')) return;
+      if (record.Status === 'done' && !window.confirm(t('downloads_remove_confirm', { title: record.Title }))) return;
       removeDownload(record.Id);
     });
     actions.appendChild(remove);
@@ -192,7 +195,7 @@ export function renderDownloads(root) {
     removeAll.title = 'Remove all';
     removeAll.appendChild(el('span', 'material-icons delete_sweep'));
     removeAll.addEventListener('click', async function () {
-      if (!window.confirm('Remove all ' + records.length + ' ' + unit + ' of “' + title + '” from this device?')) return;
+      if (!window.confirm(t('downloads_remove_all_confirm', { count: records.length, title: title }))) return;
       removeAll.disabled = true;
       for (const record of records) {
         await removeDownload(record.Id).catch((err) => console.warn('Jellio: could not remove a download', err));
@@ -248,7 +251,7 @@ export function renderDownloads(root) {
       const storageBar = el('div', 'jellio-storage-bar');
       const totalCapacity = Math.max(quota, totalUsed + free, 1);
       const kinds = [
-        { key: 'video', label: 'Movies & TV', color: '#a855f7', bytes: byKind.video },
+        { key: 'video', label: t('downloads_video'), color: '#a855f7', bytes: byKind.video },
         { key: 'manga', label: 'Manga', color: '#06b6d4', bytes: byKind.manga },
         { key: 'audiobook', label: 'Audiobooks', color: '#14b8a6', bytes: byKind.audiobook },
         { key: 'book', label: 'Books', color: '#f59e0b', bytes: byKind.book },
@@ -333,7 +336,7 @@ export function renderDownloads(root) {
         body.appendChild(empty);
         return;
       }
-      SECTIONS.forEach(function (section) {
+      getSections().forEach(function (section) {
         const mine = records.filter((record) => record.Kind === section.kind);
         if (!mine.length) return;
         const block = el('section', 'jellio-downloads-section');

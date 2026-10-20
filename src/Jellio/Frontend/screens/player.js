@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Real playback: PlaybackInfo negotiation, a bare <video> element, and
 // real session reporting, the same mechanism JMSFusion's own player uses
 // (confirmed against its real source before writing any of this), not
@@ -260,7 +261,7 @@ function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   overlay.appendChild(thumb);
 
   const body = el('div', 'jellio-player-upnext-body');
-  body.appendChild(el('div', 'jellio-player-upnext-eyebrow', 'Next Episode'));
+  body.appendChild(el('div', 'jellio-player-upnext-eyebrow', t('player_next_episode')));
   const epLabel =
     episode.IndexNumber != null && episode.ParentIndexNumber != null
       ? 'S' + episode.ParentIndexNumber + ' E' + episode.IndexNumber + ' · '
@@ -268,10 +269,10 @@ function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   body.appendChild(el('div', 'jellio-player-upnext-title', epLabel + (episode.Name || '')));
 
   const actions = el('div', 'jellio-player-upnext-actions');
-  const playButton = el('button', 'jellio-player-upnext-play', 'Play now');
+  const playButton = el('button', 'jellio-player-upnext-play', t('player_play_now'));
   playButton.type = 'button';
   playButton.addEventListener('click', onPlayNow);
-  const dismissButton = el('button', 'jellio-player-upnext-dismiss', 'Dismiss');
+  const dismissButton = el('button', 'jellio-player-upnext-dismiss', t('player_dismiss'));
   dismissButton.type = 'button';
   dismissButton.setAttribute('aria-label', 'Dismiss next episode preview');
   dismissButton.addEventListener('click', onDismiss);
@@ -379,14 +380,14 @@ function buildEndScreenModal(options) {
     const playIcon = el('span', 'material-icons', 'play_arrow');
     playIcon.setAttribute('aria-hidden', 'true');
     primaryBtn.appendChild(playIcon);
-    const playText = el('span', 'jellio-player-endscreen-btn-text', 'Play Next Episode');
+    const playText = el('span', 'jellio-player-endscreen-btn-text', t('player_play_next_episode'));
     primaryBtn.appendChild(playText);
 
     function updateBtnCountdown() {
       if (countdownSecs > 0) {
-        playText.textContent = 'Play Next Episode (' + countdownSecs + ')';
+        playText.textContent = t('player_play_next_episode') + ' (' + countdownSecs + ')';
       } else {
-        playText.textContent = 'Play Next Episode';
+        playText.textContent = t('player_play_next_episode');
       }
     }
 
@@ -500,15 +501,15 @@ function buildEndScreenModal(options) {
 function buildResumePrompt(percent, onResume, onRestart) {
   const overlay = el('div', 'jellio-player-resume-overlay');
   const panel = el('div', 'jellio-player-resume-panel');
-  panel.appendChild(el('div', 'jellio-player-resume-title', 'Resume playback?'));
+  panel.appendChild(el('div', 'jellio-player-resume-title', t('player_resume_prompt')));
   if (percent != null) {
     panel.appendChild(el('div', 'jellio-player-resume-subtitle', percent + '% watched'));
   }
   const actions = el('div', 'jellio-player-resume-actions');
-  const resumeButton = el('button', 'jellio-player-resume-play', 'Resume');
+  const resumeButton = el('button', 'jellio-player-resume-play', t('player_resume'));
   resumeButton.type = 'button';
   resumeButton.addEventListener('click', onResume);
-  const restartButton = el('button', 'jellio-player-resume-restart', 'Start Over');
+  const restartButton = el('button', 'jellio-player-resume-restart', t('player_start_over'));
   restartButton.type = 'button';
   restartButton.addEventListener('click', onRestart);
   actions.appendChild(resumeButton);
@@ -761,11 +762,11 @@ export async function renderPlayer(root, params) {
     failoverOverlay = el('div', 'jellio-player-failover');
     const box = el('div', 'jellio-player-failover-box');
     box.appendChild(el('div', 'jellio-player-failover-spinner'));
-    box.appendChild(el('div', 'jellio-player-failover-title', 'That stream didn’t work'));
+    box.appendChild(el('div', 'jellio-player-failover-title', t('player_stream_error')));
     box.appendChild(
       el('div', 'jellio-player-failover-text', 'Trying the next one (attempt ' + (failoverTried.length + 1) + ')…'),
     );
-    const stop = el('button', 'jellio-player-failover-stop', 'Stop');
+    const stop = el('button', 'jellio-player-failover-stop', t('action_stop'));
     stop.type = 'button';
     stop.addEventListener('click', function () {
       screenTornDown = true;
@@ -1288,7 +1289,7 @@ export async function renderPlayer(root, params) {
   if (document.pictureInPictureEnabled) {
     const pipButton = el('button', 'jellio-player-back jellio-player-pip');
     pipButton.type = 'button';
-    pipButton.setAttribute('aria-label', 'Picture in picture');
+    pipButton.setAttribute('aria-label', t('player_pip'));
     const pipIcon = el('span', 'material-icons picture_in_picture_alt');
     pipIcon.setAttribute('aria-hidden', 'true');
     pipButton.appendChild(pipIcon);
@@ -1387,7 +1388,7 @@ export async function renderPlayer(root, params) {
   if (fullscreenEnabled) {
     fullscreenButton = el('button', 'jellio-player-back jellio-player-fullscreen');
     fullscreenButton.type = 'button';
-    fullscreenButton.setAttribute('aria-label', 'Fullscreen');
+    fullscreenButton.setAttribute('aria-label', t('player_fullscreen'));
     const fullscreenIcon = el('span', 'material-icons fullscreen');
     fullscreenIcon.setAttribute('aria-hidden', 'true');
     fullscreenButton.appendChild(fullscreenIcon);
@@ -2866,8 +2867,8 @@ export async function renderPlayer(root, params) {
     loadingBox.appendChild(loadingSpinner);
 
     const loadingText = el('div', 'jellio-player-cast-loading-text');
-    loadingText.appendChild(el('div', 'jellio-player-cast-loading-title', 'Looking for devices...'));
-    loadingText.appendChild(el('div', 'jellio-player-cast-loading-sub', 'Scanning your network for available Smart TVs'));
+    loadingText.appendChild(el('div', 'jellio-player-cast-loading-title', t('player_looking_devices')));
+    loadingText.appendChild(el('div', 'jellio-player-cast-loading-sub', t('player_scanning_network')));
     loadingBox.appendChild(loadingText);
     castBody.appendChild(loadingBox);
 
@@ -2886,14 +2887,14 @@ export async function renderPlayer(root, params) {
       const otherTargets = targets.filter(function (t) { return !t.isTv; });
 
       if (tvTargets.length > 0) {
-        castBody.appendChild(el('div', 'jellio-player-cast-section-title', 'Smart TVs'));
+        castBody.appendChild(el('div', 'jellio-player-cast-section-title', t('player_smart_tvs')));
         tvTargets.forEach(function (target) {
           castBody.appendChild(buildCastDeviceButton(target, 'tv'));
         });
       }
 
       if (otherTargets.length > 0) {
-        castBody.appendChild(el('div', 'jellio-player-cast-section-title', 'Other Jellyfin Clients'));
+        castBody.appendChild(el('div', 'jellio-player-cast-section-title', t('player_other_clients')));
         otherTargets.forEach(function (target) {
           castBody.appendChild(buildCastDeviceButton(target, 'devices'));
         });
@@ -2911,7 +2912,7 @@ export async function renderPlayer(root, params) {
         emptyIconWrap.appendChild(emptyIcon);
         emptyBox.appendChild(emptyIconWrap);
 
-        const emptyTitle = el('div', 'jellio-player-cast-empty-title', 'No available devices found');
+        const emptyTitle = el('div', 'jellio-player-cast-empty-title', t('player_no_devices'));
         emptyBox.appendChild(emptyTitle);
 
         const emptySub = el('div', 'jellio-player-cast-empty-sub', hasWireless
@@ -3120,9 +3121,9 @@ export async function renderPlayer(root, params) {
     skipForwardButton.click();
   });
 
-  const bannerDisconnect = el('button', 'jellio-player-cast-banner-disconnect', 'Resume Here');
+  const bannerDisconnect = el('button', 'jellio-player-cast-banner-disconnect', t('player_resume_here'));
   bannerDisconnect.type = 'button';
-  bannerDisconnect.setAttribute('aria-label', 'Stop casting and resume locally');
+  bannerDisconnect.setAttribute('aria-label', t('player_stop_casting'));
   bannerDisconnect.addEventListener('click', async function () {
     const res = await disconnectCast();
     if (res && res.resumePositionTicks != null) {
@@ -3149,7 +3150,7 @@ export async function renderPlayer(root, params) {
 
     if (isCasting) {
       castBanner.style.display = 'flex';
-      castBannerText.textContent = 'Streaming to ' + (castState.name || 'Smart TV');
+      castBannerText.textContent = t('player_streaming_to', { name: castState.name || t('player_smart_tvs') });
       bannerPlayPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
       playPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
       playPauseButton.setAttribute('aria-label', castState.isPaused ? 'Play' : 'Pause');

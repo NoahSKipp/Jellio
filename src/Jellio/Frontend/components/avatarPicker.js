@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Preset avatar picker, opened from the sidebar's own profile button.
 // Lists whatever an admin has dropped into Jellio's own avatars folder
 // (runtime/api.js's own getAvatarPresets, Controllers/AvatarsController.cs)
@@ -20,7 +21,7 @@ export async function openAvatarPicker(onChanged) {
   overlay.className = 'jellio-avatar-picker-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Choose an avatar');
+  overlay.setAttribute('aria-label', t('avatar_choose'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) closeAvatarPicker();
   });
@@ -31,7 +32,7 @@ export async function openAvatarPicker(onChanged) {
 
   const title = document.createElement('h2');
   title.className = 'jellio-avatar-picker-title';
-  title.textContent = 'Choose an avatar';
+  title.textContent = t('avatar_choose');
   panel.appendChild(title);
 
   // The upload tile and any loose (ungrouped) presets share this one
@@ -74,14 +75,14 @@ export async function openAvatarPicker(onChanged) {
   const uploadOption = document.createElement('button');
   uploadOption.type = 'button';
   uploadOption.className = 'jellio-avatar-picker-option jellio-avatar-picker-upload';
-  uploadOption.setAttribute('aria-label', 'Upload your own picture or gif');
+  uploadOption.setAttribute('aria-label', t('avatar_upload_prompt'));
   const uploadIcon = document.createElement('span');
   uploadIcon.className = 'material-icons add_a_photo';
   uploadIcon.setAttribute('aria-hidden', 'true');
   uploadOption.appendChild(uploadIcon);
   const uploadLabel = document.createElement('span');
   uploadLabel.className = 'jellio-avatar-picker-upload-label';
-  uploadLabel.textContent = 'Upload';
+  uploadLabel.textContent = t('avatar_upload_btn');
   uploadOption.appendChild(uploadLabel);
   uploadOption.addEventListener('click', function () {
     fileInput.click();
@@ -94,13 +95,13 @@ export async function openAvatarPicker(onChanged) {
     status.textContent = 'Setting avatar…';
     setUserAvatarFromFile(file)
       .then(function () {
-        status.textContent = 'Avatar updated.';
+        status.textContent = t('avatar_updated');
         if (onChanged) onChanged();
         closeAvatarPicker();
       })
       .catch(function (err) {
         console.warn('Jellio: could not upload avatar', err);
-        status.textContent = 'Could not upload that picture.';
+        status.textContent = t('avatar_upload_error');
         uploadOption.disabled = false;
       });
   });
@@ -125,13 +126,13 @@ export async function openAvatarPicker(onChanged) {
       status.textContent = 'Setting avatar…';
       setUserAvatar(preset.Id)
         .then(function () {
-          status.textContent = 'Avatar updated.';
+          status.textContent = t('avatar_updated');
           if (onChanged) onChanged();
           closeAvatarPicker();
         })
         .catch(function (err) {
           console.warn('Jellio: could not set avatar', err);
-          status.textContent = 'Could not set that avatar.';
+          status.textContent = t('avatar_load_error');
           option.disabled = false;
         });
     });
@@ -161,7 +162,7 @@ export async function openAvatarPicker(onChanged) {
   try {
     const presets = await getAvatarPresets();
     if (!presets.length) {
-      status.textContent = 'No preset avatars are available on this server, upload your own instead.';
+      status.textContent = t('avatar_no_presets');
       return;
     }
     presets.forEach(function (preset) {
@@ -172,7 +173,7 @@ export async function openAvatarPicker(onChanged) {
     if (grid.firstElementChild) grid.firstElementChild.focus();
   } catch (err) {
     console.warn('Jellio: could not load avatar presets', err);
-    status.textContent = 'Could not load avatars.';
+    status.textContent = t('avatar_load_error');
   }
 }
 

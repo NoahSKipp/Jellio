@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The library page a sidebar link opens onto. topParentId/parentId and
 // collectionType come straight off the route's own query string (app.js's
 // job to parse and pass along), the same two params the original Jellio
@@ -74,12 +75,14 @@ const ROW_LIST_LIMIT = 500;
 // something, and doubles as this select's own default: the first
 // option here is what loadMainRow below sorts by before any real
 // change event fires.
-const SORT_OPTIONS = [
-  { value: 'PremiereDate:Descending', label: 'Newest release' },
-  { value: 'CommunityRating:Descending', label: 'Top rated' },
-  { value: 'SortName:Ascending', label: 'Name (A-Z)' },
-  { value: 'SortName:Descending', label: 'Name (Z-A)' },
-];
+function getSortOptions() {
+  return [
+    { value: 'PremiereDate:Descending', label: t('library_sort_newest') },
+    { value: 'CommunityRating:Descending', label: t('library_sort_top_rated') },
+    { value: 'SortName:Ascending', label: t('library_sort_name_asc') },
+    { value: 'SortName:Descending', label: t('library_sort_name_desc') },
+  ];
+}
 
 // Mounts a coverflow only once it has confirmed enough real slides to be
 // worth showing (its own MIN_SLIDES floor), rather than always reserving
@@ -158,7 +161,7 @@ export async function renderLibrary(root, params) {
   const sortSelect = document.createElement('select');
   sortSelect.className = 'jellio-library-filter-select';
   sortSelect.setAttribute('aria-label', 'Sort by');
-  SORT_OPTIONS.forEach(function (option) {
+  getSortOptions().forEach(function (option) {
     const optionEl = document.createElement('option');
     optionEl.value = option.value;
     optionEl.textContent = option.label;
@@ -171,7 +174,7 @@ export async function renderLibrary(root, params) {
   genreSelect.setAttribute('aria-label', 'Genre');
   const allGenresOption = document.createElement('option');
   allGenresOption.value = '';
-  allGenresOption.textContent = 'All genres';
+  allGenresOption.textContent = t('library_all_genres');
   genreSelect.appendChild(allGenresOption);
   genreSelect.disabled = true;
   filterBar.appendChild(genreSelect);
@@ -210,7 +213,7 @@ export async function renderLibrary(root, params) {
   let mainRow = null;
 
   function sortLabel(value) {
-    const match = SORT_OPTIONS.filter(function (option) {
+    const match = getSortOptions().filter(function (option) {
       return option.value === value;
     })[0];
     return (match && match.label) || 'Browse';
@@ -336,7 +339,7 @@ export async function renderLibrary(root, params) {
 
 const MAX_ANIME_ROWS = 8;
 const ANIME_EMPTY_MESSAGE =
-  'No anime catalogs are configured on this server yet. Enable CreateCollection on an AniList catalog in Gelato to see it here.';
+  t('library_anime_empty');
 
 // Anime has no library of its own: Gelato resolves one global
 // SeriesPath for every series import (GelatoManager.TryGetSeriesFolder),

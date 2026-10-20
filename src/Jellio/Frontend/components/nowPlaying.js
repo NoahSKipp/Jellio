@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Now playing panel: shows every active session on the server, usernames
 // included, real endpoint backed by Jellio's own ISessionManager reader
 // (Controllers/NowPlayingController.cs, ported verbatim from the original
@@ -216,7 +217,7 @@ function render(sessions) {
 
   panel.textContent = '';
   if (!sessions.length) {
-    panel.appendChild(el('div', 'jellio-now-playing-empty', 'Nothing playing right now'));
+    panel.appendChild(el('div', 'jellio-now-playing-empty', t('now_playing_nothing')));
     return;
   }
   sessions.forEach(function (session) {
@@ -241,7 +242,7 @@ function poll() {
 function createPanel() {
   panel = el('div', 'jellio-now-playing-panel');
   panel.setAttribute('role', 'region');
-  panel.setAttribute('aria-label', 'Now playing');
+  panel.setAttribute('aria-label', t('now_playing_title'));
   panel.addEventListener('mouseenter', showNowPlayingPanel);
   panel.addEventListener('mouseleave', scheduleHoverClose);
   document.body.appendChild(panel);

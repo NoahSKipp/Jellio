@@ -807,7 +807,7 @@ function buildTranslationCard(translationEnabled) {
     body.appendChild(
       buildSelectRow(null, t('onboarding_translate_into'), t('settings_translate_into_desc'), languages, readTargetLanguage(), function (value, select, status) {
         writeTargetLanguage(value);
-        status.textContent = 'Saved.';
+        status.textContent = t('action_saved');
       }),
     );
   } else {
@@ -825,7 +825,7 @@ function buildTranslationCard(translationEnabled) {
       readDefaultBookLanguage(),
       function (value, select, status) {
         writeDefaultBookLanguage(value);
-        status.textContent = 'Saved. Applies to books you haven’t set a language for.';
+        status.textContent = t('settings_saved_books_lang');
       },
     ),
   );
@@ -868,7 +868,7 @@ function buildReadingOfflineCard() {
       String(getDefaultAudiobookSpeed()),
       function (val, select, status) {
         setDefaultAudiobookSpeed(Number(val));
-        status.textContent = 'Saved.';
+        status.textContent = t('action_saved');
         window.setTimeout(() => { status.textContent = ''; }, 2000);
       },
     ),
@@ -1082,7 +1082,7 @@ function buildHomeCacheCard() {
     'delete_sweep',
     t('settings_clear_cache_btn'),
     isHomeRowCacheEnabled()
-      ? 'Home rows are kept in this browser and refreshed in the background. Clearing makes the next load ask the server for all of them.'
+      ? t('settings_cache_enabled_desc')
       : t('settings_cache_disabled'),
     function () {
       clearCachedRows();
@@ -1315,12 +1315,12 @@ function buildDisplayCategory() {
     buildSelectRow(
       null,
       t('settings_motion_label'),
-      'Full plays every effect. Reduced shows fewer, slower ones. Still keeps the scenery without animation. Off hides the theme completely. Auto uses Still when your system asks for reduced motion, otherwise Full.',
-      MOTION_OPTIONS,
+      t('settings_motion_desc'),
+      MOTION_OPTIONS.map(function (opt) { return { value: opt.value, label: t('motion_' + opt.value) }; }),
       getMotionPreference(),
       function (value, select, status) {
         setMotionPreference(value);
-        status.textContent = 'Saved for this browser.';
+        status.textContent = t('action_saved') + ' (' + t('settings_saved_browser') + ')';
       },
     ),
   );

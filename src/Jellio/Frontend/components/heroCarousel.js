@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Home hero carousel: backdrop, logo art, metadata line, action row, auto
 // advance. Ported from the original Jellio codebase's own heroCarousel.js,
 // itself a jellyfin-featured/NuvioWeb reference implementation (NuvioWeb's
@@ -70,7 +71,7 @@ export function buildHeroCarousel(options) {
   const playIcon = el('span', 'material-icons play_arrow');
   playIcon.setAttribute('aria-hidden', 'true');
   playButton.appendChild(playIcon);
-  playButton.appendChild(el('span', null, 'Play'));
+  playButton.appendChild(el('span', null, t('action_play')));
   actions.appendChild(playButton);
 
   const watchlistButton = el('button', 'jellio-hero-action jellio-hero-action-watchlist');
@@ -78,7 +79,7 @@ export function buildHeroCarousel(options) {
   const watchIcon = el('span', 'material-icons bookmark_add');
   watchIcon.setAttribute('aria-hidden', 'true');
   watchlistButton.appendChild(watchIcon);
-  const watchLabel = el('span', null, 'Watchlist');
+  const watchLabel = el('span', null, t('nav_watchlist'));
   watchlistButton.appendChild(watchLabel);
   actions.appendChild(watchlistButton);
 
@@ -87,7 +88,7 @@ export function buildHeroCarousel(options) {
   const infoIcon = el('span', 'material-icons info_outline');
   infoIcon.setAttribute('aria-hidden', 'true');
   infoButton.appendChild(infoIcon);
-  infoButton.appendChild(el('span', null, 'Details'));
+  infoButton.appendChild(el('span', null, t('home_action_details')));
   actions.appendChild(infoButton);
 
   content.appendChild(logo);
@@ -100,14 +101,14 @@ export function buildHeroCarousel(options) {
 
   const prevButton = el('button', 'jellio-hero-nav jellio-hero-nav-prev');
   prevButton.type = 'button';
-  prevButton.setAttribute('aria-label', 'Previous');
+  prevButton.setAttribute('aria-label', t('hero_previous'));
   const prevIcon = el('span', 'material-icons chevron_left');
   prevIcon.setAttribute('aria-hidden', 'true');
   prevButton.appendChild(prevIcon);
 
   const nextButton = el('button', 'jellio-hero-nav jellio-hero-nav-next');
   nextButton.type = 'button';
-  nextButton.setAttribute('aria-label', 'Next');
+  nextButton.setAttribute('aria-label', t('hero_next'));
   const nextIcon = el('span', 'material-icons chevron_right');
   nextIcon.setAttribute('aria-hidden', 'true');
   nextButton.appendChild(nextIcon);

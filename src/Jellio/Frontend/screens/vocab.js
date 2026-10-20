@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The vocabulary deck (#/vocab): words saved from the reader's selection
 // popup (components/readerStudy.js), reviewed as flashcards on a spaced
 // repetition schedule kept by Controllers/VocabularyController.cs, and
@@ -96,10 +97,10 @@ export async function renderVocab(root) {
   const reviewButton = el('button', 'jellio-vocab-review-button');
   reviewButton.type = 'button';
   actions.appendChild(reviewButton);
-  const csvButton = el('button', 'jellio-vocab-secondary', 'Export CSV');
+  const csvButton = el('button', 'jellio-vocab-secondary', t('vocab_export_csv'));
   csvButton.type = 'button';
   csvButton.addEventListener('click', () => download('csv'));
-  const ankiButton = el('button', 'jellio-vocab-secondary', 'Export for Anki');
+  const ankiButton = el('button', 'jellio-vocab-secondary', t('vocab_export_anki'));
   ankiButton.type = 'button';
   ankiButton.title = 'A text file Anki imports with File > Import';
   ankiButton.addEventListener('click', () => download('anki'));
@@ -112,7 +113,7 @@ export async function renderVocab(root) {
   searchWrap.appendChild(el('span', 'material-icons search'));
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Find a word, translation or book';
+  searchInput.placeholder = t('vocab_search_placeholder');
   searchInput.setAttribute('aria-label', 'Filter vocabulary');
   searchWrap.appendChild(searchInput);
   toolbar.appendChild(searchWrap);
@@ -134,7 +135,7 @@ export async function renderVocab(root) {
     langSelect.textContent = '';
     const all = document.createElement('option');
     all.value = '';
-    all.textContent = 'All languages';
+    all.textContent = t('vocab_all_languages');
     langSelect.appendChild(all);
     langs.forEach(function (code) {
       const option = document.createElement('option');
@@ -178,8 +179,8 @@ export async function renderVocab(root) {
     }
     const edit = el('button', 'jellio-vocab-icon');
     edit.type = 'button';
-    edit.setAttribute('aria-label', 'Edit');
-    edit.title = 'Edit';
+    edit.setAttribute('aria-label', t('action_edit'));
+    edit.title = t('action_edit');
     edit.appendChild(el('span', 'material-icons edit'));
     edit.addEventListener('click', function () {
       card.replaceWith(editCard(entry));
@@ -187,8 +188,8 @@ export async function renderVocab(root) {
     foot.appendChild(edit);
     const remove = el('button', 'jellio-vocab-icon');
     remove.type = 'button';
-    remove.setAttribute('aria-label', 'Delete');
-    remove.title = 'Delete';
+    remove.setAttribute('aria-label', t('action_delete'));
+    remove.title = t('action_delete');
     remove.appendChild(el('span', 'material-icons delete'));
     remove.addEventListener('click', async function () {
       try {
@@ -221,10 +222,10 @@ export async function renderVocab(root) {
     const definition = field('Definition', entry.Definition, 2);
     const sentence = field('Sentence', entry.Sentence, 3);
     const foot = el('div', 'jellio-vocab-card-foot');
-    const cancel = el('button', 'jellio-vocab-secondary', 'Cancel');
+    const cancel = el('button', 'jellio-vocab-secondary', t('action_cancel'));
     cancel.type = 'button';
     cancel.addEventListener('click', () => card.replaceWith(entryCard(entry)));
-    const save = el('button', 'jellio-vocab-primary', 'Save');
+    const save = el('button', 'jellio-vocab-primary', t('action_save'));
     save.type = 'button';
     save.addEventListener('click', async function () {
       save.disabled = true;

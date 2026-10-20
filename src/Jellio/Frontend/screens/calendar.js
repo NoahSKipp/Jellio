@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Calendar: Jellio's own CalendarController, upcoming episode air dates
 // and movie digital release dates for whatever is on this reader's own
 // real Watchlist, grouped by real calendar date. Desktop only for now,
@@ -28,8 +29,8 @@ function dateHeading(date) {
   const today = startOfDay(new Date());
   const target = startOfDay(date);
   const diffDays = Math.round((target - today) / DAY_MS);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays === 0) return t('calendar_today');
+  if (diffDays === 1) return t('calendar_tomorrow');
   if (diffDays > 1 && diffDays < 7) {
     return date.toLocaleDateString(undefined, { weekday: 'long' });
   }
@@ -38,7 +39,7 @@ function dateHeading(date) {
 
 function kindLabel(entry) {
   if (entry.Kind === 'episode') {
-    return entry.Detail ? 'New episode · ' + entry.Detail : 'New episode';
+    return entry.Detail ? t('calendar_new_episode') + ' · ' + entry.Detail : t('calendar_new_episode');
   }
   return 'Digital release';
 }
@@ -91,7 +92,7 @@ function buildHeader() {
     el(
       'p',
       'jellio-calendar-tagline',
-      'What’s coming for your Watchlist — new episodes and digital releases for whatever is already on it.',
+      t('calendar_tagline'),
     ),
   );
   return header;
@@ -122,7 +123,7 @@ export async function renderCalendar(root) {
       el(
         'p',
         'jellio-service-empty',
-        'Nothing upcoming yet. Your Watchlist and the shows you have been watching appear here once a new episode or release date is announced.',
+        t('calendar_empty'),
       ),
     );
     return;

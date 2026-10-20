@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.6",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.6",
+    "summary": "Deep dive UI localization across all remaining screens and components.",
+    "highlights": [
+      {
+        "title": "Full Screen Localization",
+        "description": "Translates Library sort options, Calendar entries, Downloads offline banner and actions, Feed activity items, Profile tabs and statistics, Video Player controls, and Hero Carousel across all seven languages."
+      },
+      {
+        "title": "Modal and Picker Translations",
+        "description": "Localizes Avatar Picker options and upload feedback, Account Switcher dialogs, Book and Vocabulary actions, and Bookshelf search filters."
+      },
+      {
+        "title": "Motion and Cache Preferences",
+        "description": "Translates seasonal motion presets, home row cache descriptions, and save confirmations into user-selected languages."
+      }
+    ]
+  },
+  {
     "version": "1.87.5",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.5",

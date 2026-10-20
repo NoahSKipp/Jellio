@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The profile page, from the reference table: AniList-style banner,
 // bio, badge showcase, activity feed. Own route (#/profile?id=X, own
 // signed in user's own id when the query is bare), reached from
@@ -82,9 +83,9 @@ function describeActivity(entry) {
         entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
           ? 'Episodes ' + entry.FirstEpisodeNumber + '-' + entry.LastEpisodeNumber
           : entry.EpisodeCount + ' episodes';
-      text(' — ' + season + range);
+      text(' - ' + season + range);
     } else {
-      text(' — ' + entry.ItemName);
+      text(' - ' + entry.ItemName);
     }
     return container;
   }
@@ -118,7 +119,7 @@ function buildBanner(userId, isOwner, onChanged) {
     input.accept = 'image/png,image/jpeg,image/webp';
     input.className = 'jellio-profile-banner-input';
 
-    const editButton = el('button', 'jellio-profile-banner-edit', 'Change banner');
+    const editButton = el('button', 'jellio-profile-banner-edit', t('profile_change_banner'));
     editButton.type = 'button';
     editButton.addEventListener('click', function () {
       input.click();
@@ -144,7 +145,7 @@ function buildBanner(userId, isOwner, onChanged) {
         })
         .finally(function () {
           editButton.disabled = false;
-          editButton.textContent = 'Change banner';
+          editButton.textContent = t('profile_change_banner');
         });
     });
 
@@ -178,7 +179,7 @@ function buildAvatar(userId, imageTag, isOwner, onChanged) {
   if (isOwner) {
     const editButton = el('button', 'jellio-profile-avatar-edit');
     editButton.type = 'button';
-    editButton.setAttribute('aria-label', 'Change profile picture');
+    editButton.setAttribute('aria-label', t('profile_change_avatar'));
     editButton.appendChild(el('span', 'material-icons jellio-profile-avatar-edit-icon photo_camera'));
     editButton.addEventListener('click', function () {
       openAvatarPicker(function () {
@@ -199,7 +200,7 @@ function buildBioSection(userId, bio, isOwner, onChanged) {
     wrap.textContent = '';
     wrap.appendChild(el('p', 'jellio-profile-bio', bio || (isOwner ? 'Add a short bio.' : '')));
     if (isOwner) {
-      const editButton = el('button', 'jellio-profile-bio-edit', 'Edit bio');
+      const editButton = el('button', 'jellio-profile-bio-edit', t('profile_edit_bio'));
       editButton.type = 'button';
       editButton.addEventListener('click', renderEdit);
       wrap.appendChild(editButton);
@@ -215,9 +216,9 @@ function buildBioSection(userId, bio, isOwner, onChanged) {
     wrap.appendChild(textarea);
 
     const actions = el('div', 'jellio-profile-bio-actions');
-    const save = el('button', 'jellio-settings-button', 'Save');
+    const save = el('button', 'jellio-settings-button', t('profile_save'));
     save.type = 'button';
-    const cancel = el('button', 'jellio-profile-bio-cancel', 'Cancel');
+    const cancel = el('button', 'jellio-profile-bio-cancel', t('profile_cancel'));
     cancel.type = 'button';
     cancel.addEventListener('click', renderView);
     save.addEventListener('click', function () {
@@ -246,7 +247,7 @@ function buildBioSection(userId, bio, isOwner, onChanged) {
 function buildLockedPanel() {
   const panel = el('div', 'jellio-profile-locked');
   panel.appendChild(el('span', 'material-icons jellio-profile-locked-icon', 'visibility_off'));
-  panel.appendChild(el('p', 'jellio-profile-locked-text', 'This profile is private.'));
+  panel.appendChild(el('p', 'jellio-profile-locked-text', t('profile_is_private')));
   return panel;
 }
 
@@ -335,9 +336,9 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
 
 function buildActivitySection(entries, canRemove, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
-  section.appendChild(el('h2', 'jellio-row-title', 'Recent activity'));
+  section.appendChild(el('h2', 'jellio-row-title', t('profile_recent_activity')));
   if (!entries.length) {
-    section.appendChild(el('p', 'jellio-profile-empty', 'Nothing watched yet.'));
+    section.appendChild(el('p', 'jellio-profile-empty', t('profile_nothing_watched')));
     return section;
   }
 
@@ -540,7 +541,7 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
 
   const prevBtn = el('button', 'jellio-profile-month-btn');
   prevBtn.type = 'button';
-  prevBtn.setAttribute('aria-label', 'Previous month');
+  prevBtn.setAttribute('aria-label', t('profile_previous_month'));
   prevBtn.appendChild(el('span', 'material-icons', 'chevron_left'));
   prevBtn.addEventListener('click', function () {
     onDateChange(new Date(year, month - 1, 1));
@@ -555,7 +556,7 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
 
   const nextBtn = el('button', 'jellio-profile-month-btn');
   nextBtn.type = 'button';
-  nextBtn.setAttribute('aria-label', 'Next month');
+  nextBtn.setAttribute('aria-label', t('profile_next_month'));
   nextBtn.appendChild(el('span', 'material-icons', 'chevron_right'));
   if (isCurrentMonth) {
     nextBtn.disabled = true;
@@ -567,7 +568,7 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
   nav.appendChild(nextBtn);
 
   if (!isCurrentMonth) {
-    const jumpBtn = el('button', 'jellio-profile-month-jump', 'Current month');
+    const jumpBtn = el('button', 'jellio-profile-month-jump', t('profile_current_month'));
     jumpBtn.type = 'button';
     jumpBtn.addEventListener('click', function () {
       onDateChange(new Date());
@@ -770,7 +771,7 @@ export async function renderProfile(root, params) {
       const statsToggleWrap = el('div', 'jellio-profile-stats-toggle-wrap');
       const statsToggle = el('div', 'jellio-profile-stats-toggle');
 
-      const lifetimeBtn = el('button', 'jellio-profile-stats-toggle-btn' + (activeStatMode === 'lifetime' ? ' jellio-profile-stats-toggle-btn-active' : ''), 'Lifetime Stats');
+      const lifetimeBtn = el('button', 'jellio-profile-stats-toggle-btn' + (activeStatMode === 'lifetime' ? ' jellio-profile-stats-toggle-btn-active' : ''), t('profile_lifetime_stats'));
       lifetimeBtn.type = 'button';
       lifetimeBtn.addEventListener('click', function () {
         if (activeStatMode === 'lifetime') return;
@@ -779,7 +780,7 @@ export async function renderProfile(root, params) {
       });
       statsToggle.appendChild(lifetimeBtn);
 
-      const monthlyBtn = el('button', 'jellio-profile-stats-toggle-btn' + (activeStatMode === 'monthly' ? ' jellio-profile-stats-toggle-btn-active' : ''), 'Monthly Stats');
+      const monthlyBtn = el('button', 'jellio-profile-stats-toggle-btn' + (activeStatMode === 'monthly' ? ' jellio-profile-stats-toggle-btn-active' : ''), t('profile_monthly_stats'));
       monthlyBtn.type = 'button';
       monthlyBtn.addEventListener('click', function () {
         if (activeStatMode === 'monthly') return;

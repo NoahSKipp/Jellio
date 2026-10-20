@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The Books and Audiobooks shelves (components/navShared.js gives one
 // Jellyfin Books library a sidebar entry per format, told apart by
 // &bookKind=). Built around how people browse books rather than films:
@@ -666,7 +667,7 @@ export function renderBookshelf(root, params, parentId) {
   searchWrap.appendChild(el('span', 'material-icons search'));
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Search ' + copy.many + ' and sources…';
+  searchInput.placeholder = t('bookshelf_search_placeholder', { many: copy.many });
   searchInput.setAttribute('aria-label', 'Search ' + copy.many);
   searchWrap.appendChild(searchInput);
   toolbar.appendChild(searchWrap);
@@ -784,7 +785,7 @@ export function renderBookshelf(root, params, parentId) {
   const clearFilter = el('button', 'jellio-bookshelf-clear');
   clearFilter.type = 'button';
   clearFilter.appendChild(el('span', 'material-icons close'));
-  clearFilter.appendChild(el('span', null, 'Clear filter'));
+  clearFilter.appendChild(el('span', null, t('bookshelf_clear_filter')));
   clearFilter.hidden = true;
   gridHeader.appendChild(clearFilter);
   gridSection.appendChild(gridHeader);
@@ -1195,12 +1196,12 @@ export function renderBookshelf(root, params, parentId) {
       const button = el('button', 'jellio-book-request-action');
       button.type = 'button';
       button.appendChild(el('span', 'material-icons library_add'));
-      const text = el('span', null, 'Add to library');
+      const text = el('span', null, t('bookshelf_add_library'));
       button.appendChild(text);
 
       button.addEventListener('click', function () {
         button.disabled = true;
-        text.textContent = 'Adding…';
+        text.textContent = t('bookshelf_adding');
         requestMangaSeries(manga.MangaId, manga.Title, true)
           .then(function (res) {
             if (res && res.Status === 'duplicate') {
