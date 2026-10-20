@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.11",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.11",
+    "summary": "Fixes onboarding question mark tooltip cutoff at screen top and restores existing saved preferences when rerunning the setup wizard.",
+    "highlights": [
+      {
+        "title": "Onboarding Wizard Improvements",
+        "description": "Adjusted the question mark help tooltip position and margins to avoid top clipping, and properly restored existing user configurations when rerunning the setup wizard rather than resetting to hardcoded defaults."
+      }
+    ]
+  },
+  {
     "version": "1.87.10",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.10",
