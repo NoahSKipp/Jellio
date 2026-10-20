@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.0] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Add display language selection and onboarding setup wizard\n- *(i18n)* Add French, Italian, and Portuguese translations and streamline onboarding\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.0 release notes\n",
+        "checksum": "b0f1b5cfa63926cfbe871e612bc3eba6",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.0/jellio_1.87.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T10:59:35Z",
+        "version": "1.87.0"
+      },
+      {
         "changelog": "## [1.86.3] - 2026-10-19\n\n### 🐛 Bug Fixes\n\n- *(hubs)* Centre the brand glow behind the hub's logo\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.86.3 release notes\n- *(changelog)* Note the wider hub glow in 1.86.3\n\n### 🎨 Styling\n\n- *(hubs)* Wider glow behind the hub logo, fading out below the header\n",
         "checksum": "0a70e6327a5979545786b2a4e768aa73",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.86.3/jellio_1.87.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-15T16:59:43Z",
         "version": "1.79.1"
-      },
-      {
-        "changelog": "## [1.79.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(notifications)* Add changelog and what's new entry with release highlights\n\n### ⚡ Performance\n\n- *(web)* Decouple row slot rendering, memoize seed recommendations, add immutable asset caching and async image decoding\n",
-        "checksum": "9aa9757d807b754303bca8c44e1c9b7b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.79.0/jellio_1.79.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-15T12:12:57Z",
-        "version": "1.79.0"
       }
     ]
   }
