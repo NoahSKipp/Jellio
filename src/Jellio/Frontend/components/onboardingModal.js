@@ -5,8 +5,8 @@
 
 import { el } from '../runtime/dom.js';
 import { t, getDisplayLanguage, setDisplayLanguage, DISPLAY_LANGUAGES } from '../runtime/i18n.js';
+import { getCurrentUserId } from '../runtime/auth.js';
 import {
-  getCurrentUserId,
   getCurrentUser,
   updateLanguagePreferences,
   startMangaImport,

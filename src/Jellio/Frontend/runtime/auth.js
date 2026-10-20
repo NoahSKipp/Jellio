@@ -131,7 +131,27 @@ export function getDeviceId() {
 }
 
 function getSession() {
-  return readJson(SESSION_KEY);
+  const session = readJson(SESSION_KEY);
+  if (session && session.accessToken && session.userId) {
+    return session;
+  }
+  const native = readJson(NATIVE_CREDENTIALS_KEY);
+  if (native && Array.isArray(native.Servers)) {
+    const server = native.Servers.find(function (s) {
+      return s && s.AccessToken && s.UserId;
+    }) || native.Servers[0];
+    if (server && server.AccessToken && server.UserId) {
+      const recovered = {
+        accessToken: server.AccessToken,
+        userId: server.UserId,
+        user: { Id: server.UserId, Name: server.Name || '' },
+        ts: Date.now(),
+      };
+      writeJson(SESSION_KEY, recovered);
+      return recovered;
+    }
+  }
+  return null;
 }
 
 export function isAuthenticated() {

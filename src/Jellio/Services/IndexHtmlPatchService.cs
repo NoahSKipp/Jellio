@@ -314,6 +314,34 @@ public class IndexHtmlPatchService(
   var STORAGE_PREFIX = 'jellio_auth::';
   var SESSION_KEY = STORAGE_PREFIX + 'session';
   var SERVER_ADDRESS_KEY = STORAGE_PREFIX + 'serverAddress';
+  function captureServer(server) {
+    if (!server || !server.AccessToken || !server.UserId) return;
+    fetch(window.location.origin + '/Users/' + server.UserId, {
+      headers: { 'X-Emby-Token': server.AccessToken }
+    }).then(function (res) {
+      return res.ok ? res.json() : null;
+    }).then(function (user) {
+      if (!user) return;
+      try {
+        window.localStorage.setItem(SESSION_KEY, JSON.stringify({
+          accessToken: server.AccessToken,
+          userId: user.Id,
+          user: user,
+          ts: Date.now()
+        }));
+        window.localStorage.setItem(SERVER_ADDRESS_KEY, window.location.origin);
+      } catch (e) {}
+      document.dispatchEvent(new CustomEvent('jellio:session-captured'));
+    }).catch(function () {});
+  }
+  try {
+    var rawCreds = window.localStorage.getItem('jellyfin_credentials');
+    if (rawCreds) {
+      var parsedCreds = JSON.parse(rawCreds);
+      var initialServer = parsedCreds && parsedCreds.Servers && parsedCreds.Servers[0];
+      if (initialServer) captureServer(initialServer);
+    }
+  } catch (e) {}
   var marker = 'Stored JSON credentials:';
   var originalLog = console.log;
   console.log = function () {
@@ -323,25 +351,7 @@ public class IndexHtmlPatchService(
         if (typeof arg === 'string' && arg.indexOf(marker) === 0) {
           var parsed = JSON.parse(arg.slice(marker.length).trim());
           var server = parsed && parsed.Servers && parsed.Servers[0];
-          if (server && server.AccessToken && server.UserId) {
-            fetch(window.location.origin + '/Users/' + server.UserId, {
-              headers: { 'X-Emby-Token': server.AccessToken }
-            }).then(function (res) {
-              return res.ok ? res.json() : null;
-            }).then(function (user) {
-              if (!user) return;
-              try {
-                window.localStorage.setItem(SESSION_KEY, JSON.stringify({
-                  accessToken: server.AccessToken,
-                  userId: user.Id,
-                  user: user,
-                  ts: Date.now()
-                }));
-                window.localStorage.setItem(SERVER_ADDRESS_KEY, window.location.origin);
-              } catch (e) {}
-              document.dispatchEvent(new CustomEvent('jellio:session-captured'));
-            }).catch(function () {});
-          }
+          if (server) captureServer(server);
         }
       }
     } catch (err) {}

@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.1",
+    "summary": "Fix overlay mounting and session recovery on Jellyfin Web.",
+    "highlights": [
+      {
+        "title": "Overlay Restoration",
+        "description": "Fixes a module export resolution error that prevented Jellio from mounting its overlay over Jellyfin Web on startup."
+      },
+      {
+        "title": "Reliable Session Recovery",
+        "description": "Seamlessly restores active Jellyfin Web credentials from storage on startup without relying solely on console log interception."
+      }
+    ]
+  },
+  {
     "version": "1.87.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.0",

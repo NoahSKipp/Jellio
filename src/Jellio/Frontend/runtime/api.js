@@ -7,6 +7,7 @@ import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideo
 import { copyableVideoCodecs } from './transcodeClassifier.js';
 import { hasStreamInfo, filterPlayableSources } from './quality.js';
 import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser } from './auth.js';
+export { getCurrentUserId };
 import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
 import {
