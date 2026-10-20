@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.1] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(frontend)* Resolve missing getCurrentUserId export and restore overlay mounting over Jellyfin Web\n- *(auth)* Seamlessly restore active credentials from native Jellyfin storage on startup\n- *(tests)* Add static import resolution validation to automated test suite\n",
+        "checksum": "33b1a877c99b36fc8daaf3905e65b886",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.1/jellio_1.87.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T11:31:27Z",
+        "version": "1.87.1"
+      },
+      {
         "changelog": "## [1.87.0] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Add display language selection and onboarding setup wizard\n- *(i18n)* Add French, Italian, and Portuguese translations and streamline onboarding\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.0 release notes\n",
         "checksum": "b0f1b5cfa63926cfbe871e612bc3eba6",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.0/jellio_1.87.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-15T21:45:25Z",
         "version": "1.80.0"
-      },
-      {
-        "changelog": "## [1.79.1] - 2026-10-15\n\n### 🐛 Bug Fixes\n\n- *(settings)* Make What's New card expandable with chevron and inset list padding\n",
-        "checksum": "7824bcdb1cb04c49b9443189e9a4a009",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.79.1/jellio_1.79.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-15T16:59:43Z",
-        "version": "1.79.1"
       }
     ]
   }
