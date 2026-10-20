@@ -37,6 +37,7 @@ import { showToast } from './components/toast.js';
 import { buildLibraryCoverflow } from './components/libraryCoverflow.js';
 import { syncMiniPlayer } from './components/audioMiniPlayer.js';
 import { onRouteChange, parseRoute, setTitle, navigateTo } from './runtime/router.js';
+import { shouldShowOnboarding, openOnboardingModal } from './components/onboardingModal.js';
 
 const ROOT_ID = 'jellioRoot';
 
@@ -354,6 +355,7 @@ async function sync() {
 // login page is what the previous codebase's quick sign-in work was
 // actually trying to route around in the first place.
 async function renderUnauthenticated() {
+  onboardingPrompted = false;
   await teardownActiveScreen();
 
   const root = getRoot();
@@ -729,6 +731,7 @@ function scheduleNavRecheck(attemptsLeft, delayMs) {
 }
 
 let userDataRowsHooked = false;
+let onboardingPrompted = false;
 
 async function runSync() {
   try {
@@ -844,6 +847,16 @@ async function runSync() {
     const results = await Promise.all(tasks);
     activeCleanup = typeof results[0] === 'function' ? results[0] : null;
     fadeInContent(content);
+
+    // Prompt first-run onboarding setup wizard on initial load
+    if (!onboardingPrompted && !FULLSCREEN_ROUTES.has(route.path) && shouldShowOnboarding()) {
+      onboardingPrompted = true;
+      window.setTimeout(function () {
+        if (shouldShowOnboarding() && !document.getElementById('jellioOnboardingModal')) {
+          openOnboardingModal();
+        }
+      }, 350);
+    }
   } catch (err) {
     // Real bug, found live: revoking this account's own token server
     // side (deleting its device from the Dashboard, or any other real

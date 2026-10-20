@@ -11,6 +11,7 @@
 // does not, so it keeps its own record of who is signed in, updated the
 // moment a real login response is seen, not on native code's timetable.
 import { requestRowCacheWipe } from './rowcache.js';
+import { getAcceptLanguageHeader } from './i18n.js';
 
 export const Jellio = window.Jellio || (window.Jellio = {});
 
@@ -429,7 +430,10 @@ export function buildAuthHeader() {
 }
 
 export function getAuthHeaders() {
-  return { Authorization: buildAuthHeader() };
+  return {
+    Authorization: buildAuthHeader(),
+    'Accept-Language': getAcceptLanguageHeader(),
+  };
 }
 
 // Real, unauthenticated Jellyfin endpoint (GET /Users/Public,

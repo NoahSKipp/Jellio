@@ -15456,3 +15456,560 @@
 .jellio-manga-other-sources-list {
   margin-top: 0.4em;
 }
+
+
+/* ==========================================================================
+   Jellio Onboarding Setup Wizard
+   Modal walkthrough for first-run configuration (language, audio, profile,
+   feed privacy, reading/manga). Styled to match Jellio/Nuvio glass aesthetics.
+   ========================================================================== */
+.jellio-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: jellio-fade-in 200ms ease;
+}
+
+.jellio-onboarding-card {
+  width: min(92vw, 640px);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.65);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  animation: jellio-popover-in 240ms var(--jellio-ease-out) both;
+}
+
+.jellio-onboarding-header {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.jellio-onboarding-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.jellio-onboarding-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jellio-onboarding-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--jellio-primary-color), var(--jellio-secondary-color));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.jellio-onboarding-mark svg {
+  width: 18px;
+  height: 18px;
+}
+
+.jellio-onboarding-brand-title {
+  font-weight: 700;
+  font-size: 1.1em;
+  color: var(--jellio-text);
+  margin-right: 8px;
+}
+
+.jellio-onboarding-step-counter {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-onboarding-skip-btn {
+  background: none;
+  border: none;
+  color: var(--jellio-text-secondary);
+  font-size: 0.88em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 140ms ease;
+  padding: 4px 8px;
+}
+
+.jellio-onboarding-skip-btn:hover {
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-progress-track {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.jellio-onboarding-progress-pill {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  transition: background 240ms ease;
+}
+
+.jellio-onboarding-progress-pill.active {
+  background: var(--jellio-primary-color);
+}
+
+.jellio-onboarding-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 280px;
+}
+
+.jellio-onboarding-title {
+  margin: 0 0 6px;
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-sub {
+  margin: 0 0 20px;
+  font-size: 0.95em;
+  color: var(--jellio-text-secondary);
+  line-height: 1.45;
+}
+
+.jellio-onboarding-lang-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.jellio-onboarding-lang-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.05);
+  border: 2px solid rgb(255 255 255 / 0.08);
+  color: var(--jellio-text);
+  cursor: pointer;
+  text-align: left;
+  transition: all 160ms ease;
+}
+
+.jellio-onboarding-lang-card:hover {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.2);
+  transform: translateY(-2px);
+}
+
+.jellio-onboarding-lang-card.selected {
+  border-color: var(--jellio-primary-color);
+  background: rgb(255 255 255 / 0.1);
+  box-shadow: 0 0 0 1px var(--jellio-primary-color);
+}
+
+.jellio-onboarding-lang-icon {
+  font-size: 24px;
+  color: var(--jellio-primary-color);
+}
+
+.jellio-onboarding-lang-native {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-lang-name {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.jellio-onboarding-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jellio-onboarding-label-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.jellio-onboarding-label {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  color: var(--jellio-text);
+  font-size: 0.95em;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.jellio-onboarding-select:focus {
+  border-color: var(--jellio-primary-color);
+}
+
+.jellio-onboarding-help-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.jellio-onboarding-help-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--jellio-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.jellio-onboarding-help-btn:hover {
+  border-color: var(--jellio-primary-color);
+  color: var(--jellio-text);
+  background: rgb(255 255 255 / 0.18);
+}
+
+.jellio-onboarding-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 290px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgb(24 24 32 / 0.98);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.65);
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease, transform 180ms ease;
+  font-size: 0.88em;
+  line-height: 1.45;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-help-wrap:hover .jellio-onboarding-tooltip,
+.jellio-onboarding-tooltip.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.jellio-onboarding-tooltip-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--jellio-primary-color);
+}
+
+.jellio-onboarding-tooltip-desc {
+  font-size: 0.9em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-onboarding-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  transition: background 140ms ease;
+}
+
+.jellio-onboarding-check-row:hover {
+  background: rgb(255 255 255 / 0.07);
+}
+
+.jellio-onboarding-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--jellio-primary-color);
+  cursor: pointer;
+}
+
+.jellio-onboarding-check-title {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-check-sub {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.jellio-onboarding-profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.jellio-onboarding-avatar-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.jellio-onboarding-avatar-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--jellio-primary-color);
+}
+
+.jellio-onboarding-avatar-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  color: var(--jellio-text);
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.jellio-onboarding-avatar-btn:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.jellio-onboarding-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgb(var(--jellio-primary-rgb, 100 160 255) / 0.08);
+  border: 1px solid rgb(var(--jellio-primary-rgb, 100 160 255) / 0.2);
+  margin-top: 10px;
+}
+
+.jellio-onboarding-callout-icon {
+  font-size: 22px;
+  color: var(--jellio-primary-color);
+  margin-top: 1px;
+}
+
+.jellio-onboarding-callout-title {
+  font-weight: 700;
+  font-size: 0.95em;
+  color: var(--jellio-text);
+  margin-bottom: 4px;
+}
+
+.jellio-onboarding-callout-desc {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+  line-height: 1.45;
+}
+
+.jellio-onboarding-card-nested {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jellio-onboarding-reading-sub {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.03);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.jellio-onboarding-reading-block {
+  margin-bottom: 16px;
+}
+
+.jellio-onboarding-reading-block:last-child {
+  margin-bottom: 0;
+}
+
+.jellio-onboarding-block-title {
+  margin: 0 0 4px;
+  font-size: 0.95em;
+  font-weight: 700;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-block-desc {
+  margin: 0 0 10px;
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-onboarding-file-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jellio-onboarding-file-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  color: var(--jellio-text);
+  font-size: 0.88em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.jellio-onboarding-file-btn:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.jellio-onboarding-file-status {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-onboarding-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jellio-onboarding-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.07);
+}
+
+.jellio-onboarding-summary-icon {
+  font-size: 22px;
+  color: var(--jellio-primary-color);
+}
+
+.jellio-onboarding-summary-label {
+  font-size: 0.82em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-onboarding-summary-value {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-footer {
+  padding: 18px 28px 22px;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.jellio-onboarding-btn-next,
+.jellio-onboarding-btn-finish {
+  padding: 11px 26px;
+  border-radius: 999px;
+  background: var(--jellio-primary-color);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95em;
+  border: none;
+  cursor: pointer;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.jellio-onboarding-btn-next:hover,
+.jellio-onboarding-btn-finish:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.jellio-onboarding-btn-back {
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  font-size: 0.92em;
+  font-weight: 500;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.jellio-onboarding-btn-back:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text);
+}
+
+.jellio-onboarding-summary-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 600;
+  background: rgb(var(--jellio-primary-rgb, 100 160 255) / 0.16);
+  color: var(--jellio-primary-color);
+  border: 1px solid rgb(var(--jellio-primary-rgb, 100 160 255) / 0.3);
+}
+
+.jellio-onboarding-settings-reminder {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  font-size: 0.88em;
+  color: var(--jellio-text-secondary);
+  text-align: center;
+}

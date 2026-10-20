@@ -78,6 +78,7 @@ import {
 import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from '../components/audioMiniPlayer.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
+import { DISPLAY_LANGUAGES, getDisplayLanguage, setDisplayLanguage, t } from '../runtime/i18n.js';
 import {
   LANGUAGES,
   languageLabel,
@@ -87,6 +88,7 @@ import {
   writeDefaultBookLanguage,
 } from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
+import { openOnboardingModal } from '../components/onboardingModal.js';
 
 // One grouped list card: an icon'd header (skipped entirely when
 // no title is given, RemoveShow/Sign out's own bare single-row card)
@@ -1280,6 +1282,31 @@ function buildRecommendationsCategory() {
 // the spot by components/seasons.js.
 function buildDisplayCategory() {
   const wrap = el('div', 'jellio-settings-category');
+  const { card: langCard, body: langBody } = buildCard(
+    'translate',
+    t('settings_display_language_title'),
+    t('settings_display_language_desc'),
+  );
+  const langOptions = DISPLAY_LANGUAGES.map(function (lang) {
+    return { value: lang.code, label: lang.nativeName + ' (' + lang.label + ')' };
+  });
+  langBody.appendChild(
+    buildSelectRow(
+      null,
+      t('settings_display_language_title'),
+      null,
+      langOptions,
+      getDisplayLanguage(),
+      function (value, select, status) {
+        setDisplayLanguage(value);
+        status.textContent = t('action_saved') + ' (' + t('settings_saved_browser') + ')';
+        window.setTimeout(function () {
+          window.location.reload();
+        }, 500);
+      },
+    ),
+  );
+  wrap.appendChild(langCard);
   const { card, body } = buildCard('auto_awesome', 'Seasonal effects', 'The themed background shown around holidays, when your server has it turned on.');
   body.appendChild(
     buildSelectRow(
@@ -1295,6 +1322,7 @@ function buildDisplayCategory() {
     ),
   );
   wrap.appendChild(card);
+
   wrap.appendChild(buildHomeCacheCard());
   return wrap;
 }
@@ -1304,6 +1332,24 @@ function buildAboutCategory() {
   const version = jellioVersion();
   const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
+
+  const { card: wizardCard, body: wizardBody } = buildCard(
+    'explore',
+    t('onboarding_wizard_card_title'),
+    t('onboarding_wizard_card_desc'),
+  );
+  const wizardRow = el('div', 'jellio-settings-row');
+  const wizardBtn = el('button', 'jellio-btn jellio-btn-secondary', t('onboarding_wizard_btn'));
+  wizardBtn.type = 'button';
+  wizardBtn.style.padding = '8px 18px';
+  wizardBtn.style.borderRadius = '999px';
+  wizardBtn.style.fontWeight = '600';
+  wizardBtn.addEventListener('click', function () {
+    openOnboardingModal();
+  });
+  wizardRow.appendChild(wizardBtn);
+  wizardBody.appendChild(wizardRow);
+  wrap.appendChild(wizardCard);
 
   const { card: whatsNewCard, body: whatsNewBody } = buildExpandableCard(
     'auto_awesome',
