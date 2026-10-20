@@ -23,7 +23,48 @@ export function shouldShowOnboarding(userId) {
   const uid = userId || getCurrentUserId();
   if (!uid) return false;
   try {
-    return !window.localStorage.getItem(STORAGE_PREFIX + uid);
+    if (window.localStorage.getItem(STORAGE_PREFIX + uid)) {
+      return false;
+    }
+
+    // Onboarding setup wizard is strictly for initial open / clean installs.
+    // If the user has already configured settings, has previous changelog history,
+    // or has established account playback preferences, treat onboarding as done.
+    const hasExistingUsage = Boolean(
+      window.localStorage.getItem('jellio_last_seen_changelog_' + uid) ||
+      window.localStorage.getItem('jellio_last_seen_changelog_global') ||
+      window.localStorage.getItem('jellio_display_language') ||
+      window.localStorage.getItem('jellio_player_volume') ||
+      window.localStorage.getItem('jellioPlayerSpeed') ||
+      window.localStorage.getItem('jellio_player_sub_style') ||
+      window.localStorage.getItem('jellio_player_autoskip') ||
+      window.localStorage.getItem('jellio_reader_settings') ||
+      window.localStorage.getItem('jellio_reader_study_lang') ||
+      window.localStorage.getItem('jellio_audiobook_default_speed') ||
+      window.localStorage.getItem('jellio_audiobook_volume') ||
+      window.localStorage.getItem('jellio_motion_level') ||
+      window.localStorage.getItem('jellio_buffer_seconds') ||
+      window.localStorage.getItem('jellio_pip_mode') ||
+      window.localStorage.getItem('jellio_up_next_countdown') ||
+      window.localStorage.getItem('jellio_recent_searches') ||
+      window.localStorage.getItem('jellio_home_genres')
+    );
+
+    const user = getCurrentUser();
+    const hasServerSettings = Boolean(
+      user &&
+      user.Configuration &&
+      (user.Configuration.AudioLanguagePreference ||
+       user.Configuration.SubtitleLanguagePreference ||
+       user.Configuration.SubtitleMode)
+    );
+
+    if (hasExistingUsage || hasServerSettings) {
+      markOnboardingComplete(uid);
+      return false;
+    }
+
+    return true;
   } catch (err) {
     return false;
   }

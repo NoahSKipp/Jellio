@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.2",
+    "summary": "Do not prompt onboarding for established users with existing settings.",
+    "highlights": [
+      {
+        "title": "Onboarding Polishing",
+        "description": "Ensures the first-run onboarding setup wizard is strictly reserved for clean installs and does not prompt established users who already configured their preferences."
+      }
+    ]
+  },
+  {
     "version": "1.87.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.1",
