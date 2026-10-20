@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.0",
+    "summary": "Guided setup wizard, new display languages, and cross-platform preference sync.",
+    "highlights": [
+      {
+        "title": "Setup Wizard",
+        "description": "A guided onboarding flow helps you configure your display language, audio and subtitle defaults, profile privacy, and reader preferences right from the start. You can also re-run the wizard at any time from Settings > About."
+      },
+      {
+        "title": "Display Languages",
+        "description": "Full interface localization is now available in English, German (Deutsch), Spanish (Español), and Polish (Polski). Choosing a language also updates media descriptions to match your preference."
+      },
+      {
+        "title": "Cross-Platform Preference Sync",
+        "description": "Playback preferences configured on Jellio TV are automatically detected so you never have to re-enter them on Web."
+      }
+    ]
+  },
+  {
     "version": "1.86.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.86.3",
