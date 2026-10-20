@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.7] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Complete 100% deep-dive UI localization across all remaining screens, components, dialogs, toasts, and controls\n- *(i18n)* Exact dictionary parity across all 7 supported display languages (en, de, es, pl, fr, it, pt) with 795 keys each\n- *(vocab)* Full localization for vocabulary deck management, SRS review sessions, flashcard intervals, and dictionary lookup states\n- *(manga)* Localize chapter search filters, source checking statuses, Suwayomi CBZ format warnings, and shelf category assignment\n- *(player)* Translate dialogue boost and night mode status toggles, cast device section, wireless streaming, and failover notifications\n- *(settings)* Localize native application update descriptions and status indicators for macOS\n",
+        "checksum": "83a2c69715ae1cbe216cf2c3b3033720",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.7/jellio_1.87.7.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T14:50:29Z",
+        "version": "1.87.7"
+      },
+      {
         "changelog": "## [1.87.5] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(settings)* Translate all remaining Settings cards, form fields, action buttons, status messages, recommendation controls, and category headers across all supported languages\n- *(onboarding)* Persist onboarding completion status to server display preferences so accounts that already configured settings or finished onboarding never see the setup wizard repeatedly on other devices\n- *(home)* Localize home greetings (Good morning, Still up?) and dynamic recommendation headers (Top Picks for You, Because you watched)\n- *(switcher)* Localize account switcher actions and profile titles\n",
         "checksum": "ca9aa869d98b6e99d9f0fe099b4482a7",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.5/jellio_1.87.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-16T14:14:02Z",
         "version": "1.83.1"
-      },
-      {
-        "changelog": "## [1.83.0] - 2026-10-16\n\n### 🚀 Features\n\n- *(changelog)* Add 1.82.0 release notes to What's New\n\n### 🐛 Bug Fixes\n\n- *(tests)* Restore PlaybackStart listener in CommunityWatchingCache\n\n### ⚡ Performance\n\n- *(community)* Optimize community watching with parallel queries, two-tier cache, and client pre-warming\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Sync macOS 0.6.0 release entry\n- *(changelog)* Prepare 1.83.0 release entry\n\n### 💼 Other\n\n- Fix row title display name in home customize mode: strip expand chevron icon text\n- Fix placeholder stream detection: recognise .strm stubs, match release titles, and show no streams available\n",
-        "checksum": "ecd7fb833c2d678da1b1caf6150fc208",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.0/jellio_1.83.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-16T14:13:08Z",
-        "version": "1.83.0"
       }
     ]
   }
