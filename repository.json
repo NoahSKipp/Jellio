@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.9] - 2026-10-20\n\n### Features\n\n- *(subtitles)* Add explicit \"Off (no subtitles by default)\" option to the onboarding setup wizard and playback settings\n- *(playback)* Default subtitle selection in the onboarding setup wizard to Off to prevent forced auto-selection\n- *(sync)* Save SubtitleMode to None and synchronize default subtitles to server profile preferences across sessions and devices\n- *(player)* Ensure player auto-select respects SubtitleMode None and preferredLanguage off without attaching subtitle tracks\n",
+        "checksum": "a4d3e0f603cc4267a96b88e9f335b634",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.9/jellio_1.87.9.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T16:28:46Z",
+        "version": "1.87.9"
+      },
+      {
         "changelog": "## [1.87.8] - 2026-10-20\n\n### Features\n\n- *(achievements)* Complete translation coverage across all 46 achievement badges (names, descriptions, and unlock toasts) in all 7 supported display languages\n- *(settings)* Netflix-style server preferences sync: seamlessly sync user playback, display, and recommendation settings to server profile across devices\n- *(genres)* Dynamic catalog genre translations across Home screen rows, Settings genre selectors, and Detail view tags\n- *(profile)* Fully localize lifetime and monthly statistics, category labels, overview tabs, and filter chips\n- *(feed)* Refactor activity feed watch descriptions to prevent double prepositions (\"von of\"), translate season headers, and localize relative timestamps\n- *(i18n)* Unified informal German phrasing (\"Du / dein / dir / dich\") and consistent informal tone across all languages\n- *(settings)* Replace unstyled onboarding wizard button with native action card row\n- *(cache)* Ensure complete cache purge and reload on display language change so metadata refreshes immediately in the target language\n",
         "checksum": "639d7f8ab5e7aa3b590b9d3934e587bd",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.8/jellio_1.87.8.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-16T22:48:10Z",
         "version": "1.83.3"
-      },
-      {
-        "changelog": "## [1.83.2] - 2026-10-16\n\n### 🐛 Bug Fixes\n\n- *(streams)* Refine placeholder source detection to preserve strm releases\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Add 1.83.2 release notes\n",
-        "checksum": "5e7d433c14f0db88a43f5f942271e160",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.2/jellio_1.83.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-16T18:22:40Z",
-        "version": "1.83.2"
       }
     ]
   }
