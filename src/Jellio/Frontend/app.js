@@ -13,6 +13,7 @@ import {
   itemTypesForKind,
   invalidateNavCaches,
   invalidateUserDataRows,
+  loadServerPreferences,
 } from './runtime/api.js';
 import { renderLogin } from './screens/login.js';
 import { transitionsAllowed } from './runtime/motionSettings.js';
@@ -811,6 +812,7 @@ async function runSync() {
     loadGrouplistSetting();
     loadAdminStatus();
     loadSkipIntroCreditsMenuSetting();
+    await loadServerPreferences();
     // Overwrites whatever native's own unmatched route transition just
     // set the tab to (router.js's own setTitle() header explains why
     // that happens on every single route this runtime owns); a screen

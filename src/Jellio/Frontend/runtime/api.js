@@ -4624,17 +4624,79 @@ export function getCommunityUsers() {
 
 
 
-// Sync display language preference to Jellyfin server DisplayPreferences
-export async function saveServerDisplayLanguage(lang) {
+let cachedDisplayPreferences = null;
+
+export function getCachedServerDisplayPreferences() {
+  return cachedDisplayPreferences;
+}
+
+export async function getServerDisplayPreferences() {
   const userId = getCurrentUserId();
-  if (!userId) return;
+  if (!userId) return null;
+  if (cachedDisplayPreferences && cachedDisplayPreferences.UserId === userId) {
+    return cachedDisplayPreferences;
+  }
   try {
+    const res = await fetch(getServerAddress() + '/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
+      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+    });
+    if (res.ok) {
+      cachedDisplayPreferences = await res.json();
+      if (cachedDisplayPreferences) cachedDisplayPreferences.UserId = userId;
+      return cachedDisplayPreferences;
+    }
+  } catch (err) {
+    // Network or server error
+  }
+  return null;
+}
+
+export async function saveServerDisplayPreferences(customPrefs) {
+  const userId = getCurrentUserId();
+  if (!userId || !customPrefs) return;
+  try {
+    const existing = await getServerDisplayPreferences();
+    const existingCustom = (existing && existing.CustomPrefs) || {};
+    const merged = Object.assign({}, existingCustom, customPrefs);
+    const body = {
+      Id: 'usersettings',
+      Client: 'Jellio',
+      CustomPrefs: merged,
+    };
+    cachedDisplayPreferences = Object.assign({}, existing, body, { UserId: userId });
     await fetch(getServerAddress() + '/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
-      body: JSON.stringify({ Id: 'usersettings', CustomPrefs: { language: lang || 'en' } }),
+      body: JSON.stringify(body),
     });
   } catch (err) {
     // Best effort only
   }
+}
+
+// Sync display language preference to Jellyfin server DisplayPreferences
+export async function saveServerDisplayLanguage(lang) {
+  return saveServerDisplayPreferences({ language: lang || 'en' });
+}
+
+export async function loadServerPreferences() {
+  const userId = getCurrentUserId();
+  if (!userId) return null;
+  const prefs = await getServerDisplayPreferences();
+  if (prefs && prefs.CustomPrefs) {
+    if (prefs.CustomPrefs.onboarding_done === 'true') {
+      try {
+        window.localStorage.setItem('jellio_onboarding_done_' + userId, 'true');
+      } catch (_) {}
+    }
+    if (prefs.CustomPrefs.language) {
+      try {
+        const localLang = window.localStorage.getItem('jellio_display_language');
+        if (!localLang && prefs.CustomPrefs.language) {
+          setDisplayLanguage(prefs.CustomPrefs.language);
+        }
+      } catch (_) {}
+    }
+  }
+  return prefs;
 }

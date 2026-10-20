@@ -285,19 +285,19 @@ function buildPasswordCard() {
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (!next.value || next.value !== confirm.value) {
-      status.textContent = 'New passwords do not match.';
+      status.textContent = t('auth_passwords_mismatch');
       return;
     }
     submit.disabled = true;
-    status.textContent = 'Updating…';
+    status.textContent = t('settings_updating_password');
     updateUserPassword(current.value, next.value)
       .then(function () {
-        status.textContent = 'Password updated.';
+        status.textContent = t('settings_password_updated');
         form.reset();
       })
       .catch(function (err) {
         console.warn('Jellio: could not update password', err);
-        status.textContent = 'Could not update password. Check your current password.';
+        status.textContent = t('settings_password_error');
       })
       .finally(function () {
         submit.disabled = false;
@@ -408,7 +408,7 @@ function buildPlaybackCard() {
       getPrebufferLevel(),
       function (value, select, status) {
         setPrebufferLevel(value);
-        status.textContent = 'Saved. Applies from the next video you start.';
+        status.textContent = t('settings_saved_next_video');
       },
     ),
   );
@@ -416,7 +416,7 @@ function buildPlaybackCard() {
     buildToggleRow(
       null,
       t('settings_remember_stream'),
-      'Skip the picker on a repeat play once you have chosen a stream for a title, remembered for 4 days. Use Change Stream on that title’s own page if a remembered one stops working.',
+      t('settings_remember_stream_desc'),
       isRememberStreamEnabled(),
       function (checked) {
         setRememberStreamEnabled(checked);
@@ -427,7 +427,7 @@ function buildPlaybackCard() {
     buildToggleRow(
       null,
       t('settings_delete_watched'),
-      'Automatically remove downloaded episodes and movies from this device once finished. Files on the Jellyfin server are never affected.',
+      t('settings_delete_watched_desc'),
       isAutoDeleteWatchedEnabled(),
       function (checked) {
         setAutoDeleteWatchedEnabled(checked);
@@ -439,7 +439,7 @@ function buildPlaybackCard() {
       buildToggleRow(
         null,
         t('settings_pip_label'),
-        'Keep the video playing in a small window when you switch to another tab or window while watching. It returns to the player when you come back.',
+        t('settings_pip_desc'),
         isAutoPipEnabled(),
         function (checked) {
           setAutoPipEnabled(checked);
@@ -451,12 +451,12 @@ function buildPlaybackCard() {
     buildSelectRow(
       null,
       t('settings_up_next_timer'),
-      'How long the Up Next card counts down before automatically playing the next episode when credits begin. Choose Off to disable automatic transition.',
+      t('settings_up_next_timer_desc'),
       UPNEXT_COUNTDOWN_OPTIONS,
       String(getUpNextCountdownSeconds()),
       function (value, select, status) {
         setUpNextCountdownSeconds(Number(value));
-        status.textContent = 'Saved, takes effect on the next episode.';
+        status.textContent = t('settings_saved_next_episode');
       },
     ),
   );
@@ -500,25 +500,25 @@ function buildLanguageCard(user) {
   let subtitleValue = resolveValue(configuration.SubtitleLanguagePreference);
 
   function save(status) {
-    status.textContent = 'Saving…';
+    status.textContent = t('action_saving');
     updateLanguagePreferences(audioValue, subtitleValue)
       .then(function () {
-        status.textContent = 'Saved, takes effect the next time you start playback.';
+        status.textContent = t('settings_saved_next_playback');
       })
       .catch(function (err) {
         console.warn('Jellio: could not update language preferences', err);
-        status.textContent = 'Could not save language preferences.';
+        status.textContent = t('settings_save_lang_error');
       });
   }
 
   body.appendChild(
-    buildSelectRow(null, 'Default audio language', null, options, audioValue, function (value, select, status) {
+    buildSelectRow(null, t('settings_default_audio'), null, options, audioValue, function (value, select, status) {
       audioValue = value;
       save(status);
     }),
   );
   body.appendChild(
-    buildSelectRow(null, 'Default subtitle language', null, options, subtitleValue, function (value, select, status) {
+    buildSelectRow(null, t('settings_default_subtitle'), null, options, subtitleValue, function (value, select, status) {
       subtitleValue = value;
       save(status);
     }),
@@ -548,13 +548,13 @@ async function buildQuickConnectCard() {
 
   const codeInput = document.createElement('input');
   codeInput.type = 'text';
-  codeInput.placeholder = 'Code shown on the other device';
+  codeInput.placeholder = t('settings_quick_connect_placeholder');
   codeInput.autocomplete = 'off';
   codeInput.className = 'jellio-settings-input';
   codeInput.maxLength = 6;
 
   const status = el('p', 'jellio-settings-status');
-  const submit = el('button', 'jellio-settings-button', 'Approve');
+  const submit = el('button', 'jellio-settings-button', t('settings_quick_connect_approve'));
   submit.type = 'submit';
 
   form.appendChild(codeInput);
@@ -566,15 +566,15 @@ async function buildQuickConnectCard() {
     const code = codeInput.value.trim();
     if (!code) return;
     submit.disabled = true;
-    status.textContent = 'Approving…';
+    status.textContent = t('settings_quick_connect_approving');
     authorizeQuickConnect(code)
       .then(function (authorized) {
-        status.textContent = authorized ? 'Device approved.' : 'That code was not recognized.';
+        status.textContent = authorized ? t('settings_quick_connect_approved') : t('settings_quick_connect_invalid');
         if (authorized) form.reset();
       })
       .catch(function (err) {
         console.warn('Jellio: could not authorize Quick Connect', err);
-        status.textContent = 'Could not approve that code.';
+        status.textContent = t('settings_quick_connect_error');
       })
       .finally(function () {
         submit.disabled = false;
@@ -587,8 +587,8 @@ async function buildQuickConnectCard() {
 }
 
 async function buildSleepTimerCard() {
-  const { card, body } = buildCard('bedtime', 'Sleep timer');
-  const status = el('p', 'jellio-settings-status', 'No active playback session.');
+  const { card, body } = buildCard('bedtime', t('settings_sleep_timer'));
+  const status = el('p', 'jellio-settings-status', t('settings_sleep_timer_empty'));
   const wrap = el('div', 'jellio-settings-card-body-form');
   wrap.appendChild(status);
   body.appendChild(wrap);
@@ -596,14 +596,14 @@ async function buildSleepTimerCard() {
   try {
     const result = await getSleepTimerStatus();
     if (result && result.Active) {
-      status.textContent = 'A sleep timer is running.';
-      const cancel = el('button', 'jellio-settings-button', 'Cancel timer');
+      status.textContent = t('settings_sleep_timer_running');
+      const cancel = el('button', 'jellio-settings-button', t('settings_sleep_timer_cancel'));
       cancel.type = 'button';
       cancel.addEventListener('click', function () {
         cancel.disabled = true;
         cancelSleepTimer()
           .then(function () {
-            status.textContent = 'Sleep timer cancelled.';
+            status.textContent = t('settings_sleep_timer_cancelled');
             cancel.remove();
           })
           .catch(function (err) {
@@ -613,7 +613,7 @@ async function buildSleepTimerCard() {
       });
       wrap.appendChild(cancel);
     } else {
-      status.textContent = 'No sleep timer is running.';
+      status.textContent = t('settings_sleep_timer_none');
     }
   } catch (err) {
     console.warn('Jellio: could not load sleep timer status', err);
@@ -640,7 +640,7 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
   const { card: profileCard, body: profileBody } = buildCard(
     'person',
     t('nav_profile'),
-    user ? 'Signed in as ' + user.Name : null,
+    user ? t('settings_signed_in_as', { name: user.Name }) : null,
   );
   profileBody.appendChild(
     buildActionRow('photo_camera', t('onboarding_change_avatar'), null, function () {
@@ -653,7 +653,7 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
     }),
   );
   profileBody.appendChild(
-    buildActionRow('badge', 'View profile', 'Banner, badges and activity.', function () {
+    buildActionRow('badge', t('settings_view_profile'), t('settings_view_profile_desc'), function () {
       navigateTo('#/profile');
     }),
   );
@@ -667,7 +667,7 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
   // every other unmigrated route already gets.
   if (user && user.Policy && user.Policy.IsAdministrator) {
     profileBody.appendChild(
-      buildActionRow('admin_panel_settings', 'Open admin dashboard', null, function () {
+      buildActionRow('admin_panel_settings', t('settings_admin_dashboard'), null, function () {
         navigateTo('#/dashboard');
       }),
     );
@@ -716,7 +716,7 @@ function buildMihonImportCard() {
     buildActionRow(
       'upload_file',
       'Choose a backup file',
-      'In Mihon: Settings, Data and storage, Create backup. Then pick the .tachibk file here.',
+      t('settings_mihon_hint'),
       function () {
         input.click();
       },
@@ -796,8 +796,8 @@ function buildMihonImportCard() {
 function buildTranslationCard(translationEnabled) {
   const { card, body } = buildCard(
     'translate',
-    'Translation and dictionary',
-    'Select a word or passage while reading to look it up or translate it.',
+    t('settings_translation_dict_title'),
+    t('settings_translation_dict_desc'),
   );
   const languages = LANGUAGES.map((code) => ({ value: code, label: languageLabel(code) })).sort((a, b) =>
     a.label.localeCompare(b.label),
@@ -805,23 +805,23 @@ function buildTranslationCard(translationEnabled) {
 
   if (translationEnabled) {
     body.appendChild(
-      buildSelectRow(null, 'Translate into', 'The language translations and vocabulary cards are written in.', languages, readTargetLanguage(), function (value, select, status) {
+      buildSelectRow(null, t('onboarding_translate_into'), t('settings_translate_into_desc'), languages, readTargetLanguage(), function (value, select, status) {
         writeTargetLanguage(value);
         status.textContent = 'Saved.';
       }),
     );
   } else {
     body.appendChild(
-      buildRow(null, 'Translation is off', 'An admin can turn it on by adding a DeepL API key in Jellio’s plugin settings. Dictionary lookups work without it.', null),
+      buildRow(null, t('settings_translation_off_title'), t('settings_translation_off_desc'), null),
     );
   }
 
   body.appendChild(
     buildSelectRow(
       null,
-      'Books are written in',
-      'Detect automatically works out each book’s language from its text the first time you translate. Pick one if you mostly read in one language; the reader can still change it per book.',
-      [{ value: 'auto', label: 'Detect automatically' }].concat(languages),
+      t('settings_books_language_title'),
+      t('settings_books_language_desc'),
+      [{ value: 'auto', label: t('settings_detect_auto') }].concat(languages),
       readDefaultBookLanguage(),
       function (value, select, status) {
         writeDefaultBookLanguage(value);
@@ -831,7 +831,7 @@ function buildTranslationCard(translationEnabled) {
   );
 
   body.appendChild(
-    buildActionRow('style', 'Vocabulary deck', 'Review the words you saved while reading, or export them to Anki.', function () {
+    buildActionRow('style', t('settings_vocab_deck'), t('settings_vocab_deck_desc'), function () {
       navigateTo('#/vocab');
     }),
   );
@@ -843,8 +843,8 @@ function buildReadingOfflineCard() {
   body.appendChild(
     buildToggleRow(
       null,
-      'Delete after reading',
-      'Automatically remove downloaded chapters, books, and audiobooks from this device once finished. Files on the Jellyfin server are never affected.',
+      t('settings_delete_reading'),
+      t('settings_delete_reading_desc'),
       isAutoDeleteReadEnabled(),
       function (checked) {
         setAutoDeleteReadEnabled(checked);
@@ -862,8 +862,8 @@ function buildReadingOfflineCard() {
   body.appendChild(
     buildSelectRow(
       null,
-      'Default audiobook speed',
-      'Preferred playback speed when opening an audiobook.',
+      t('settings_audiobook_speed'),
+      t('settings_audiobook_speed_desc'),
       speedOptions,
       String(getDefaultAudiobookSpeed()),
       function (val, select, status) {
@@ -939,7 +939,7 @@ function describeAppUpdate(state) {
 }
 
 function buildAppUpdateCard(native) {
-  const { card, body } = buildCard('laptop_mac', 'Jellio for macOS', 'Updates for this Mac app.');
+  const { card, body } = buildCard('laptop_mac', t('settings_macos_title'), t('settings_macos_desc'));
   const action = el('button', 'jellio-settings-button', t('settings_check_updates'));
   action.type = 'button';
   const statusRow = buildRow(null, 'Version', '', action);
@@ -950,7 +950,7 @@ function buildAppUpdateCard(native) {
   let current = null;
   let toggleInput = null;
   body.appendChild(
-    buildToggleRow(null, 'Check automatically', 'Looks for a new version when Jellio starts and every few hours.', true, function (checked) {
+    buildToggleRow(null, t('settings_check_auto'), t('settings_check_auto_desc'), true, function (checked) {
       native.setAutomatic(checked).catch(function (err) {
         console.warn('Jellio: could not save the update setting', err);
       });
@@ -991,7 +991,7 @@ function buildAppUpdateCard(native) {
     macWrap.style.borderTop = '1px solid rgba(255, 255, 255, 0.08)';
     macWrap.style.paddingTop = '14px';
 
-    const macHeader = el('div', 'jellio-settings-row-title', "What's New in this Mac app");
+    const macHeader = el('div', 'jellio-settings-row-title', t('settings_macos_whats_new'));
     macHeader.style.marginBottom = '8px';
     macWrap.appendChild(macHeader);
 
@@ -1014,7 +1014,7 @@ function buildAppUpdateCard(native) {
       prevToggle.className = 'jellio-settings-sub-expander';
       prevToggle.setAttribute('aria-expanded', 'false');
 
-      const prevLabel = el('span', 'jellio-settings-sub-label', 'Previous Mac Versions (' + prevMac.length + ')');
+      const prevLabel = el('span', 'jellio-settings-sub-label', t('settings_macos_prev_versions', { count: prevMac.length }));
       const prevArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
       prevToggle.appendChild(prevLabel);
       prevToggle.appendChild(prevArrow);
@@ -1083,11 +1083,11 @@ function buildHomeCacheCard() {
     t('settings_clear_cache_btn'),
     isHomeRowCacheEnabled()
       ? 'Home rows are kept in this browser and refreshed in the background. Clearing makes the next load ask the server for all of them.'
-      : 'The home row cache is turned off on this server.',
+      : t('settings_cache_disabled'),
     function () {
       clearCachedRows();
       const description = row.querySelector('.jellio-settings-row-description');
-      if (description) description.textContent = 'Cleared. The home screen asks the server for every row on its next load.';
+      if (description) description.textContent = t('settings_cache_cleared');
     },
   );
   body.appendChild(row);
@@ -1100,16 +1100,16 @@ function buildRecommendationsCategory() {
   // --- Card 1: What Others Are Watching ---
   const { card: communityCard, body: communityBody } = buildCard(
     'group',
-    'What Others Are Watching',
-    'Show titles currently being watched or recently finished by other users on this server.',
+    t('home_community_watching'),
+    t('settings_community_desc'),
   );
 
   let excludedSet = new Set(getCommunityExcludedUsers());
 
   const rowToggle = buildToggleRow(
     'visibility',
-    'Display row on Home',
-    'Show the "What Others Are Watching" row among your home screen recommendations.',
+    t('settings_community_toggle'),
+    t('settings_community_toggle_desc'),
     isCommunityRowEnabled(),
     function (enabled) {
       setCommunityRowEnabled(enabled);
@@ -1128,12 +1128,12 @@ function buildRecommendationsCategory() {
   }
 
   const subcardHeader = el('div', 'jellio-settings-subcard-header');
-  subcardHeader.appendChild(el('h3', 'jellio-settings-subcard-title', 'Included Users'));
+  subcardHeader.appendChild(el('h3', 'jellio-settings-subcard-title', t('settings_community_included')));
   subcardHeader.appendChild(
     el(
       'p',
       'jellio-settings-subcard-description',
-      'Choose whose activity appears in your community row. Uncheck any user to hide their activity.',
+      t('settings_community_included_desc'),
     ),
   );
   usersSubcard.appendChild(subcardHeader);
@@ -1141,14 +1141,14 @@ function buildRecommendationsCategory() {
   const usersList = el('div', 'jellio-settings-user-list');
   usersSubcard.appendChild(usersList);
 
-  const loadingNote = el('p', 'jellio-settings-empty-note', 'Loading server users...');
+  const loadingNote = el('p', 'jellio-settings-empty-note', t('status_loading'));
   usersList.appendChild(loadingNote);
 
   getCommunityUsers()
     .then(function (users) {
       usersList.textContent = '';
       if (!users || users.length === 0) {
-        usersList.appendChild(el('p', 'jellio-settings-empty-note', 'No other users found on this server.'));
+        usersList.appendChild(el('p', 'jellio-settings-empty-note', t('settings_community_no_users')));
         return;
       }
       users.forEach(function (user) {
@@ -1190,7 +1190,7 @@ function buildRecommendationsCategory() {
     .catch(function (err) {
       console.warn('Jellio: could not load community users', err);
       usersList.textContent = '';
-      usersList.appendChild(el('p', 'jellio-settings-empty-note', 'Could not load users list.'));
+      usersList.appendChild(el('p', 'jellio-settings-empty-note', t('settings_community_load_error')));
     });
 
   communityBody.appendChild(usersSubcard);
@@ -1199,19 +1199,19 @@ function buildRecommendationsCategory() {
   // --- Card 2: Genre Recommendations ---
   const { card: genreCard, body: genreBody } = buildCard(
     'movie_filter',
-    'Genre Recommendations',
-    'Choose which genre rows appear on your Home screen. When none are selected, rows are chosen automatically based on your library.',
+    t('settings_genres_title'),
+    t('settings_genres_desc'),
   );
 
   const genresWrap = el('div', 'jellio-settings-genres-wrap');
   const pillsContainer = el('div', 'jellio-settings-genre-pills');
   genresWrap.appendChild(pillsContainer);
 
-  const loadingGenres = el('p', 'jellio-settings-empty-note', 'Loading library genres...');
+  const loadingGenres = el('p', 'jellio-settings-empty-note', t('status_loading'));
   pillsContainer.appendChild(loadingGenres);
 
   const actionsWrap = el('div', 'jellio-settings-genre-actions');
-  const resetBtn = el('button', 'jellio-settings-btn-secondary', 'Reset to automatic');
+  const resetBtn = el('button', 'jellio-settings-btn-secondary', t('settings_genres_reset'));
   resetBtn.type = 'button';
   actionsWrap.appendChild(resetBtn);
   genresWrap.appendChild(actionsWrap);
@@ -1220,7 +1220,7 @@ function buildRecommendationsCategory() {
     .then(function (genres) {
       pillsContainer.textContent = '';
       if (!genres || genres.length === 0) {
-        pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', 'No genres found in your library.'));
+        pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', t('settings_genres_empty')));
         return;
       }
 
@@ -1270,7 +1270,7 @@ function buildRecommendationsCategory() {
     .catch(function (err) {
       console.warn('Jellio: could not load library genres', err);
       pillsContainer.textContent = '';
-      pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', 'Could not load library genres.'));
+      pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', t('settings_genres_load_error')));
     });
 
   genreBody.appendChild(genresWrap);
@@ -1356,7 +1356,7 @@ function buildAboutCategory() {
 
   const { card: whatsNewCard, body: whatsNewBody } = buildExpandableCard(
     'auto_awesome',
-    "What's New",
+    t('settings_whats_new'),
     LATEST_CHANGELOG.subtitle,
     false,
   );
@@ -1382,7 +1382,7 @@ function buildAboutCategory() {
     prevToggle.className = 'jellio-settings-sub-expander';
     prevToggle.setAttribute('aria-expanded', 'false');
 
-    const prevLabel = el('span', 'jellio-settings-sub-label', 'Previous Versions (' + previousReleases.length + ')');
+    const prevLabel = el('span', 'jellio-settings-sub-label', t('settings_previous_versions', { count: previousReleases.length }));
     const prevArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
     prevToggle.appendChild(prevLabel);
     prevToggle.appendChild(prevArrow);
@@ -1458,7 +1458,7 @@ export async function renderSettings(root) {
   root.className = 'jellio-content jellio-screen-settings';
 
   const header = el('header', 'jellio-settings-header');
-  header.appendChild(el('h1', 'jellio-settings-title', 'Settings'));
+  header.appendChild(el('h1', 'jellio-settings-title', t('settings_title')));
   root.appendChild(header);
 
   // buildSleepTimerCard/buildQuickConnectCard each own real network

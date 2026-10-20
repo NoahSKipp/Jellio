@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // "Because you watched X" recommendation rows, scored here rather than
 // asked of the server. Ported from the original codebase's own
 // js/recommend.js, real reasoning preserved rather than re-derived:
@@ -313,7 +314,7 @@ function buildGenreRows(genres, itemsPerGenre, exclude) {
     const raw = itemsPerGenre[i];
     if (!raw) continue;
     const items = dedupe(raw.filter(notPlayed), exclude);
-    if (items.length) rows.push({ title: 'Top Picks for You', items: items });
+    if (items.length) rows.push({ title: t('home_top_picks'), items: items });
   }
   return rows;
 }
@@ -359,14 +360,14 @@ export async function streamRecommendationRows(exclude, onRow) {
   completedSeeds.forEach(function (seed, i) {
     jobs.push(
       fetchSeedCandidates([seed]).then(function (entries) {
-        emit(pickSeedRows([seed], entries, (s) => 'Because you watched ' + s.Name, exclude)[0], RECOMMENDATION_SLOTS.completed + i);
+        emit(pickSeedRows([seed], entries, (s) => t('home_because_watched', { name: s.Name }), exclude)[0], RECOMMENDATION_SLOTS.completed + i);
       }),
     );
   });
   nextUpSeeds.forEach(function (seed, i) {
     jobs.push(
       fetchSeedCandidates([seed]).then(function (entries) {
-        emit(pickSeedRows([seed], entries, (s) => "Because you're watching " + (s.SeriesName || s.Name), exclude)[0], RECOMMENDATION_SLOTS.nextUp + i);
+        emit(pickSeedRows([seed], entries, (s) => t('home_because_watching', { name: s.SeriesName || s.Name }), exclude)[0], RECOMMENDATION_SLOTS.nextUp + i);
       }),
     );
   });
@@ -425,11 +426,11 @@ export async function buildRecommendationRows(exclude) {
   ]);
 
   const completedRows = pickSeedRows(completedSeeds, completedEntries, function (seed) {
-    return 'Because you watched ' + seed.Name;
+    return t('home_because_watched', { name: seed.Name });
   }, exclude);
 
   const nextUpRows = pickSeedRows(nextUpSeeds, nextUpEntries, function (seed) {
-    return "Because you're watching " + (seed.SeriesName || seed.Name);
+    return t('home_because_watching', { name: seed.SeriesName || seed.Name });
   }, exclude);
 
   const genreRows = buildGenreRows(genres, genreItemsList, exclude);

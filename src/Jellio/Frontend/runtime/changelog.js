@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.5",
+    "summary": "Comprehensive Settings translations and cross-device onboarding sync.",
+    "highlights": [
+      {
+        "title": "Complete Settings Localization",
+        "description": "Translates all remaining Settings cards, form fields, action buttons, status messages, recommendation controls, and category headers across all supported languages."
+      },
+      {
+        "title": "Cross-Device Onboarding Synchronization",
+        "description": "Persists onboarding status to server display preferences so accounts that completed or configured preferences never see the setup wizard repeatedly on other devices."
+      },
+      {
+        "title": "Localized Greetings & Recommendations",
+        "description": "Translates home greetings (Good morning, Still up?) and dynamic recommendation headers (Top Picks for You, Because you watched)."
+      }
+    ]
+  },
+  {
     "version": "1.87.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.4",

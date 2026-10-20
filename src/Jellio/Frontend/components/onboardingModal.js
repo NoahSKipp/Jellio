@@ -10,6 +10,8 @@ import {
   getCurrentUser,
   updateLanguagePreferences,
   startMangaImport,
+  getCachedServerDisplayPreferences,
+  saveServerDisplayPreferences,
 } from '../runtime/api.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from './streamPicker.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
@@ -50,7 +52,17 @@ export function shouldShowOnboarding(userId) {
       window.localStorage.getItem('jellio_home_genres')
     );
 
+    const serverPrefs = getCachedServerDisplayPreferences();
+    if (serverPrefs && serverPrefs.CustomPrefs && serverPrefs.CustomPrefs.onboarding_done === 'true') {
+      try {
+        window.localStorage.setItem(STORAGE_PREFIX + uid, 'true');
+      } catch (_) {}
+      return false;
+    }
+
     const user = getCurrentUser();
+    const hasPriorLogin = Boolean(user && user.LastLoginDate);
+    const hasPriorActivity = Boolean(user && user.LastActivityDate && (Date.now() - new Date(user.LastActivityDate).getTime() > 30000));
     const hasServerSettings = Boolean(
       user &&
       user.Configuration &&
@@ -59,7 +71,7 @@ export function shouldShowOnboarding(userId) {
        user.Configuration.SubtitleMode)
     );
 
-    if (hasExistingUsage || hasServerSettings) {
+    if (hasExistingUsage || hasPriorLogin || hasPriorActivity || hasServerSettings) {
       markOnboardingComplete(uid);
       return false;
     }
@@ -71,10 +83,12 @@ export function shouldShowOnboarding(userId) {
 }
 
 export function markOnboardingComplete(userId) {
-  if (!userId) return;
+  const uid = userId || getCurrentUserId();
+  if (!uid) return;
   try {
-    window.localStorage.setItem(STORAGE_PREFIX + userId, 'true');
+    window.localStorage.setItem(STORAGE_PREFIX + uid, 'true');
   } catch (err) {}
+  saveServerDisplayPreferences({ onboarding_done: 'true' }).catch(function () {});
 }
 
 export function closeOnboardingModal() {

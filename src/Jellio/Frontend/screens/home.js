@@ -408,7 +408,7 @@ function buildListsHeader(activeList) {
   watchlistTab.addEventListener('click', function () {
     navigateTo('#/home?tab=1');
   });
-  const grouplistTab = el('button', 'jellio-lists-toggle-tab', 'Grouplist');
+  const grouplistTab = el('button', 'jellio-lists-toggle-tab', t('settings_grouplist_label'));
   grouplistTab.type = 'button';
   grouplistTab.classList.toggle('jellio-lists-toggle-tab-active', activeList === 'group');
   grouplistTab.addEventListener('click', function () {
@@ -847,10 +847,10 @@ export function preloadHomeSectionsWithProgress(onSection) {
 // 0-4 gets its own real late night text rather than folding into
 // "evening", the one bucket real feedback specifically called out.
 function greetingFor(hour) {
-  if (hour >= 5 && hour < 12) return 'Good morning';
-  if (hour >= 12 && hour < 17) return 'Good afternoon';
-  if (hour >= 17 && hour < 22) return 'Good evening';
-  return 'Still up';
+  if (hour >= 5 && hour < 12) return t('home_greeting_morning');
+  if (hour >= 12 && hour < 17) return t('home_greeting_afternoon');
+  if (hour >= 17 && hour < 22) return t('home_greeting_evening');
+  return t('home_greeting_night');
 }
 
 export async function renderHome(root, params) {
@@ -870,7 +870,7 @@ export async function renderHome(root, params) {
   // wanted the late night bucket specifically to read as the direct
   // address it actually is, a question rather than a flat greeting.
   const greeting = greetingFor(new Date().getHours());
-  const greetingEl = el('h1', 'jellio-home-greeting', greeting + (greeting === 'Still up' ? '?' : ''));
+  const greetingEl = el('h1', 'jellio-home-greeting', greeting);
   header.appendChild(greetingEl);
   // Real feedback: this whole screen, skeleton included, used to sit
   // behind this one real getCurrentUser() call before painting

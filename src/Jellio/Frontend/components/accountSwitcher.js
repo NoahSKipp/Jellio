@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Quick profile switcher, opened from the sidebar/mobile nav's own Profile
 // button. Real feedback: Profile and Settings both just navigated to the
 // same #/account screen, no real second job of its own. Real reference,
@@ -79,7 +80,7 @@ function switchToUser(button, promiseFactory, status) {
     .catch(function (err) {
       console.warn('Jellio: could not switch profile', err);
       button.disabled = false;
-      if (status) status.textContent = 'Could not switch to that profile.';
+      if (status) status.textContent = t('account_switch_error');
     });
 }
 
@@ -162,7 +163,7 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online, index)
 
   wrap.appendChild(avatarWrap);
   wrap.appendChild(el('span', 'jellio-login-profile-name', name || ''));
-  if (quick) wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
+  if (quick) wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', t('auth_quick_signin')));
   return wrap;
 }
 
@@ -190,7 +191,7 @@ function buildAddTile(index) {
 
   avatarWrap.appendChild(avatar);
   wrap.appendChild(avatarWrap);
-  wrap.appendChild(el('span', 'jellio-login-profile-name', 'Other user'));
+  wrap.appendChild(el('span', 'jellio-login-profile-name', t('auth_other_user')));
   return wrap;
 }
 
@@ -225,7 +226,7 @@ export async function openAccountSwitcher() {
   header.appendChild(currentAvatar);
 
   const info = el('div', 'jellio-account-switcher-current-info');
-  info.appendChild(el('div', 'jellio-account-switcher-current-name', (current && current.Name) || 'Signed in'));
+  info.appendChild(el('div', 'jellio-account-switcher-current-name', (current && current.Name) || t('status_signed_in')));
   const actions = el('div', 'jellio-account-switcher-current-actions');
   // Real feedback: reaching one's own profile used to live only in
   // Settings, one real click most readers never make on the way there.
@@ -234,21 +235,21 @@ export async function openAccountSwitcher() {
   // the signed in reader's own id instead, sitting here above the
   // grid rather than inside it since there is no tile of its own to
   // anchor to.
-  const viewProfile = el('button', 'jellio-settings-button', 'View Profile');
+  const viewProfile = el('button', 'jellio-settings-button', t('settings_view_profile'));
   viewProfile.type = 'button';
   viewProfile.addEventListener('click', function () {
     closeAccountSwitcher();
     navigateTo('#/profile?id=' + currentId);
   });
   actions.appendChild(viewProfile);
-  const manage = el('button', 'jellio-settings-button', 'Manage Account');
+  const manage = el('button', 'jellio-settings-button', t('account_manage'));
   manage.type = 'button';
   manage.addEventListener('click', function () {
     closeAccountSwitcher();
     navigateTo('#/account');
   });
   actions.appendChild(manage);
-  const signOut = el('button', 'jellio-settings-button jellio-settings-button-danger', 'Sign out');
+  const signOut = el('button', 'jellio-settings-button jellio-settings-button-danger', t('nav_sign_out'));
   signOut.type = 'button';
   signOut.addEventListener('click', function () {
     logout();
@@ -258,7 +259,7 @@ export async function openAccountSwitcher() {
   header.appendChild(info);
   panel.appendChild(header);
 
-  panel.appendChild(el('h2', 'jellio-avatar-picker-title', 'Switch Profile'));
+  panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('nav_switch_account')));
 
   const grid = el('div', 'jellio-login-profile-grid');
   panel.appendChild(grid);
