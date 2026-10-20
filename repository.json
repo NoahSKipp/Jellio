@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.3] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(style)* Ensure dark mode contrast and dark flyout popups for audio and subtitle language dropdowns\n",
+        "checksum": "2dfcda7128b289c31811e597565f01b7",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.3/jellio_1.87.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T12:36:31Z",
+        "version": "1.87.3"
+      },
+      {
         "changelog": "## [1.87.2] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(onboarding)* Ensure established accounts and existing installs with configured preferences are never prompted with first-run onboarding\n",
         "checksum": "2db26cd62ddf00106616de88736b0490",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.2/jellio_1.87.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-15T22:29:43Z",
         "version": "1.81.0"
-      },
-      {
-        "changelog": "## [1.80.1] - 2026-10-15\n",
-        "checksum": "ffdfd6f191f980c956d753eb33fc5ec9",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.80.1/jellio_1.80.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-15T21:46:30Z",
-        "version": "1.80.1"
       }
     ]
   }
