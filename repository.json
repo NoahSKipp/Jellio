@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.2] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(onboarding)* Ensure established accounts and existing installs with configured preferences are never prompted with first-run onboarding\n",
+        "checksum": "2db26cd62ddf00106616de88736b0490",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.2/jellio_1.87.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T12:30:04Z",
+        "version": "1.87.2"
+      },
+      {
         "changelog": "## [1.87.1] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(frontend)* Resolve missing getCurrentUserId export and restore overlay mounting over Jellyfin Web\n- *(auth)* Seamlessly restore active credentials from native Jellyfin storage on startup\n- *(tests)* Add static import resolution validation to automated test suite\n",
         "checksum": "33b1a877c99b36fc8daaf3905e65b886",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.1/jellio_1.87.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-15T21:46:30Z",
         "version": "1.80.1"
-      },
-      {
-        "changelog": "## [1.80.0] - 2026-10-15\n\n### 🚀 Features\n\n- *(web)* Trigger whats new notification only on big releases and display latest in about\n- *(settings)* Nest previous changelog versions in collapsible sections\n- Add Screen Wake Lock, media keys, and macOS app changelog\n\n### 🐛 Bug Fixes\n\n- *(cards)* Add untagged primary and backdrop image fallbacks and hydrate community watching items\n\n### ⚡ Performance\n\n- *(web)* Lazy-load non-initial screen modules and tune modulepreload paths\n",
-        "checksum": "8b95770fe9d05a7e3a7ef56f9f512bb0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.80.0/jellio_1.80.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-15T21:45:25Z",
-        "version": "1.80.0"
       }
     ]
   }
