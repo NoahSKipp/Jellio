@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.11] - 2026-10-21\n\n### Bug Fixes\n\n- *(onboarding)* Fix question mark help tooltip cutoff at screen top and restore existing saved preferences when rerunning the setup wizard",
+        "checksum": "22f7ca239a9d050760ba71c2ffaba3fa",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.11/jellio_1.87.11.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T23:14:52Z",
+        "version": "1.87.11"
+      },
+      {
         "changelog": "## [1.87.10] - 2026-10-20\n\n### Bug Fixes\n\n- *(search)* Resolve error toast when opening search results by handling unimported remote titles via on-demand metadata fallback\n- *(detail)* Harden detail view against non-array genres, null item payloads, and missing metadata fields\n- *(carousel)* Ensure hero carousel candidates require valid backdrop images and complete metadata, add art preloading, and synchronize slide state transitions\n- *(i18n)* Add missing home_action_details and core interface translation keys across all supported display languages",
         "checksum": "8a4755dc2d41d6f8955016553b8c5c26",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.10/jellio_1.87.10.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T01:23:33Z",
         "version": "1.83.5"
-      },
-      {
-        "changelog": "## [1.83.4] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(streams)* Remove single-stream autopick and ignore default stub fields in hasStreamInfo\n",
-        "checksum": "0944e2ae7d01a7f2fffeb526ed4dc483",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.4/jellio_1.83.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T00:00:23Z",
-        "version": "1.83.4"
       }
     ]
   }
