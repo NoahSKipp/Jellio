@@ -26,11 +26,11 @@ export const CHANGELOG_RELEASES = [
     "highlights": [
       {
         "title": "Setup Wizard",
-        "description": "A guided onboarding flow helps you configure your display language, audio and subtitle defaults, profile privacy, and reader preferences right from the start. You can also re-run the wizard at any time from Settings > About."
+        "description": "A guided onboarding flow helps you configure your display language, audio and subtitle defaults, and reader preferences right from the start. You can also re-run the wizard at any time from Settings > About."
       },
       {
         "title": "Display Languages",
-        "description": "Full interface localization is now available in English, German (Deutsch), Spanish (Español), and Polish (Polski). Choosing a language also updates media descriptions to match your preference."
+        "description": "Full interface localization is now available in English, German (Deutsch), Spanish (Español), French (Français), Italian (Italiano), Polish (Polski), and Portuguese (Português). Choosing a language also updates media descriptions to match your preference."
       },
       {
         "title": "Cross-Platform Preference Sync",

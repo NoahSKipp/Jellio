@@ -9,13 +9,9 @@ import {
   getCurrentUserId,
   getCurrentUser,
   updateLanguagePreferences,
-  getProfileSettings,
-  setProfilePrivacy,
   startMangaImport,
-  getUserImageUrl,
 } from '../runtime/api.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from './streamPicker.js';
-import { openAvatarPicker } from './avatarPicker.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
 import { LANGUAGES, languageLabel, readTargetLanguage, writeTargetLanguage } from './readerStudy.js';
 import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from './audioMiniPlayer.js';
@@ -57,7 +53,6 @@ export function openOnboardingModal(options) {
   let selectedAudioLang = '';
   let selectedSubtitleLang = '';
   let rememberStream = isRememberStreamEnabled();
-  let isPrivateProfile = false;
   let readingEnabled = false;
   let targetStudyLang = readTargetLanguage() || 'eng';
   let audiobookSpeed = getDefaultAudiobookSpeed() || 1;
@@ -79,21 +74,12 @@ export function openOnboardingModal(options) {
     const list = ['language'];
     if (!hasSharedAccountSettings) {
       list.push('playback');
-      list.push('profile');
     }
     list.push('reading');
     list.push('done');
     return list;
   }
 
-  // Pre-load privacy setting
-  getProfileSettings()
-    .then(function (settings) {
-      if (settings && typeof settings.IsPrivate === 'boolean') {
-        isPrivateProfile = settings.IsPrivate;
-      }
-    })
-    .catch(function () {});
 
   const overlay = el('div', 'jellio-onboarding-overlay');
   overlay.id = MODAL_ID;
@@ -108,8 +94,6 @@ export function openOnboardingModal(options) {
     markOnboardingComplete(userId);
     // Persist language preferences to Jellyfin server
     updateLanguagePreferences(selectedAudioLang, selectedSubtitleLang).catch(function () {});
-    // Persist privacy to Jellio plugin backend
-    setProfilePrivacy(isPrivateProfile).catch(function () {});
     // Persist stream choice memory
     setRememberStreamEnabled(rememberStream);
     // Persist study & audiobook settings if reading enabled
@@ -346,70 +330,6 @@ export function openOnboardingModal(options) {
     container.appendChild(form);
   }
 
-  // STEP 3: Profile & Community Privacy
-  function renderStepProfile(container) {
-    container.appendChild(el('h2', 'jellio-onboarding-title', t('onboarding_step_profile')));
-    container.appendChild(el('p', 'jellio-onboarding-sub', t('onboarding_profile_sub')));
-
-    const profileCard = el('div', 'jellio-onboarding-profile-card');
-
-    // Avatar preview & change button
-    const avatarArea = el('div', 'jellio-onboarding-avatar-area');
-    const avatarImg = document.createElement('img');
-    avatarImg.className = 'jellio-onboarding-avatar-preview';
-    avatarImg.src = getUserImageUrl(userId);
-    avatarImg.alt = 'Profile avatar';
-    avatarImg.onerror = function () {
-      avatarImg.style.display = 'none';
-    };
-    avatarArea.appendChild(avatarImg);
-
-    const avatarBtn = el('button', 'jellio-onboarding-avatar-btn', t('onboarding_change_avatar'));
-    avatarBtn.type = 'button';
-    avatarBtn.addEventListener('click', function () {
-      openAvatarPicker(function () {
-        avatarImg.src = getUserImageUrl(userId) + '?t=' + Date.now();
-        avatarImg.style.display = 'block';
-      });
-    });
-    avatarArea.appendChild(avatarBtn);
-    profileCard.appendChild(avatarArea);
-
-    // Private profile toggle with Feed explanation
-    const privacyArea = el('div', 'jellio-onboarding-privacy-area');
-    const privacyCheckRow = el('label', 'jellio-onboarding-check-row');
-    const privacyCheckbox = document.createElement('input');
-    privacyCheckbox.type = 'checkbox';
-    privacyCheckbox.className = 'jellio-onboarding-checkbox';
-    privacyCheckbox.checked = isPrivateProfile;
-    privacyCheckbox.addEventListener('change', function () {
-      isPrivateProfile = privacyCheckbox.checked;
-    });
-    privacyCheckRow.appendChild(privacyCheckbox);
-
-    const privacyText = el('div', 'jellio-onboarding-check-text');
-    const titleWithHelp = el('div', 'jellio-onboarding-label-wrap');
-    titleWithHelp.appendChild(el('span', 'jellio-onboarding-check-title', t('onboarding_private_label')));
-    titleWithHelp.appendChild(buildHelpIcon(t('onboarding_feed_help_title'), t('onboarding_feed_help_desc')));
-    privacyText.appendChild(titleWithHelp);
-    privacyText.appendChild(el('div', 'jellio-onboarding-check-sub', t('onboarding_private_desc')));
-    privacyCheckRow.appendChild(privacyText);
-    privacyArea.appendChild(privacyCheckRow);
-
-    // Callout box explaining community feed
-    const callout = el('div', 'jellio-onboarding-callout');
-    const calloutIcon = el('span', 'material-icons jellio-onboarding-callout-icon', 'dynamic_feed');
-    callout.appendChild(calloutIcon);
-    const calloutText = el('div', 'jellio-onboarding-callout-text');
-    calloutText.appendChild(el('div', 'jellio-onboarding-callout-title', t('onboarding_feed_help_title')));
-    calloutText.appendChild(el('div', 'jellio-onboarding-callout-desc', t('onboarding_feed_help_desc')));
-    callout.appendChild(calloutText);
-    privacyArea.appendChild(callout);
-
-    profileCard.appendChild(privacyArea);
-    container.appendChild(profileCard);
-  }
-
   // STEP 4: Reading & Manga Setup
   function renderStepReading(container) {
     container.appendChild(el('h2', 'jellio-onboarding-title', t('onboarding_step_reading')));
@@ -556,12 +476,6 @@ export function openOnboardingModal(options) {
       hasSharedAccountSettings ? t('onboarding_synced_badge') : null,
     );
 
-    addSummaryItem(
-      'security',
-      t('onboarding_summary_profile_privacy'),
-      isPrivateProfile ? t('onboarding_summary_profile_private') : t('onboarding_summary_profile_public'),
-      hasSharedAccountSettings ? t('onboarding_synced_badge') : null,
-    );
 
     if (readingEnabled) {
       addSummaryItem('auto_stories', t('onboarding_summary_reading_setup'), t('onboarding_summary_reading_enabled', { lang: targetStudyLang.toUpperCase() }));
