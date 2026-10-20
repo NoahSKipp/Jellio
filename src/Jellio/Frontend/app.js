@@ -37,6 +37,7 @@ import { startGroupWatchInvites } from './components/groupWatchInvites.js';
 import { showSplash, hideSplash, setSplashTotal, reportSplashStep } from './components/splash.js';
 import { showToast } from './components/toast.js';
 import { buildLibraryCoverflow } from './components/libraryCoverflow.js';
+import { getHeroBackdropUrl, getHeroLogoUrl } from './components/heroCarousel.js';
 import { syncMiniPlayer } from './components/audioMiniPlayer.js';
 import { onRouteChange, parseRoute, setTitle, navigateTo } from './runtime/router.js';
 import { shouldShowOnboarding, openOnboardingModal } from './components/onboardingModal.js';
@@ -479,13 +480,10 @@ async function preloadHeroImages() {
     // carousel auto-advances to later, not what decides how long the
     // reader watches an empty hero before anything shows up in it.
     const priority = index === 0 ? 'high' : 'low';
-    prefetchImage(getImageUrl(item.Id, 'Backdrop', { maxWidth: 1600 }), priority);
-    // The logo used to sit outside this warm-up entirely, real reason
-    // components/heroCarousel.js's own render() only ever built that
-    // <img> once it mounted, the reader watching it pop in after the
-    // splash had already stepped aside, same real gap this whole
-    // function already closed for the backdrop.
-    prefetchImage(getImageUrl(item.Id, 'Logo', { maxWidth: 800 }), priority);
+    const backdropUrl = getHeroBackdropUrl(item);
+    if (backdropUrl) prefetchImage(backdropUrl, priority);
+    const logoUrl = getHeroLogoUrl(item);
+    if (logoUrl) prefetchImage(logoUrl, priority);
   });
 }
 

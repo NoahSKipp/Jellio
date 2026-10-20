@@ -3758,17 +3758,40 @@ export function getHeroCandidates(limit, options) {
   const itemTypes = opts.itemTypes || 'Movie,Series';
   const key = 'hero:' + userId + ':' + (opts.parentId || '') + ':' + itemTypes + ':' + (limit || 8);
   return cached(key, function () {
-    // Asks for extra so there are still enough once anime is left out.
+    // Asks for extra so there are still enough once anime and incomplete items are left out.
     const params = new URLSearchParams({
       SortBy: 'Random',
       Recursive: 'true',
       IncludeItemTypes: itemTypes,
-      Limit: String((limit || 8) * 3),
-      Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating',
+      ImageTypes: 'Backdrop',
+      EnableImageTypes: 'Backdrop,Logo,Primary',
+      Limit: String((limit || 8) * 4),
+      Fields: 'Overview,Genres,ProductionYear,RunTimeTicks,OfficialRating,ImageTags,BackdropImageTags,ParentBackdropItemId,ParentBackdropImageTags',
     });
     if (opts.parentId) params.set('ParentId', opts.parentId);
     return Promise.all([rowJson('/Users/' + userId + '/Items?' + params.toString(), 'hero'), getAnimeIds()]).then(function (results) {
-      return withoutAnime((results[0] && results[0].Items) || [], results[1]).slice(0, limit || 8);
+      const candidates = withoutAnime((results[0] && results[0].Items) || [], results[1]);
+      const highQuality = candidates.filter(function (item) {
+        const hasBackdrop = Boolean(
+          (item.BackdropImageTags && item.BackdropImageTags.length > 0) ||
+          (item.ParentBackdropItemId && item.ParentBackdropImageTags && item.ParentBackdropImageTags.length > 0)
+        );
+        const hasTitle = Boolean(item.Name && item.Name.trim().length > 0);
+        const hasOverview = Boolean(item.Overview && item.Overview.trim().length > 0);
+        return hasBackdrop && hasTitle && hasOverview;
+      });
+      if (highQuality.length >= (limit || 8)) {
+        return highQuality.slice(0, limit || 8);
+      }
+      const withBackdrop = candidates.filter(function (item) {
+        const hasBackdrop = Boolean(
+          (item.BackdropImageTags && item.BackdropImageTags.length > 0) ||
+          (item.ParentBackdropItemId && item.ParentBackdropImageTags && item.ParentBackdropImageTags.length > 0)
+        );
+        const hasTitle = Boolean(item.Name && item.Name.trim().length > 0);
+        return hasBackdrop && hasTitle;
+      });
+      return (withBackdrop.length ? withBackdrop : candidates).slice(0, limit || 8);
     });
   });
 }

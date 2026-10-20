@@ -20,36 +20,94 @@ import { transitionsAllowed } from '../runtime/motionSettings.js';
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
 
+export function getHeroBackdropUrl(item) {
+  if (!item || !item.Id) return '';
+  const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
+  if (backdropTag) {
+    return getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 1920 });
+  }
+  if (item.ParentBackdropItemId && item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
+    return getImageUrl(item.ParentBackdropItemId, 'Backdrop', {
+      tag: item.ParentBackdropImageTags[0],
+      maxWidth: 1920,
+    });
+  }
+  if (item.ParentBackdropItemId) {
+    return getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 1920 });
+  }
+  if (item.ImageTags && item.ImageTags.Primary) {
+    return getImageUrl(item.Id, 'Primary', { tag: item.ImageTags.Primary, maxWidth: 1920 });
+  }
+  return getImageUrl(item.Id, 'Backdrop', { maxWidth: 1920 });
+}
+
+export function getHeroLogoUrl(item) {
+  if (!item || !item.Id) return null;
+  const logoTag = item.ImageTags && item.ImageTags.Logo;
+  if (logoTag) {
+    return getImageUrl(item.Id, 'Logo', { tag: logoTag, maxWidth: 800 });
+  }
+  if (item.ParentLogoItemId && item.ParentLogoImageTag) {
+    return getImageUrl(item.ParentLogoItemId, 'Logo', { tag: item.ParentLogoImageTag, maxWidth: 800 });
+  }
+  return null;
+}
+
 function metaLine(item) {
+  if (!item) return '';
   const parts = [];
   if (item.ProductionYear) parts.push(String(item.ProductionYear));
   const runtime = formatRuntime(item.RunTimeTicks);
   if (runtime) parts.push(runtime);
   if (item.OfficialRating) parts.push(item.OfficialRating);
-  if (item.Genres && item.Genres.length) parts.push(item.Genres.slice(0, 3).map(translateGenre).join(', '));
+  if (item.Genres) {
+    const list = Array.isArray(item.Genres)
+      ? item.Genres
+      : typeof item.Genres === 'string'
+      ? item.Genres.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+      : [];
+    if (list.length) {
+      parts.push(
+        list.slice(0, 3).map(function (genre) {
+          try {
+            return translateGenre(genre);
+          } catch (_) {
+            return genre;
+          }
+        }).join(', ')
+      );
+    }
+  }
   return parts.join(' • ');
 }
 
 // A browser has nothing to interpolate between two url() values, so
 // swapping background-image on one element cannot animate: a new layer
 // crossfades in over whatever is already there instead, removed once the
-// CSS transition finishes.
-function crossfadeBackdrop(container, url) {
-  const layer = el('div', 'jellio-hero-backdrop-layer');
-  layer.style.backgroundImage = 'url(' + url + ')';
-  container.appendChild(layer);
+// CSS transition finishes. Preloads before mounting the layer so missing
+// or slow images never flash a blank screen, and guards against race conditions.
+function crossfadeBackdrop(container, url, isCurrent) {
+  if (!url) return;
+  const img = new Image();
+  img.onload = function () {
+    if (isCurrent && !isCurrent()) return;
+    const layer = el('div', 'jellio-hero-backdrop-layer');
+    layer.style.backgroundImage = 'url(' + url + ')';
+    container.appendChild(layer);
 
-  void layer.offsetWidth;
-  layer.classList.add('jellio-hero-backdrop-layer-visible');
+    void layer.offsetWidth;
+    layer.classList.add('jellio-hero-backdrop-layer-visible');
 
-  const previousLayers = container.querySelectorAll('.jellio-hero-backdrop-layer');
-  previousLayers.forEach(function (previous) {
-    if (previous === layer) return;
-    previous.classList.remove('jellio-hero-backdrop-layer-visible');
-    window.setTimeout(function () {
-      if (previous.parentNode) previous.parentNode.removeChild(previous);
-    }, 900);
-  });
+    const previousLayers = container.querySelectorAll('.jellio-hero-backdrop-layer');
+    previousLayers.forEach(function (previous) {
+      if (previous === layer) return;
+      previous.classList.remove('jellio-hero-backdrop-layer-visible');
+      window.setTimeout(function () {
+        if (previous.parentNode) previous.parentNode.removeChild(previous);
+      }, 900);
+    });
+  };
+  img.src = url;
 }
 
 export function buildHeroCarousel(options) {
@@ -125,30 +183,53 @@ export function buildHeroCarousel(options) {
   let index = 0;
   let timer = null;
   let hovered = false;
+  let activeSlideId = null;
 
   let shownOnce = false;
   function render() {
     if (!items.length) return;
     const item = items[index];
+    if (!item) return;
 
+    activeSlideId = item.Id;
     root.classList.remove('jellio-hero-loading');
-    crossfadeBackdrop(backdrop, getImageUrl(item.Id, 'Backdrop', { maxWidth: 1920 }));
 
-    logo.classList.remove('jellio-hero-logo-hidden');
-    logo.onerror = function () {
-      logo.classList.add('jellio-hero-logo-hidden');
-    };
-    // css/app.css's own .jellio-hero-logo caps this at 5.5em tall,
-    // never more than a few hundred real pixels wide on any real
-    // screen; no maxWidth here meant every request served the source
-    // logo at its own real original resolution instead, some of them
-    // several MB, real cost paid in full for a source-quality asset
-    // rendered no bigger than a real button icon.
-    logo.src = getImageUrl(item.Id, 'Logo', { maxWidth: 800 });
-
+    // Synchronously update text so stale descriptions or metadata from
+    // a prior slide are immediately replaced and never linger.
     title.textContent = item.Name || '';
     meta.textContent = metaLine(item);
     overview.textContent = item.Overview || '';
+
+    // Clear and hide logo immediately; only display if the current item
+    // has a valid logo that loads successfully.
+    logo.src = '';
+    logo.classList.add('jellio-hero-logo-hidden');
+
+    const logoUrl = getHeroLogoUrl(item);
+    if (logoUrl) {
+      const currentId = item.Id;
+      logo.onload = function () {
+        if (activeSlideId === currentId) {
+          logo.classList.remove('jellio-hero-logo-hidden');
+        }
+      };
+      logo.onerror = function () {
+        if (activeSlideId === currentId) {
+          logo.classList.add('jellio-hero-logo-hidden');
+          logo.src = '';
+        }
+      };
+      logo.src = logoUrl;
+    }
+
+    const backdropUrl = getHeroBackdropUrl(item);
+    if (backdropUrl) {
+      const currentId = item.Id;
+      crossfadeBackdrop(backdrop, backdropUrl, function () {
+        return activeSlideId === currentId;
+      });
+    }
+
     if (shownOnce && transitionsAllowed() && typeof content.animate === 'function') {
       content.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
     }

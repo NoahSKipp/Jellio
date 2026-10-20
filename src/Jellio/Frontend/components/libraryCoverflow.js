@@ -27,10 +27,27 @@ const MIN_SLIDES = 3;
 const ADVANCE_MS = 7000;
 
 function metaLine(item) {
+  if (!item) return '';
   const parts = [];
   if (item.ProductionYear) parts.push(String(item.ProductionYear));
-  if (item.Genres && item.Genres.length) {
-    parts.push.apply(parts, item.Genres.slice(0, 2).map(translateGenre));
+  if (item.Genres) {
+    const list = Array.isArray(item.Genres)
+      ? item.Genres
+      : typeof item.Genres === 'string'
+      ? item.Genres.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+      : [];
+    if (list.length) {
+      parts.push.apply(
+        parts,
+        list.slice(0, 2).map(function (genre) {
+          try {
+            return translateGenre(genre);
+          } catch (_) {
+            return genre;
+          }
+        })
+      );
+    }
   }
   return parts.join(' · ');
 }
@@ -61,6 +78,8 @@ function buildSlide(item) {
   // carries it, imperceptible at this real display size.
   if (backdropTag) {
     art.src = getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 960, quality: 85 });
+  } else if (item.ParentBackdropItemId && item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
+    art.src = getImageUrl(item.ParentBackdropItemId, 'Backdrop', { tag: item.ParentBackdropImageTags[0], maxWidth: 960, quality: 85 });
   } else if (item.ImageTags && item.ImageTags.Primary) {
     art.src = getImageUrl(item.Id, 'Primary', { tag: item.ImageTags.Primary, maxWidth: 960, quality: 85 });
   }
