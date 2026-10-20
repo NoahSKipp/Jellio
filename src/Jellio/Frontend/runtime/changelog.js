@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.10",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.10",
+    "summary": "Fixes search result item navigation, resolves remote unimported metadata fallbacks, and enhances hero carousel candidate selection and slide transitions.",
+    "highlights": [
+      {
+        "title": "Search Result Navigation Fix",
+        "description": "Resolved an issue where opening search results triggered an error toast. Unimported remote titles now cleanly fall back to on-demand metadata import with robust type handling."
+      },
+      {
+        "title": "Hero Carousel Reliability",
+        "description": "Enhanced hero candidate filtering to require valid backdrop images and complete metadata, added image preloading, and fixed metadata sync across slide transitions."
+      },
+      {
+        "title": "UI Localization Additions",
+        "description": "Added missing home_action_details and core interface translation keys across all supported display languages."
+      }
+    ]
+  },
+  {
     "version": "1.87.9",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.9",
