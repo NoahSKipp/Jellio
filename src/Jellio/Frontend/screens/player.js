@@ -2425,8 +2425,10 @@ export async function renderPlayer(root, params) {
     let matched = null;
     try {
       const user = await currentUserPromise;
+      const subtitleMode = user && user.Configuration && user.Configuration.SubtitleMode;
       const preferredLanguage = user && user.Configuration && user.Configuration.SubtitleLanguagePreference;
-      matched = preferredLanguage ? matchSubtitleStream(mediaSource, preferredLanguage) : null;
+      const isSubtitlesDisabled = subtitleMode === 'None' || preferredLanguage === 'off' || preferredLanguage === 'none' || !preferredLanguage;
+      matched = isSubtitlesDisabled ? null : matchSubtitleStream(mediaSource, preferredLanguage);
     } catch (err) {
       console.warn('Jellio: could not match preferred subtitle language', err);
     }

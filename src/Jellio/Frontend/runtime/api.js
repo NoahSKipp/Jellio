@@ -3398,14 +3398,23 @@ export function clearAllNotifications() {
 // DefaultAudioStreamIndex/DefaultSubtitleStreamIndex automatically, no
 // client side track selection logic needed here for this to take
 // effect on the next real negotiated stream.
-export async function updateLanguagePreferences(audioLanguage, subtitleLanguage) {
+export async function updateLanguagePreferences(audioLanguage, subtitleLanguage, subtitleMode) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const user = await getCurrentUser();
-  const configuration = Object.assign({}, user.Configuration, {
+  const isOff = subtitleLanguage === 'off' || subtitleLanguage === 'none' || subtitleMode === 'None';
+  const newConfig = {
     AudioLanguagePreference: audioLanguage || '',
-    SubtitleLanguagePreference: subtitleLanguage || '',
-  });
+    SubtitleLanguagePreference: isOff ? '' : (subtitleLanguage || ''),
+  };
+  if (subtitleMode !== undefined) {
+    newConfig.SubtitleMode = subtitleMode;
+  } else if (isOff) {
+    newConfig.SubtitleMode = 'None';
+  } else if (user && user.Configuration && user.Configuration.SubtitleMode === 'None') {
+    newConfig.SubtitleMode = 'Default';
+  }
+  const configuration = Object.assign({}, user && user.Configuration, newConfig);
   const response = await fetch(getServerAddress() + '/Users/' + userId + '/Configuration', {
     method: 'POST',
     headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),

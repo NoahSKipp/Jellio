@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.9",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.9",
+    "summary": "Adds default subtitle disable option to the onboarding setup wizard and playback preferences.",
+    "highlights": [
+      {
+        "title": "Default Subtitle Disable Option",
+        "description": "Added an explicit Off option for default subtitles in the onboarding wizard and playback settings, defaulting to off so users who do not want subtitles are not forced into automatic track selection."
+      },
+      {
+        "title": "Streamlined Playback Preferences",
+        "description": "Preferences sync smoothly to user configuration on the server, ensuring subtitle and audio choices persist across sessions and devices."
+      }
+    ]
+  },
+  {
     "version": "1.87.8",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.8",

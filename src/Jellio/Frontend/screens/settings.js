@@ -488,6 +488,15 @@ function buildLanguageCard(user) {
     }),
   );
 
+  const subtitleOptions = [
+    { value: 'off', label: t('settings_subtitles_off') },
+    { value: '', label: t('settings_no_preference') },
+  ].concat(
+    LANGUAGE_OPTIONS.map(function (option) {
+      return { value: option.code, label: option.name };
+    }),
+  );
+
   // A saved code might be the alternate ISO form this canonical
   // option list does not itself carry (deu rather than ger, for a
   // preference set from some other real Jellyfin client): matched by
@@ -500,12 +509,20 @@ function buildLanguageCard(user) {
     return matched ? matched.code : '';
   }
 
+  const isSubtitleOff =
+    configuration.SubtitleMode === 'None' ||
+    configuration.SubtitleLanguagePreference === 'off' ||
+    configuration.SubtitleLanguagePreference === 'none';
+
   let audioValue = resolveValue(configuration.AudioLanguagePreference);
-  let subtitleValue = resolveValue(configuration.SubtitleLanguagePreference);
+  let subtitleValue = isSubtitleOff ? 'off' : resolveValue(configuration.SubtitleLanguagePreference);
 
   function save(status) {
     status.textContent = t('action_saving');
-    updateLanguagePreferences(audioValue, subtitleValue)
+    const isSubOff = subtitleValue === 'off';
+    const subLangToSave = isSubOff ? '' : subtitleValue;
+    const subModeToSave = isSubOff ? 'None' : (subtitleValue ? 'Default' : undefined);
+    updateLanguagePreferences(audioValue, subLangToSave, subModeToSave)
       .then(function () {
         status.textContent = t('settings_saved_next_playback');
       })
@@ -522,7 +539,7 @@ function buildLanguageCard(user) {
     }),
   );
   body.appendChild(
-    buildSelectRow(null, t('settings_default_subtitle'), null, options, subtitleValue, function (value, select, status) {
+    buildSelectRow(null, t('settings_default_subtitle'), null, subtitleOptions, subtitleValue, function (value, select, status) {
       subtitleValue = value;
       save(status);
     }),

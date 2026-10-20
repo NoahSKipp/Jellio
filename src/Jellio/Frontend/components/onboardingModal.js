@@ -106,7 +106,7 @@ export function openOnboardingModal(options) {
   // Staged state before saving
   let selectedDisplayLang = getDisplayLanguage();
   let selectedAudioLang = '';
-  let selectedSubtitleLang = '';
+  let selectedSubtitleLang = 'off';
   let rememberStream = isRememberStreamEnabled();
   let readingEnabled = false;
   let targetStudyLang = readTargetLanguage() || 'eng';
@@ -118,12 +118,22 @@ export function openOnboardingModal(options) {
   const sessionUser = getCurrentUser();
   if (sessionUser && sessionUser.Configuration) {
     selectedAudioLang = sessionUser.Configuration.AudioLanguagePreference || '';
-    selectedSubtitleLang = sessionUser.Configuration.SubtitleLanguagePreference || '';
+    if (sessionUser.Configuration.SubtitleMode === 'None') {
+      selectedSubtitleLang = 'off';
+    } else if (sessionUser.Configuration.SubtitleLanguagePreference) {
+      selectedSubtitleLang = sessionUser.Configuration.SubtitleLanguagePreference;
+    } else {
+      selectedSubtitleLang = 'off';
+    }
   }
 
   // If user already has audio/subtitle preferences configured (e.g. from Jellio TV setup),
   // skip redundant steps and only show new and relevant settings for this platform.
-  const hasSharedAccountSettings = Boolean(selectedAudioLang || selectedSubtitleLang);
+  const hasSharedAccountSettings = Boolean(
+    sessionUser &&
+    sessionUser.Configuration &&
+    (sessionUser.Configuration.AudioLanguagePreference || sessionUser.Configuration.SubtitleLanguagePreference)
+  );
 
   function getActiveSteps() {
     const list = ['language'];
@@ -163,6 +173,8 @@ export function openOnboardingModal(options) {
     saveServerDisplayPreferences({
       onboarding_done: 'true',
       language: selectedDisplayLang,
+      default_audio: selectedAudioLang || '',
+      default_subtitles: selectedSubtitleLang || 'off',
       remember_stream: rememberStream ? 'on' : 'off',
       study_target_language: targetStudyLang,
       audiobook_speed: String(audiobookSpeed),
@@ -363,7 +375,8 @@ export function openOnboardingModal(options) {
     subRow.appendChild(subLabelWrap);
 
     const subSelect = createSelect('jellio-onboarding-select');
-    subSelect.appendChild(createOption('', t('settings_no_preference'), !selectedSubtitleLang));
+    subSelect.appendChild(createOption('off', t('settings_subtitles_off'), selectedSubtitleLang === 'off' || !selectedSubtitleLang));
+    subSelect.appendChild(createOption('', t('settings_no_preference'), selectedSubtitleLang === ''));
 
     LANGUAGE_OPTIONS.forEach(function (opt) {
       subSelect.appendChild(createOption(opt.code, opt.name, opt.code === selectedSubtitleLang));
@@ -526,7 +539,9 @@ export function openOnboardingModal(options) {
     addSummaryItem(
       'subtitles',
       t('onboarding_summary_subtitles'),
-      selectedSubtitleLang ? t('onboarding_summary_subtitles_auto', { name: languageName(selectedSubtitleLang) }) : t('onboarding_summary_subtitles_off'),
+      selectedSubtitleLang && selectedSubtitleLang !== 'off'
+        ? t('onboarding_summary_subtitles_auto', { name: languageName(selectedSubtitleLang) })
+        : t('onboarding_summary_subtitles_off'),
       hasSharedAccountSettings ? t('onboarding_synced_badge') : null,
     );
 

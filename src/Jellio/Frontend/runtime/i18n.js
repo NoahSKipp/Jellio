@@ -248,6 +248,7 @@ export const STRINGS = {
     // Settings - Playback
     settings_default_audio: 'Default audio language',
     settings_default_subtitle: 'Default subtitle language',
+    settings_subtitles_off: "Off (no subtitles by default)",
     settings_no_preference: 'No preference',
     settings_remember_stream: 'Remember stream choice',
     settings_remember_stream_desc: 'Automatically pick your preferred release group, codec, or resolution.',
@@ -1223,6 +1224,7 @@ export const STRINGS = {
     // Settings - Playback
     settings_default_audio: 'Standard-Audiosprache',
     settings_default_subtitle: 'Standard-Untertitelsprache',
+    settings_subtitles_off: "Aus (standardmäßig keine Untertitel)",
     settings_no_preference: 'Keine Bevorzugung',
     settings_remember_stream: 'Stream-Auswahl merken',
     settings_remember_stream_desc: 'Bevorzugte Release-Gruppe, Codec oder Auflösung automatisch auswählen.',
@@ -2198,6 +2200,7 @@ export const STRINGS = {
     // Settings - Playback
     settings_default_audio: 'Idioma de audio predeterminado',
     settings_default_subtitle: 'Idioma de subtítulos predeterminado',
+    settings_subtitles_off: "Desactivados (sin subtítulos por defecto)",
     settings_no_preference: 'Sin preferencia',
     settings_remember_stream: 'Recordar elección de fuente',
     settings_remember_stream_desc: 'Selecciona automáticamente tu grupo de lanzamiento, códec o resolución preferidos.',
@@ -3173,6 +3176,7 @@ export const STRINGS = {
     // Settings - Playback
     settings_default_audio: 'Domyślny język dźwięku',
     settings_default_subtitle: 'Domyślny język napisów',
+    settings_subtitles_off: "Wyłączone (domyślnie brak napisów)",
     settings_no_preference: 'Brak preferencji',
     settings_remember_stream: 'Zapamiętaj wybór źródła',
     settings_remember_stream_desc: 'Automatycznie wybieraj preferowaną grupę, kodek lub rozdzielczość.',
@@ -4130,6 +4134,7 @@ export const STRINGS = {
     settings_avatar_desc: 'Choisissez un avatar pour représenter votre profil dans Jellio.',
     settings_default_audio: 'Langue audio par défaut',
     settings_default_subtitle: 'Langue des sous-titres par défaut',
+    settings_subtitles_off: "Désactivés (sans sous-titres par défaut)",
     settings_no_preference: 'Aucune préférence',
     settings_remember_stream: 'Mémoriser le choix du flux',
     settings_remember_stream_desc: 'Sélectionne automatiquement votre groupe de release, codec ou résolution préféré.',
@@ -5081,6 +5086,7 @@ export const STRINGS = {
     settings_avatar_desc: 'Scegli un avatar per rappresentare il tuo profilo in Jellio.',
     settings_default_audio: 'Lingua audio predefinita',
     settings_default_subtitle: 'Lingua sottotitoli predefinita',
+    settings_subtitles_off: "Disattivati (nessun sottotitolo predefinito)",
     settings_no_preference: 'Nessuna preferenza',
     settings_remember_stream: 'Ricorda scelta del flusso',
     settings_remember_stream_desc: 'Seleziona automaticamente il gruppo di rilascio, codec o risoluzione preferito.',
@@ -6032,6 +6038,7 @@ export const STRINGS = {
     settings_avatar_desc: 'Escolha um avatar para representar seu perfil no Jellio.',
     settings_default_audio: 'Idioma de áudio padrão',
     settings_default_subtitle: 'Idioma de legendas padrão',
+    settings_subtitles_off: "Desativadas (sem legendas por padrão)",
     settings_no_preference: 'Sem preferência',
     settings_remember_stream: 'Lembrar escolha de transmissão',
     settings_remember_stream_desc: 'Seleciona automaticamente seu grupo de lançamento, codec ou resolução preferido.',
