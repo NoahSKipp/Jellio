@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.5] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(settings)* Translate all remaining Settings cards, form fields, action buttons, status messages, recommendation controls, and category headers across all supported languages\n- *(onboarding)* Persist onboarding completion status to server display preferences so accounts that already configured settings or finished onboarding never see the setup wizard repeatedly on other devices\n- *(home)* Localize home greetings (Good morning, Still up?) and dynamic recommendation headers (Top Picks for You, Because you watched)\n- *(switcher)* Localize account switcher actions and profile titles\n",
+        "checksum": "ca9aa869d98b6e99d9f0fe099b4482a7",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.5/jellio_1.87.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T13:50:28Z",
+        "version": "1.87.5"
+      },
+      {
         "changelog": "## [1.87.4] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Full multi-language UI translation across all Jellio components (sidebar, navigation, home rows, detail actions, card context menus, search, login, settings)\n- *(api)* Request localized item descriptions and titles using active display language Culture parameter with English fallback\n- *(cache)* Segment offline row and item caches by active display language and refresh on language changes\n",
         "checksum": "4d3fd5bf1c00670d1fa601867de6ee82",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.4/jellio_1.87.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-16T14:13:08Z",
         "version": "1.83.0"
-      },
-      {
-        "changelog": "## [1.82.0] - 2026-10-15\n\n### 🚀 Features\n\n- Include full version history across all releases in changelog\n",
-        "checksum": "7df979c7f1bf0f446c90dfc89cb17edc",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.82.0/jellio_1.82.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-15T22:51:57Z",
-        "version": "1.82.0"
       }
     ]
   }
