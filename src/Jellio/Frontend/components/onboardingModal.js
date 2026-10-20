@@ -5,11 +5,12 @@
 
 import { el } from '../runtime/dom.js';
 import { t, getDisplayLanguage, setDisplayLanguage, DISPLAY_LANGUAGES } from '../runtime/i18n.js';
-import { getCurrentUserId } from '../runtime/auth.js';
+import { getCurrentUserId, getCurrentUser as getSessionUser } from '../runtime/auth.js';
 import {
   getCurrentUser,
   updateLanguagePreferences,
   startMangaImport,
+  getServerDisplayPreferences,
   getCachedServerDisplayPreferences,
   saveServerDisplayPreferences,
 } from '../runtime/api.js';
@@ -20,6 +21,7 @@ import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from './audioMiniP
 
 const MODAL_ID = 'jellioOnboardingModal';
 const STORAGE_PREFIX = 'jellio_onboarding_done_';
+let openToken = 0;
 
 export function shouldShowOnboarding(userId) {
   const uid = userId || getCurrentUserId();
@@ -60,7 +62,7 @@ export function shouldShowOnboarding(userId) {
       return false;
     }
 
-    const user = getCurrentUser();
+    const user = getSessionUser();
     const hasPriorLogin = Boolean(user && user.LastLoginDate);
     const hasPriorActivity = Boolean(user && user.LastActivityDate && (Date.now() - new Date(user.LastActivityDate).getTime() > 30000));
     const hasServerSettings = Boolean(
@@ -92,19 +94,21 @@ export function markOnboardingComplete(userId) {
 }
 
 export function closeOnboardingModal() {
+  openToken++;
   const existing = document.getElementById(MODAL_ID);
   if (existing) existing.remove();
 }
 
-export function openOnboardingModal(options) {
+export async function openOnboardingModal(options) {
   closeOnboardingModal();
   const userId = (options && options.userId) || getCurrentUserId();
   const onDone = options && options.onDone;
+  const currentToken = ++openToken;
 
   let currentStep = 1;
 
   // Staged state before saving
-  let selectedDisplayLang = getDisplayLanguage();
+  let selectedDisplayLang = getDisplayLanguage() || 'en';
   let selectedAudioLang = '';
   let selectedSubtitleLang = 'off';
   let rememberStream = isRememberStreamEnabled();
@@ -114,37 +118,105 @@ export function openOnboardingModal(options) {
   let mihonImportFile = null;
   let mihonStatusText = '';
 
-  // Pre-load current server user configuration if available
-  const sessionUser = getCurrentUser();
-  if (sessionUser && sessionUser.Configuration) {
-    selectedAudioLang = sessionUser.Configuration.AudioLanguagePreference || '';
-    if (sessionUser.Configuration.SubtitleMode === 'None') {
-      selectedSubtitleLang = 'off';
-    } else if (sessionUser.Configuration.SubtitleLanguagePreference) {
-      selectedSubtitleLang = sessionUser.Configuration.SubtitleLanguagePreference;
+  function resolveLanguageCode(currentCode) {
+    if (!currentCode) return '';
+    const lower = String(currentCode).trim().toLowerCase();
+    const matched = LANGUAGE_OPTIONS.find(function (option) {
+      return (
+        option.code.toLowerCase() === lower ||
+        option.name.toLowerCase() === lower ||
+        languageName(option.code).toLowerCase() === lower
+      );
+    });
+    return matched ? matched.code : (LANGUAGE_OPTIONS.some(function (o) { return o.code === lower; }) ? lower : '');
+  }
+
+  function applyUserSettings(user, serverPrefs) {
+    const userConfig = (user && user.Configuration) || {};
+    const custom = (serverPrefs && serverPrefs.CustomPrefs) || {};
+
+    if (custom.language) {
+      selectedDisplayLang = custom.language;
     } else {
+      selectedDisplayLang = getDisplayLanguage() || 'en';
+    }
+
+    const audioCandidate = userConfig.AudioLanguagePreference || custom.default_audio;
+    if (audioCandidate) {
+      selectedAudioLang = resolveLanguageCode(audioCandidate) || audioCandidate;
+    }
+
+    const isSubOff =
+      userConfig.SubtitleMode === 'None' ||
+      userConfig.SubtitleLanguagePreference === 'off' ||
+      userConfig.SubtitleLanguagePreference === 'none' ||
+      custom.default_subtitles === 'off' ||
+      custom.default_subtitles === 'none';
+
+    if (isSubOff) {
       selectedSubtitleLang = 'off';
+    } else {
+      const subCandidate = userConfig.SubtitleLanguagePreference || custom.default_subtitles;
+      if (subCandidate === '') {
+        selectedSubtitleLang = '';
+      } else if (subCandidate) {
+        selectedSubtitleLang = resolveLanguageCode(subCandidate) || subCandidate;
+      } else {
+        selectedSubtitleLang = 'off';
+      }
+    }
+
+    if (custom.remember_stream !== undefined) {
+      rememberStream = custom.remember_stream === 'on';
+    } else {
+      rememberStream = isRememberStreamEnabled();
+    }
+
+    if (custom.reading_enabled !== undefined) {
+      readingEnabled = custom.reading_enabled === 'true';
+    } else {
+      readingEnabled = Boolean(
+        window.localStorage.getItem('jellio_reading_enabled') === 'true' ||
+        window.localStorage.getItem('jellio_reader_settings') ||
+        window.localStorage.getItem('jellio_reader_study_lang')
+      );
+    }
+
+    if (custom.study_target_language) {
+      targetStudyLang = custom.study_target_language;
+    } else {
+      targetStudyLang = readTargetLanguage() || 'eng';
+    }
+
+    if (custom.audiobook_speed) {
+      audiobookSpeed = Number(custom.audiobook_speed) || 1;
+    } else {
+      audiobookSpeed = Number(getDefaultAudiobookSpeed()) || 1;
     }
   }
 
-  // If user already has audio/subtitle preferences configured (e.g. from Jellio TV setup),
-  // skip redundant steps and only show new and relevant settings for this platform.
-  const hasSharedAccountSettings = Boolean(
-    sessionUser &&
-    sessionUser.Configuration &&
-    (sessionUser.Configuration.AudioLanguagePreference || sessionUser.Configuration.SubtitleLanguagePreference)
-  );
+  // Pre-load current state from synchronous cache first
+  const sessionUser = getSessionUser();
+  const cachedPrefs = getCachedServerDisplayPreferences();
+  applyUserSettings(sessionUser, cachedPrefs);
+
+  // Await fresh server user configuration and server display preferences if available
+  try {
+    const [fetchedUser, fetchedPrefs] = await Promise.all([
+      getCurrentUser().catch(function () { return null; }),
+      getServerDisplayPreferences().catch(function () { return null; }),
+    ]);
+    if (currentToken !== openToken) return;
+    if (fetchedUser || fetchedPrefs) {
+      applyUserSettings(fetchedUser || sessionUser, fetchedPrefs || cachedPrefs);
+    }
+  } catch (_) {}
+
+  if (currentToken !== openToken) return;
 
   function getActiveSteps() {
-    const list = ['language'];
-    if (!hasSharedAccountSettings) {
-      list.push('playback');
-    }
-    list.push('reading');
-    list.push('done');
-    return list;
+    return ['language', 'playback', 'reading', 'done'];
   }
-
 
   const overlay = el('div', 'jellio-onboarding-overlay');
   overlay.id = MODAL_ID;
@@ -155,12 +227,24 @@ export function openOnboardingModal(options) {
   const card = el('div', 'jellio-onboarding-card');
   overlay.appendChild(card);
 
+  overlay.addEventListener('click', function (e) {
+    if (!e.target.closest('.jellio-onboarding-help-btn') && !e.target.closest('.jellio-onboarding-tooltip')) {
+      card.querySelectorAll('.jellio-onboarding-tooltip.visible').forEach(function (t) {
+        t.classList.remove('visible');
+      });
+    }
+  });
+
   function saveAndFinish() {
     markOnboardingComplete(userId);
     // Persist language preferences to Jellyfin server
     updateLanguagePreferences(selectedAudioLang, selectedSubtitleLang).catch(function () {});
     // Persist stream choice memory
     setRememberStreamEnabled(rememberStream);
+    // Persist reading enabled state locally
+    try {
+      window.localStorage.setItem('jellio_reading_enabled', readingEnabled ? 'true' : 'false');
+    } catch (_) {}
     // Persist study & audiobook settings if reading enabled
     if (readingEnabled) {
       writeTargetLanguage(targetStudyLang);
@@ -176,6 +260,7 @@ export function openOnboardingModal(options) {
       default_audio: selectedAudioLang || '',
       default_subtitles: selectedSubtitleLang || 'off',
       remember_stream: rememberStream ? 'on' : 'off',
+      reading_enabled: readingEnabled ? 'true' : 'false',
       study_target_language: targetStudyLang,
       audiobook_speed: String(audiobookSpeed),
     }).catch(function () {});
@@ -336,7 +421,13 @@ export function openOnboardingModal(options) {
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      tooltip.classList.toggle('visible');
+      const wasVisible = tooltip.classList.contains('visible');
+      card.querySelectorAll('.jellio-onboarding-tooltip.visible').forEach(function (t) {
+        t.classList.remove('visible');
+      });
+      if (!wasVisible) {
+        tooltip.classList.add('visible');
+      }
     });
     return wrap;
   }
@@ -525,6 +616,15 @@ export function openOnboardingModal(options) {
       item.appendChild(text);
       summaryCard.appendChild(item);
     }
+
+    const hasSharedAccountSettings = Boolean(
+      (sessionUser &&
+        sessionUser.Configuration &&
+        (sessionUser.Configuration.AudioLanguagePreference || sessionUser.Configuration.SubtitleLanguagePreference)) ||
+      (cachedPrefs &&
+        cachedPrefs.CustomPrefs &&
+        (cachedPrefs.CustomPrefs.default_audio || cachedPrefs.CustomPrefs.default_subtitles))
+    );
 
     const currentDisplayLangObj = DISPLAY_LANGUAGES.find((l) => l.code === selectedDisplayLang);
     addSummaryItem('translate', t('onboarding_summary_interface_language'), currentDisplayLangObj ? currentDisplayLangObj.nativeName : 'English');

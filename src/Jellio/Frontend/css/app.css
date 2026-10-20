@@ -15722,10 +15722,12 @@
 
 .jellio-onboarding-tooltip {
   position: absolute;
-  bottom: calc(100% + 10px);
+  top: calc(100% + 8px);
+  bottom: auto;
   left: 50%;
-  transform: translateX(-50%);
-  width: 290px;
+  transform: translateX(-50%) translateY(0);
+  width: min(300px, calc(100vw - 64px));
+  max-width: 320px;
   padding: 12px 14px;
   border-radius: 12px;
   background: rgb(24 24 32 / 0.98);
@@ -15744,7 +15746,7 @@
 .jellio-onboarding-tooltip.visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(4px);
 }
 
 .jellio-onboarding-tooltip-title {
