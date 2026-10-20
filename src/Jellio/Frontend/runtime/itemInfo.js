@@ -25,11 +25,19 @@ export function itemFallbackPath(userId, itemId, includePlaybackFields) {
 export function loadItemInfo(getJson, userId, itemId, options) {
   const playback = !!(options && options.includePlaybackFields);
   const timeout = options && options.timeoutMs;
-  return getJson(itemInfoPath(userId, itemId, playback), timeout).then(function (result) {
-    const item = result && result.Items && result.Items[0];
-    if (item) return item;
-    return getJson(itemFallbackPath(userId, itemId, playback), timeout);
-  });
+  return getJson(itemInfoPath(userId, itemId, playback), timeout)
+    .then(function (result) {
+      const item = result && result.Items && result.Items[0];
+      if (item) return item;
+      return getJson(itemFallbackPath(userId, itemId, playback), timeout);
+    })
+    .catch(function () {
+      return getJson(itemFallbackPath(userId, itemId, playback), timeout);
+    })
+    .then(function (result) {
+      if (result && result.Items && result.Items[0]) return result.Items[0];
+      return result;
+    });
 }
 
 // The detail page's stream lookup: started after the page is drawn,

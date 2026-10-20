@@ -693,8 +693,11 @@ async function downloadedItem(itemId, err) {
 }
 
 export function seedItemCache(item) {
-  if (!item || !item.Id) return;
-  const key = 'item:' + item.Id;
+  if (!item) return;
+  const id = item.Id || item.id;
+  if (!id) return;
+  if (!item.Id) item.Id = id;
+  const key = 'item:' + id;
   const existing = cache.get(key);
   if (!existing) {
     cache.set(key, { promise: Promise.resolve(item), ts: Date.now(), value: item });

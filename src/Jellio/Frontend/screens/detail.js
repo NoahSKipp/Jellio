@@ -315,7 +315,8 @@ function openTrailerModal(trailer, youTubeId) {
 }
 
 function buildTrailersRow(trailers) {
-  const usable = (trailers || []).filter(function (trailer) {
+  const trailerList = Array.isArray(trailers) ? trailers : [];
+  const usable = trailerList.filter(function (trailer) {
     return trailer && trailer.Url;
   });
   if (!usable.length) return null;
@@ -760,7 +761,7 @@ async function buildSeasonsSection(seriesId, targetPromise) {
     console.warn('Jellio: could not load seasons', err);
     return null;
   }
-  if (!seasons.length) return null;
+  if (!seasons || !seasons.length) return null;
 
   let activeSeasonId = null;
   if (targetPromise) {
@@ -912,7 +913,8 @@ async function buildSeasonsSection(seriesId, targetPromise) {
 }
 
 function buildCastRow(people) {
-  const cast = (people || []).filter(function (person) {
+  const peopleList = Array.isArray(people) ? people : [];
+  const cast = peopleList.filter(function (person) {
     return person.Type === 'Actor';
   });
   if (!cast.length) return null;
@@ -1025,7 +1027,7 @@ export async function renderDetail(root, params) {
   root.className = 'jellio-content jellio-screen-detail';
 
   const itemId = params.get('id');
-  if (!itemId) {
+  if (!itemId || itemId === 'undefined' || itemId === 'null') {
     renderDetailError(root, 'Nothing to show.', null);
     return;
   }
@@ -1068,9 +1070,17 @@ export async function renderDetail(root, params) {
     return;
   }
 
+  if (!item || (!item.Id && !item.Name && !item.Type)) {
+    console.warn('Jellio: item details missing for id', itemId);
+    renderDetailError(root, describeNetworkFailure('this title', new Error('Title details unavailable')), function () {
+      renderDetail(root, params);
+    });
+    return;
+  }
+
   // Fetched while the loading state is still up, not after it clears.
   const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
-  const bookMeta = isBook ? await loadBookMetadata(item.Id || itemId) : null;
+  const bookMeta = isBook ? await loadBookMetadata(item.Id || itemId).catch(() => null) : null;
   mergeBookMetadata(item, bookMeta);
 
   root.textContent = '';
@@ -1185,8 +1195,14 @@ export async function renderDetail(root, params) {
   const badgeSlot = el('div', 'jellio-detail-badge-slot');
   heroContent.appendChild(badgeSlot);
 
-  if (item.Genres && item.Genres.length) {
-    const genres = el('div', 'jellio-detail-genres', item.Genres.map(translateGenre).join(', '));
+  const rawGenres = item.Genres || item.Genre;
+  const genresList = Array.isArray(rawGenres)
+    ? rawGenres
+    : typeof rawGenres === 'string'
+    ? rawGenres.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+    : [];
+  if (genresList.length) {
+    const genres = el('div', 'jellio-detail-genres', genresList.map(translateGenre).join(', '));
     heroContent.appendChild(genres);
   }
 
@@ -1524,9 +1540,10 @@ export async function renderDetail(root, params) {
     actionsIcons.appendChild(changeStreamButton);
   }
 
+  const seriesOrItemKey = 's:' + String(item.Id).replace(/-/g, '').toLowerCase();
+  const rawKey = String(item.Id).replace(/-/g, '').toLowerCase();
+
   if (item.Type === 'Series') {
-    const seriesOrItemKey = 's:' + String(item.Id).replace(/-/g, '').toLowerCase();
-    const rawKey = String(item.Id).replace(/-/g, '').toLowerCase();
 
     const muteToggle = el('button', iconActionClass);
     muteToggle.type = 'button';
@@ -1564,11 +1581,17 @@ export async function renderDetail(root, params) {
     actionsIcons.appendChild(muteToggle);
   }
 
+  const rawTags = item.Tags || item.Tag;
+  const tagsList = Array.isArray(rawTags)
+    ? rawTags
+    : typeof rawTags === 'string'
+    ? rawTags.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+    : [];
   const isAnimeSeries =
     item.Type === 'Series' &&
     ((params && params.get('jellioKind') === 'anime') ||
-      (item.Genres && item.Genres.some((g) => /anime/i.test(g))) ||
-      (item.Tags && item.Tags.some((t) => /anime/i.test(t))));
+      genresList.some(function (g) { return /anime/i.test(g); }) ||
+      tagsList.some(function (t) { return /anime/i.test(t); }));
   if (isAnimeSeries) {
     const trackerButton = el('button', iconActionClass);
     trackerButton.type = 'button';

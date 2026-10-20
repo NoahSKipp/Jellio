@@ -417,15 +417,17 @@ function buildLandscapeCard(item, options) {
   }
   card.appendChild(imageWrap);
 
+  const landscapeItemId = item.Id || item.id;
+  if (!item.Id && landscapeItemId) item.Id = landscapeItemId;
   card.addEventListener('click', function () {
     seedItemCache(item);
-    navigateTo('#/item?id=' + item.Id);
+    navigateTo('#/item?id=' + encodeURIComponent(landscapeItemId));
   });
   card.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       seedItemCache(item);
-      navigateTo('#/item?id=' + item.Id);
+      navigateTo('#/item?id=' + encodeURIComponent(landscapeItemId));
     }
   });
 
@@ -639,10 +641,12 @@ export function buildCard(item, options) {
   // own, or the two would collide on the same hash.
   // Continue Reading/Listening cards skip the detail page and reopen the
   // book right where the reader left off.
+  const itemId = item.Id || item.id;
+  if (!item.Id && itemId) item.Id = itemId;
   const targetHash =
     options && options.openReader
-      ? '#/' + (item.Type === 'AudioBook' ? 'listen' : 'read') + '?id=' + item.Id + (item.Stream && item.Stream.MangaId ? '&manga=' + item.Stream.MangaId : '')
-      : '#/item?id=' + item.Id;
+      ? '#/' + (item.Type === 'AudioBook' ? 'listen' : 'read') + '?id=' + encodeURIComponent(itemId) + (item.Stream && item.Stream.MangaId ? '&manga=' + encodeURIComponent(item.Stream.MangaId) : '')
+      : '#/item?id=' + encodeURIComponent(itemId);
   card.addEventListener('click', function () {
     seedItemCache(item);
     navigateTo(targetHash);

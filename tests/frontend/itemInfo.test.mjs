@@ -38,6 +38,32 @@ test('a title not imported yet falls back to the by-id request, still without st
   assert.ok(asked.every(noStreamFields));
 });
 
+test('a title that rejects on /Items?ids= (e.g. synthetic non-GUID search result) falls back to by-id request', async () => {
+  const asked = [];
+  const getJson = async (path) => {
+    asked.push(path);
+    if (path.startsWith('/Items?')) {
+      const err = new Error('Request failed: ' + path);
+      err.status = 400;
+      throw err;
+    }
+    return { Id: 'tt1234567', Name: 'Remote Title' };
+  };
+  const item = await loadItemInfo(getJson, 'u1', 'tt1234567');
+  assert.equal(item.Name, 'Remote Title');
+  assert.deepEqual(asked.map((p) => p.split('?')[0]), ['/Items', '/Users/u1/Items/tt1234567']);
+  assert.ok(asked.every(noStreamFields));
+});
+
+test('fallback returning an Items array unpacks the item properly', async () => {
+  const getJson = async (path) => {
+    if (path.startsWith('/Items?')) throw new Error('400');
+    return { Items: [{ Id: 'i1', Name: 'Wrapped' }] };
+  };
+  const item = await loadItemInfo(getJson, 'u1', 'i1');
+  assert.equal(item.Name, 'Wrapped');
+});
+
 test('the page has its info while streams are still being found, and they fill in later', async () => {
   let release;
   const sourcesPending = new Promise((resolve) => (release = resolve));

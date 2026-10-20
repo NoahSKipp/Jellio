@@ -249,13 +249,17 @@ export async function renderSearch(root, params) {
   const SEARCH_SKELETON_CARDS = 4;
 
   function identityKeys(item) {
-    const keys = ['id:' + String(item.Id || '').replace(/-/g, '').toLowerCase()];
-    const ids = item.ProviderIds || {};
+    const rawId = item.Id || item.id || '';
+    const keys = ['id:' + String(rawId).replace(/-/g, '').toLowerCase()];
+    const ids = item.ProviderIds || item.providerIds || {};
+    const itemType = item.Type || item.type || '';
     ['Tmdb', 'Imdb', 'Tvdb'].forEach(function (provider) {
       const value = ids[provider] || ids[provider.toLowerCase()];
-      if (value) keys.push(item.Type + ':' + provider + ':' + value);
+      if (value) keys.push(itemType + ':' + provider + ':' + value);
     });
-    if (item.Name && item.ProductionYear) keys.push(item.Type + ':name:' + item.Name.trim().toLowerCase() + ':' + item.ProductionYear);
+    const name = item.Name || item.name;
+    const year = item.ProductionYear || item.year;
+    if (name && year) keys.push(itemType + ':name:' + name.trim().toLowerCase() + ':' + year);
     return keys;
   }
 
