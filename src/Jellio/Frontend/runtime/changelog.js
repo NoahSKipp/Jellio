@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.4",
+    "summary": "Full multi-language UI translation and localized Jellyfin metadata fetching.",
+    "highlights": [
+      {
+        "title": "Comprehensive UI Localization",
+        "description": "Translates all Jellio interface elements across the sidebar, navigation, home row titles, detail action buttons, card context menus, search, login, and settings into all supported display languages (English, German, Spanish, Polish, French, Italian, and Portuguese)."
+      },
+      {
+        "title": "Localized Metadata & Culture Querying",
+        "description": "Requests item titles, series descriptions, and overviews in the active display language from the Jellyfin server with automatic fallback to English when translations are unavailable."
+      },
+      {
+        "title": "Language-Segmented Row Caching",
+        "description": "Partitions offline row and item caches by active display language and automatically refreshes cached rows when switching languages so stale translations are never shown."
+      }
+    ]
+  },
+  {
     "version": "1.87.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.3",

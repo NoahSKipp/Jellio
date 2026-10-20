@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // This runtime's own login screen, a real replacement for native
 // jellyfin-web's login page rather than an overlay injected on top of
 // it. The original codebase's own version (js/loginProfiles.js, now
@@ -49,7 +50,7 @@ function completeSignIn() {
 // manual form: a remembered or public profile's own owner may still
 // need it, not only someone with no profile visible at all.
 function buildBypassLink() {
-  const link = el('button', 'jellio-login-cancel', 'Use classic sign-in');
+  const link = el('button', 'jellio-login-cancel', t('auth_classic_signin'));
   link.type = 'button';
   link.addEventListener('click', function () {
     bypassLoginScreen();
@@ -65,20 +66,20 @@ function buildManualForm(options) {
 
   const username = document.createElement('input');
   username.type = 'text';
-  username.placeholder = 'Username';
+  username.placeholder = t('auth_username');
   username.autocomplete = 'username';
   username.className = 'jellio-login-input';
   if (opts.username) username.value = opts.username;
 
   const password = document.createElement('input');
   password.type = 'password';
-  password.placeholder = 'Password';
+  password.placeholder = t('auth_password');
   password.autocomplete = 'current-password';
   password.className = 'jellio-login-input';
 
   const status = el('p', 'jellio-login-status', opts.message || '');
 
-  const submit = el('button', 'jellio-login-submit', 'Sign in');
+  const submit = el('button', 'jellio-login-submit', t('action_sign_in'));
   submit.type = 'submit';
 
   form.appendChild(username);
@@ -87,7 +88,7 @@ function buildManualForm(options) {
   form.appendChild(submit);
 
   if (opts.onForgotPassword) {
-    const forgot = el('button', 'jellio-login-forgot', 'Forgot password?');
+    const forgot = el('button', 'jellio-login-forgot', t('auth_forgot_password'));
     forgot.type = 'button';
     forgot.addEventListener('click', function () {
       opts.onForgotPassword(username.value);
@@ -96,7 +97,7 @@ function buildManualForm(options) {
   }
 
   if (opts.onCancel) {
-    const cancel = el('button', 'jellio-login-cancel', 'Back');
+    const cancel = el('button', 'jellio-login-cancel', t('nav_back'));
     cancel.type = 'button';
     cancel.addEventListener('click', opts.onCancel);
     form.appendChild(cancel);
@@ -105,18 +106,18 @@ function buildManualForm(options) {
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (!username.value || !password.value) {
-      status.textContent = 'Enter a username and password.';
+      status.textContent = t('auth_enter_credentials');
       return;
     }
     submit.disabled = true;
-    status.textContent = 'Signing in…';
+    status.textContent = t('auth_signing_in');
     authenticateByName(username.value, password.value)
       .then(function () {
         completeSignIn();
       })
       .catch(function (err) {
         console.warn('Jellio: sign in failed', err);
-        status.textContent = err && err.status === 401 ? 'Wrong username or password.' : 'Could not sign in.';
+        status.textContent = err && err.status === 401 ? t('auth_invalid_credentials') : t('auth_failed');
         submit.disabled = false;
       });
   });
@@ -144,21 +145,21 @@ function buildForgotUsernameForm(prefillUsername, onRequested, onCancel) {
 
   const username = document.createElement('input');
   username.type = 'text';
-  username.placeholder = 'Username';
+  username.placeholder = t('auth_username');
   username.autocomplete = 'username';
   username.className = 'jellio-login-input';
   if (prefillUsername) username.value = prefillUsername;
 
   const status = el('p', 'jellio-login-status', '');
 
-  const submit = el('button', 'jellio-login-submit', 'Send reset code');
+  const submit = el('button', 'jellio-login-submit', t('auth_send_reset_code'));
   submit.type = 'submit';
 
   form.appendChild(username);
   form.appendChild(status);
   form.appendChild(submit);
 
-  const cancel = el('button', 'jellio-login-cancel', 'Back');
+  const cancel = el('button', 'jellio-login-cancel', t('nav_back'));
   cancel.type = 'button';
   cancel.addEventListener('click', onCancel);
   form.appendChild(cancel);
@@ -166,11 +167,11 @@ function buildForgotUsernameForm(prefillUsername, onRequested, onCancel) {
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (!username.value) {
-      status.textContent = 'Enter your username.';
+      status.textContent = t('auth_enter_username');
       return;
     }
     submit.disabled = true;
-    status.textContent = 'Sending…';
+    status.textContent = t('auth_sending');
     requestPasswordReset(username.value)
       .then(function () {
         onRequested(username.value);
@@ -205,29 +206,29 @@ function buildForgotPinForm(username, onCancel) {
 
   const pin = document.createElement('input');
   pin.type = 'text';
-  pin.placeholder = 'Reset code';
+  pin.placeholder = t('auth_reset_code');
   pin.autocomplete = 'one-time-code';
   pin.className = 'jellio-login-input';
 
   const newPassword = document.createElement('input');
   newPassword.type = 'password';
-  newPassword.placeholder = 'New password';
+  newPassword.placeholder = t('settings_new_password');
   newPassword.autocomplete = 'new-password';
   newPassword.className = 'jellio-login-input';
 
   const confirmPassword = document.createElement('input');
   confirmPassword.type = 'password';
-  confirmPassword.placeholder = 'Confirm new password';
+  confirmPassword.placeholder = t('settings_confirm_password');
   confirmPassword.autocomplete = 'new-password';
   confirmPassword.className = 'jellio-login-input';
 
   const status = el(
     'p',
     'jellio-login-status',
-    'If that account exists, a reset code has been emailed to it. Enter it below with a new password.',
+    t('auth_reset_requested_desc'),
   );
 
-  const submit = el('button', 'jellio-login-submit', 'Reset password');
+  const submit = el('button', 'jellio-login-submit', t('auth_reset_password'));
   submit.type = 'submit';
 
   form.appendChild(pin);
@@ -236,7 +237,7 @@ function buildForgotPinForm(username, onCancel) {
   form.appendChild(status);
   form.appendChild(submit);
 
-  const cancel = el('button', 'jellio-login-cancel', 'Back');
+  const cancel = el('button', 'jellio-login-cancel', t('nav_back'));
   cancel.type = 'button';
   cancel.addEventListener('click', onCancel);
   form.appendChild(cancel);
@@ -244,19 +245,19 @@ function buildForgotPinForm(username, onCancel) {
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (!pin.value || !newPassword.value) {
-      status.textContent = 'Enter the reset code and a new password.';
+      status.textContent = t('auth_enter_pin_password');
       return;
     }
     if (newPassword.value !== confirmPassword.value) {
-      status.textContent = 'New passwords do not match.';
+      status.textContent = t('auth_passwords_mismatch');
       return;
     }
     submit.disabled = true;
-    status.textContent = 'Resetting…';
+    status.textContent = t('auth_resetting');
     redeemPasswordResetPin(pin.value)
       .then(function (result) {
         if (!result || !result.Success) {
-          status.textContent = 'That reset code is invalid or has expired.';
+          status.textContent = t('auth_pin_expired');
           submit.disabled = false;
           return;
         }
@@ -284,13 +285,13 @@ function buildForgotPinForm(username, onCancel) {
 
 function renderForgotPassword(container, prefillUsername, onCancel) {
   container.textContent = '';
-  container.appendChild(el('h1', 'jellio-login-heading', 'Reset password'));
+  container.appendChild(el('h1', 'jellio-login-heading', t('auth_reset_password')));
   container.appendChild(
     buildForgotUsernameForm(
       prefillUsername,
       function (username) {
         container.textContent = '';
-        container.appendChild(el('h1', 'jellio-login-heading', 'Reset password'));
+        container.appendChild(el('h1', 'jellio-login-heading', t('auth_reset_password')));
         container.appendChild(buildForgotPinForm(username, onCancel));
       },
       onCancel,
@@ -385,7 +386,7 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
 
   wrap.appendChild(avatarWrap);
   wrap.appendChild(name);
-  wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
+  wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', t('auth_quick_signin')));
   return wrap;
 }
 
@@ -464,7 +465,7 @@ function buildPublicUserTile(user, index, onNeedsPassword, online) {
 
   wrap.appendChild(avatarWrap);
   wrap.appendChild(name);
-  if (!hasPassword) wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', 'Quick sign-in'));
+  if (!hasPassword) wrap.appendChild(el('span', 'jellio-account-switcher-quick-label', t('auth_quick_signin')));
   return wrap;
 }
 
@@ -484,7 +485,7 @@ function buildAddTile(index, onClick) {
 
   avatarWrap.appendChild(avatar);
   wrap.appendChild(avatarWrap);
-  wrap.appendChild(el('span', 'jellio-login-profile-name', 'Other user'));
+  wrap.appendChild(el('span', 'jellio-login-profile-name', t('auth_other_user')));
   return wrap;
 }
 
@@ -507,7 +508,7 @@ function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
 
   function showManual(prefillName, message) {
     container.textContent = '';
-    container.appendChild(el('h1', 'jellio-login-heading', 'Sign in'));
+    container.appendChild(el('h1', 'jellio-login-heading', t('action_sign_in')));
     container.appendChild(
       buildManualForm({
         username: prefillName,
@@ -531,7 +532,7 @@ function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
     return;
   }
 
-  container.appendChild(el('h1', 'jellio-login-heading', 'Who’s watching?'));
+  container.appendChild(el('h1', 'jellio-login-heading', t('auth_whos_watching')));
   const grid = el('div', 'jellio-login-profile-grid');
   let index = 0;
 
@@ -543,7 +544,7 @@ function renderProfilePicker(container, remembered, publicUsers, onlineIds) {
         index++,
         rerender,
         function (name) {
-          showManual(name, 'That saved sign-in no longer works. Sign in again.');
+          showManual(name, t('auth_saved_login_expired'));
         },
         onlineIds.has(userId),
       ),

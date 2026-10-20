@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Floating pill nav for a real phone width (css/app.css's own
 // breakpoint hides this in favour of components/sidebar.js's own rail
 // above it; a tablet keeps the rail, real feedback asked for the pill
@@ -76,7 +77,7 @@ function buildLibraryButton(links) {
     }),
   );
   button.className = 'jellio-mobile-nav-link' + (activeHash ? ' jellio-mobile-nav-link-active' : '');
-  button.setAttribute('aria-label', 'Library');
+  button.setAttribute('aria-label', t('nav_library'));
   if (activeHash) button.setAttribute('aria-current', 'page');
 
   const iconWrap = document.createElement('span');
@@ -86,7 +87,7 @@ function buildLibraryButton(links) {
 
   const labelEl = document.createElement('span');
   labelEl.className = 'jellio-mobile-nav-label';
-  labelEl.textContent = 'Library';
+  labelEl.textContent = t('nav_library');
   button.appendChild(labelEl);
 
   button.addEventListener('click', function () {
@@ -134,7 +135,7 @@ async function buildProfileButton() {
   iconWrap.appendChild(await buildAvatarIconMount());
   button.appendChild(iconWrap);
 
-  let name = 'Profile';
+  let name = t('nav_profile');
   try {
     const user = await getCurrentUser();
     if (user && user.Name) name = user.Name;

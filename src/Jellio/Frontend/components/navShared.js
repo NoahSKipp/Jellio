@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Shared between components/sidebar.js (desktop/tablet rail) and
 // components/mobileNav.js (phone pill bar): which links exist, what
 // their icons look like, which one is active, and the profile avatar,
@@ -60,7 +61,7 @@ const LIBRARY_ROUTES = {
 // is this runtime's own real settings screen, mounted at #/account
 // (app.js's own SCREENS.account), the one real hash that actually
 // reaches it.
-export const SETTINGS_LINK = { icon: 'settings', label: 'Settings', hash: '#/account' };
+export const SETTINGS_LINK = { icon: 'settings', get label() { return t('nav_settings'); }, hash: '#/account' };
 
 // Every session always has these four, no real fetch behind any of
 // them: exported on its own so components/sidebar.js and components/
@@ -69,10 +70,10 @@ export const SETTINGS_LINK = { icon: 'settings', label: 'Settings', hash: '#/acc
 // before, just no longer needing to wait on it first for the one part
 // of that output that was never actually conditional on anything.
 export const FIXED_NAV_LINKS = [
-  { icon: 'home', label: 'Home', hash: '#/home' },
-  { icon: 'search', label: 'Search', hash: '#/search' },
-  { icon: 'bookmark_add', label: 'Watchlist', hash: '#/home?tab=1' },
-  { icon: 'dynamic_feed', label: 'Feed', hash: '#/feed' },
+  { icon: 'home', get label() { return t('nav_home'); }, hash: '#/home' },
+  { icon: 'search', get label() { return t('nav_search'); }, hash: '#/search' },
+  { icon: 'bookmark_add', get label() { return t('nav_watchlist'); }, hash: '#/home?tab=1' },
+  { icon: 'dynamic_feed', get label() { return t('nav_feed'); }, hash: '#/feed' },
 ];
 
 export const MANGA_LIBRARY = /manga|comic|manhwa|webtoon/i;
@@ -155,8 +156,8 @@ export async function getPrimaryNavLinks() {
     return /anime/i.test(view.Name || '');
   })[0];
 
-  if (moviesView) links.push({ icon: 'movies', label: 'Movies', hash: libraryHash(moviesView) });
-  if (tvView) links.push({ icon: 'shows', label: 'Shows', hash: libraryHash(tvView) });
+  if (moviesView) links.push({ icon: 'movies', label: t('nav_movies'), hash: libraryHash(moviesView) });
+  if (tvView) links.push({ icon: 'shows', label: t('nav_shows'), hash: libraryHash(tvView) });
 
   // Anime has no real Jellyfin library of its own: Gelato resolves one
   // global SeriesPath for every series import (GelatoManager.TryGetSeriesFolder),
@@ -178,9 +179,9 @@ export async function getPrimaryNavLinks() {
   // the one place that check, and its own real empty state, actually
   // lives now, behind a real loading skeleton rather than nothing.
   if (realAnimeView) {
-    links.push({ icon: 'anime', label: 'Anime', hash: libraryHash(realAnimeView) });
+    links.push({ icon: 'anime', label: t('nav_anime'), hash: libraryHash(realAnimeView) });
   } else if (tvView) {
-    links.push({ icon: 'anime', label: 'Anime', hash: libraryHash(tvView) + '&jellioKind=anime' });
+    links.push({ icon: 'anime', label: t('nav_anime'), hash: libraryHash(tvView) + '&jellioKind=anime' });
   }
 
   // Manga always has a shelf of its own: a dedicated manga/comics library
@@ -199,7 +200,7 @@ export async function getPrimaryNavLinks() {
     if (!source) return;
     links.push({
       icon: 'collections_bookmark',
-      label: 'Manga',
+      label: t('nav_manga'),
       hash: libraryHash(source) + '&bookKind=manga' + (mangaView ? '&mangaLibrary=1' : ''),
       group: 'reading',
     });
@@ -220,8 +221,8 @@ export async function getPrimaryNavLinks() {
     // video libraries, below their own divider.
     if (view.CollectionType === 'books') {
       if (view === mangaView) return;
-      links.push({ icon: 'auto_stories', label: 'Books', hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
-      links.push({ icon: 'headphones', label: 'Audiobooks', hash: libraryHash(view) + '&bookKind=audiobook', group: 'reading' });
+      links.push({ icon: 'auto_stories', label: t('nav_books'), hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
+      links.push({ icon: 'headphones', label: t('nav_audiobooks'), hash: libraryHash(view) + '&bookKind=audiobook', group: 'reading' });
       if (view === booksView) pushMangaLink();
       return;
     }
@@ -232,7 +233,7 @@ export async function getPrimaryNavLinks() {
   pushMangaLink();
   // What's kept on this device (screens/downloads.js), the one link that
   // still works offline.
-  links.push({ icon: 'download_for_offline', label: 'Downloads', hash: '#/downloads', group: 'reading' });
+  links.push({ icon: 'download_for_offline', label: t('nav_downloads'), hash: '#/downloads', group: 'reading' });
   return links;
 }
 

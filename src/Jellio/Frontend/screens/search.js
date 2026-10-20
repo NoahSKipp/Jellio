@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Own search, not a reskin of native SearchFields.tsx: a plain text input
 // against the same real /Items?searchTerm= query every other screen's own
 // grid already uses. Debounced locally, does not push a route on every
@@ -104,8 +105,8 @@ export async function renderSearch(root, params) {
   const input = document.createElement('input');
   input.type = 'search';
   input.className = 'jellio-search-input';
-  input.placeholder = 'Search movies and shows';
-  input.setAttribute('aria-label', 'Search movies and shows');
+  input.placeholder = t('search_placeholder');
+  input.setAttribute('aria-label', t('search_placeholder'));
   input.autofocus = true;
   header.appendChild(input);
   root.appendChild(header);
@@ -122,8 +123,8 @@ export async function renderSearch(root, params) {
     }
     recentSection.hidden = false;
     const recentHeader = el('div', 'jellio-search-recent-header');
-    recentHeader.appendChild(el('span', 'jellio-search-recent-title', 'Recent Searches'));
-    const clearBtn = el('button', 'jellio-search-recent-clear', 'Clear all');
+    recentHeader.appendChild(el('span', 'jellio-search-recent-title', t('search_recent_title')));
+    const clearBtn = el('button', 'jellio-search-recent-clear', t('search_clear_all'));
     clearBtn.type = 'button';
     clearBtn.addEventListener('click', function () {
       clearRecentSearches();
@@ -157,9 +158,9 @@ export async function renderSearch(root, params) {
   // is the whole fix: every branch below now leaves it saying
   // something a reader can tell apart from silence.
   const FILTER_CATEGORIES = [
-    { id: 'all', label: 'All' },
-    { id: 'movies', label: 'Movies' },
-    { id: 'series', label: 'TV Shows' },
+    { id: 'all', label: t('search_filter_all') },
+    { id: 'movies', label: t('search_filter_movies') },
+    { id: 'series', label: t('search_filter_shows') },
   ];
   const SEARCH_TAB_STORAGE_KEY = 'jellio_search_category_tab';
   let activeFilter = 'all';

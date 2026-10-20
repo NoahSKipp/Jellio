@@ -1,3 +1,4 @@
+import { getDisplayCulture, getDisplayLanguage } from './i18n.js';
 // Every server call Jellio's own screens need, built directly on fetch and
 // auth.js's own headers. Nothing here touches window.ApiClient: the whole
 // point of this runtime is that a screen's data never depends on native
@@ -518,9 +519,19 @@ function safeLocalStorage() {
 
 function rowCacheScope() {
   const user = getSessionUser();
-  return { serverId: (user && user.ServerId) || getServerAddress(), userId: getCurrentUserId() };
+  return { serverId: (user && user.ServerId) || getServerAddress(), userId: getCurrentUserId(), language: getDisplayLanguage() };
 }
 
+
+// Invalidate caches and refresh row cache scope when display language changes
+if (typeof window !== 'undefined') {
+  window.addEventListener('jellio-display-language-change', function () {
+    clearCachedRows();
+    if (rowCache) {
+      rowCache.setScope(rowCacheScope());
+    }
+  });
+}
 function activeRowCache() {
   if (!rowCacheFlag || !getCurrentUserId()) return null;
   const scope = rowCacheScope();
@@ -658,8 +669,9 @@ function reportHomeLoad() {
 export function getItem(itemId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  return cached('item:' + itemId, function () {
-    return loadItemInfo(getJson, userId, itemId);
+  const culture = getDisplayCulture();
+  return cached('item:' + itemId + ':' + culture, function () {
+    return loadItemInfo(getJson, userId, itemId, { culture: culture });
   }).catch(function (err) {
     return downloadedItem(itemId, err);
   });
@@ -693,7 +705,13 @@ export function seedItemCache(item) {
 
 export function getCachedItemSync(itemId) {
   if (!itemId) return null;
-  const hit = cache.get('details:' + itemId) || cache.get('details:' + itemId + ':full') || cache.get('item:' + itemId);
+  const culture = getDisplayCulture();
+  const hit = cache.get('details:' + itemId + ':' + culture) ||
+    cache.get('details:' + itemId + ':full:' + culture) ||
+    cache.get('item:' + itemId + ':' + culture) ||
+    cache.get('details:' + itemId) ||
+    cache.get('details:' + itemId + ':full') ||
+    cache.get('item:' + itemId);
   return hit ? hit.value : null;
 }
 
@@ -709,12 +727,14 @@ export function getItemDetails(itemId, options) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const opts = options || {};
-  const cacheKey = 'details:' + itemId + (opts.includePlaybackFields ? ':full' : '');
+  const culture = getDisplayCulture();
+  const cacheKey = 'details:' + itemId + (opts.includePlaybackFields ? ':full' : '') + ':' + culture;
   // Info only (runtime/itemInfo.js): streams come from getMediaSources.
   return cachedRecent(cacheKey, function () {
     return loadItemInfo(getJson, userId, itemId, {
       includePlaybackFields: !!opts.includePlaybackFields,
       timeoutMs: ITEM_DETAILS_TIMEOUT_MS,
+      culture: culture,
     });
   }, SHORT_CACHE_TTL_MS, itemId).catch(function (err) {
     return downloadedItem(itemId, err);
@@ -769,7 +789,8 @@ export function getResumeItems(limit) {
     // Video only: a half-listened audiobook resumes into its own
     // Continue Listening row (getContinueListening below), not here.
     '&MediaTypes=Video' +
-    '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb';
+    '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb' +
+    (getDisplayCulture() ? '&Culture=' + encodeURIComponent(getDisplayCulture()) : '');
   return rowJson(query, 'personal', { priority: true, rank: 0 }).then(function (result) {
     return applyRealDurationOverrides((result && result.Items) || []);
   });
@@ -798,7 +819,9 @@ export function getItemsByIds(ids, rowClass) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!ids || !ids.length) return Promise.resolve([]);
+  const culture = getDisplayCulture();
   const params = new URLSearchParams({ Ids: ids.join(','), Fields: 'PrimaryImageAspectRatio' });
+  if (culture) params.set('Culture', culture);
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return (rowClass ? rowJson(path, rowClass, { priority: true, rank: 2 }) : getPriorityJson(path)).then(function (result) {
     const byId = new Map();
@@ -1946,7 +1969,8 @@ export function getLibraryItems(parentId, collectionType, options) {
 export function getSeasons(seriesId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const path = '/Shows/' + seriesId + '/Seasons?userId=' + userId;
+  const culture = getDisplayCulture();
+  const path = '/Shows/' + seriesId + '/Seasons?userId=' + userId + (culture ? '&Culture=' + encodeURIComponent(culture) : '');
   return cachedRecent(path, function () {
     return getJson(path);
   }, SHORT_CACHE_TTL_MS, seriesId).then(function (result) {
@@ -1967,11 +1991,13 @@ export function getSeriesEpisodes(seriesId) {
 export function getEpisodes(seriesId, seasonId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
+  const culture = getDisplayCulture();
   const params = new URLSearchParams({
     userId: userId,
     seasonId: seasonId,
     Fields: 'Overview,PrimaryImageAspectRatio',
   });
+  if (culture) params.set('Culture', culture);
   const path = '/Shows/' + seriesId + '/Episodes?' + params.toString();
   return cachedRecent(path, function () {
     return getJson(path);
@@ -1988,6 +2014,7 @@ export function searchItems(term, limit, signal) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!term) return Promise.resolve([]);
+  const culture = getDisplayCulture();
   const params = new URLSearchParams({
     searchTerm: term,
     Recursive: 'true',
@@ -1995,6 +2022,7 @@ export function searchItems(term, limit, signal) {
     Fields: 'PrimaryImageAspectRatio',
     Limit: String(limit || 50),
   });
+  if (culture) params.set('Culture', culture);
   return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (result) {
     return (result && result.Items) || [];
   });
@@ -4595,3 +4623,18 @@ export function getCommunityUsers() {
 }
 
 
+
+// Sync display language preference to Jellyfin server DisplayPreferences
+export async function saveServerDisplayLanguage(lang) {
+  const userId = getCurrentUserId();
+  if (!userId) return;
+  try {
+    await fetch(getServerAddress() + '/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
+      body: JSON.stringify({ Id: 'usersettings', CustomPrefs: { language: lang || 'en' } }),
+    });
+  } catch (err) {
+    // Best effort only
+  }
+}

@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Quick actions on a poster card without leaving the row it lives in,
 // ported in spirit from NuvioWeb's own posterOptionsMenu.js (its own
 // screens open it on a held remote button, real Jellyfin.PlayedItems and
@@ -199,7 +200,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
 
   if (!opts.onlyExtra && item && item.Id) {
     menu.appendChild(
-      buildOption('Share link', 'share', function () {
+      buildOption(t('menu_share_link'), 'share', function () {
         shareItem(item)
           .then((result) => {
             if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
@@ -213,17 +214,17 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     // Nothing item-specific applies.
   } else if (opts.continueWatching) {
     menu.appendChild(
-      buildOption('Go to details', 'info', function () {
+      buildOption(t('menu_go_to_details'), 'info', function () {
         navigateTo('#/item?id=' + item.Id);
       }),
     );
     menu.appendChild(
-      buildOption('Play manually', 'play_arrow', function () {
+      buildOption(t('menu_play_manually'), 'play_arrow', function () {
         openStreamPicker(item, { forceChoice: true });
       }),
     );
     menu.appendChild(
-      buildOption('Start from beginning', 'replay', function () {
+      buildOption(t('menu_start_beginning'), 'replay', function () {
         restartFromBeginning(item).catch(function (err) {
           console.warn('Jellio: could not start over', err);
           showToast('Could not start over. Try again.');
@@ -232,7 +233,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     );
     menu.appendChild(
       buildOption(
-        'Remove from Continue Watching',
+        t('menu_remove_continue'),
         'delete',
         function () {
           toggleWatched(item, opts, onChanged).catch(function (err) {
@@ -245,7 +246,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     );
   } else if (opts.upNext) {
     menu.appendChild(
-      buildOption('Go to details', 'info', function () {
+      buildOption(t('menu_go_to_details'), 'info', function () {
         navigateTo('#/item?id=' + item.Id);
       }),
     );
@@ -256,7 +257,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     // already leans on above.
     menu.appendChild(
       buildOption(
-        'Remove from Up Next',
+        t('menu_remove_up_next'),
         'delete',
         function () {
           toggleWatched(item, opts, onChanged).catch(function (err) {
@@ -276,7 +277,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     if (item.SeriesId) {
       menu.appendChild(
         buildOption(
-          'Remove Show from Up Next',
+          t('menu_remove_show_up_next'),
           'playlist_remove',
           function () {
             hideSeriesFromNextUp(item.SeriesId)
@@ -296,7 +297,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     const isWatchlisted = !!(item.UserData && item.UserData.IsFavorite);
     menu.appendChild(
       buildOption(
-        isWatchlisted ? 'Remove from Watchlist' : 'Add to Watchlist',
+        isWatchlisted ? t('menu_remove_watchlist') : t('menu_add_watchlist'),
         isWatchlisted ? 'bookmark_added' : 'bookmark_add',
         function () {
           toggleWatchlist(item, onChanged).catch(function (err) {
@@ -311,7 +312,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       const isGrouplisted = isOnGrouplistSync(item.Id);
       menu.appendChild(
         buildOption(
-          isGrouplisted ? 'Remove from Grouplist' : 'Add to Grouplist',
+          isGrouplisted ? t('menu_remove_grouplist') : t('menu_add_grouplist'),
           isGrouplisted ? 'playlist_add_check' : 'playlist_add',
           function () {
             toggleGrouplist(item.Id).catch(function (err) {
@@ -324,7 +325,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     }
     const isPlayed = !!(item.UserData && item.UserData.Played);
     menu.appendChild(
-      buildOption(isPlayed ? 'Mark as unwatched' : 'Mark as watched', 'check', function () {
+      buildOption(isPlayed ? t('detail_mark_unwatched') : t('detail_mark_watched'), 'check', function () {
         toggleWatched(item, opts, onChanged).catch(function (err) {
           console.warn('Jellio: could not update watched state', err);
           showToast('Could not update watched state. Try again.');
@@ -335,7 +336,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     // film asks for the quality, a season or series which episodes.
     if (canDownload(item)) {
       menu.appendChild(
-        buildOption(item.Type === 'Series' || item.Type === 'Season' ? 'Download episodes' : 'Download', 'download', function () {
+        buildOption(item.Type === 'Series' || item.Type === 'Season' ? t('menu_download_episodes') : t('menu_download'), 'download', function () {
           promptDownload(item, anchorRect);
         }),
       );
@@ -346,18 +347,18 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       // for regardless, a standalone movie has no sibling of its own to
       // cross-reference against.
       menu.appendChild(
-        buildOption('Find Skip Intro/Credits', 'search', function () {
+        buildOption(t('menu_find_skip'), 'search', function () {
           findSkipTimestamps(item.Id, item.Name, false);
         }),
       );
     } else if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && item.Type === 'Series') {
       menu.appendChild(
-        buildOption('Quick Skip Search (Show)', 'bolt', function () {
+        buildOption(t('menu_quick_skip'), 'bolt', function () {
           findSkipTimestamps(item.Id, item.Name, false);
         }),
       );
       menu.appendChild(
-        buildOption('Deep Skip Search (Show)', 'travel_explore', function () {
+        buildOption(t('menu_deep_skip'), 'travel_explore', function () {
           findSkipTimestamps(item.Id, item.Name, true);
         }),
       );

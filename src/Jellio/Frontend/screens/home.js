@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // First real screen, proof of the whole architecture end to end: its own
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
 // read or waited on.
@@ -246,7 +247,7 @@ function buildHubStrip(collections) {
   if (!names.length) return null;
 
   const section = el('section', 'jellio-hub');
-  section.appendChild(el('h2', 'jellio-row-title', 'Studio Hubs'));
+  section.appendChild(el('h2', 'jellio-row-title', t('home_studio_hubs')));
   // Real feedback live: this strip had no visible way to reach a tile
   // scrolled past the edge on a smaller monitor except a mouse drag or
   // a trackpad swipe, the exact real gap components/scrollArrows.js's
@@ -351,7 +352,7 @@ async function buildComingSoonRow() {
   if (!entries.length) return null;
 
   const section = el('section', 'jellio-row');
-  section.appendChild(el('h2', 'jellio-row-title', 'Coming Soon'));
+  section.appendChild(el('h2', 'jellio-row-title', t('home_coming_soon')));
   const trackWrap = el('div', 'jellio-row-track-wrap');
   const track = el('div', 'jellio-row-track');
   entries.slice(0, COMING_SOON_LIMIT).forEach(function (entry) {
@@ -396,12 +397,12 @@ function buildWatchlistSection(title, items) {
 function buildListsHeader(activeList) {
   const header = el('header', 'jellio-home-header');
   if (!isGrouplistEnabled()) {
-    header.appendChild(el('h1', 'jellio-home-greeting', 'Watchlist'));
+    header.appendChild(el('h1', 'jellio-home-greeting', t('home_watchlist')));
     return header;
   }
 
   const toggle = el('div', 'jellio-lists-toggle');
-  const watchlistTab = el('button', 'jellio-lists-toggle-tab', 'Watchlist');
+  const watchlistTab = el('button', 'jellio-lists-toggle-tab', t('home_watchlist'));
   watchlistTab.type = 'button';
   watchlistTab.classList.toggle('jellio-lists-toggle-tab-active', activeList !== 'group');
   watchlistTab.addEventListener('click', function () {
@@ -602,28 +603,28 @@ async function buildCheapSections() {
   // on slower book scans or Coming Soon calendar lookups.
   const resume = settle(getResumeItems(20)).then(function (result) {
     if (result.status === 'fulfilled') {
-      const row = buildRow('Continue Watching', result.value, { continueWatching: true });
+      const row = buildRow(t('home_continue_watching'), result.value, { continueWatching: true });
       if (row) push(wrapRowForCustomization(row, 'continue-watching'), 'continue-watching');
     }
   });
 
   const reading = settle(getContinueReading(20)).then(function (result) {
     if (result.status === 'fulfilled') {
-      const row = buildRow('Continue Reading', result.value, { openReader: true });
+      const row = buildRow(t('home_continue_reading'), result.value, { openReader: true });
       if (row) push(wrapRowForCustomization(row, 'continue-reading'), 'continue-reading');
     }
   });
 
   const listening = settle(getContinueListening(20)).then(function (result) {
     if (result.status === 'fulfilled') {
-      const row = buildRow('Continue Listening', result.value, { openReader: true });
+      const row = buildRow(t('home_continue_listening'), result.value, { openReader: true });
       if (row) push(wrapRowForCustomization(row, 'continue-listening'), 'continue-listening');
     }
   });
 
   const nextUp = settle(getNextUp(20)).then(function (result) {
     if (result.status === 'fulfilled') {
-      const row = buildRow('Up Next', result.value, { upNext: true });
+      const row = buildRow(t('home_next_up'), result.value, { upNext: true });
       if (row) push(wrapRowForCustomization(row, 'up-next'), 'up-next');
     }
   });
@@ -686,7 +687,7 @@ async function buildExpensiveSections() {
         // usually come out empty, and the watchers make it a different row.
         const valid = dedupe(withoutAnime(results[0] || [], results[1]), {});
         if (!valid.length) return;
-        const row = buildRow('What Others Are Watching', valid);
+        const row = buildRow(t('home_community_watching'), valid);
         if (row) place(wrapRowForCustomization(row, 'rec:What Others Are Watching'), EXPENSIVE_SLOTS.community);
       })
       .catch(function (err) {

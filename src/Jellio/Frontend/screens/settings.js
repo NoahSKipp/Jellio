@@ -27,6 +27,7 @@
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel } from '../runtime/bufferSettings.js';
 import {
   getCurrentUser,
+  saveServerDisplayLanguage,
   updateUserPassword,
   getSleepTimerStatus,
   cancelSleepTimer,
@@ -247,32 +248,32 @@ function buildSelectRow(iconName, title, description, options, value, onChange) 
 }
 
 function buildPasswordCard() {
-  const { card, body } = buildCard('lock', 'Security', 'Change the password used to sign in to this account.');
+  const { card, body } = buildCard('lock', t('settings_security_title'), t('settings_security_desc'));
   const wrap = el('div', 'jellio-settings-card-body-form');
   const form = document.createElement('form');
   form.className = 'jellio-settings-form';
 
   const current = document.createElement('input');
   current.type = 'password';
-  current.placeholder = 'Current password';
+  current.placeholder = t('settings_current_password');
   current.autocomplete = 'current-password';
   current.className = 'jellio-settings-input';
 
   const next = document.createElement('input');
   next.type = 'password';
-  next.placeholder = 'New password';
+  next.placeholder = t('settings_new_password');
   next.autocomplete = 'new-password';
   next.className = 'jellio-settings-input';
 
   const confirm = document.createElement('input');
   confirm.type = 'password';
-  confirm.placeholder = 'Confirm new password';
+  confirm.placeholder = t('settings_confirm_password');
   confirm.autocomplete = 'new-password';
   confirm.className = 'jellio-settings-input';
 
   const status = el('p', 'jellio-settings-status');
 
-  const submit = el('button', 'jellio-settings-button', 'Update password');
+  const submit = el('button', 'jellio-settings-button', t('settings_update_password'));
   submit.type = 'submit';
 
   form.appendChild(current);
@@ -326,12 +327,12 @@ async function buildPrivacyCard() {
     console.warn('Jellio: could not load profile privacy setting', err);
   }
 
-  const { card, body } = buildCard('visibility_off', 'Privacy', 'Controls what other users can see on your profile.');
+  const { card, body } = buildCard('visibility_off', t('settings_privacy_title'), t('settings_privacy_desc'));
   body.appendChild(
     buildToggleRow(
       null,
-      'Private profile',
-      'Your profile picture and banner stay visible. Achievement badges and activity are hidden from other users.',
+      t('onboarding_private_label'),
+      t('onboarding_private_desc'),
       isPrivate,
       function (checked) {
         setProfilePrivacy(checked).catch(function (err) {
@@ -360,12 +361,12 @@ async function buildGrouplistCard() {
   }
   setGrouplistEnabledLocal(grouplistEnabled);
 
-  const { card, body } = buildCard('groups', 'Group Watch lists', 'A shared list for picking what to watch together.');
+  const { card, body } = buildCard('groups', t('settings_groupwatch_title'), t('settings_groupwatch_desc'));
   body.appendChild(
     buildToggleRow(
       null,
-      'Grouplist',
-      'Adds a second list alongside your Watchlist, and a ranking session in Group Watch chat for picking from it together.',
+      t('settings_grouplist_label'),
+      t('settings_grouplist_desc'),
       grouplistEnabled,
       function (checked) {
         setGrouplistEnabledLocal(checked);
@@ -397,12 +398,12 @@ async function buildGrouplistCard() {
 // real path left, a small forward looking batch analyzed inside that
 // same real request every time a reader starts a new episode.
 function buildPlaybackCard() {
-  const { card, body } = buildCard('play_circle', 'Playback');
+  const { card, body } = buildCard('play_circle', t('settings_playback_title'));
   body.appendChild(
     buildSelectRow(
       null,
-      'Pre-buffer',
-      'How much of a video loads before it starts, and again if it runs out mid-playback. More or Maximum waits a little longer at the start for fewer hiccups on large (4K) files. Paused videos keep loading ahead either way.',
+      t('settings_prebuffer_label'),
+      t('settings_prebuffer_desc'),
       PREBUFFER_OPTIONS,
       getPrebufferLevel(),
       function (value, select, status) {
@@ -414,7 +415,7 @@ function buildPlaybackCard() {
   body.appendChild(
     buildToggleRow(
       null,
-      'Remember my stream choice',
+      t('settings_remember_stream'),
       'Skip the picker on a repeat play once you have chosen a stream for a title, remembered for 4 days. Use Change Stream on that title’s own page if a remembered one stops working.',
       isRememberStreamEnabled(),
       function (checked) {
@@ -425,7 +426,7 @@ function buildPlaybackCard() {
   body.appendChild(
     buildToggleRow(
       null,
-      'Delete after watching',
+      t('settings_delete_watched'),
       'Automatically remove downloaded episodes and movies from this device once finished. Files on the Jellyfin server are never affected.',
       isAutoDeleteWatchedEnabled(),
       function (checked) {
@@ -437,7 +438,7 @@ function buildPlaybackCard() {
     body.appendChild(
       buildToggleRow(
         null,
-        'Picture in picture when leaving the tab',
+        t('settings_pip_label'),
         'Keep the video playing in a small window when you switch to another tab or window while watching. It returns to the player when you come back.',
         isAutoPipEnabled(),
         function (checked) {
@@ -449,7 +450,7 @@ function buildPlaybackCard() {
   body.appendChild(
     buildSelectRow(
       null,
-      'Up Next timer',
+      t('settings_up_next_timer'),
       'How long the Up Next card counts down before automatically playing the next episode when credits begin. Choose Off to disable automatic transition.',
       UPNEXT_COUNTDOWN_OPTIONS,
       String(getUpNextCountdownSeconds()),
@@ -472,12 +473,12 @@ function buildPlaybackCard() {
 function buildLanguageCard(user) {
   const { card, body } = buildCard(
     'translate',
-    'Language',
-    'Used automatically when Jellyfin picks a stream’s default audio and subtitle track.',
+    t('onboarding_step_playback'),
+    t('onboarding_playback_sub'),
   );
 
   const configuration = (user && user.Configuration) || {};
-  const options = [{ value: '', label: 'No preference' }].concat(
+  const options = [{ value: '', label: t('settings_no_preference') }].concat(
     LANGUAGE_OPTIONS.map(function (option) {
       return { value: option.code, label: option.name };
     }),
@@ -540,7 +541,7 @@ async function buildQuickConnectCard() {
   }
   if (!enabled) return null;
 
-  const { card, body } = buildCard('link', 'Quick Connect', 'Approve a sign in on another device with its own code.');
+  const { card, body } = buildCard('link', t('settings_quick_connect'), t('settings_quick_connect_desc'));
   const wrap = el('div', 'jellio-settings-card-body-form');
   const form = document.createElement('form');
   form.className = 'jellio-settings-form';
@@ -638,11 +639,11 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
 
   const { card: profileCard, body: profileBody } = buildCard(
     'person',
-    'Profile',
+    t('nav_profile'),
     user ? 'Signed in as ' + user.Name : null,
   );
   profileBody.appendChild(
-    buildActionRow('photo_camera', 'Change avatar', null, function () {
+    buildActionRow('photo_camera', t('onboarding_change_avatar'), null, function () {
       // The sidebar's own avatar used to pick this up for free on the
       // next navigation's own full rebuild; it no longer rebuilds at
       // all past its first real render (components/sidebar.js's own
@@ -681,7 +682,7 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
   signOutBody.appendChild(
     buildActionRow(
       'logout',
-      'Sign out',
+      t('nav_sign_out'),
       null,
       function () {
         logout();
@@ -838,7 +839,7 @@ function buildTranslationCard(translationEnabled) {
 }
 
 function buildReadingOfflineCard() {
-  const { card, body } = buildCard('auto_stories', 'Reading & Audiobooks');
+  const { card, body } = buildCard('auto_stories', t('settings_reading_audiobooks'));
   body.appendChild(
     buildToggleRow(
       null,
@@ -939,7 +940,7 @@ function describeAppUpdate(state) {
 
 function buildAppUpdateCard(native) {
   const { card, body } = buildCard('laptop_mac', 'Jellio for macOS', 'Updates for this Mac app.');
-  const action = el('button', 'jellio-settings-button', 'Check for updates');
+  const action = el('button', 'jellio-settings-button', t('settings_check_updates'));
   action.type = 'button';
   const statusRow = buildRow(null, 'Version', '', action);
   const description = el('span', 'jellio-settings-row-description');
@@ -1076,10 +1077,10 @@ function buildAppUpdateCard(native) {
 // The home row cache (runtime/rowcache.js) lives in this browser; this
 // empties it for every tab.
 function buildHomeCacheCard() {
-  const { card, body } = buildCard('home', 'Home screen');
+  const { card, body } = buildCard('home', t('settings_home_cache'));
   const row = buildActionRow(
     'delete_sweep',
-    'Clear cached rows',
+    t('settings_clear_cache_btn'),
     isHomeRowCacheEnabled()
       ? 'Home rows are kept in this browser and refreshed in the background. Clearing makes the next load ask the server for all of them.'
       : 'The home row cache is turned off on this server.',
@@ -1299,6 +1300,8 @@ function buildDisplayCategory() {
       getDisplayLanguage(),
       function (value, select, status) {
         setDisplayLanguage(value);
+        clearCachedRows();
+        saveServerDisplayLanguage(value);
         status.textContent = t('action_saved') + ' (' + t('settings_saved_browser') + ')';
         window.setTimeout(function () {
           window.location.reload();
@@ -1307,11 +1310,11 @@ function buildDisplayCategory() {
     ),
   );
   wrap.appendChild(langCard);
-  const { card, body } = buildCard('auto_awesome', 'Seasonal effects', 'The themed background shown around holidays, when your server has it turned on.');
+  const { card, body } = buildCard('auto_awesome', t('settings_seasonal_title'), t('settings_seasonal_desc'));
   body.appendChild(
     buildSelectRow(
       null,
-      'Motion',
+      t('settings_motion_label'),
       'Full plays every effect. Reduced shows fewer, slower ones. Still keeps the scenery without animation. Off hides the theme completely. Auto uses Still when your system asks for reduced motion, otherwise Full.',
       MOTION_OPTIONS,
       getMotionPreference(),
@@ -1330,7 +1333,7 @@ function buildDisplayCategory() {
 function buildAboutCategory() {
   const wrap = el('div', 'jellio-settings-category');
   const version = jellioVersion();
-  const { card } = buildCard('info', 'About', version ? 'Jellio ' + version : 'Jellio');
+  const { card } = buildCard('info', t('settings_about_title'), version ? 'Jellio ' + version : 'Jellio');
   wrap.appendChild(card);
 
   const { card: wizardCard, body: wizardBody } = buildCard(
@@ -1478,20 +1481,20 @@ export async function renderSettings(root) {
   const user = userResult;
 
   const categories = [
-    { id: 'account', label: 'Account', build: function () { return buildAccountCategory(user, privacyCard, grouplistCard); } },
-    { id: 'playback', label: 'Playback', build: function () { return buildPlaybackCategory(user); } },
+    { id: 'account', label: t('settings_cat_account'), build: function () { return buildAccountCategory(user, privacyCard, grouplistCard); } },
+    { id: 'playback', label: t('settings_cat_playback'), build: function () { return buildPlaybackCategory(user); } },
     {
       id: 'sessions',
-      label: 'Sessions',
+      label: t('settings_cat_sessions'),
       build: function () { return buildSessionsCategory(sleepTimerCard, quickConnectCard); },
     },
-    { id: 'recommendations', label: 'Recommendations', build: buildRecommendationsCategory },
-    { id: 'display', label: 'Display', build: buildDisplayCategory },
-    { id: 'about', label: 'About', build: buildAboutCategory },
+    { id: 'recommendations', label: t('settings_cat_recommendations'), build: buildRecommendationsCategory },
+    { id: 'display', label: t('settings_cat_display'), build: buildDisplayCategory },
+    { id: 'about', label: t('settings_cat_about'), build: buildAboutCategory },
   ];
   categories.splice(2, 0, {
     id: 'reading',
-    label: 'Reading',
+    label: t('settings_cat_reading'),
     build: function () {
       return buildReadingCategory(config);
     },

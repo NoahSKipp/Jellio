@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Persistent nav rail, rendered as part of Jellio's own shell whenever any
 // custom screen is active on a tablet/desktop width viewport (CSS hides
 // this in favour of components/mobileNav.js's own pill bar on a real
@@ -12,7 +13,7 @@ import { openAccountSwitcher } from './accountSwitcher.js';
 import { openGroupWatch } from './groupWatch.js';
 import { getCurrentUser } from '../runtime/api.js';
 
-const DOWNLOADS_LINK = { icon: 'download_for_offline', label: 'Downloads', hash: '#/downloads' };
+const DOWNLOADS_LINK = { icon: 'download_for_offline', get label() { return t('nav_downloads'); }, hash: '#/downloads' };
 
 // Tagged with its own hash so updateActiveLinks() can find it again
 // without rebuilding it: real feedback was that the whole rail
@@ -71,8 +72,8 @@ function buildGroupWatchButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'jellio-sidebar-link jellio-sidebar-groupwatch';
-  button.title = 'Group Watch';
-  button.setAttribute('aria-label', 'Group Watch');
+  button.title = t('nav_group_watch');
+  button.setAttribute('aria-label', t('nav_group_watch'));
 
   const icon = document.createElement('span');
   icon.className = 'material-icons groups';
@@ -81,7 +82,7 @@ function buildGroupWatchButton() {
 
   const labelEl = document.createElement('span');
   labelEl.className = 'jellio-sidebar-label';
-  labelEl.textContent = 'Group Watch';
+  labelEl.textContent = t('nav_group_watch');
   button.appendChild(labelEl);
 
   button.addEventListener('click', function () {
@@ -99,8 +100,8 @@ function buildNowPlayingButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'jellio-sidebar-link jellio-sidebar-now-playing';
-  button.title = 'Playing';
-  button.setAttribute('aria-label', 'Now playing');
+  button.title = t('nav_now_playing');
+  button.setAttribute('aria-label', t('nav_now_playing'));
   button.setAttribute('aria-haspopup', 'true');
   button.setAttribute('aria-expanded', 'false');
   if (nowPlayingCount() > 0) button.classList.add('jellio-sidebar-now-playing-active');
@@ -117,7 +118,7 @@ function buildNowPlayingButton() {
 
   const labelEl = document.createElement('span');
   labelEl.className = 'jellio-sidebar-label';
-  labelEl.textContent = 'Playing';
+  labelEl.textContent = t('nav_now_playing');
   button.appendChild(labelEl);
 
   button.addEventListener('click', function () {
@@ -136,8 +137,8 @@ function buildNotificationsButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'jellio-sidebar-link jellio-sidebar-notifications';
-  button.title = 'Notifications';
-  button.setAttribute('aria-label', 'Notifications');
+  button.title = t('nav_notifications');
+  button.setAttribute('aria-label', t('nav_notifications'));
   button.setAttribute('aria-haspopup', 'true');
   button.setAttribute('aria-expanded', 'false');
   if (notificationsUnreadCount() > 0) button.classList.add('jellio-sidebar-notifications-active');
@@ -154,7 +155,7 @@ function buildNotificationsButton() {
 
   const labelEl = document.createElement('span');
   labelEl.className = 'jellio-sidebar-label';
-  labelEl.textContent = 'Notifications';
+  labelEl.textContent = t('nav_notifications');
   button.appendChild(labelEl);
 
   button.addEventListener('click', function () {
@@ -177,7 +178,7 @@ async function buildProfileButton() {
 
   button.appendChild(await buildAvatarIconMount());
 
-  let name = 'Profile';
+  let name = t('nav_profile');
   try {
     const user = await getCurrentUser();
     if (user && user.Name) name = user.Name;

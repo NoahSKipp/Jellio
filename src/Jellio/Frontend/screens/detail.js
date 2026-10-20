@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Metadata view for one item: backdrop, title, overview, genres, cast,
 // trailers.
 // Play opens components/streamPicker.js's own picker first when there
@@ -320,7 +321,7 @@ function buildTrailersRow(trailers) {
   if (!usable.length) return null;
 
   const section = el('section', 'jellio-detail-trailers');
-  section.appendChild(el('h2', 'jellio-row-title', 'Trailers'));
+  section.appendChild(el('h2', 'jellio-row-title', t('detail_trailers')));
   const trackWrap = el('div', 'jellio-row-track-wrap');
   const track = el('div', 'jellio-row-track');
 
@@ -424,7 +425,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
 
   const isPlayed = !!(episode.UserData && episode.UserData.Played);
   menu.appendChild(
-    buildEpisodeMenuOption(isPlayed ? 'Mark as unwatched' : 'Mark as watched', 'check', function () {
+    buildEpisodeMenuOption(isPlayed ? t('detail_mark_unwatched') : t('detail_mark_watched'), 'check', function () {
       setPlayed(episode.Id, !isPlayed)
         .then(function (updated) {
           episode.UserData = updated;
@@ -786,7 +787,7 @@ async function buildSeasonsSection(seriesId, targetPromise) {
   });
 
   const section = el('section', 'jellio-detail-seasons');
-  section.appendChild(el('h2', 'jellio-row-title', 'Episodes'));
+  section.appendChild(el('h2', 'jellio-row-title', t('detail_episodes')));
 
   // Real feedback: neither row had any visible way to reach anything
   // scrolled past its own edge except a mouse drag or a trackpad swipe,
@@ -917,7 +918,7 @@ function buildCastRow(people) {
   if (!cast.length) return null;
 
   const section = el('section', 'jellio-detail-cast');
-  section.appendChild(el('h2', 'jellio-row-title', 'Cast'));
+  section.appendChild(el('h2', 'jellio-row-title', t('detail_cast')));
   const trackWrap = el('div', 'jellio-row-track-wrap');
   const track = el('div', 'jellio-row-track');
   cast.slice(0, 20).forEach(function (person) {
@@ -1238,7 +1239,7 @@ export async function renderDetail(root, params) {
     const readButton = el('button', 'jellio-detail-play');
     readButton.type = 'button';
     readButton.appendChild(el('span', 'material-icons ' + (readerKind === 'read' ? 'menu_book' : 'headphones')));
-    const readLabel = el('span', null, hasProgress ? 'Resume' : readerKind === 'read' ? 'Read' : 'Listen');
+    const readLabel = el('span', null, hasProgress ? t('action_resume') : readerKind === 'read' ? t('nav_reading') : t('nav_audiobooks'));
     readButton.appendChild(readLabel);
     readButton.addEventListener('click', function () {
       navigateTo('#/' + readerKind + '?id=' + item.Id);
@@ -1258,7 +1259,7 @@ export async function renderDetail(root, params) {
     const playButton = el('button', 'jellio-detail-play');
     playButton.type = 'button';
     playButton.appendChild(el('span', 'material-icons play_arrow'));
-    playButton.appendChild(el('span', null, 'Play'));
+    playButton.appendChild(el('span', null, t('action_play')));
     playButton.addEventListener('click', function () {
       openStreamPicker(item);
     });
@@ -1267,7 +1268,7 @@ export async function renderDetail(root, params) {
     const playButton = el('button', 'jellio-detail-play');
     playButton.type = 'button';
     const playIcon = el('span', 'material-icons play_arrow');
-    const playLabel = el('span', null, 'Play');
+    const playLabel = el('span', null, t('action_play'));
     playButton.appendChild(playIcon);
     playButton.appendChild(playLabel);
     actions.appendChild(playButton);
@@ -1678,7 +1679,7 @@ export async function renderDetail(root, params) {
           if (badges) badgeSlot.appendChild(badges);
           return;
         }
-        streamStatus.appendChild(el('span', null, update.state === 'empty' ? 'No streams found yet.' : 'Could not check for streams.'));
+        streamStatus.appendChild(el('span', null, update.state === 'empty' ? t('detail_no_streams') : 'Could not check for streams.'));
       },
     );
   }

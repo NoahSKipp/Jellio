@@ -97,7 +97,8 @@ export function normalizePath(path) {
 }
 
 export function scopePrefix(scope) {
-  return String((scope && scope.serverId) || '') + '|' + String((scope && scope.userId) || '') + '|';
+  const lang = (scope && scope.language) || '';
+  return String((scope && scope.serverId) || '') + '|' + String((scope && scope.userId) || '') + '|' + (lang ? lang + '|' : '');
 }
 
 export function buildKey(scope, path) {
