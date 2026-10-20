@@ -270,7 +270,24 @@ export function openOnboardingModal(options) {
     container.appendChild(langGrid);
   }
 
-  // Helper for question mark tooltip
+  // Helpers for dark-mode dropdowns and question mark tooltip
+  function createSelect(className) {
+    const sel = document.createElement('select');
+    sel.className = className || 'jellio-onboarding-select';
+    sel.style.colorScheme = 'dark';
+    return sel;
+  }
+
+  function createOption(value, text, selected) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = text;
+    opt.style.backgroundColor = '#1a1a1a';
+    opt.style.color = '#ffffff';
+    if (selected) opt.selected = true;
+    return opt;
+  }
+
   function buildHelpIcon(title, description) {
     const wrap = el('span', 'jellio-onboarding-help-wrap');
     const btn = el('button', 'jellio-onboarding-help-btn', '?');
@@ -304,19 +321,11 @@ export function openOnboardingModal(options) {
     audioLabelWrap.appendChild(buildHelpIcon(t('onboarding_audio_help_title'), t('onboarding_audio_help_desc')));
     audioRow.appendChild(audioLabelWrap);
 
-    const audioSelect = document.createElement('select');
-    audioSelect.className = 'jellio-onboarding-select';
-    const noPrefOpt = document.createElement('option');
-    noPrefOpt.value = '';
-    noPrefOpt.textContent = t('settings_no_preference');
-    audioSelect.appendChild(noPrefOpt);
+    const audioSelect = createSelect('jellio-onboarding-select');
+    audioSelect.appendChild(createOption('', t('settings_no_preference'), !selectedAudioLang));
 
     LANGUAGE_OPTIONS.forEach(function (opt) {
-      const optEl = document.createElement('option');
-      optEl.value = opt.code;
-      optEl.textContent = opt.name;
-      if (opt.code === selectedAudioLang) optEl.selected = true;
-      audioSelect.appendChild(optEl);
+      audioSelect.appendChild(createOption(opt.code, opt.name, opt.code === selectedAudioLang));
     });
     audioSelect.addEventListener('change', function () {
       selectedAudioLang = audioSelect.value;
@@ -331,19 +340,11 @@ export function openOnboardingModal(options) {
     subLabelWrap.appendChild(buildHelpIcon(t('onboarding_subtitle_help_title'), t('onboarding_subtitle_help_desc')));
     subRow.appendChild(subLabelWrap);
 
-    const subSelect = document.createElement('select');
-    subSelect.className = 'jellio-onboarding-select';
-    const subNoPrefOpt = document.createElement('option');
-    subNoPrefOpt.value = '';
-    subNoPrefOpt.textContent = t('settings_no_preference');
-    subSelect.appendChild(subNoPrefOpt);
+    const subSelect = createSelect('jellio-onboarding-select');
+    subSelect.appendChild(createOption('', t('settings_no_preference'), !selectedSubtitleLang));
 
     LANGUAGE_OPTIONS.forEach(function (opt) {
-      const optEl = document.createElement('option');
-      optEl.value = opt.code;
-      optEl.textContent = opt.name;
-      if (opt.code === selectedSubtitleLang) optEl.selected = true;
-      subSelect.appendChild(optEl);
+      subSelect.appendChild(createOption(opt.code, opt.name, opt.code === selectedSubtitleLang));
     });
     subSelect.addEventListener('change', function () {
       selectedSubtitleLang = subSelect.value;
@@ -436,14 +437,9 @@ export function openOnboardingModal(options) {
     const studyRow = el('div', 'jellio-onboarding-row');
     studyRow.appendChild(el('label', 'jellio-onboarding-label', t('onboarding_translate_into')));
 
-    const studySelect = document.createElement('select');
-    studySelect.className = 'jellio-onboarding-select';
+    const studySelect = createSelect('jellio-onboarding-select');
     LANGUAGES.forEach(function (code) {
-      const opt = document.createElement('option');
-      opt.value = code;
-      opt.textContent = languageLabel(code);
-      if (code === targetStudyLang) opt.selected = true;
-      studySelect.appendChild(opt);
+      studySelect.appendChild(createOption(code, languageLabel(code), code === targetStudyLang));
     });
     studySelect.addEventListener('change', function () {
       targetStudyLang = studySelect.value;
@@ -458,14 +454,9 @@ export function openOnboardingModal(options) {
     const speedRow = el('div', 'jellio-onboarding-row');
     speedRow.appendChild(el('label', 'jellio-onboarding-label', t('onboarding_speed')));
 
-    const speedSelect = document.createElement('select');
-    speedSelect.className = 'jellio-onboarding-select';
+    const speedSelect = createSelect('jellio-onboarding-select');
     ['0.75', '1', '1.25', '1.5', '1.75', '2'].forEach(function (s) {
-      const opt = document.createElement('option');
-      opt.value = s;
-      opt.textContent = s + 'x' + (s === '1' ? ' (Normal)' : '');
-      if (Number(s) === Number(audiobookSpeed)) opt.selected = true;
-      speedSelect.appendChild(opt);
+      speedSelect.appendChild(createOption(s, s + 'x' + (s === '1' ? ' (Normal)' : ''), Number(s) === Number(audiobookSpeed)));
     });
     speedSelect.addEventListener('change', function () {
       audiobookSpeed = Number(speedSelect.value);

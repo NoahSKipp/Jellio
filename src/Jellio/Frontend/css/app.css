@@ -8352,6 +8352,7 @@
    own full width, that full width rule stays scoped to a form's own
    stacked fields (Change password, Quick Connect) instead. */
 .jellio-settings-select {
+  color-scheme: dark;
   appearance: none;
   padding: 0.55em 2.2em 0.55em 1em;
   border: 1px solid var(--jellio-border-color);
@@ -8371,6 +8372,11 @@
 .jellio-settings-select:focus {
   outline: none;
   border-color: var(--jellio-secondary-color);
+}
+
+.jellio-settings-select option {
+  background-color: var(--jellio-bg-elevated, #1a1a1a);
+  color: var(--jellio-text-color, #ffffff);
 }
 
 @media (max-width: 30em) {
@@ -15463,8 +15469,7 @@
    Modal walkthrough for first-run configuration (language, audio, profile,
    feed privacy, reading/manga). Styled to match Jellio/Nuvio glass aesthetics.
    ========================================================================== */
-.jellio-onboarding-overlay {
-  position: fixed;
+.jellio-onboarding-overlay {  color-scheme: dark;  position: fixed;
   inset: 0;
   z-index: 10002;
   display: flex;
@@ -15476,8 +15481,7 @@
   animation: jellio-fade-in 200ms ease;
 }
 
-.jellio-onboarding-card {
-  width: min(92vw, 640px);
+.jellio-onboarding-card {  color-scheme: dark;  width: min(92vw, 640px);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
@@ -15664,19 +15668,27 @@
 }
 
 .jellio-onboarding-select {
+  color-scheme: dark;
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
+  background-color: var(--jellio-bg-elevated, #1a1a1a);
   background: rgb(255 255 255 / 0.06);
   border: 1px solid rgb(255 255 255 / 0.12);
-  color: var(--jellio-text);
+  color: var(--jellio-text-color, #ffffff);
   font-size: 0.95em;
   outline: none;
   transition: border-color 140ms ease;
+  cursor: pointer;
 }
 
 .jellio-onboarding-select:focus {
   border-color: var(--jellio-primary-color);
+}
+
+.jellio-onboarding-select option {
+  background-color: var(--jellio-bg-elevated, #1a1a1a);
+  color: var(--jellio-text-color, #ffffff);
 }
 
 .jellio-onboarding-help-wrap {

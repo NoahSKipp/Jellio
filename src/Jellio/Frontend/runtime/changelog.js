@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.3",
+    "summary": "Fix dropdown option contrast in audio and subtitle selection.",
+    "highlights": [
+      {
+        "title": "Dropdown Dark Mode",
+        "description": "Fixes an issue where audio and subtitle language dropdown options rendered white text on a white background by enforcing dark mode popups and high-contrast option styling."
+      }
+    ]
+  },
+  {
     "version": "1.87.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.2",
