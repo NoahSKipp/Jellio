@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.8] - 2026-10-20\n\n### Features\n\n- *(achievements)* Complete translation coverage across all 46 achievement badges (names, descriptions, and unlock toasts) in all 7 supported display languages\n- *(settings)* Netflix-style server preferences sync: seamlessly sync user playback, display, and recommendation settings to server profile across devices\n- *(genres)* Dynamic catalog genre translations across Home screen rows, Settings genre selectors, and Detail view tags\n- *(profile)* Fully localize lifetime and monthly statistics, category labels, overview tabs, and filter chips\n- *(feed)* Refactor activity feed watch descriptions to prevent double prepositions (\"von of\"), translate season headers, and localize relative timestamps\n- *(i18n)* Unified informal German phrasing (\"Du / dein / dir / dich\") and consistent informal tone across all languages\n- *(settings)* Replace unstyled onboarding wizard button with native action card row\n- *(cache)* Ensure complete cache purge and reload on display language change so metadata refreshes immediately in the target language\n",
+        "checksum": "639d7f8ab5e7aa3b590b9d3934e587bd",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.8/jellio_1.87.8.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T16:15:09Z",
+        "version": "1.87.8"
+      },
+      {
         "changelog": "## [1.87.7] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Complete 100% deep-dive UI localization across all remaining screens, components, dialogs, toasts, and controls\n- *(i18n)* Exact dictionary parity across all 7 supported display languages (en, de, es, pl, fr, it, pt) with 795 keys each\n- *(vocab)* Full localization for vocabulary deck management, SRS review sessions, flashcard intervals, and dictionary lookup states\n- *(manga)* Localize chapter search filters, source checking statuses, Suwayomi CBZ format warnings, and shelf category assignment\n- *(player)* Translate dialogue boost and night mode status toggles, cast device section, wireless streaming, and failover notifications\n- *(settings)* Localize native application update descriptions and status indicators for macOS\n",
         "checksum": "83a2c69715ae1cbe216cf2c3b3033720",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.7/jellio_1.87.7.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-16T18:22:40Z",
         "version": "1.83.2"
-      },
-      {
-        "changelog": "## [1.83.1] - 2026-10-16\n",
-        "checksum": "6bfe5c71b9fdf3f28b5c8d1918bc402a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.1/jellio_1.83.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-16T14:14:02Z",
-        "version": "1.83.1"
       }
     ]
   }
