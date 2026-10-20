@@ -217,7 +217,7 @@ export async function renderFeed(root) {
   root.className = 'jellio-content jellio-screen-feed';
 
   const header = el('header', 'jellio-settings-header');
-  header.appendChild(el('h1', 'jellio-settings-title', 'Feed'));
+  header.appendChild(el('h1', 'jellio-settings-title', t('nav_feed')));
   root.appendChild(header);
 
   renderLoading(root);
@@ -237,7 +237,7 @@ export async function renderFeed(root) {
   root.appendChild(header);
 
   if (!entries.length) {
-    root.appendChild(el('p', 'jellio-profile-empty', 'Nothing here yet.'));
+    root.appendChild(el('p', 'jellio-profile-empty', t('feed_nothing_here')));
     return;
   }
 
@@ -248,7 +248,7 @@ export async function renderFeed(root) {
 
   const hidden = readHiddenTypes();
   const list = el('div', 'jellio-feed-list');
-  const empty = el('p', 'jellio-profile-empty', 'Nothing to show with these filters.');
+  const empty = el('p', 'jellio-profile-empty', t('feed_nothing_filter'));
 
   function applyFilters() {
     let shown = 0;
@@ -262,7 +262,7 @@ export async function renderFeed(root) {
 
   const filters = el('div', 'jellio-feed-filters');
   filters.setAttribute('role', 'group');
-  filters.setAttribute('aria-label', 'Show in the feed');
+  filters.setAttribute('aria-label', t('feed_show_in_feed'));
   // Every type, even ones with nothing in the feed yet, so a reader can
   // set them up ahead of time.
   FEED_TYPES.forEach(function (type) {

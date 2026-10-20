@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Actors Plus, from the reference table: an actor's own page, photo,
 // bio and real filmography, reached by clicking a cast card on the
 // detail screen. Own route (#/person?id=X), not a native page this
@@ -68,14 +69,14 @@ export async function renderPerson(root, params) {
     const books = items.filter((item) => item.Type === 'Book' || item.Type === 'AudioBook');
 
     if (!films.length && !books.length) {
-      const empty = el('p', 'jellio-service-empty', 'No works found in your library.');
+      const empty = el('p', 'jellio-service-empty', t('person_no_works'));
       root.appendChild(empty);
       return;
     }
 
     if (films.length) {
       const filmSection = el('section', 'jellio-person-filmography');
-      filmSection.appendChild(el('h2', 'jellio-row-title', 'Filmography'));
+      filmSection.appendChild(el('h2', 'jellio-row-title', t('person_filmography')));
       const filmGrid = el('div', 'jellio-library-grid');
       filmSection.appendChild(filmGrid);
       root.appendChild(filmSection);
@@ -84,7 +85,7 @@ export async function renderPerson(root, params) {
 
     if (books.length) {
       const bookSection = el('section', 'jellio-person-filmography jellio-person-bibliography');
-      bookSection.appendChild(el('h2', 'jellio-row-title', 'Bibliography'));
+      bookSection.appendChild(el('h2', 'jellio-row-title', t('person_bibliography')));
       const bookGrid = el('div', 'jellio-library-grid');
       bookSection.appendChild(bookGrid);
       root.appendChild(bookSection);

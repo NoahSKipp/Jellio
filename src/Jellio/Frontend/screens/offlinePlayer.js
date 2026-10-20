@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Plays a downloaded film or episode from this device (components/
 // downloads.js saved it): the browser's own video controls, the
 // downloaded subtitles, and the position kept locally and sent to the
@@ -17,7 +18,7 @@ function message(root, text) {
   const box = el('div', 'jellio-offline-player-message');
   box.appendChild(el('span', 'material-icons cloud_off'));
   box.appendChild(el('p', null, text));
-  const back = el('button', 'jellio-downloads-retry', 'Go to Downloads');
+  const back = el('button', 'jellio-downloads-retry', t('offline_go_downloads'));
   back.type = 'button';
   back.addEventListener('click', () => navigateTo('#/downloads'));
   box.appendChild(back);
@@ -69,7 +70,7 @@ export async function renderOfflinePlayer(root, params) {
   const top = el('div', 'jellio-offline-player-top');
   const back = el('button', 'jellio-offline-player-back');
   back.type = 'button';
-  back.setAttribute('aria-label', 'Back');
+  back.setAttribute('aria-label', t('onboarding_back'));
   back.appendChild(el('span', 'material-icons arrow_back'));
   back.addEventListener('click', function () {
     if (window.history.length > 1) window.history.back();

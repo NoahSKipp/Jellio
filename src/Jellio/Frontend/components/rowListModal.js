@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // A row's own title, made clickable: real feedback was that scrolling
 // all the way across a long row (a studio hub's own "Series on
 // Netflix", easily 20+ deep) by drag or arrow-click alone is tedious,
@@ -130,7 +131,7 @@ export function openRowListModal(title, items, options) {
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'jellio-group-watch-close';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   const closeIcon = el('span', 'material-icons close');
   closeIcon.setAttribute('aria-hidden', 'true');
   closeButton.appendChild(closeIcon);
@@ -149,7 +150,7 @@ export function openRowListModal(title, items, options) {
   renderList(items);
   panel.appendChild(list);
 
-  const loadingNote = el('p', 'jellio-avatar-picker-status', 'Loading the rest…');
+  const loadingNote = el('p', 'jellio-avatar-picker-status', t('row_loading_rest'));
   if (opts.fetchAll) {
     panel.appendChild(loadingNote);
     opts
@@ -179,7 +180,7 @@ export function makeRowTitleClickable(titleEl, title, items, options) {
   titleEl.classList.add('jellio-row-title-clickable');
   titleEl.setAttribute('role', 'button');
   titleEl.tabIndex = 0;
-  titleEl.setAttribute('aria-label', 'Browse all of ' + title);
+  titleEl.setAttribute('aria-label', t('row_browse_all', { title }));
   titleEl.appendChild(el('span', 'material-icons jellio-row-title-chevron', 'chevron_right'));
 
   function open() {

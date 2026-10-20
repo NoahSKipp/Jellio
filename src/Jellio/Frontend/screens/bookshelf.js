@@ -360,9 +360,9 @@ function seriesCard(entry, cardOptions) {
       params.set('series', group.key);
       shareHash(group.title, '#/books?' + params.toString())
         .then((result) => {
-          if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+          if (result === 'copied') showToast(t('toast_link_copied'));
         })
-        .catch(() => showToast('Could not copy the link.'));
+        .catch(() => showToast(t('toast_copy_link_error')));
     },
   };
   attachCardOptionsTrigger(card, entry.item, null, {
@@ -529,7 +529,7 @@ export function renderBookshelf(root, params, parentId) {
 
   function removeFromLibrary(entry) {
     const title = entry.item.Name || 'this ' + copy.one;
-    if (!window.confirm('Remove “' + title + '” from your library? If nobody else has it, it is deleted from the server.')) return;
+    if (!window.confirm(t('bookshelf_remove_confirm', { title }))) return;
     removeBookFromLibrary(kind, { ItemId: entry.item.Id })
       .then(function (result) {
         showToast(
@@ -541,7 +541,7 @@ export function renderBookshelf(root, params, parentId) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not remove the book', err);
-        showToast('Couldn’t remove it. Try again.');
+        showToast(t('toast_remove_error'));
       });
   }
 
@@ -604,7 +604,7 @@ export function renderBookshelf(root, params, parentId) {
         onClick: function () {
           markRead(entry, item, read).catch(function (err) {
             console.warn('Jellio: could not update read state', err);
-            showToast('Could not update read state. Try again.');
+            showToast(t('toast_watched_error'));
           });
         },
       };
@@ -638,7 +638,7 @@ export function renderBookshelf(root, params, parentId) {
             invalidateStreamLibrary();
             setInLibrary(key, false).catch(function (err) {
               console.warn('Jellio: could not update the library', err);
-              showToast('Could not remove it from your library. Try again.');
+              showToast(t('toast_remove_library_error'));
             });
           },
         });
@@ -668,13 +668,13 @@ export function renderBookshelf(root, params, parentId) {
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.placeholder = t('bookshelf_search_placeholder', { many: copy.many });
-  searchInput.setAttribute('aria-label', 'Search ' + copy.many);
+  searchInput.setAttribute('aria-label', t('bookshelf_search_target', { target: copy.many }));
   searchWrap.appendChild(searchInput);
   toolbar.appendChild(searchWrap);
 
   const sortSelect = document.createElement('select');
   sortSelect.className = 'jellio-library-filter-select';
-  sortSelect.setAttribute('aria-label', 'Sort by');
+  sortSelect.setAttribute('aria-label', t('library_sort_by'));
   SORTS.filter((option) => !option.manga || kind === 'manga').forEach(function (option) {
     const optionEl = document.createElement('option');
     optionEl.value = option.value;
@@ -689,7 +689,7 @@ export function renderBookshelf(root, params, parentId) {
   toolbar.appendChild(sortDirection);
   const viewButton = el('button', 'jellio-bookshelf-sort-direction jellio-bookshelf-view-button');
   viewButton.type = 'button';
-  viewButton.setAttribute('aria-label', 'Filter and display');
+  viewButton.setAttribute('aria-label', t('library_filter_display'));
   viewButton.appendChild(el('span', 'material-icons tune'));
   const viewCount = el('span', 'jellio-bookshelf-view-count');
   viewButton.appendChild(viewCount);
@@ -705,7 +705,7 @@ export function renderBookshelf(root, params, parentId) {
   const vocabButton = el('button', 'jellio-bookshelf-vocab');
   vocabButton.type = 'button';
   vocabButton.appendChild(el('span', 'material-icons translate'));
-  vocabButton.appendChild(el('span', null, 'Vocabulary'));
+  vocabButton.appendChild(el('span', null, t('nav_vocab')));
   vocabButton.addEventListener('click', function () {
     navigateTo('#/vocab');
   });
@@ -723,7 +723,7 @@ export function renderBookshelf(root, params, parentId) {
     const button = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
     button.type = 'button';
     button.appendChild(el('span', 'material-icons assignment'));
-    button.appendChild(el('span', null, 'Requests'));
+    button.appendChild(el('span', null, t('manga_requests')));
     button.addEventListener('click', function () {
       const next = new URLSearchParams(params);
       next.set('requests', '1');
@@ -735,7 +735,7 @@ export function renderBookshelf(root, params, parentId) {
     const button = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
     button.type = 'button';
     button.appendChild(el('span', 'material-icons new_releases'));
-    button.appendChild(el('span', null, 'Updates'));
+    button.appendChild(el('span', null, t('manga_updates_title')));
     button.addEventListener('click', function () {
       const next = new URLSearchParams(params);
       next.set('updates', '1');
@@ -749,7 +749,7 @@ export function renderBookshelf(root, params, parentId) {
       const discover = el('button', 'jellio-book-request-toggle jellio-bookshelf-discover');
       discover.type = 'button';
       discover.appendChild(el('span', 'material-icons explore'));
-      discover.appendChild(el('span', null, 'Discover'));
+      discover.appendChild(el('span', null, t('nav_discover')));
       discover.addEventListener('click', function () {
         navigateTo(
           '#/discover?kind=' +
@@ -796,7 +796,7 @@ export function renderBookshelf(root, params, parentId) {
   const sourcesSection = el('section', 'jellio-bookshelf-sources');
   sourcesSection.hidden = true;
   const sourcesHeader = el('div', 'jellio-bookshelf-all-header');
-  const sourcesTitle = el('h2', 'jellio-row-title', 'From sources');
+  const sourcesTitle = el('h2', 'jellio-row-title', t('bookshelf_from_sources'));
   sourcesHeader.appendChild(sourcesTitle);
   sourcesSection.appendChild(sourcesHeader);
   const sourcesStatus = el('p', 'jellio-book-request-status');
@@ -900,17 +900,17 @@ export function renderBookshelf(root, params, parentId) {
     });
 
     const selected = selectedAuthor && entries.find((entry) => entry.authorKey === selectedAuthor);
-    if (selected) gridTitle.textContent = 'By ' + selected.author;
-    else if (query) gridTitle.textContent = 'In your library (' + matches.length + ')';
+    if (selected) gridTitle.textContent = t('bookshelf_by_author', { author: selected.author });
+    else if (query) gridTitle.textContent = t('bookshelf_in_library_count', { count: matches.length });
     else if (category) gridTitle.textContent = category.Name;
     else gridTitle.textContent = kind === 'manga' ? 'Library' : 'All ' + copy.many;
 
     if (!matches.length && query) {
-      grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'No ' + copy.many + ' in your library match “' + filterText + '”.'));
+      grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', t('bookshelf_no_matches', { type: copy.many, query: filterText })));
     } else if (!matches.length && category && !query && !selectedAuthor) {
       grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing in ' + category.Name + ' yet. Right click (or hold) a cover and choose Categories to add it.'));
     } else if (!matches.length && entries.length) {
-      grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'Nothing on this shelf matches.'));
+      grid.appendChild(el('p', 'jellio-bookshelf-empty-inline', t('bookshelf_nothing_matches')));
     }
 
     rows.hidden = isFiltering();
@@ -936,7 +936,7 @@ export function renderBookshelf(root, params, parentId) {
       return;
     }
     authorsSection.hidden = false;
-    authorsSection.appendChild(el('h2', 'jellio-row-title', 'Authors'));
+    authorsSection.appendChild(el('h2', 'jellio-row-title', t('bookshelf_authors')));
     const strip = el('div', 'jellio-bookshelf-author-strip');
     authorGroups.forEach(function (group) {
       const chip = el('button', 'jellio-bookshelf-author-chip');
@@ -1016,7 +1016,7 @@ export function renderBookshelf(root, params, parentId) {
     empty.appendChild(el('p', null, kind === 'manga' ? 'Your manga library is empty.' : 'No ' + copy.many + ' on this shelf yet.'));
     if (kind === 'manga') {
       empty.appendChild(
-        el('p', 'jellio-bookshelf-stats', 'Find series with Discover or Request manga, or bring your Mihon library over in Settings.'),
+        el('p', 'jellio-bookshelf-stats', t('bookshelf_find_hint')),
       );
     }
     rows.appendChild(empty);
@@ -1039,7 +1039,7 @@ export function renderBookshelf(root, params, parentId) {
       return;
     }
     sourcesSection.hidden = false;
-    sourcesStatus.textContent = 'Searching sources…';
+    sourcesStatus.textContent = t('bookshelf_searching_sources');
     sourcesResults.textContent = '';
     searchTimer = setTimeout(function () {
       executeSourceSearch(query);
@@ -1070,7 +1070,7 @@ export function renderBookshelf(root, params, parentId) {
         .catch(function (err) {
           if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
           console.warn('Jellio: manga sources search failed', err);
-          sourcesStatus.textContent = 'Could not search manga sources.';
+          sourcesStatus.textContent = t('bookshelf_search_manga_error');
         });
     } else {
       searchBooksToRequest(query, kind)
@@ -1081,7 +1081,7 @@ export function renderBookshelf(root, params, parentId) {
         .catch(function (err) {
           if (thisToken !== sourceSearchToken || cancelled || !filterText) return;
           console.warn('Jellio: books sources search failed', err);
-          sourcesStatus.textContent = 'Could not search sources.';
+          sourcesStatus.textContent = t('bookshelf_search_sources_error');
         });
     }
   }
@@ -1091,7 +1091,7 @@ export function renderBookshelf(root, params, parentId) {
   // now because they kept failing (the server tries them again later).
   function startMangaSources(query) {
     sourcesResults.textContent = '';
-    sourcesStatus.textContent = 'Searching manga sources…';
+    sourcesStatus.textContent = t('bookshelf_searching_manga_sources');
     let shown = 0;
 
     function unavailableNote(summary) {
@@ -1186,7 +1186,7 @@ export function renderBookshelf(root, params, parentId) {
       const button = el('button', 'jellio-book-request-action jellio-book-request-action-read');
       button.type = 'button';
       button.appendChild(el('span', 'material-icons menu_book'));
-      button.appendChild(el('span', null, 'Read'));
+      button.appendChild(el('span', null, t('action_read')));
       button.addEventListener('click', function () {
         const key = inStream ? inStream.Key : mangaSeriesKey(manga.Title);
         openSeriesAction(key);
@@ -1207,7 +1207,7 @@ export function renderBookshelf(root, params, parentId) {
             if (res && res.Status === 'duplicate') {
               showToast('“' + manga.Title + '” is already in your library.');
               button.disabled = false;
-              text.textContent = 'Read';
+              text.textContent = t('action_read');
               button.classList.add('jellio-book-request-action-read');
               const icon = button.querySelector('.material-icons');
               if (icon) icon.textContent = 'menu_book';
@@ -1223,8 +1223,8 @@ export function renderBookshelf(root, params, parentId) {
               return;
             }
             invalidateStreamLibrary();
-            showToast('Added “' + manga.Title + '” to library');
-            text.textContent = 'Read';
+            showToast(t('bookshelf_added_to_library', { title: manga.Title }));
+            text.textContent = t('action_read');
             button.disabled = false;
             button.classList.add('jellio-book-request-action-read');
             const icon = button.querySelector('.material-icons');
@@ -1237,7 +1237,7 @@ export function renderBookshelf(root, params, parentId) {
             }).catch(function () {});
           })
           .catch(function () {
-            text.textContent = 'Failed to add';
+            text.textContent = t('bookshelf_failed_add');
             button.disabled = false;
             button.classList.add('jellio-book-request-action-error');
           });
@@ -1253,7 +1253,7 @@ export function renderBookshelf(root, params, parentId) {
   function renderBookSources(results, query) {
     sourcesResults.textContent = '';
     if (!results || !results.length) {
-      sourcesStatus.textContent = 'No ' + copy.many + ' found on sources for “' + query + '”.';
+      sourcesStatus.textContent = t('bookshelf_no_sources_found', { type: copy.many, query }));
       return;
     }
     sourcesStatus.textContent = '';
@@ -1330,7 +1330,7 @@ export function renderBookshelf(root, params, parentId) {
       const button = el('button', 'jellio-book-request-action');
       button.type = 'button';
       button.appendChild(el('span', 'material-icons library_add'));
-      button.appendChild(el('span', null, 'Add back'));
+      button.appendChild(el('span', null, t('bookshelf_add_back')));
       button.addEventListener('click', function () {
         button.disabled = true;
         setInLibrary(hidden.key, true)
@@ -1340,7 +1340,7 @@ export function renderBookshelf(root, params, parentId) {
           })
           .catch(function () {
             button.disabled = false;
-            showToast('Couldn’t add it back. Try again.');
+            showToast(t('bookshelf_add_back_error'));
           });
       });
       actions.appendChild(button);
@@ -1360,18 +1360,18 @@ export function renderBookshelf(root, params, parentId) {
       const button = el('button', 'jellio-book-request-action');
       button.type = 'button';
       button.appendChild(el('span', 'material-icons library_add'));
-      const text = el('span', null, 'Add to library');
+      const text = el('span', null, t('bookshelf_add_library'));
       button.appendChild(text);
 
       button.addEventListener('click', function () {
         button.disabled = true;
-        text.textContent = 'Adding…';
+        text.textContent = t('bookshelf_adding');
         requestBook(result, kind)
           .then(function (response) {
             const status = response && response.Status;
             if (status === 'added' || status === 'pending' || status === 'exists') {
-              showToast('Requested “' + result.Title + '”. It shows up here once Chaptarr has downloaded it.');
-              text.textContent = 'Requested ✓';
+              showToast(t('bookshelf_requested_chaptarr', { title: result.Title }));
+              text.textContent = t('action_requested_check');
               button.classList.add('jellio-book-request-action-done');
               if (response.Message) button.title = response.Message;
               return;
@@ -1382,7 +1382,7 @@ export function renderBookshelf(root, params, parentId) {
           })
           .catch(function (err) {
             console.warn('Jellio: book request failed', err);
-            text.textContent = 'Failed to add';
+            text.textContent = t('bookshelf_failed_add');
             button.disabled = false;
             button.classList.add('jellio-book-request-action-error');
           });
@@ -1502,7 +1502,7 @@ export function renderBookshelf(root, params, parentId) {
       console.warn('Jellio: could not load the shelf', err);
       rows.textContent = '';
       gridSection.hidden = true;
-      rows.appendChild(el('p', 'jellio-service-empty', 'Could not load this shelf. Try again in a moment.'));
+      rows.appendChild(el('p', 'jellio-service-empty', t('bookshelf_load_error')));
     });
   }
   load();

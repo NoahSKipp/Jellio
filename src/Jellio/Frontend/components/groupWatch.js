@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Group Watch, opened from the sidebar's own rail. Used to just forward
 // a click at native jellyfin-web's own hidden .headerSyncButton (that
 // header sits under display: none once this shell takes over, so its
@@ -123,7 +124,7 @@ export async function openGroupWatch() {
   overlay.className = 'jellio-avatar-picker-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Group Watch');
+  overlay.setAttribute('aria-label', t('gw_title'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) closeGroupWatch();
   });
@@ -135,7 +136,7 @@ export async function openGroupWatch() {
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'jellio-group-watch-close';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   const closeIcon = el('span', 'material-icons close');
   closeIcon.setAttribute('aria-hidden', 'true');
   closeButton.appendChild(closeIcon);
@@ -145,14 +146,14 @@ export async function openGroupWatch() {
   const backButton = document.createElement('button');
   backButton.type = 'button';
   backButton.className = 'jellio-group-watch-back';
-  backButton.setAttribute('aria-label', 'Back to groups');
+  backButton.setAttribute('aria-label', t('gw_back_to_groups'));
   const backIcon = el('span', 'material-icons arrow_back');
   backIcon.setAttribute('aria-hidden', 'true');
   backButton.appendChild(backIcon);
   backButton.style.display = 'none';
   panel.appendChild(backButton);
 
-  const titleEl = el('h2', 'jellio-avatar-picker-title', 'Group Watch');
+  const titleEl = el('h2', 'jellio-avatar-picker-title', t('gw_title'));
   panel.appendChild(titleEl);
 
   const list = el('div', 'jellio-group-watch-list');
@@ -162,9 +163,9 @@ export async function openGroupWatch() {
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
   nameInput.className = 'jellio-group-watch-input';
-  nameInput.placeholder = 'New group name';
+  nameInput.placeholder = t('gw_new_group_name');
   nameInput.maxLength = 100;
-  const createButton = el('button', 'jellio-settings-button', 'Start a group');
+  const createButton = el('button', 'jellio-settings-button', t('gw_start_group'));
   createButton.type = 'button';
   createRow.appendChild(nameInput);
   createRow.appendChild(createButton);
@@ -254,7 +255,7 @@ export async function openGroupWatch() {
     stopChatPoll();
     backButton.style.display = 'none';
     panel.classList.remove('jellio-group-watch-panel-subview');
-    titleEl.textContent = 'Group Watch';
+    titleEl.textContent = t('gw_title');
     chatView.style.display = 'none';
     chatView.textContent = '';
     inviteView.style.display = 'none';
@@ -280,14 +281,14 @@ export async function openGroupWatch() {
     const messageList = el('div', 'jellio-group-watch-chat-messages');
     const rankingContainer = el('div', 'jellio-pick-container');
     activeRankingContainer = rankingContainer;
-    const chatStatus = el('p', 'jellio-avatar-picker-status', 'Loading messages…');
+    const chatStatus = el('p', 'jellio-avatar-picker-status', t('gw_loading_messages'));
     const inputRow = el('div', 'jellio-group-watch-chat-input-row');
     const textInput = document.createElement('input');
     textInput.type = 'text';
     textInput.className = 'jellio-group-watch-input';
-    textInput.placeholder = 'Message the group…';
+    textInput.placeholder = t('gw_message_placeholder');
     textInput.maxLength = 500;
-    const sendButton = el('button', 'jellio-settings-button', 'Send');
+    const sendButton = el('button', 'jellio-settings-button', t('action_send'));
     sendButton.type = 'button';
     inputRow.appendChild(textInput);
     inputRow.appendChild(sendButton);
@@ -310,7 +311,7 @@ export async function openGroupWatch() {
           .filter(Boolean);
         return startPick(group.GroupId, participantIds).catch(function (err) {
           if (err && err.status === 400) {
-            chatStatus.textContent = 'Not enough titles across the group’s own Grouplists to start a pick.';
+            chatStatus.textContent = t('gw_not_enough_titles');
           }
           throw err;
         });
@@ -377,7 +378,7 @@ export async function openGroupWatch() {
       card.type = 'button';
       if (!isOwn) card.appendChild(el('div', 'jellio-group-watch-chat-message-author', message.UserName || 'Someone'));
       card.appendChild(el('div', 'jellio-group-watch-chat-message-text', message.Text));
-      card.appendChild(el('div', 'jellio-group-watch-chat-watch-card-cta', 'Click to join'));
+      card.appendChild(el('div', 'jellio-group-watch-chat-watch-card-cta', t('gw_click_to_join')));
       card.appendChild(el('div', 'jellio-group-watch-chat-message-time', formatChatTime(message.Timestamp)));
       card.addEventListener('click', function () {
         closeGroupWatch();
@@ -469,7 +470,7 @@ export async function openGroupWatch() {
         if (messages.length) appendMessages(messages);
       } catch (err) {
         console.warn('Jellio: could not load Group Watch chat', err);
-        chatStatus.textContent = 'Could not load messages.';
+        chatStatus.textContent = t('gw_load_messages_error');
       }
       refreshMembers();
       pollRanking();
@@ -486,7 +487,7 @@ export async function openGroupWatch() {
         })
         .catch(function (err) {
           console.warn('Jellio: could not send Group Watch message', err);
-          chatStatus.textContent = 'Could not send that message.';
+          chatStatus.textContent = t('gw_send_error');
         })
         .finally(function () {
           sendButton.disabled = false;
@@ -515,7 +516,7 @@ export async function openGroupWatch() {
     inviteView.style.display = '';
     inviteView.textContent = '';
 
-    const inviteStatus = el('p', 'jellio-avatar-picker-status', 'Loading online people…');
+    const inviteStatus = el('p', 'jellio-avatar-picker-status', t('gw_loading_online'));
     inviteView.appendChild(inviteStatus);
 
     let onlineIds = [];
@@ -524,7 +525,7 @@ export async function openGroupWatch() {
       onlineIds = ids || [];
     } catch (err) {
       console.warn('Jellio: could not load online users for Group Watch invite', err);
-      inviteStatus.textContent = 'Could not load online people.';
+      inviteStatus.textContent = t('gw_load_online_error');
       return;
     }
 
@@ -539,7 +540,7 @@ export async function openGroupWatch() {
     inviteStatus.textContent = '';
 
     if (!invitable.length) {
-      inviteView.appendChild(el('p', 'jellio-service-empty', 'No one else is online right now.'));
+      inviteView.appendChild(el('p', 'jellio-service-empty', t('gw_no_one_online')));
       return;
     }
 
@@ -552,19 +553,19 @@ export async function openGroupWatch() {
       row.appendChild(info);
 
       const actions = el('div', 'jellio-group-watch-row-actions');
-      const inviteButton = el('button', 'jellio-settings-button', 'Invite');
+      const inviteButton = el('button', 'jellio-settings-button', t('action_invite'));
       inviteButton.type = 'button';
       inviteButton.addEventListener('click', function () {
         inviteButton.disabled = true;
         sendGroupWatchInvite(group.GroupId, group.GroupName, user.Id)
           .then(function () {
-            inviteButton.textContent = 'Invited';
+            inviteButton.textContent = t('action_invited');
           })
           .catch(function (err) {
             console.warn('Jellio: could not send Group Watch invite', err);
             inviteButton.disabled = false;
-            inviteButton.textContent = 'Invite';
-            inviteStatus.textContent = 'Could not send that invite.';
+            inviteButton.textContent = t('action_invite');
+            inviteStatus.textContent = t('gw_send_invite_error');
           });
       });
       actions.appendChild(inviteButton);
@@ -589,7 +590,7 @@ export async function openGroupWatch() {
   async function refresh(quiet) {
     if (!quiet) {
       list.textContent = '';
-      status.textContent = 'Loading groups…';
+      status.textContent = t('gw_loading_groups');
       // list was just cleared above, so the real rebuild below has to
       // run even if this fetch happens to come back identical to the
       // last one rendered.
@@ -600,7 +601,7 @@ export async function openGroupWatch() {
       groups = await getSyncPlayGroups();
     } catch (err) {
       console.warn('Jellio: could not load Group Watch groups', err);
-      if (!quiet) status.textContent = 'Could not load groups.';
+      if (!quiet) status.textContent = t('gw_load_error');
       return;
     }
     // Already in flight since openGroupWatch() started it alongside
@@ -619,7 +620,7 @@ export async function openGroupWatch() {
     status.textContent = '';
 
     if (!groups.length) {
-      list.appendChild(el('p', 'jellio-service-empty', 'No groups yet. Start one below.'));
+      list.appendChild(el('p', 'jellio-service-empty', t('gw_no_groups')));
       return;
     }
 
@@ -639,7 +640,7 @@ export async function openGroupWatch() {
       const actions = el('div', 'jellio-group-watch-row-actions');
 
       if (isMember) {
-        const chatButton = el('button', 'jellio-settings-button', 'Chat');
+        const chatButton = el('button', 'jellio-settings-button', t('gw_chat'));
         chatButton.type = 'button';
         chatButton.addEventListener('click', function () {
           openChatView(group);
@@ -648,7 +649,7 @@ export async function openGroupWatch() {
       }
 
       if (isMember) {
-        const inviteButton = el('button', 'jellio-settings-button', 'Invite');
+        const inviteButton = el('button', 'jellio-settings-button', t('action_invite'));
         inviteButton.type = 'button';
         inviteButton.addEventListener('click', function () {
           openInviteView(group);
@@ -684,7 +685,7 @@ export async function openGroupWatch() {
           })
           .catch(function (err) {
             console.warn('Jellio: could not update Group Watch membership', err);
-            status.textContent = 'Could not ' + (isMember ? 'leave' : 'join') + ' that group.';
+            status.textContent = isMember ? t('gw_leave_error') : t('gw_join_error');
             actionButton.disabled = false;
           });
       });
@@ -704,7 +705,7 @@ export async function openGroupWatch() {
 
   createButton.addEventListener('click', function () {
     createButton.disabled = true;
-    status.textContent = 'Starting group…';
+    status.textContent = t('gw_starting_group');
     createSyncPlayGroup(nameInput.value.trim() || 'Group Watch')
       .then(function () {
         nameInput.value = '';
@@ -716,7 +717,7 @@ export async function openGroupWatch() {
       })
       .catch(function (err) {
         console.warn('Jellio: could not start Group Watch group', err);
-        status.textContent = 'Could not start a group.';
+        status.textContent = t('gw_start_group_error');
       })
       .finally(function () {
         createButton.disabled = false;

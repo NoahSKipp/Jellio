@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // A bigger, harder to miss real notification for the two Group Watch
 // events that actually need a reader's attention (an invite, or the
 // group just starting something), components/toast.js's own plain
@@ -67,7 +68,7 @@ export function showGroupWatchNotice(options) {
 
   const closeButton = el('button', 'jellio-groupwatch-notice-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Dismiss');
+  closeButton.setAttribute('aria-label', t('player_dismiss'));
   const closeIcon = el('span', 'material-icons close');
   closeIcon.setAttribute('aria-hidden', 'true');
   closeButton.appendChild(closeIcon);

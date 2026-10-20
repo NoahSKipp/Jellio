@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The active Group Watch decision session: a real single elimination
 // bracket (Services/GroupWatchRankingService.cs's own header explains
 // the format), built from every current group member's own pooled
@@ -26,7 +27,7 @@ export function buildPickTrigger(onStart) {
   const icon = el('span', 'material-icons how_to_vote');
   icon.setAttribute('aria-hidden', 'true');
   button.appendChild(icon);
-  button.appendChild(el('span', null, 'Start a Pick'));
+  button.appendChild(el('span', null, t('gw_start_pick')));
   button.addEventListener('click', function () {
     button.disabled = true;
     onStart()
@@ -97,7 +98,7 @@ function buildOption(itemId, isPicked, isDisabled, onPick) {
       poster.appendChild(title);
     })
     .catch(function () {
-      poster.appendChild(el('div', 'jellio-pick-option-title', 'Unknown title'));
+      poster.appendChild(el('div', 'jellio-pick-option-title', t('gw_unknown_title')));
     });
 
   option.addEventListener('click', function () {

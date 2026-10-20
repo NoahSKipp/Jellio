@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The Books and Audiobooks Requests page (&requests=1 on the shelf): every
 // book asked of Chaptarr and where it stands, from searching through
 // downloading to waiting for Jellyfin's scan, refreshed while it's open.
@@ -34,13 +35,13 @@ export function renderBookRequests(root, params, kind) {
   const isAudiobook = kind === 'audiobook';
   let cancelled = false;
   let timer = null;
-  setTitle('Requests - Jellio');
+  setTitle(t('manga_requests') + ' - Jellio');
   root.classList.add('jellio-screen-bookshelf', 'jellio-screen-book-requests');
 
   const header = el('header', 'jellio-library-header jellio-manga-series-header');
   const back = el('button', 'jellio-discover-back');
   back.type = 'button';
-  back.setAttribute('aria-label', 'Back to ' + (isAudiobook ? 'Audiobooks' : 'Books'));
+  back.setAttribute('aria-label', t('action_back_to', { target: isAudiobook ? t('word_audiobook') : t('nav_books') }));
   back.appendChild(el('span', 'material-icons arrow_back'));
   back.addEventListener('click', function () {
     const shelf = new URLSearchParams(params);
@@ -48,15 +49,15 @@ export function renderBookRequests(root, params, kind) {
     navigateTo('#/books?' + shelf.toString());
   });
   header.appendChild(back);
-  header.appendChild(el('h1', 'jellio-library-title', 'Requests'));
+  header.appendChild(el('h1', 'jellio-library-title', t('manga_requests')));
   const refresh = el('button', 'jellio-book-request-toggle jellio-manga-updates-refresh');
   refresh.type = 'button';
   refresh.appendChild(el('span', 'material-icons refresh'));
-  refresh.appendChild(el('span', null, 'Refresh'));
+  refresh.appendChild(el('span', null, t('action_refresh')));
   header.appendChild(refresh);
   root.appendChild(header);
 
-  const status = el('p', 'jellio-bookshelf-stats', 'Loading…');
+  const status = el('p', 'jellio-bookshelf-stats', t('status_loading'));
   const list = el('div', 'jellio-book-requests-list');
   root.appendChild(status);
   root.appendChild(list);
@@ -90,7 +91,7 @@ export function renderBookRequests(root, params, kind) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not remove the book', err);
-        showToast('Couldn’t remove it. Try again.');
+        showToast(t('toast_remove_error'));
         button.disabled = false;
       });
   }
@@ -98,7 +99,7 @@ export function renderBookRequests(root, params, kind) {
   function paint(data) {
     list.textContent = '';
     if (data && data.Configured === false) {
-      status.textContent = 'Chaptarr isn’t set up, so there’s nothing to show yet.';
+      status.textContent = t('chaptarr_not_setup');
       return;
     }
     const items = (data && data.Items) || [];
@@ -167,8 +168,8 @@ export function renderBookRequests(root, params, kind) {
           actionButton('refresh', 'Search again', function (button) {
             button.disabled = true;
             searchBookAgain(entry.ChaptarrBookId)
-              .then(() => showToast('Chaptarr is searching for “' + entry.Title + '” again.'))
-              .catch(() => showToast('Chaptarr couldn’t start a search.'))
+              .then(() => showToast(t('chaptarr_searching_again', { title: entry.Title })))
+              .catch(() => showToast(t('chaptarr_search_error')))
               .then(function () {
                 button.disabled = false;
               });
@@ -200,7 +201,7 @@ export function renderBookRequests(root, params, kind) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not load requests', err);
-        if (!cancelled) status.textContent = 'Chaptarr isn’t answering right now.';
+        if (!cancelled) status.textContent = t('chaptarr_unreachable');
       })
       .then(function () {
         refresh.disabled = false;

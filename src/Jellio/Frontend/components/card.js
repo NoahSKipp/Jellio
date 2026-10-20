@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Shared item card, used by every screen that renders a poster grid or row
 // (home's own rows, the library grid). One definition so a later visual
 // change (a hover state, a progress bar) only has one place to happen.
@@ -83,8 +84,8 @@ function buildWatchersBadge(watchers) {
       return w.UserName || 'User';
     })
     .join(', ');
-  wrap.title = 'Watching: ' + names;
-  wrap.setAttribute('aria-label', 'Watched by ' + names);
+  wrap.title = t('card_watching', { names });
+  wrap.setAttribute('aria-label', t('card_watched_by', { names }));
 
   const displayWatchers = watchers.slice(0, 3);
   displayWatchers.forEach(function (watcher) {
@@ -215,7 +216,7 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update watchlist state', err);
-        showToast('Could not update your watchlist. Try again.');
+        showToast(t('toast_watchlist_error'));
       })
       .finally(function () {
         watchlistButton.disabled = false;
@@ -252,7 +253,7 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update watched state', err);
-        showToast('Could not update watched state. Try again.');
+        showToast(t('toast_watched_error'));
       })
       .finally(function () {
         watchedButton.disabled = false;

@@ -132,7 +132,7 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online, index)
   const viewProfile = document.createElement('button');
   viewProfile.type = 'button';
   viewProfile.className = 'jellio-account-switcher-view-profile';
-  viewProfile.setAttribute('aria-label', "View " + (name || 'this user') + "'s profile");
+  viewProfile.setAttribute('aria-label', t('account_view_profile', { name: name || t('account_this_user') }));
   const eyeIcon = el('span', 'material-icons visibility');
   eyeIcon.setAttribute('aria-hidden', 'true');
   viewProfile.appendChild(eyeIcon);

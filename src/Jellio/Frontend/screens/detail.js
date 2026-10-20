@@ -278,13 +278,13 @@ function openTrailerModal(trailer, youTubeId) {
   externalLink.href = trailer.Url;
   externalLink.target = '_blank';
   externalLink.rel = 'noopener noreferrer';
-  externalLink.title = 'Watch on YouTube';
+  externalLink.title = t('detail_watch_youtube');
   externalLink.appendChild(el('span', 'material-icons open_in_new'));
   actions.appendChild(externalLink);
 
   const closeButton = el('button', 'jellio-trailer-modal-close', '×');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close trailer');
+  closeButton.setAttribute('aria-label', t('action_close_trailer'));
   closeButton.addEventListener('click', closeTrailerModal);
   actions.appendChild(closeButton);
 
@@ -433,7 +433,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         })
         .catch(function (err) {
           console.warn('Jellio: could not update watched state', err);
-          showToast('Could not update watched state. Try again.');
+          showToast(t('toast_watched_error'));
         });
     }),
   );
@@ -452,7 +452,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
           .then(context.onChanged)
           .catch(function (err) {
             console.warn('Jellio: could not mark previous episodes watched', err);
-            showToast('Could not mark previous episodes watched. Try again.');
+            showToast(t('toast_mark_previous_watched_error'));
           });
       }),
     );
@@ -470,7 +470,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         .then(context.onChanged)
         .catch(function (err) {
           console.warn('Jellio: could not mark season watched', err);
-          showToast('Could not mark season watched. Try again.');
+          showToast(t('toast_mark_season_watched_error'));
         });
     }),
   );
@@ -487,7 +487,7 @@ function openEpisodeOptionsMenu(episode, anchorRect, context) {
         .then(context.onChanged)
         .catch(function (err) {
           console.warn('Jellio: could not mark season unwatched', err);
-          showToast('Could not mark season unwatched. Try again.');
+          showToast(t('toast_mark_season_unwatched_error'));
         });
     }),
   );
@@ -626,8 +626,8 @@ function buildEpisodeCard(episode, context) {
 
   const quickPlay = el('button', 'jellio-episode-quick-play');
   quickPlay.type = 'button';
-  quickPlay.setAttribute('aria-label', 'Play episode ' + (episode.IndexNumber != null ? episode.IndexNumber : episode.Name || ''));
-  quickPlay.title = 'Play episode';
+  quickPlay.setAttribute('aria-label', t('detail_play_episode_aria', { number: episode.IndexNumber != null ? episode.IndexNumber : episode.Name || '' }));
+  quickPlay.title = t('detail_play_episode');
   quickPlay.appendChild(el('span', 'material-icons play_arrow'));
   quickPlay.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -1250,7 +1250,7 @@ export async function renderDetail(root, params) {
       getReadingProgress(item.Id)
         .then(function (progress) {
           if (progress && progress.Progress > 0 && progress.Progress < 0.98) {
-            readLabel.textContent = 'Resume';
+            readLabel.textContent = t('action_resume');
           }
         })
         .catch(function () {});
@@ -1276,7 +1276,7 @@ export async function renderDetail(root, params) {
     const targetPromise = (isSeason ? resolveSeasonPlayTarget(item) : resolveSeriesPlayTarget(item.Id)).then(
       function (result) {
         if (result && result.resume) {
-          playLabel.textContent = 'Resume S' + result.episode.ParentIndexNumber + ' E' + result.episode.IndexNumber;
+          playLabel.textContent = t('detail_resume_episode', { s: result.episode.ParentIndexNumber, e: result.episode.IndexNumber });
         }
         return result;
       },
@@ -1328,7 +1328,7 @@ export async function renderDetail(root, params) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update watchlist state', err);
-        showToast('Could not update your watchlist. Try again.');
+        showToast(t('toast_watchlist_error'));
       })
       .finally(function () {
         watchlistButton.disabled = false;
@@ -1359,7 +1359,7 @@ export async function renderDetail(root, params) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update watched state', err);
-        showToast('Could not update watched state. Try again.');
+        showToast(t('toast_watched_error'));
       })
       .finally(function () {
         watchedButton.disabled = false;
@@ -1370,17 +1370,17 @@ export async function renderDetail(root, params) {
   // A link to this title for anyone else with an account on the server.
   const shareButton = el('button', iconActionClass);
   shareButton.type = 'button';
-  shareButton.setAttribute('aria-label', 'Copy a link to share');
-  shareButton.title = 'Copy a link to share';
+  shareButton.setAttribute('aria-label', t('action_copy_link_share'));
+  shareButton.title = t('action_copy_link_share');
   shareButton.appendChild(el('span', 'material-icons share'));
   shareButton.addEventListener('click', function (event) {
     event.stopPropagation();
     shareItem(item)
       .then(function (result) {
-        if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+        if (result === 'copied') showToast(t('toast_link_copied'));
       })
       .catch(function () {
-        showToast('Could not copy the link.');
+        showToast(t('toast_copy_link_error'));
       });
   });
   actionsIcons.appendChild(shareButton);
@@ -1472,7 +1472,7 @@ export async function renderDetail(root, params) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update rating', err);
-        showToast('Could not update your rating. Try again.');
+        showToast(t('toast_rating_error'));
       })
       .finally(function () {
         thumbsUpButton.disabled = false;
@@ -1493,7 +1493,7 @@ export async function renderDetail(root, params) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not update rating', err);
-        showToast('Could not update your rating. Try again.');
+        showToast(t('toast_rating_error'));
       })
       .finally(function () {
         thumbsDownButton.disabled = false;
@@ -1515,7 +1515,7 @@ export async function renderDetail(root, params) {
   if (!needsEpisodeResolution && !readerKind) {
     const changeStreamButton = el('button', iconActionClass);
     changeStreamButton.type = 'button';
-    changeStreamButton.setAttribute('aria-label', 'Change Stream');
+    changeStreamButton.setAttribute('aria-label', t('detail_change_stream'));
     changeStreamButton.appendChild(el('span', 'material-icons sync_alt'));
     changeStreamButton.addEventListener('click', function (event) {
       event.stopPropagation();
@@ -1530,8 +1530,8 @@ export async function renderDetail(root, params) {
 
     const muteToggle = el('button', iconActionClass);
     muteToggle.type = 'button';
-    muteToggle.setAttribute('aria-label', 'Mute notifications');
-    muteToggle.title = 'Skip new-episode notifications for this show';
+    muteToggle.setAttribute('aria-label', t('detail_mute_notifications'));
+    muteToggle.title = t('detail_skip_notifications_show');
     muteToggle.appendChild(el('span', 'material-icons notifications_off'));
 
     function paintMuteToggle(on) {
@@ -1554,10 +1554,10 @@ export async function renderDetail(root, params) {
         saveSeriesPrefs(seriesOrItemKey, { SkipUpdates: next })
           .then(function () {
             paintMuteToggle(next);
-            showToast(next ? 'Notifications muted for this title.' : 'Notifications enabled for this title.');
+            showToast(next ? t('detail_notifications_muted') : t('detail_notifications_enabled'));
           })
           .catch(function () {
-            showToast('Could not save that setting.');
+            showToast(t('toast_save_error'));
           });
       });
     });
@@ -1572,8 +1572,8 @@ export async function renderDetail(root, params) {
   if (isAnimeSeries) {
     const trackerButton = el('button', iconActionClass);
     trackerButton.type = 'button';
-    trackerButton.setAttribute('aria-label', 'Track on AniList');
-    trackerButton.title = 'Track on AniList';
+    trackerButton.setAttribute('aria-label', t('detail_track_anilist'));
+    trackerButton.title = t('detail_track_anilist');
     trackerButton.appendChild(el('span', 'material-icons sync'));
     trackerButton.addEventListener('click', function (event) {
       event.stopPropagation();
@@ -1614,7 +1614,7 @@ export async function renderDetail(root, params) {
   // guarantee this rather than trying to correct for it.
   const moreButton = el('button', 'jellio-detail-icon-action jellio-detail-icon-action-more');
   moreButton.type = 'button';
-  moreButton.setAttribute('aria-label', 'More options');
+  moreButton.setAttribute('aria-label', t('action_more_options'));
   moreButton.appendChild(el('span', 'material-icons more_vert'));
 
   let actionsExpanded = false;

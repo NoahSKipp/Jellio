@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Only ever opens once runtime/grouplistSettings.js's own
 // isGrouplistEnabled() is on: components/card.js's own watchlist
 // button and screens/detail.js's own version of it both call this
@@ -157,7 +158,7 @@ export function openListMembershipMenu(item, anchorRect, onChanged) {
     grouplistRow.setAttribute('aria-checked', String(isOnGrouplistSync(item.Id)));
     grouplistRow.textContent = '';
     grouplistRow.appendChild(el('span', 'material-icons ' + (isOnGrouplistSync(item.Id) ? 'check_box' : 'check_box_outline_blank')));
-    grouplistRow.appendChild(el('span', 'jellio-list-membership-row-label', 'Grouplist'));
+    grouplistRow.appendChild(el('span', 'jellio-list-membership-row-label', t('settings_grouplist_label')));
   });
 
   document.body.appendChild(menu);

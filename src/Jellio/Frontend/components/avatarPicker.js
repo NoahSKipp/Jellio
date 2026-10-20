@@ -92,7 +92,7 @@ export async function openAvatarPicker(onChanged) {
     fileInput.value = '';
     if (!file) return;
     uploadOption.disabled = true;
-    status.textContent = 'Setting avatar…';
+    status.textContent = t('avatar_setting');
     setUserAvatarFromFile(file)
       .then(function () {
         status.textContent = t('avatar_updated');
@@ -123,7 +123,7 @@ export async function openAvatarPicker(onChanged) {
     option.appendChild(img);
     option.addEventListener('click', function () {
       option.disabled = true;
-      status.textContent = 'Setting avatar…';
+      status.textContent = t('avatar_setting');
       setUserAvatar(preset.Id)
         .then(function () {
           status.textContent = t('avatar_updated');

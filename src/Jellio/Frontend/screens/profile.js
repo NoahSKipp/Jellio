@@ -133,7 +133,7 @@ function buildBanner(userId, isOwner, onChanged) {
       if (!file) return;
       status.hidden = true;
       editButton.disabled = true;
-      editButton.textContent = 'Uploading…';
+      editButton.textContent = t('status_loading');
       setProfileBannerFromFile(file)
         .then(function () {
           onChanged();
@@ -261,7 +261,7 @@ function buildLockedPanel() {
 function buildBadgesSection(badges, isAdmin, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
   const unlockedCount = badges.filter(function (b) { return b.Unlocked; }).length;
-  section.appendChild(el('h2', 'jellio-row-title', 'Badges (' + unlockedCount + '/' + badges.length + ')'));
+  section.appendChild(el('h2', 'jellio-row-title', t('profile_badges_title', { unlocked: unlockedCount, total: badges.length })));
 
   let filter = 'all';
   const filterBar = el('div', 'jellio-profile-filter-bar');
@@ -282,7 +282,7 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
     });
 
     if (!filtered.length) {
-      grid.appendChild(el('p', 'jellio-profile-empty', 'No badges in this category.'));
+      grid.appendChild(el('p', 'jellio-profile-empty', t('profile_no_badges')));
       return;
     }
 
@@ -295,11 +295,11 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
       tile.appendChild(el('span', 'jellio-profile-badge-name', badge.Name));
       tile.title = badge.Description;
       if (isAdmin && badge.Unlocked) {
-        const lockButton = el('button', 'jellio-profile-admin-lock', 'Lock again');
+        const lockButton = el('button', 'jellio-profile-admin-lock', t('action_lock_again'));
         lockButton.type = 'button';
         lockButton.addEventListener('click', function (event) {
           event.stopPropagation();
-          if (!window.confirm('Lock "' + badge.Name + '" again?')) return;
+          if (!window.confirm(t('profile_lock_badge_confirm', { name: badge.Name }))) return;
           lockButton.disabled = true;
           lockBadgeForUser(userId, badge.Id)
             .then(onChanged)
@@ -363,7 +363,7 @@ function buildActivitySection(entries, canRemove, userId, onChanged) {
     });
 
     if (!filtered.length) {
-      list.appendChild(el('li', 'jellio-profile-empty', 'No activity matching this filter.'));
+      list.appendChild(el('li', 'jellio-profile-empty', t('profile_no_activity_filter')));
       return;
     }
 
@@ -372,10 +372,10 @@ function buildActivitySection(entries, canRemove, userId, onChanged) {
       item.appendChild(describeActivity(entry));
       item.appendChild(el('span', 'jellio-profile-activity-time', formatRelativeTime(entry.CompletedAtUtc)));
       if (canRemove) {
-        const deleteButton = el('button', 'jellio-profile-admin-delete', 'Remove');
+        const deleteButton = el('button', 'jellio-profile-admin-delete', t('action_remove'));
         deleteButton.type = 'button';
         deleteButton.addEventListener('click', function () {
-          if (!window.confirm('Remove this entry from the profile and the feed? Stats and badges stay as they are.')) return;
+          if (!window.confirm(t('profile_remove_entry_confirm'))) return;
           deleteButton.disabled = true;
           deleteActivityEntry(userId, entry.ItemId, entry.CompletedAtUtc)
             .then(onChanged)
@@ -586,7 +586,7 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
     const card = el('div', 'jellio-profile-spotlight-card');
     card.appendChild(el('span', 'material-icons jellio-profile-spotlight-icon', 'military_tech'));
     const content = el('div', 'jellio-profile-spotlight-content');
-    content.appendChild(el('span', 'jellio-profile-spotlight-eyebrow', 'Monthly Top Show'));
+    content.appendChild(el('span', 'jellio-profile-spotlight-eyebrow', t('profile_top_show')));
     content.appendChild(el('span', 'jellio-profile-spotlight-title', data.topSeriesName));
     content.appendChild(el('span', 'jellio-profile-spotlight-sub', data.topSeriesCount + ' episodes watched in ' + selectedDate.toLocaleString('default', { month: 'short' })));
     card.appendChild(content);
@@ -595,7 +595,7 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
   }
 
   if (!data.hasActivity) {
-    container.appendChild(el('p', 'jellio-profile-empty', 'No activity recorded for ' + monthName + '.'));
+    container.appendChild(el('p', 'jellio-profile-empty', t('profile_no_activity_month', { month: monthName })));
     return container;
   }
 
@@ -656,11 +656,11 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
 // anything at all.
 function buildAdminDangerZone(userId, onChanged) {
   const section = el('section', 'jellio-profile-section jellio-profile-danger-zone');
-  section.appendChild(el('h2', 'jellio-row-title', 'Admin'));
-  const resetButton = el('button', 'jellio-profile-admin-reset', 'Reset all progress');
+  section.appendChild(el('h2', 'jellio-row-title', t('profile_admin_role')));
+  const resetButton = el('button', 'jellio-profile-admin-reset', t('profile_reset_all_progress'));
   resetButton.type = 'button';
   resetButton.addEventListener('click', function () {
-    if (!window.confirm('Reset every counter, badge and activity entry for this user? This cannot be undone.')) return;
+    if (!window.confirm(t('profile_reset_all_confirm'))) return;
     resetButton.disabled = true;
     resetAchievementsForUser(userId)
       .then(onChanged)
@@ -726,7 +726,7 @@ export async function renderProfile(root, params) {
   const nameRow = el('div', 'jellio-profile-name-row');
   nameRow.appendChild(el('h1', 'jellio-profile-name', user.Name || ''));
   if (isOwner && profile.IsPrivate) {
-    nameRow.appendChild(el('span', 'jellio-profile-private-chip', 'Private'));
+    nameRow.appendChild(el('span', 'jellio-profile-private-chip', t('profile_private_label')));
   }
   identity.appendChild(nameRow);
   identity.appendChild(

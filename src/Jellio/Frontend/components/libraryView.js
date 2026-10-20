@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Mihon's library filter and display options for the Manga shelf: which
 // series show (unread, started, completed, downloaded; each off, only,
 // or hidden), how the covers are laid out, and the unread badge. Kept on
@@ -87,7 +88,7 @@ export function openLibraryView(view, onChange, kind = 'manga') {
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Filter and display');
+  overlay.setAttribute('aria-label', t('library_filter_display'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) close();
   });
@@ -96,11 +97,11 @@ export function openLibraryView(view, onChange, kind = 'manga') {
   const panel = el('div', 'jellio-avatar-picker-panel jellio-shelf-categories-panel');
   const closeButton = el('button', 'jellio-group-watch-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   closeButton.appendChild(el('span', 'material-icons close'));
   closeButton.addEventListener('click', close);
   panel.appendChild(closeButton);
-  panel.appendChild(el('h2', 'jellio-avatar-picker-title', 'Filter and display'));
+  panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('library_filter_display')));
   const body = el('div', 'jellio-library-view-body');
   panel.appendChild(body);
 
@@ -112,7 +113,7 @@ export function openLibraryView(view, onChange, kind = 'manga') {
 
   function paint() {
     body.textContent = '';
-    body.appendChild(el('h3', 'jellio-library-view-heading', 'Filter'));
+    body.appendChild(el('h3', 'jellio-library-view-heading', t('library_filter')));
     FILTERS.forEach(function (filter) {
       const mode = view[filter.key];
       const row = el('button', 'jellio-library-view-row');
@@ -127,7 +128,7 @@ export function openLibraryView(view, onChange, kind = 'manga') {
       });
       body.appendChild(row);
     });
-    body.appendChild(el('h3', 'jellio-library-view-heading', 'Display'));
+    body.appendChild(el('h3', 'jellio-library-view-heading', t('library_display')));
     DISPLAYS.forEach(function (option) {
       const row = el('button', 'jellio-library-view-row');
       row.type = 'button';
@@ -139,7 +140,7 @@ export function openLibraryView(view, onChange, kind = 'manga') {
       });
       body.appendChild(row);
     });
-    body.appendChild(el('h3', 'jellio-library-view-heading', 'Badges'));
+    body.appendChild(el('h3', 'jellio-library-view-heading', t('library_badges')));
     const badge = el('button', 'jellio-library-view-row');
     badge.type = 'button';
     badge.appendChild(el('span', 'material-icons ' + (view.badges ? 'check_box' : 'check_box_outline_blank')));
@@ -150,7 +151,7 @@ export function openLibraryView(view, onChange, kind = 'manga') {
     });
     body.appendChild(badge);
     if (activeFilterCount(view)) {
-      const reset = el('button', 'jellio-chapter-settings-action', 'Clear filters');
+      const reset = el('button', 'jellio-chapter-settings-action', t('library_clear_filters'));
       reset.type = 'button';
       reset.addEventListener('click', function () {
         FILTERS.forEach((filter) => (view[filter.key] = ''));

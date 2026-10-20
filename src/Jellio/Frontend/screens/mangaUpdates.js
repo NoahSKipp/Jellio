@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Mihon's Updates, reached from the Manga shelf (&updates=1): the
 // chapters that turned up in the latest library refreshes, newest first,
 // grouped by day. The server checks the sources on its own every few
@@ -22,13 +23,13 @@ function dayLabel(ms) {
 
 export function renderMangaUpdates(root, params) {
   let cancelled = false;
-  setTitle('Updates - Jellio');
+  setTitle(t('manga_updates_title') + ' - Jellio');
   root.classList.add('jellio-screen-bookshelf', 'jellio-screen-manga-updates');
 
   const header = el('header', 'jellio-library-header jellio-manga-series-header');
   const back = el('button', 'jellio-discover-back');
   back.type = 'button';
-  back.setAttribute('aria-label', 'Back to Manga');
+  back.setAttribute('aria-label', t('manga_back_to_manga'));
   back.appendChild(el('span', 'material-icons arrow_back'));
   back.addEventListener('click', function () {
     const shelf = new URLSearchParams(params);
@@ -36,15 +37,15 @@ export function renderMangaUpdates(root, params) {
     navigateTo('#/books?' + shelf.toString());
   });
   header.appendChild(back);
-  header.appendChild(el('h1', 'jellio-library-title', 'Updates'));
+  header.appendChild(el('h1', 'jellio-library-title', t('nav_updates')));
   const refresh = el('button', 'jellio-book-request-toggle jellio-manga-updates-refresh');
   refresh.type = 'button';
   refresh.appendChild(el('span', 'material-icons refresh'));
-  refresh.appendChild(el('span', null, 'Check now'));
+  refresh.appendChild(el('span', null, t('manga_check_now')));
   header.appendChild(refresh);
   root.appendChild(header);
 
-  const status = el('p', 'jellio-bookshelf-stats', 'Loading…');
+  const status = el('p', 'jellio-bookshelf-stats', t('status_loading'));
   const list = el('div', 'jellio-manga-updates-list');
   root.appendChild(status);
   root.appendChild(list);
@@ -59,7 +60,7 @@ export function renderMangaUpdates(root, params) {
     status.textContent = data && data.LastRefreshAt ? 'Last checked ' + formatRelativeTime(new Date(data.LastRefreshAt).toISOString()) + '.' : 'Not checked yet.';
     if (!items.length) {
       list.appendChild(
-        el('p', 'jellio-bookshelf-stats', 'No new chapters yet. The server checks your library’s sources regularly, and new ones will show up here.'),
+        el('p', 'jellio-bookshelf-stats', t('manga_no_new_chapters')),
       );
       return;
     }
@@ -99,7 +100,7 @@ export function renderMangaUpdates(root, params) {
             entry.Read = read;
             paint(data);
           })
-          .catch(() => showToast('Couldn’t update that chapter'));
+          .catch(() => showToast(t('manga_update_chapter_error')));
       });
       row.appendChild(mark);
       list.appendChild(row);
@@ -108,13 +109,13 @@ export function renderMangaUpdates(root, params) {
 
   function check() {
     refresh.disabled = true;
-    status.textContent = 'Checking your sources…';
+    status.textContent = t('manga_updates_checking');
     return refreshMangaUpdates()
       .then(function (data) {
         if (!cancelled) paint(data);
       })
       .catch(function () {
-        if (!cancelled) status.textContent = 'Couldn’t check the sources right now.';
+        if (!cancelled) status.textContent = t('manga_updates_check_error');
       })
       .then(function () {
         refresh.disabled = false;
@@ -129,7 +130,7 @@ export function renderMangaUpdates(root, params) {
       if (!data.LastRefreshAt || Date.now() - data.LastRefreshAt > STALE_MS) check();
     })
     .catch(function () {
-      if (!cancelled) status.textContent = 'Suwayomi isn’t answering right now.';
+      if (!cancelled) status.textContent = t('manga_suwayomi_unreachable');
     });
 
   return function () {

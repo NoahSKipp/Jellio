@@ -124,7 +124,7 @@ function buildRow(session) {
 
   const item = session.Item;
   const imageId = item.Type === 'Episode' && item.SeriesId ? item.SeriesId : item.Id;
-  row.setAttribute('aria-label', 'Go to ' + (displayTitle(item) || 'title'));
+  row.setAttribute('aria-label', t('action_go_to', { name: displayTitle(item) || '' }));
 
   function open() {
     hideNowPlayingPanel();

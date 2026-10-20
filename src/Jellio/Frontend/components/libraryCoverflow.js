@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Coverflow carousel for the library pages, ported from the original
 // codebase's own libraryCoverflow.js: three wide cards, the middle one
 // lit and carrying logo, meta and actions, the neighbours dimmed and
@@ -226,7 +227,7 @@ export function buildLibraryCoverflow(options) {
       const dot = document.createElement('button');
       dot.type = 'button';
       dot.className = 'jellio-coverflow-dot';
-      dot.setAttribute('aria-label', 'Show item ' + (i + 1));
+      dot.setAttribute('aria-label', t('coverflow_show_item', { index: i + 1 }));
       dot.addEventListener('click', function () {
         go(i);
       });

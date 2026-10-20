@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Audiobook player for Jellyfin AudioBook items. Jellyfin keeps one item
 // per file and tracks resume position natively per file, so this screen
 // stitches the book's files into one timeline (or uses the optional
@@ -182,7 +183,7 @@ export async function renderListen(root, params) {
   } catch (err) {
     // Offline and not downloaded ends up here too.
     console.warn('Jellio: could not open audiobook', err);
-    renderRetry(root, 'Could not open this audiobook.', function () {
+    renderRetry(root, t('listen_open_error'), function () {
       renderListen(root, params);
     });
     return;
@@ -200,7 +201,7 @@ export async function renderListen(root, params) {
   }
 
   if (!timeline.tracks.length) {
-    renderRetry(root, 'This audiobook has no playable files.', function () {
+    renderRetry(root, t('listen_no_playable'), function () {
       renderListen(root, params);
     });
     return;
@@ -218,7 +219,7 @@ export async function renderListen(root, params) {
   root.appendChild(el('div', 'jellio-listen-backdrop'));
 
   const topbar = el('div', 'jellio-listen-topbar');
-  const backButton = iconButton('arrow_back', 'Back');
+  const backButton = iconButton('arrow_back', t('onboarding_back'));
   backButton.addEventListener('click', function () {
     navigateTo('#/item?id=' + itemId);
   });
@@ -262,7 +263,7 @@ export async function renderListen(root, params) {
   scrub.max = String(Math.max(1, Math.floor(timeline.durationSec)));
   scrub.step = '1';
   scrub.value = '0';
-  scrub.setAttribute('aria-label', 'Position in book');
+  scrub.setAttribute('aria-label', t('reader_position_in_book'));
   scrubTrack.appendChild(scrub);
   attachScrubPreview(scrubTrack);
   if (timeline.durationSec > 0) {
@@ -300,7 +301,7 @@ export async function renderListen(root, params) {
   const chaptersButton = el('button', 'jellio-listen-pill');
   chaptersButton.type = 'button';
   chaptersButton.appendChild(el('span', 'material-icons list'));
-  chaptersButton.appendChild(el('span', null, 'Chapters'));
+  chaptersButton.appendChild(el('span', null, t('reader_chapters')));
   extras.appendChild(buildVolumeControl());
   extras.appendChild(speedButton);
   extras.appendChild(sleepButton);
@@ -360,7 +361,7 @@ export async function renderListen(root, params) {
     speedButton.textContent = '';
     speedButton.appendChild(el('span', 'material-icons speed'));
     speedButton.appendChild(el('span', null, curSpeed + '×'));
-    speedButton.setAttribute('aria-label', 'Playback speed ' + curSpeed + 'x');
+    speedButton.setAttribute('aria-label', t('player_speed_aria', { speed: curSpeed }));
   }
 
   function paintSleep() {
@@ -442,14 +443,14 @@ export async function renderListen(root, params) {
 
   function paintChapters() {
     chaptersPanel.textContent = '';
-    chaptersPanel.appendChild(el('h2', 'jellio-listen-panel-title', 'Chapters'));
+    chaptersPanel.appendChild(el('h2', 'jellio-listen-panel-title', t('reader_chapters')));
 
     let filterText = '';
     const filterWrap = el('div', 'jellio-listen-chapter-filter-wrap');
     const input = document.createElement('input');
     input.type = 'search';
     input.className = 'jellio-listen-chapter-filter-input';
-    input.placeholder = 'Filter chapters (e.g. 5, Epilogue)…';
+    input.placeholder = t('reader_filter_chapters_placeholder');
     input.autocomplete = 'off';
     input.spellcheck = false;
     filterWrap.appendChild(input);
@@ -485,7 +486,7 @@ export async function renderListen(root, params) {
       });
 
       if (!matchedCount) {
-        list.appendChild(el('p', 'jellio-listen-empty', 'No matching chapters.'));
+        list.appendChild(el('p', 'jellio-listen-empty', t('listen_no_matching_chapters')));
       } else if (activeRow && !query) {
         window.setTimeout(function () {
           try {
@@ -517,10 +518,10 @@ export async function renderListen(root, params) {
   const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
   const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
   const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
-  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', 'Keyboard Shortcuts'));
+  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', t('player_keyboard_shortcuts')));
   const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
   shortcutsClose.type = 'button';
-  shortcutsClose.setAttribute('aria-label', 'Close keyboard shortcuts');
+  shortcutsClose.setAttribute('aria-label', t('player_close_shortcuts'));
   shortcutsHeader.appendChild(shortcutsClose);
   shortcutsCard.appendChild(shortcutsHeader);
 
@@ -581,13 +582,13 @@ export async function renderListen(root, params) {
       event.preventDefault();
       if (session && session.audio) {
         setAudiobookVolume(Math.min(1, Math.round(((session.audio.volume || 0) + 0.1) * 10) / 10), false);
-        showToast('Volume ' + Math.round(session.audio.volume * 100) + '%');
+        showToast(t('player_volume_toast', { level: Math.round(session.audio.volume * 100) }));
       }
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
       if (session && session.audio) {
         setAudiobookVolume(Math.max(0, Math.round(((session.audio.volume || 0) - 0.1) * 10) / 10), false);
-        showToast('Volume ' + Math.round(session.audio.volume * 100) + '%');
+        showToast(t('player_volume_toast', { level: Math.round(session.audio.volume * 100) }));
       }
     } else if (event.key === 'm' || event.key === 'M') {
       event.preventDefault();

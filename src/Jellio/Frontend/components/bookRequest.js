@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // "Request a book" on the Books shelf: searches Chaptarr's metadata through
 // Controllers/BookRequestController.cs and adds the ebook or audiobook to
 // Chaptarr, which then searches for it. Collapsed behind one button until
@@ -30,12 +31,12 @@ function requestButton(result, bookType, label, icon, alreadyHave) {
   button.appendChild(text);
   if (alreadyHave) {
     markDone(button, text, label + ' ✓');
-    button.title = 'Already in Chaptarr';
+    button.title = t('book_request_in_chaptarr');
     return button;
   }
   button.addEventListener('click', function () {
     button.disabled = true;
-    text.textContent = 'Requesting…';
+    text.textContent = t('action_requesting');
     requestBook(result, bookType)
       .then(function (response) {
         const status = response && response.Status;
@@ -50,7 +51,7 @@ function requestButton(result, bookType, label, icon, alreadyHave) {
       })
       .catch(function (err) {
         console.warn('Jellio: book request failed', err);
-        text.textContent = 'Request failed';
+        text.textContent = t('request_failed');
         button.disabled = false;
         button.classList.add('jellio-book-request-action-error');
       });
@@ -118,8 +119,8 @@ export function buildBookRequestPanel(bookType, options) {
   input.type = 'search';
   input.className = 'jellio-book-request-input';
   input.placeholder = opts.placeholder || 'Title, author or ISBN';
-  input.setAttribute('aria-label', 'Search books to request');
-  const submit = el('button', 'jellio-book-request-submit', 'Search');
+  input.setAttribute('aria-label', t('search_books_request'));
+  const submit = el('button', 'jellio-book-request-submit', t('action_search'));
   submit.type = 'submit';
   form.appendChild(input);
   form.appendChild(submit);
@@ -143,7 +144,7 @@ export function buildBookRequestPanel(bookType, options) {
     if (!query) return;
     const token = ++searchToken;
     results.textContent = '';
-    status.textContent = 'Searching…';
+    status.textContent = t('status_searching');
     submit.disabled = true;
     searchBooksToRequest(query, bookType)
       .then(function (found) {
@@ -156,7 +157,7 @@ export function buildBookRequestPanel(bookType, options) {
       .catch(function (err) {
         if (token !== searchToken) return;
         console.warn('Jellio: book search failed', err);
-        status.textContent = 'Search failed. Try again in a moment.';
+        status.textContent = t('search_failed_moment');
       })
       .finally(function () {
         if (token === searchToken) submit.disabled = false;

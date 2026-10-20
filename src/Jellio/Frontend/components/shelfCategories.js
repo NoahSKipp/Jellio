@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Mihon-style categories on the book shelves (runtime/shelf.js): a
 // checklist for putting series or books into categories, and a dialog
 // for adding, renaming, reordering and deleting them.
@@ -38,7 +39,7 @@ function modal(title) {
   const panel = el('div', 'jellio-avatar-picker-panel jellio-shelf-categories-panel');
   const closeButton = el('button', 'jellio-group-watch-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   closeButton.appendChild(el('span', 'material-icons close'));
   closeButton.addEventListener('click', close);
   panel.appendChild(closeButton);
@@ -64,12 +65,12 @@ function newCategoryForm(kind, onCreated) {
   const input = document.createElement('input');
   input.type = 'text';
   input.maxLength = 40;
-  input.placeholder = 'New category, e.g. Reading';
-  input.setAttribute('aria-label', 'New category name');
+  input.placeholder = t('shelf_new_category');
+  input.setAttribute('aria-label', t('shelf_category_name'));
   const add = el('button', 'jellio-shelf-categories-add');
   add.type = 'submit';
   add.appendChild(el('span', 'material-icons add'));
-  add.appendChild(el('span', null, 'Add'));
+  add.appendChild(el('span', null, t('action_add')));
   form.appendChild(input);
   form.appendChild(add);
   form.addEventListener('submit', async function (event) {
@@ -111,7 +112,7 @@ export async function openCategoryPicker(kind, keys, title) {
     if (extraTick) ticked.add(extraTick);
     list.textContent = '';
     if (!shelf.Categories.length) {
-      list.appendChild(el('p', 'jellio-avatar-picker-status', 'No categories yet. Add one below, like Reading or Up to date.'));
+      list.appendChild(el('p', 'jellio-avatar-picker-status', t('shelf_no_categories')));
     }
     shelf.Categories.forEach(function (category) {
       const row = el('label', 'jellio-shelf-categories-check');
@@ -130,7 +131,7 @@ export async function openCategoryPicker(kind, keys, title) {
 
   panel.appendChild(newCategoryForm(kind, (category) => paint(category.Id)));
   const actions = el('div', 'jellio-shelf-categories-actions');
-  const save = el('button', 'jellio-shelf-categories-save', 'Save');
+  const save = el('button', 'jellio-shelf-categories-save', t('profile_save'));
   save.type = 'button';
   save.addEventListener('click', async function () {
     save.disabled = true;
@@ -166,7 +167,7 @@ export async function openCategoryManager(kind) {
     const ids = shelf.Categories.map((category) => category.Id);
     list.textContent = '';
     if (!shelf.Categories.length) {
-      list.appendChild(el('p', 'jellio-avatar-picker-status', 'No categories yet.'));
+      list.appendChild(el('p', 'jellio-avatar-picker-status', t('shelf_no_categories_simple')));
     }
     shelf.Categories.forEach(function (category, index) {
       const row = el('div', 'jellio-shelf-categories-row');
@@ -174,7 +175,7 @@ export async function openCategoryManager(kind) {
       name.type = 'text';
       name.maxLength = 40;
       name.value = category.Name;
-      name.setAttribute('aria-label', 'Category name');
+      name.setAttribute('aria-label', t('shelf_category_name_label'));
       name.addEventListener('change', function () {
         const next = name.value.trim();
         if (!next || next === category.Name) {
@@ -198,7 +199,7 @@ export async function openCategoryManager(kind) {
       });
       down.disabled = index === ids.length - 1;
       const remove = iconButton('delete_outline', 'Delete', function () {
-        if (!window.confirm('Delete the category “' + category.Name + '”? What’s in it stays on the shelf.')) return;
+        if (!window.confirm(t('shelf_delete_category_confirm', { name: category.Name }))) return;
         run(() => deleteCategory(kind, category.Id));
       });
       row.appendChild(up);

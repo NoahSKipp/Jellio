@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The reader's study layer: select text to highlight it, add a note,
 // look a word up (Wiktionary), translate it (DeepL, when the server has a
 // key), or save it to the vocabulary deck (screens/vocab.js). Also owns
@@ -223,7 +224,7 @@ export function createStudyLayer(options) {
 
     popup = el('div', 'jellio-study-popup');
     popup.setAttribute('role', 'dialog');
-    popup.setAttribute('aria-label', 'Selection');
+    popup.setAttribute('aria-label', t('reader_selection'));
     const toolbar = el('div', 'jellio-study-toolbar');
     const colors = el('div', 'jellio-study-colors');
     const results = el('div', 'jellio-study-results');
@@ -234,8 +235,8 @@ export function createStudyLayer(options) {
         const dot = el('button', 'jellio-study-color' + (current && current.Color === color.value ? ' jellio-study-color-active' : ''));
         dot.type = 'button';
         dot.style.setProperty('--dot', color.hex);
-        dot.setAttribute('aria-label', 'Highlight ' + color.label.toLowerCase());
-        dot.title = 'Highlight ' + color.label.toLowerCase();
+        dot.setAttribute('aria-label', t('reader_study_highlight_color', { color: color.label.toLowerCase() }));
+        dot.title = t('reader_study_highlight_color', { color: color.label.toLowerCase() });
         dot.addEventListener('click', function () {
           saveHighlight(color.value).then(paintColors);
         });
@@ -286,10 +287,10 @@ export function createStudyLayer(options) {
       const editor = el('div', 'jellio-study-note');
       const area = document.createElement('textarea');
       area.rows = 3;
-      area.placeholder = 'Add a note';
+      area.placeholder = t('reader_add_note');
       area.value = (current && current.Note) || '';
       editor.appendChild(area);
-      const saveButton = el('button', 'jellio-study-note-save', 'Save note');
+      const saveButton = el('button', 'jellio-study-note-save', t('manga_save_note'));
       saveButton.type = 'button';
       saveButton.addEventListener('click', async function () {
         saveButton.disabled = true;
@@ -302,7 +303,7 @@ export function createStudyLayer(options) {
           closePopup();
         } catch (err) {
           saveButton.disabled = false;
-          showToast('Could not save the note');
+          showToast(t('toast_save_note_error'));
         }
       });
       editor.appendChild(saveButton);
@@ -315,7 +316,7 @@ export function createStudyLayer(options) {
       const block = el('div', 'jellio-study-block');
       block.appendChild(sectionTitle('Dictionary'));
       if (!senses || !senses.length) {
-        block.appendChild(el('p', 'jellio-study-muted', 'No dictionary entry for “' + word + '”.'));
+        block.appendChild(el('p', 'jellio-study-muted', t('reader_study_no_dictionary', { word })));
         return block;
       }
       const showLanguage = bookLang === 'auto';
@@ -332,7 +333,7 @@ export function createStudyLayer(options) {
     }
 
     function lookUp() {
-      const block = el('div', 'jellio-study-block jellio-study-loading', 'Looking up…');
+      const block = el('div', 'jellio-study-block jellio-study-loading', t('reader_study_looking_up'));
       results.appendChild(block);
       positionAgain();
       return defineWord(word, bookLang)
@@ -348,7 +349,7 @@ export function createStudyLayer(options) {
     }
 
     function translate() {
-      const block = el('div', 'jellio-study-block jellio-study-loading', 'Translating…');
+      const block = el('div', 'jellio-study-block jellio-study-loading', t('reader_study_translating'));
       results.appendChild(block);
       positionAgain();
       const target = getTargetLang();
@@ -396,11 +397,11 @@ export function createStudyLayer(options) {
           ItemName: itemName,
           Locator: (current && current.Locator) || (selection && selection.locator) || null,
         });
-        showToast('Saved “' + (wordLike ? word : text.slice(0, 30)) + '” to vocabulary');
+        showToast(t('reader_study_saved_vocab', { word: wordLike ? word : text.slice(0, 30) }));
         button.classList.add('jellio-study-action-done');
       } catch (err) {
         button.disabled = false;
-        showToast('Could not save the word');
+        showToast(t('toast_save_word_error'));
       }
     }
 
@@ -413,7 +414,7 @@ export function createStudyLayer(options) {
       saveWord(saveButton);
     });
     action('content_copy', 'Copy', function () {
-      if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => showToast('Copied'), () => {});
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => showToast(t('toast_copied')), () => {});
     });
     if (current) {
       action('delete', 'Remove highlight', async function () {
@@ -424,7 +425,7 @@ export function createStudyLayer(options) {
           notify();
           closePopup();
         } catch (err) {
-          showToast('Could not remove the highlight');
+          showToast(t('toast_remove_highlight_error'));
         }
       });
     }
@@ -489,7 +490,7 @@ export function createStudyLayer(options) {
       if (here) {
         await deleteAnnotation(itemId, here.Id);
         annotations = annotations.filter((annotation) => annotation.Id !== here.Id);
-        showToast('Bookmark removed');
+        showToast(t('reader_bookmark_removed'));
       } else {
         const locator = reader.currentLocator();
         if (!locator) return;
@@ -501,11 +502,11 @@ export function createStudyLayer(options) {
           Text: reader.currentExcerpt ? reader.currentExcerpt() : null,
         });
         annotations.push(created);
-        showToast('Bookmarked');
+        showToast(t('reader_bookmarked'));
       }
       notify();
     } catch (err) {
-      showToast('Could not update the bookmark');
+      showToast(t('toast_update_bookmark_error'));
     }
   }
 
@@ -537,11 +538,11 @@ export function createStudyLayer(options) {
   function paintNotesPanel(panel, closePanels) {
     panel.textContent = '';
     const header = el('div', 'jellio-study-notes-header');
-    header.appendChild(el('h2', 'jellio-reader-panel-title', 'Notes & highlights'));
+    header.appendChild(el('h2', 'jellio-reader-panel-title', t('reader_notes_and_highlights')));
     if (annotations.length) {
-      const exportButton = el('button', 'jellio-study-export', 'Export');
+      const exportButton = el('button', 'jellio-study-export', t('reader_export'));
       exportButton.type = 'button';
-      exportButton.title = 'Download as Markdown';
+      exportButton.title = t('reader_download_markdown');
       exportButton.addEventListener('click', exportMarkdown);
       header.appendChild(exportButton);
     }
@@ -549,7 +550,7 @@ export function createStudyLayer(options) {
 
     if (!annotations.length) {
       panel.appendChild(
-        el('p', 'jellio-reader-empty', 'Select text to highlight it or add a note. Use the bookmark button to mark a page.'),
+        el('p', 'jellio-reader-empty', t('reader_study_hint')),
       );
       return;
     }
@@ -576,8 +577,8 @@ export function createStudyLayer(options) {
         entry.appendChild(jump);
         const remove = el('button', 'jellio-study-note-remove');
         remove.type = 'button';
-        remove.setAttribute('aria-label', 'Remove');
-        remove.title = 'Remove';
+        remove.setAttribute('aria-label', t('action_remove'));
+        remove.title = t('action_remove');
         remove.appendChild(el('span', 'material-icons close'));
         remove.addEventListener('click', async function () {
           try {
@@ -587,7 +588,7 @@ export function createStudyLayer(options) {
             notify();
             paintNotesPanel(panel, closePanels);
           } catch (err) {
-            showToast('Could not remove it');
+            showToast(t('toast_remove_failed'));
           }
         });
         entry.appendChild(remove);

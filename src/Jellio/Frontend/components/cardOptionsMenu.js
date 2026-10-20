@@ -167,17 +167,17 @@ function restartFromBeginning(item) {
 // this file already uses rather than a spinner the admin has to sit and
 // watch.
 export function findSkipTimestamps(itemId, itemName, useAnalyzerFallback) {
-  showToast('Looking for skip timestamps for ' + (itemName || 'this title') + '…');
+  showToast(t('skip_looking', { title: itemName || t('account_this_user') }));
   scanIntroCreditsForItem(itemId, useAnalyzerFallback)
     .then(function (result) {
       const communityHits = (result && result.CommunityHits) || 0;
       const analyzerHits = (result && result.AnalyzerHits) || 0;
       const scanned = (result && result.EpisodesScanned) || 1;
-      showToast('Skip timestamps found for ' + (communityHits + analyzerHits) + ' of ' + scanned + ' item(s).');
+      showToast(t('skip_found_count', { hits: communityHits + analyzerHits, total: scanned }));
     })
     .catch(function (err) {
       console.warn('Jellio: could not scan for skip timestamps', err);
-      showToast('Could not scan for skip timestamps. Try again.');
+      showToast(t('toast_skip_timestamps_error'));
     });
 }
 
@@ -203,9 +203,9 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       buildOption(t('menu_share_link'), 'share', function () {
         shareItem(item)
           .then((result) => {
-            if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+            if (result === 'copied') showToast(t('toast_link_copied'));
           })
-          .catch(() => showToast('Could not copy the link.'));
+          .catch(() => showToast(t('toast_copy_link_error')));
       }),
     );
   }
@@ -227,7 +227,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       buildOption(t('menu_start_beginning'), 'replay', function () {
         restartFromBeginning(item).catch(function (err) {
           console.warn('Jellio: could not start over', err);
-          showToast('Could not start over. Try again.');
+          showToast(t('toast_start_over_error'));
         });
       }),
     );
@@ -238,7 +238,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         function () {
           toggleWatched(item, opts, onChanged).catch(function (err) {
             console.warn('Jellio: could not remove from continue watching', err);
-            showToast('Could not remove from Continue Watching. Try again.');
+            showToast(t('toast_remove_continue_error'));
           });
         },
         true,
@@ -262,7 +262,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         function () {
           toggleWatched(item, opts, onChanged).catch(function (err) {
             console.warn('Jellio: could not remove from up next', err);
-            showToast('Could not remove from Up Next. Try again.');
+            showToast(t('toast_remove_upnext_error'));
           });
         },
         true,
@@ -286,7 +286,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
               })
               .catch(function (err) {
                 console.warn('Jellio: could not remove show from up next', err);
-                showToast('Could not remove show from Up Next. Try again.');
+                showToast(t('toast_remove_upnext_error'));
               });
           },
           true,
@@ -302,7 +302,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         function () {
           toggleWatchlist(item, onChanged).catch(function (err) {
             console.warn('Jellio: could not update watchlist state', err);
-            showToast('Could not update your watchlist. Try again.');
+            showToast(t('toast_watchlist_error'));
           });
         },
       ),
@@ -317,7 +317,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
           function () {
             toggleGrouplist(item.Id).catch(function (err) {
               console.warn('Jellio: could not update grouplist state', err);
-              showToast('Could not update your Grouplist. Try again.');
+              showToast(t('toast_grouplist_error'));
             });
           },
         ),
@@ -328,7 +328,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       buildOption(isPlayed ? t('detail_mark_unwatched') : t('detail_mark_watched'), 'check', function () {
         toggleWatched(item, opts, onChanged).catch(function (err) {
           console.warn('Jellio: could not update watched state', err);
-          showToast('Could not update watched state. Try again.');
+          showToast(t('toast_watched_error'));
         });
       }),
     );

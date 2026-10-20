@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Discover for the Manga shelf (#/discover?kind=manga): manga, manhwa and
 // manhua series from AniList through Controllers/BookRequestController.cs's
 // discover-manga, never prose books. A card's Read opens the series (read
@@ -59,7 +60,7 @@ export async function renderMangaDiscover(root, params) {
   const mangaLibrary = params.get('mangaLibrary') === '1';
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-discover';
-  setTitle('Discover manga - Jellio');
+  setTitle(t('nav_discover') + ' - Jellio');
 
   let cancelled = false;
   let requestsEnabled = false;
@@ -68,7 +69,7 @@ export async function renderMangaDiscover(root, params) {
   const header = el('header', 'jellio-library-header jellio-discover-header');
   const back = el('button', 'jellio-discover-back');
   back.type = 'button';
-  back.setAttribute('aria-label', 'Back to Manga');
+  back.setAttribute('aria-label', t('manga_back_to_manga'));
   back.appendChild(el('span', 'material-icons arrow_back'));
   back.addEventListener('click', function () {
     if (parentId) {
@@ -81,8 +82,8 @@ export async function renderMangaDiscover(root, params) {
   });
   header.appendChild(back);
   const headingWrap = el('div', 'jellio-discover-heading');
-  headingWrap.appendChild(el('h1', 'jellio-library-title', 'Discover manga'));
-  headingWrap.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga, manhwa and manhua. Read any series straight from its source.'));
+  headingWrap.appendChild(el('h1', 'jellio-library-title', t('manga_discover_title')));
+  headingWrap.appendChild(el('p', 'jellio-bookshelf-stats', t('manga_discover_desc')));
   header.appendChild(headingWrap);
   root.appendChild(header);
 
@@ -91,8 +92,8 @@ export async function renderMangaDiscover(root, params) {
   searchForm.appendChild(el('span', 'material-icons search'));
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Search manga, manhwa and manhua';
-  searchInput.setAttribute('aria-label', 'Search manga, manhwa and manhua');
+  searchInput.placeholder = t('manga_search_placeholder');
+  searchInput.setAttribute('aria-label', t('manga_search_placeholder'));
   searchForm.appendChild(searchInput);
   toolbar.appendChild(searchForm);
   root.appendChild(toolbar);
@@ -288,9 +289,9 @@ export async function renderMangaDiscover(root, params) {
     body.appendChild(head);
     const grid = el('div', 'jellio-discover-grid');
     body.appendChild(grid);
-    const status = el('p', 'jellio-bookshelf-empty-inline', 'Loading…');
+    const status = el('p', 'jellio-bookshelf-empty-inline', t('status_loading'));
     body.appendChild(status);
-    const more = el('button', 'jellio-vocab-secondary jellio-discover-more', 'Load more');
+    const more = el('button', 'jellio-vocab-secondary jellio-discover-more', t('discover_load_more'));
     more.type = 'button';
     more.hidden = true;
     body.appendChild(more);
@@ -299,7 +300,7 @@ export async function renderMangaDiscover(root, params) {
     function load() {
       more.hidden = true;
       status.hidden = false;
-      status.textContent = 'Loading…';
+      status.textContent = t('status_loading');
       discoverManga(Object.assign({}, query, { page: page }))
         .then(function (list) {
           if (cancelled || !grid.isConnected) return;
@@ -315,7 +316,7 @@ export async function renderMangaDiscover(root, params) {
         .catch(function () {
           if (!grid.isConnected) return;
           status.hidden = false;
-          status.textContent = 'Could not reach AniList. Try again in a moment.';
+          status.textContent = t('discover_anilist_error');
           more.hidden = false;
         });
     }

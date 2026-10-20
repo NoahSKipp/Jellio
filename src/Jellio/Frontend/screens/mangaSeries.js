@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // One manga series from the Manga shelf (screens/bookshelf.js, reached
 // with &series=<key>): its cover, how far the reader is, a button that
 // picks up where they left off, and every chapter in reading order with
@@ -68,7 +69,7 @@ export function renderMangaSeries(root, params, parentId) {
   const header = el('header', 'jellio-library-header jellio-manga-series-header');
   const back = el('button', 'jellio-discover-back');
   back.type = 'button';
-  back.setAttribute('aria-label', 'Back to Manga');
+  back.setAttribute('aria-label', t('manga_back_to_manga'));
   back.appendChild(el('span', 'material-icons arrow_back'));
   back.addEventListener('click', function () {
     const shelf = new URLSearchParams(params);
@@ -80,7 +81,7 @@ export function renderMangaSeries(root, params, parentId) {
 
   const body = el('div', 'jellio-manga-series-body');
   root.appendChild(body);
-  body.appendChild(el('p', 'jellio-bookshelf-stats', 'Loading…'));
+  body.appendChild(el('p', 'jellio-bookshelf-stats', t('status_loading')));
 
   Promise.all([
     getBookshelfItems(parentId, 'manga', params.get('mangaLibrary') === '1'),
@@ -132,7 +133,7 @@ export function renderMangaSeries(root, params, parentId) {
       if (cancelled) return;
       console.warn('Jellio: could not load the series', err);
       body.textContent = '';
-      body.appendChild(el('p', 'jellio-service-empty', 'Could not load this series. Try again in a moment.'));
+      body.appendChild(el('p', 'jellio-service-empty', t('manga_load_error')));
     });
 
   function bookmarked(item) {
@@ -187,16 +188,16 @@ export function renderMangaSeries(root, params, parentId) {
         })
         .catch(function (err) {
           console.warn('Jellio: could not update read state', err);
-          showToast('Could not save the read state. Try again.');
+          showToast(t('toast_watched_error'));
         });
     }
 
     function copyShare(title, hash) {
       shareHash(title, hash)
         .then((result) => {
-          if (result === 'copied') showToast('Link copied. Anyone with an account on this server can open it.');
+          if (result === 'copied') showToast(t('toast_link_copied'));
         })
-        .catch(() => showToast('Could not copy the link.'));
+        .catch(() => showToast(t('toast_copy_link_error')));
     }
 
     // Right-click or long-press on a chapter, Mihon style.
@@ -261,7 +262,7 @@ export function renderMangaSeries(root, params, parentId) {
       rerender();
       saveSeriesPrefs(shelfKey, server).catch(function (err) {
         console.warn('Jellio: could not save the chapter settings', err);
-        showToast('Could not save the chapter settings. Try again.');
+        showToast(t('toast_chapter_settings_error'));
       });
     }
 
@@ -278,7 +279,7 @@ export function renderMangaSeries(root, params, parentId) {
           rerender();
           saveSeriesPrefs(shelfKey, { ExcludedScanlators: choice.excluded, DuplicatesAsOne: choice.duplicatesAsOne }).catch(function (err) {
             console.warn('Jellio: could not save the scanlator filter', err);
-            showToast('Could not save the scanlator filter. Try again.');
+            showToast(t('toast_scanlator_filter_error'));
           });
         },
       });
@@ -340,8 +341,8 @@ export function renderMangaSeries(root, params, parentId) {
 
     const moreButton = el('button', 'jellio-detail-icon-action jellio-detail-icon-action-more');
     moreButton.type = 'button';
-    moreButton.setAttribute('aria-label', 'More options');
-    moreButton.title = 'More options';
+    moreButton.setAttribute('aria-label', t('action_more_options'));
+    moreButton.title = t('action_more_options');
     moreButton.appendChild(el('span', 'material-icons more_vert'));
 
     let actionsExpanded = false;
@@ -387,7 +388,7 @@ export function renderMangaSeries(root, params, parentId) {
     markAll.addEventListener('click', function () {
       collapseActions();
       if (unread.length) setRead(unread, true);
-      else if (window.confirm('Mark every chapter of “' + group.title + '” as unread?')) setRead(chapters, false);
+      else if (window.confirm(t('manga_mark_all_unread_confirm', { title: group.title }))) setRead(chapters, false);
     });
     actions.appendChild(markAll);
 
@@ -395,8 +396,8 @@ export function renderMangaSeries(root, params, parentId) {
       // Mihon's download menu: the next few unread chapters, or all.
       const save = el('button', iconActionClass);
       save.type = 'button';
-      save.setAttribute('aria-label', 'Download chapters');
-      save.title = 'Download chapters';
+      save.setAttribute('aria-label', t('manga_download_chapters'));
+      save.title = t('manga_download_chapters');
       save.appendChild(el('span', 'material-icons download'));
       const inOrder = unread
         .slice()
@@ -435,22 +436,22 @@ export function renderMangaSeries(root, params, parentId) {
     const removeDownloads = el('button', iconActionClass);
     removeDownloads.type = 'button';
     removeDownloads.hidden = true;
-    removeDownloads.setAttribute('aria-label', 'Remove downloads');
+    removeDownloads.setAttribute('aria-label', t('manga_remove_downloads'));
     removeDownloads.appendChild(el('span', 'material-icons delete_sweep'));
     let downloaded = [];
     Promise.all(chapters.map((chapter) => findAnyDownload(chapter.Id).catch(() => null))).then(function (found) {
       downloaded = found.filter(Boolean);
       if (cancelled || !downloaded.length) return;
-      removeDownloads.title = 'Remove downloads (' + downloaded.length + ')';
+      removeDownloads.title = t('manga_remove_downloads_count', { count: downloaded.length });
       removeDownloads.hidden = false;
     });
     removeDownloads.addEventListener('click', async function () {
-      if (!window.confirm('Remove all ' + downloaded.length + ' downloaded chapters of “' + group.title + '” from this device?')) return;
+      if (!window.confirm(t('manga_remove_downloads_confirm', { count: downloaded.length, title: group.title }))) return;
       removeDownloads.disabled = true;
       for (const record of downloaded) {
         await removeDownload(record.Id).catch((err) => console.warn('Jellio: could not remove a download', err));
       }
-      showToast('Removed ' + downloaded.length + ' chapters from this device.');
+      showToast(t('manga_removed_chapters_toast', { count: downloaded.length }));
       removeDownloads.hidden = true;
     });
     actions.appendChild(removeDownloads);
@@ -458,7 +459,7 @@ export function renderMangaSeries(root, params, parentId) {
     // Per-series switch: no new-chapter alerts.
     const skipUpdatesToggle = el('button', iconActionClass);
     skipUpdatesToggle.type = 'button';
-    skipUpdatesToggle.setAttribute('aria-label', 'Skip updates');
+    skipUpdatesToggle.setAttribute('aria-label', t('manga_skip_updates'));
     skipUpdatesToggle.appendChild(el('span', 'material-icons notifications_off'));
     function paintSkipUpdates() {
       const on = !!(shelf.Series[shelfKey] && shelf.Series[shelfKey].SkipUpdates);
@@ -475,7 +476,7 @@ export function renderMangaSeries(root, params, parentId) {
         .then(function () {
           showToast(on ? 'Skipping new-chapter notifications.' : 'Notifications enabled for new chapters.');
         })
-        .catch(() => showToast('Could not save that. Try again.'));
+        .catch(() => showToast(t('toast_save_error')));
     });
     actions.appendChild(skipUpdatesToggle);
 
@@ -505,11 +506,11 @@ export function renderMangaSeries(root, params, parentId) {
 
     const categoriesButton = el('button', iconActionClass);
     categoriesButton.type = 'button';
-    categoriesButton.setAttribute('aria-label', 'Categories');
+    categoriesButton.setAttribute('aria-label', t('shelf_category_name_label'));
     categoriesButton.appendChild(el('span', 'material-icons label'));
     function paintCategories() {
       const names = categoriesOf(shelf, shelfKey).map((category) => category.Name);
-      categoriesButton.title = names.length ? 'Categories: ' + names.join(', ') : 'Categories';
+      categoriesButton.title = names.length ? t('shelf_category_name_label') + ': ' + names.join(', ') : t('shelf_category_name_label');
       categoriesButton.classList.toggle('jellio-detail-icon-action-active', names.length > 0);
     }
     paintCategories();
@@ -518,8 +519,8 @@ export function renderMangaSeries(root, params, parentId) {
 
     const shareButton = el('button', iconActionClass);
     shareButton.type = 'button';
-    shareButton.setAttribute('aria-label', 'Copy a link to share');
-    shareButton.title = 'Copy a link to share';
+    shareButton.setAttribute('aria-label', t('action_copy_link_share'));
+    shareButton.title = t('action_copy_link_share');
     shareButton.appendChild(el('span', 'material-icons share'));
     shareButton.addEventListener('click', () => copyShare(group.title, window.location.hash));
     actions.appendChild(shareButton);
@@ -537,7 +538,7 @@ export function renderMangaSeries(root, params, parentId) {
       { label: 'Long strip with gaps', layout: 'vertical-gaps', direction: '' },
     ];
     const modeRow = el('div', 'jellio-manga-series-mode');
-    modeRow.appendChild(el('span', 'jellio-manga-series-mode-label', 'Reading mode'));
+    modeRow.appendChild(el('span', 'jellio-manga-series-mode-label', t('manga_reading_mode')));
     function paintModes() {
       modeRow.querySelectorAll('button').forEach((button) => button.remove());
       modes.forEach(function (mode) {
@@ -568,9 +569,9 @@ export function renderMangaSeries(root, params, parentId) {
         const area = document.createElement('textarea');
         area.maxLength = 4000;
         area.rows = 3;
-        area.placeholder = 'Anything to remember about this series';
+        area.placeholder = t('manga_note_placeholder');
         area.value = prefs.Note || '';
-        const save = el('button', 'jellio-manga-series-chip jellio-manga-series-chip-active', 'Save note');
+        const save = el('button', 'jellio-manga-series-chip jellio-manga-series-chip-active', t('manga_save_note'));
         save.type = 'button';
         save.addEventListener('click', function () {
           prefs.Note = area.value.trim() || null;
@@ -652,7 +653,7 @@ export function renderMangaSeries(root, params, parentId) {
     const sheet = el('button', 'jellio-manga-series-chip');
     sheet.type = 'button';
     sheet.appendChild(el('span', 'material-icons tune'));
-    sheet.appendChild(el('span', null, 'Filter & sort'));
+    sheet.appendChild(el('span', null, t('manga_filter_and_sort')));
     sheet.addEventListener('click', function () {
       openChapterSettings({
         settings: cs,
@@ -662,10 +663,10 @@ export function renderMangaSeries(root, params, parentId) {
         onScanlators: openScanlators,
         onSetDefault: function (applyToLibrary) {
           saveSeriesDefaults(settingsForServer(chapterSettings(shelf.Series[shelfKey], shelf.SeriesDefaults)), applyToLibrary)
-            .then(() => showToast(applyToLibrary ? 'Saved as the default, and applied to your shelf.' : 'Saved as the default for new series.'))
+            .then(() => showToast(applyToLibrary ? t('manga_saved_default_applied') : t('manga_saved_default_new')))
             .catch(function (err) {
               console.warn('Jellio: could not save the default chapter settings', err);
-              showToast('Could not save the default. Try again.');
+              showToast(t('manga_save_default_error'));
             });
         },
         onReset: function () {
@@ -681,7 +682,7 @@ export function renderMangaSeries(root, params, parentId) {
           rerender();
           saveSeriesPrefs(shelfKey, { Reset: true }).catch(function (err) {
             console.warn('Jellio: could not reset the chapter settings', err);
-            showToast('Could not reset. Try again.');
+            showToast(t('manga_reset_error'));
           });
         },
       });
@@ -697,8 +698,8 @@ export function renderMangaSeries(root, params, parentId) {
     const searchInput = document.createElement('input');
     searchInput.type = 'search';
     searchInput.className = 'jellio-manga-chapter-search-input';
-    searchInput.placeholder = 'Jump to ch. # / search…';
-    searchInput.setAttribute('aria-label', 'Filter chapters or jump to chapter');
+    searchInput.placeholder = t('manga_jump_chapter_placeholder');
+    searchInput.setAttribute('aria-label', t('manga_filter_chapters'));
     searchInput.value = chapterSearchQuery;
 
     searchInput.addEventListener('input', function () {
@@ -867,7 +868,7 @@ export function renderMangaSeries(root, params, parentId) {
       others.className = 'jellio-manga-other-sources';
       const names = Array.from(new Set(group.otherSources.map((item) => chapterSource(item) || 'Unknown source')));
       others.appendChild(
-        el('summary', 'jellio-manga-other-sources-summary', 'Other sources (' + group.otherSources.length + ') · ' + names.join(', ')),
+        el('summary', 'jellio-manga-other-sources-summary', t('manga_other_sources_count', { count: group.otherSources.length, names: names.join(', ') })),
       );
       const otherList = el('ol', 'jellio-manga-chapter-list jellio-manga-other-sources-list');
       group.otherSources.forEach(function (item) {

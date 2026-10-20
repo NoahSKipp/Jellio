@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.7",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.7",
+    "summary": "100% full localization coverage across all Jellio UI components, screens, toasts, and dialogs.",
+    "highlights": [
+      {
+        "title": "Universal Interface Localization",
+        "description": "Translates all toasts, confirmations, status indicators, audio mini-player controls, coverflow accessibility labels, and Group Watch messages across all 7 display languages."
+      },
+      {
+        "title": "Vocabulary and Reading Study",
+        "description": "Brings complete translation coverage to vocabulary decks, review sessions, flashcard intervals, dictionary lookups, and reading study tools."
+      },
+      {
+        "title": "Manga and Bookshelf Polish",
+        "description": "Localizes chapter search filters, source checking, download management, and category assignment dialogues with zero untranslated UI strings."
+      }
+    ]
+  },
+  {
     "version": "1.87.6",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.6",

@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Four real occasions (Halloween, New Year's, Valentine's, Christmas),
 // replacing the old catalogue of three dozen themes ported
 // wholesale from CodeDevMLH/Jellyfin-Seasonals: real feedback was that
@@ -511,7 +512,7 @@ function mountNewYear(container, level) {
     if (!sky) {
       sky = el('div', 'jellio-season-sky');
       const title = el('div', 'jellio-season-hny');
-      title.appendChild(el('span', null, 'Happy New Year'));
+      title.appendChild(el('span', null, t('seasons_happy_new_year')));
       sky.appendChild(title);
       rootEl.appendChild(sky);
     }

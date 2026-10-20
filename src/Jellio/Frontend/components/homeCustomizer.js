@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Ported in spirit from Harbor's own real home row customization
 // (harborstremio/harbor, src/views/home/customizable-rows.tsx,
 // row-controls.tsx, home-customize-bar.tsx and lib/home-customization.ts,
@@ -156,8 +157,8 @@ function buildRowBar(wrapper, key, hidden, canMoveUp, canMoveDown, onChange) {
 
   const up = el('button', 'jellio-row-editor-button');
   up.type = 'button';
-  up.title = 'Move up';
-  up.setAttribute('aria-label', 'Move row up');
+  up.title = t('action_move_up');
+  up.setAttribute('aria-label', t('home_move_row_up'));
   up.disabled = !canMoveUp;
   up.appendChild(el('span', 'material-icons', 'arrow_upward'));
   up.addEventListener('click', function () {
@@ -169,8 +170,8 @@ function buildRowBar(wrapper, key, hidden, canMoveUp, canMoveDown, onChange) {
 
   const down = el('button', 'jellio-row-editor-button');
   down.type = 'button';
-  down.title = 'Move down';
-  down.setAttribute('aria-label', 'Move row down');
+  down.title = t('action_move_down');
+  down.setAttribute('aria-label', t('home_move_row_down'));
   down.disabled = !canMoveDown;
   down.appendChild(el('span', 'material-icons', 'arrow_downward'));
   down.addEventListener('click', function () {
@@ -275,14 +276,14 @@ export function applyHomeCustomization(rowsContainer, editMode) {
 export function buildHomeCustomizeBar(onToggleEdit, onReset) {
   const bar = el('div', 'jellio-home-customize-bar');
 
-  const resetButton = el('button', 'jellio-home-customize-reset', 'Reset');
+  const resetButton = el('button', 'jellio-home-customize-reset', t('action_reset'));
   resetButton.type = 'button';
   const resetIcon = el('span', 'material-icons', 'restart_alt');
   resetButton.prepend(resetIcon);
   resetButton.addEventListener('click', onReset);
   bar.appendChild(resetButton);
 
-  const editButton = el('button', 'jellio-home-customize-toggle', 'Customize');
+  const editButton = el('button', 'jellio-home-customize-toggle', t('home_customize'));
   editButton.type = 'button';
   const editIcon = el('span', 'material-icons', 'tune');
   editButton.prepend(editIcon);

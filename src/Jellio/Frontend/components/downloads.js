@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // What gets downloaded for each kind of item, and the Download button
 // that sits on its page. The files and bookkeeping are runtime/offline.js's;
 // this file decides which files make up a book, a manga chapter, an
@@ -447,7 +448,7 @@ export function buildDownloadButton(item, options) {
       return;
     }
     if (isOffline()) {
-      showToast('Downloads start once the server can be reached.');
+      showToast(t('downloads_start_server_reached'));
       return;
     }
     function start(quality) {
@@ -456,11 +457,11 @@ export function buildDownloadButton(item, options) {
         .then(function (queued) {
           record = queued;
           paint();
-          showToast('Downloading. Find it under Downloads.');
+          showToast(t('downloads_finding_under'));
         })
         .catch(function (err) {
           console.warn('Jellio: could not start the download', err);
-          showToast('Could not start the download' + (err && err.message ? ': ' + err.message : '.'));
+          showToast(t('toast_download_start_error') + (err && err.message ? ': ' + err.message : '.'));
         })
         .finally(function () {
           button.disabled = false;
@@ -490,8 +491,8 @@ export function buildEpisodesDownloadButton(item, options) {
   if ((item.Type !== 'Series' && item.Type !== 'Season') || !('caches' in window) || !('indexedDB' in window)) return null;
   const button = el('button', opts.className || 'jellio-detail-icon-action jellio-download-button');
   button.type = 'button';
-  button.setAttribute('aria-label', 'Download episodes');
-  button.title = 'Download episodes';
+  button.setAttribute('aria-label', t('menu_download_episodes'));
+  button.title = t('menu_download_episodes');
   button.appendChild(el('span', 'material-icons download'));
 
   button.addEventListener('click', function (event) {
@@ -504,7 +505,7 @@ export function buildEpisodesDownloadButton(item, options) {
 // Which episodes of a series or season to download, then the quality.
 function openEpisodesMenu(item, anchor, busyButton) {
   if (isOffline()) {
-    showToast('Downloads start once the server can be reached.');
+    showToast(t('downloads_start_server_reached'));
     return;
   }
   function episodes() {
@@ -517,10 +518,10 @@ function openEpisodesMenu(item, anchor, busyButton) {
     try {
       const chosen = pick(await episodes());
       if (!chosen.length) {
-        showToast('No episodes to download.');
+        showToast(t('downloads_no_episodes'));
         return;
       }
-      showToast('Getting ' + chosen.length + (chosen.length === 1 ? ' episode' : ' episodes') + ' ready to download…');
+      showToast(t('downloads_getting_ready', { count: chosen.length, episodes: chosen.length === 1 ? t('word_episode_singular') : t('word_episode_plural') }));
       let queued = 0;
       let busy = null;
       for (const episode of chosen) {
@@ -545,7 +546,7 @@ function openEpisodesMenu(item, anchor, busyButton) {
       }
     } catch (err) {
       console.warn('Jellio: could not list episodes', err);
-      showToast('Could not load the episodes.');
+      showToast(t('downloads_load_episodes_error'));
     } finally {
       if (busyButton) busyButton.disabled = false;
     }
@@ -593,7 +594,7 @@ export function promptDownload(item, anchorRect) {
   const kind = downloadKindFor(item);
   if (!kind) return;
   if (isOffline()) {
-    showToast('Downloads start once the server can be reached.');
+    showToast(t('downloads_start_server_reached'));
     return;
   }
   findAnyDownload(item.Id).then(function (existing) {
@@ -603,10 +604,10 @@ export function promptDownload(item, anchorRect) {
     }
     function start(quality) {
       startDownload(item, kind, quality)
-        .then(() => showToast('Downloading. Find it under Downloads.'))
+        .then(() => showToast(t('downloads_finding_under')))
         .catch(function (err) {
           console.warn('Jellio: could not start the download', err);
-          showToast('Could not start the download' + (err && err.message ? ': ' + err.message : '.'));
+          showToast(t('toast_download_start_error') + (err && err.message ? ': ' + err.message : '.'));
         });
     }
     if (kind === 'video') {

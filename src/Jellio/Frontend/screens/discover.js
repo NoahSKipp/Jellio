@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Discover (#/discover?kind=ebook|audiobook&parent=<library id>): browse
 // books to request instead of having to know what to search for. Rows
 // built from the reader's own shelf (more by the authors they read, the
@@ -79,7 +80,7 @@ export async function renderDiscover(root, params) {
   const noun = kind === 'audiobook' ? 'audiobooks' : 'books';
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-discover';
-  setTitle('Discover ' + noun + ' - Jellio');
+  setTitle(t('nav_discover') + ' ' + noun + ' - Jellio');
 
   let cancelled = false;
   const ownedTitles = new Set();
@@ -88,7 +89,7 @@ export async function renderDiscover(root, params) {
   const header = el('header', 'jellio-library-header jellio-discover-header');
   const back = el('button', 'jellio-discover-back');
   back.type = 'button';
-  back.setAttribute('aria-label', 'Back to ' + noun);
+  back.setAttribute('aria-label', t('action_back_to', { target: noun }));
   back.appendChild(el('span', 'material-icons arrow_back'));
   back.addEventListener('click', function () {
     if (parentId) {
@@ -101,7 +102,7 @@ export async function renderDiscover(root, params) {
   const titleWrap = el('div', 'jellio-discover-heading');
   titleWrap.appendChild(el('h1', 'jellio-library-title', 'Discover ' + noun));
   titleWrap.appendChild(
-    el('p', 'jellio-bookshelf-stats', 'Find something new and request the ' + (kind === 'audiobook' ? 'audiobook' : 'ebook') + '.'),
+    el('p', 'jellio-bookshelf-stats', t('discover_find_request', { kind: kind === 'audiobook' ? t('word_audiobook') : t('word_ebook') })),
   );
   header.appendChild(titleWrap);
   root.appendChild(header);
@@ -111,8 +112,8 @@ export async function renderDiscover(root, params) {
   authorForm.appendChild(el('span', 'material-icons person_search'));
   const authorInput = document.createElement('input');
   authorInput.type = 'search';
-  authorInput.placeholder = 'Browse an author';
-  authorInput.setAttribute('aria-label', 'Browse an author');
+  authorInput.placeholder = t('discover_browse_author');
+  authorInput.setAttribute('aria-label', t('discover_browse_author'));
   authorForm.appendChild(authorInput);
   toolbar.appendChild(authorForm);
   root.appendChild(toolbar);
@@ -131,13 +132,13 @@ export async function renderDiscover(root, params) {
     button.type = 'button';
     const tracked = kind === 'audiobook' ? book.HasAudiobook : book.HasEbook;
     if (ownedTitles.has(normalizeTitle(book.Title))) {
-      button.textContent = 'In your library';
+      button.textContent = t('discover_in_library');
       button.disabled = true;
       button.classList.add('jellio-discover-request-done');
       return button;
     }
     if (tracked) {
-      button.textContent = 'In Chaptarr';
+      button.textContent = t('discover_in_chaptarr');
       button.disabled = true;
       button.classList.add('jellio-discover-request-done');
       return button;
@@ -146,11 +147,11 @@ export async function renderDiscover(root, params) {
       button.hidden = true;
       return button;
     }
-    button.textContent = 'Request';
+    button.textContent = t('action_request');
     button.addEventListener('click', function (event) {
       event.stopPropagation();
       button.disabled = true;
-      button.textContent = 'Requesting…';
+      button.textContent = t('action_requesting');
       requestBook(book, kind)
         .then(function (response) {
           const status = response && response.Status;
@@ -165,7 +166,7 @@ export async function renderDiscover(root, params) {
           button.classList.add('jellio-discover-request-error');
         })
         .catch(function () {
-          button.textContent = 'Request failed';
+          button.textContent = t('request_failed');
           button.disabled = false;
           button.classList.add('jellio-discover-request-error');
         });
@@ -194,7 +195,7 @@ export async function renderDiscover(root, params) {
     if (book.Author) {
       const author = el('button', 'jellio-discover-author', book.Author);
       author.type = 'button';
-      author.title = 'More by ' + book.Author;
+      author.title = t('discover_more_by', { author: book.Author });
       author.addEventListener('click', function () {
         showGrid({ source: 'author', value: book.Author, title: book.Author });
       });
@@ -336,9 +337,9 @@ export async function renderDiscover(root, params) {
     body.appendChild(head);
     const grid = el('div', 'jellio-discover-grid');
     body.appendChild(grid);
-    const status = el('p', 'jellio-bookshelf-empty-inline', 'Loading…');
+    const status = el('p', 'jellio-bookshelf-empty-inline', t('status_loading'));
     body.appendChild(status);
-    const more = el('button', 'jellio-vocab-secondary jellio-discover-more', 'Load more');
+    const more = el('button', 'jellio-vocab-secondary jellio-discover-more', t('discover_load_more'));
     more.type = 'button';
     more.hidden = true;
     body.appendChild(more);
@@ -347,7 +348,7 @@ export async function renderDiscover(root, params) {
 
     function load() {
       more.hidden = true;
-      status.textContent = 'Loading…';
+      status.textContent = t('status_loading');
       status.hidden = false;
       discoverBooks(view.source, view.value, page)
         .then(function (books) {
@@ -364,7 +365,7 @@ export async function renderDiscover(root, params) {
         .catch(function () {
           if (!grid.isConnected) return;
           status.hidden = false;
-          status.textContent = 'Could not reach Open Library. Try again in a moment.';
+          status.textContent = t('discover_openlibrary_error');
           more.hidden = false;
         });
     }

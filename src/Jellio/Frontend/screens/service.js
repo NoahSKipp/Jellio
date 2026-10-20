@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The page a streaming hub tile opens: every real catalog collection
 // matched to that service, one row per collection, with type/genre
 // filter chips. Own route (#/service?name=X), not borrowed off a
@@ -50,7 +51,7 @@ function buildHeader(service, heroItem) {
   }
 
   const content = el('div', 'jellio-service-hero-content');
-  const eyebrow = el('div', 'jellio-service-eyebrow', 'Popular on');
+  const eyebrow = el('div', 'jellio-service-eyebrow', t('action_popular_on'));
   content.appendChild(eyebrow);
 
   const heading = el('h1', 'jellio-service-name');
@@ -202,7 +203,7 @@ export async function renderService(root, params) {
 
   if (!matching.length) {
     root.appendChild(buildHeader(service, null));
-    root.appendChild(el('p', 'jellio-service-empty', 'Nothing imported for ' + service + ' yet.'));
+    root.appendChild(el('p', 'jellio-service-empty', t('service_nothing_imported', { service })));
     return;
   }
 

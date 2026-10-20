@@ -777,7 +777,7 @@ function buildMihonImportCard() {
     input.value = '';
     if (!file) return;
     status.textContent = '';
-    status.appendChild(el('p', 'jellio-settings-import-headline', 'Reading ' + file.name + '…'));
+    status.appendChild(el('p', 'jellio-settings-import-headline', t('settings_reading_file', { file: file.name })));
     startMangaImport(file)
       .then(render)
       .catch(function (err) {
@@ -920,21 +920,21 @@ function jellioVersion() {
 function describeAppUpdate(state) {
   switch (state.status) {
     case 'checking':
-      return 'Checking for updates…';
+      return t('settings_app_checking');
     case 'up-to-date':
-      return 'You’re up to date.';
+      return t('settings_app_up_to_date');
     case 'available':
-      return 'Version ' + state.latest + ' is available.';
+      return t('settings_app_available', { version: state.latest });
     case 'downloading':
-      return 'Downloading ' + state.latest + '… ' + Math.round((state.progress || 0) * 100) + '%';
+      return t('settings_app_downloading', { version: state.latest, percent: Math.round((state.progress || 0) * 100) });
     case 'installing':
-      return 'Installing ' + state.latest + '…';
+      return t('settings_app_installing', { version: state.latest });
     case 'restarting':
-      return 'Restarting into ' + state.latest + '…';
+      return t('settings_app_restarting', { version: state.latest });
     case 'error':
-      return state.error || 'Something went wrong.';
+      return state.error || t('request_failed');
     default:
-      return state.checkedAt ? 'Last checked ' + new Date(state.checkedAt).toLocaleString() + '.' : 'Not checked yet.';
+      return state.checkedAt ? t('settings_app_last_checked', { date: new Date(state.checkedAt).toLocaleString() }) : t('settings_app_not_checked');
   }
 }
 
@@ -942,7 +942,7 @@ function buildAppUpdateCard(native) {
   const { card, body } = buildCard('laptop_mac', t('settings_macos_title'), t('settings_macos_desc'));
   const action = el('button', 'jellio-settings-button', t('settings_check_updates'));
   action.type = 'button';
-  const statusRow = buildRow(null, 'Version', '', action);
+  const statusRow = buildRow(null, t('settings_version'), '', action);
   const description = el('span', 'jellio-settings-row-description');
   statusRow.querySelector('.jellio-settings-row-text').appendChild(description);
   body.appendChild(statusRow);
@@ -961,11 +961,11 @@ function buildAppUpdateCard(native) {
   function paint(state) {
     if (!state) return;
     current = state;
-    statusRow.querySelector('.jellio-settings-row-title').textContent = 'Version ' + state.current;
+    statusRow.querySelector('.jellio-settings-row-title').textContent = t('settings_version') + ' ' + state.current;
     description.textContent = describeAppUpdate(state);
     const working = ['checking', 'downloading', 'installing', 'restarting'].indexOf(state.status) !== -1;
     action.disabled = working;
-    action.textContent = state.status === 'available' ? 'Install ' + state.latest : working ? 'Working…' : 'Check for updates';
+    action.textContent = state.status === 'available' ? t('settings_app_install', { version: state.latest }) : working ? t('settings_app_working') : t('settings_check_updates');
     if (toggleInput) toggleInput.checked = state.automatic !== false;
   }
 
@@ -1030,7 +1030,7 @@ function buildAppUpdateCard(native) {
         verHeader.className = 'jellio-settings-version-header';
         verHeader.setAttribute('aria-expanded', 'false');
 
-        const verTitle = el('span', 'jellio-settings-version-title', rel.subtitle || ('Version ' + rel.version));
+        const verTitle = el('span', 'jellio-settings-version-title', rel.subtitle || (t('settings_version') + ' ' + rel.version));
         const verArrow = el('span', 'jellio-settings-sub-arrow material-icons', 'keyboard_arrow_down');
         verHeader.appendChild(verTitle);
         verHeader.appendChild(verArrow);

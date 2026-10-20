@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The gap Nuvio's own instant-navigation-plus-retry model covers and
 // this runtime's own screens did not: every screen used to clear root
 // and then await its own data with nothing shown in between, real bug
@@ -34,7 +35,7 @@ export function renderRetry(root, message, onRetry, options) {
   wrap.appendChild(el('p', 'jellio-service-empty', message));
   const actions = el('div', 'jellio-screen-retry-actions');
   if (onRetry) {
-    const retryButton = el('button', 'jellio-detail-error-back', 'Retry');
+    const retryButton = el('button', 'jellio-detail-error-back', t('action_retry'));
     retryButton.type = 'button';
     retryButton.addEventListener('click', onRetry);
     actions.appendChild(retryButton);

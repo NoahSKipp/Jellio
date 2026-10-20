@@ -32,7 +32,7 @@ function dueLabel(entry) {
   if (!entry.Reps && !entry.Lapses) return 'New';
   const days = Math.round((due - Date.now()) / 86400000);
   if (days <= 0) return 'Due';
-  return days === 1 ? 'In 1 day' : 'In ' + days + ' days';
+  return days === 1 ? t('vocab_in_one_day') : t('vocab_in_days', { days });
 }
 
 // The saved sentence with the word itself emphasised, built from text
@@ -62,21 +62,21 @@ async function download(format) {
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   } catch (err) {
-    showToast('Export failed');
+    showToast(t('vocab_export_failed'));
   }
 }
 
 export async function renderVocab(root) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-vocab';
-  setTitle('Vocabulary - Jellio');
+  setTitle(t('nav_vocabulary') + ' - Jellio');
   renderLoading(root, 'Loading your vocabulary…');
 
   let entries;
   try {
     entries = await getVocabulary();
   } catch (err) {
-    renderRetry(root, 'Could not load your vocabulary.', function () {
+    renderRetry(root, t('vocab_load_error'), function () {
       renderVocab(root);
     });
     return;
@@ -88,7 +88,7 @@ export async function renderVocab(root) {
 
   root.textContent = '';
   const header = el('header', 'jellio-library-header jellio-vocab-header');
-  header.appendChild(el('h1', 'jellio-library-title', 'Vocabulary'));
+  header.appendChild(el('h1', 'jellio-library-title', t('nav_vocab')));
   const stats = el('p', 'jellio-bookshelf-stats');
   header.appendChild(stats);
   root.appendChild(header);
@@ -102,7 +102,7 @@ export async function renderVocab(root) {
   csvButton.addEventListener('click', () => download('csv'));
   const ankiButton = el('button', 'jellio-vocab-secondary', t('vocab_export_anki'));
   ankiButton.type = 'button';
-  ankiButton.title = 'A text file Anki imports with File > Import';
+  ankiButton.title = t('vocab_anki_title');
   ankiButton.addEventListener('click', () => download('anki'));
   actions.appendChild(csvButton);
   actions.appendChild(ankiButton);
@@ -114,12 +114,12 @@ export async function renderVocab(root) {
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.placeholder = t('vocab_search_placeholder');
-  searchInput.setAttribute('aria-label', 'Filter vocabulary');
+  searchInput.setAttribute('aria-label', t('vocab_filter_label'));
   searchWrap.appendChild(searchInput);
   toolbar.appendChild(searchWrap);
   const langSelect = document.createElement('select');
   langSelect.className = 'jellio-library-filter-select';
-  langSelect.setAttribute('aria-label', 'Language');
+  langSelect.setAttribute('aria-label', t('onboarding_step_language'));
   toolbar.appendChild(langSelect);
   root.appendChild(toolbar);
 
@@ -151,7 +151,7 @@ export async function renderVocab(root) {
     const now = Date.now();
     const due = entries.filter((entry) => isDue(entry, now)).length;
     stats.textContent = entries.length + (entries.length === 1 ? ' word' : ' words') + (entries.length ? ' · ' + due + ' due for review' : '');
-    reviewButton.textContent = due ? 'Review ' + due + (due === 1 ? ' card' : ' cards') : 'Nothing due';
+    reviewButton.textContent = due ? t('vocab_review_cards', { count: due, cards: due === 1 ? t('word_card_singular') : t('word_card_plural') }) : t('vocab_nothing_due');
     reviewButton.disabled = !due;
     csvButton.disabled = ankiButton.disabled = !entries.length;
   }
@@ -170,7 +170,7 @@ export async function renderVocab(root) {
     const where = [entry.ItemName, entry.SourceLang ? languageLabel(entry.SourceLang) : ''].filter(Boolean).join(' · ');
     foot.appendChild(el('span', 'jellio-vocab-source', where));
     if (entry.ItemId) {
-      const open = el('button', 'jellio-vocab-link', 'Open in book');
+      const open = el('button', 'jellio-vocab-link', t('vocab_open_in_book'));
       open.type = 'button';
       open.addEventListener('click', function () {
         navigateTo('#/read?id=' + entry.ItemId + (entry.Locator ? '&loc=' + encodeURIComponent(entry.Locator) : ''));
@@ -197,7 +197,7 @@ export async function renderVocab(root) {
         entries = entries.filter((candidate) => candidate.Id !== entry.Id);
         paint();
       } catch (err) {
-        showToast('Could not delete it');
+        showToast(t('vocab_delete_error'));
       }
     });
     foot.appendChild(remove);
@@ -218,9 +218,9 @@ export async function renderVocab(root) {
       card.appendChild(wrap);
       return input;
     }
-    const translation = field('Translation', entry.Translation, 1);
-    const definition = field('Definition', entry.Definition, 2);
-    const sentence = field('Sentence', entry.Sentence, 3);
+    const translation = field(t('vocab_translation_label'), entry.Translation, 1);
+    const definition = field(t('vocab_definition_label'), entry.Definition, 2);
+    const sentence = field(t('vocab_sentence_label'), entry.Sentence, 3);
     const foot = el('div', 'jellio-vocab-card-foot');
     const cancel = el('button', 'jellio-vocab-secondary', t('action_cancel'));
     cancel.type = 'button';
@@ -239,7 +239,7 @@ export async function renderVocab(root) {
         card.replaceWith(entryCard(entry));
       } catch (err) {
         save.disabled = false;
-        showToast('Could not save');
+        showToast(t('toast_save_error'));
       }
     });
     foot.appendChild(cancel);
@@ -264,13 +264,13 @@ export async function renderVocab(root) {
       const empty = el('div', 'jellio-bookshelf-empty');
       empty.appendChild(el('span', 'material-icons translate'));
       empty.appendChild(
-        el('p', null, 'No words yet. While reading, select a word and tap “Save to vocabulary” to start your deck.'),
+        el('p', null, t('vocab_empty_deck')),
       );
       list.appendChild(empty);
       return;
     }
     if (!shown.length) {
-      list.appendChild(el('p', 'jellio-bookshelf-empty-inline', 'No words match.'));
+      list.appendChild(el('p', 'jellio-bookshelf-empty-inline', t('vocab_no_match')));
       return;
     }
     shown.forEach((entry) => list.appendChild(entryCard(entry)));
@@ -296,7 +296,7 @@ export async function renderVocab(root) {
       list.hidden = false;
       toolbar.hidden = false;
       actions.hidden = false;
-      if (reviewed) showToast('Reviewed ' + reviewed + (reviewed === 1 ? ' card' : ' cards'));
+      if (reviewed) showToast(t('vocab_reviewed_count', { count: reviewed, cards: reviewed === 1 ? t('word_card_singular') : t('word_card_plural') }));
       paint();
     }
 
@@ -309,7 +309,7 @@ export async function renderVocab(root) {
       const entry = queue[index];
       const top = el('div', 'jellio-vocab-review-top');
       top.appendChild(el('span', null, index + 1 + ' / ' + queue.length));
-      const close = el('button', 'jellio-vocab-secondary', 'Done');
+      const close = el('button', 'jellio-vocab-secondary', t('action_done'));
       close.type = 'button';
       close.addEventListener('click', finish);
       top.appendChild(close);
@@ -329,7 +329,7 @@ export async function renderVocab(root) {
 
       const controls = el('div', 'jellio-vocab-grades');
       if (!revealed) {
-        const show = el('button', 'jellio-vocab-primary jellio-vocab-show', 'Show answer');
+        const show = el('button', 'jellio-vocab-primary jellio-vocab-show', t('vocab_show_answer'));
         show.type = 'button';
         show.addEventListener('click', reveal);
         controls.appendChild(show);
@@ -360,7 +360,7 @@ export async function renderVocab(root) {
         // "Again" comes back around at the end of this session.
         if (grade === 0) queue.push(entry);
       } catch (err) {
-        showToast('Could not save that review');
+        showToast(t('vocab_save_error'));
       }
       index++;
       revealed = false;

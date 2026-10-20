@@ -1,3 +1,4 @@
+import { t } from './runtime/i18n.js';
 // Bootstrap: mounts Jellio's own root container over the native page,
 // renders the persistent sidebar alongside whichever screen owns the
 // current route. An unmigrated route (no entry in SCREENS) leaves native
@@ -899,7 +900,7 @@ async function runSync() {
     // again. Cleared here so a retry genuinely retries.
     console.warn('Jellio: screen render failed', err);
     lastRenderedRouteKey = null;
-    showToast('Could not load that page. Try again.');
+    showToast(t('toast_load_page_error'));
   }
 }
 

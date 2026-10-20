@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Mihon's per-manga scanlator filter: which groups' chapters this series
 // shows, so the same chapter from several of them isn't listed more than
 // once. Remembered per series (screens/mangaSeries.js saves it).
@@ -23,7 +24,7 @@ export function openScanlatorFilter(options) {
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Scanlators');
+  overlay.setAttribute('aria-label', t('manga_scanlators'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) close();
   });
@@ -32,13 +33,13 @@ export function openScanlatorFilter(options) {
   const panel = el('div', 'jellio-avatar-picker-panel jellio-shelf-categories-panel');
   const closeButton = el('button', 'jellio-group-watch-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   closeButton.appendChild(el('span', 'material-icons close'));
   closeButton.addEventListener('click', close);
   panel.appendChild(closeButton);
-  panel.appendChild(el('h2', 'jellio-avatar-picker-title', 'Scanlators'));
+  panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('manga_scanlators')));
   panel.appendChild(
-    el('p', 'jellio-avatar-picker-status', 'Show chapters from these groups. Untick one to hide its chapters, so the same chapter isn’t listed twice.'),
+    el('p', 'jellio-avatar-picker-status', 't('manga_scanlators_desc')'),
   );
 
   const hidden = new Set((options.excluded || []).map((name) => name.toLowerCase()));
@@ -64,8 +65,8 @@ export function openScanlatorFilter(options) {
   duplicatesBox.checked = options.duplicatesAsOne !== false;
   duplicates.appendChild(duplicatesBox);
   const duplicatesText = el('span', null);
-  duplicatesText.appendChild(el('span', 'jellio-scanlator-name', 'Mark duplicate chapters read'));
-  duplicatesText.appendChild(el('span', 'jellio-scanlator-hint', 'Reading a chapter counts the same chapter number from other groups as read too.'));
+  duplicatesText.appendChild(el('span', 'jellio-scanlator-name', t('manga_mark_duplicate_read')));
+  duplicatesText.appendChild(el('span', 'jellio-scanlator-hint', 't('manga_mark_duplicate_read_desc')'));
   duplicates.appendChild(duplicatesText);
   panel.appendChild(duplicates);
 
@@ -73,13 +74,13 @@ export function openScanlatorFilter(options) {
   panel.appendChild(note);
 
   const actions = el('div', 'jellio-shelf-categories-actions jellio-scanlator-actions');
-  const reset = el('button', 'jellio-chapter-settings-action jellio-scanlator-reset', 'Show all');
+  const reset = el('button', 'jellio-chapter-settings-action jellio-scanlator-reset', t('action_show_all'));
   reset.type = 'button';
   reset.addEventListener('click', function () {
     boxes.forEach((entry) => (entry.box.checked = true));
     refresh();
   });
-  const save = el('button', 'jellio-shelf-categories-save', 'Save');
+  const save = el('button', 'jellio-shelf-categories-save', t('profile_save'));
   save.type = 'button';
   actions.appendChild(reset);
   actions.appendChild(save);

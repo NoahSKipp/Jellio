@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Pre-playback stream picker, real feedback asked for it directly:
 // hitting Play used to negotiate PlaybackInfo against whichever source
 // GetPlaybackMediaSources defaulted to and start playing that one
@@ -444,7 +445,7 @@ function buildOverlayShell(item) {
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Choose a stream');
+  overlay.setAttribute('aria-label', t('stream_choose'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) closeStreamPicker();
   });
@@ -466,7 +467,7 @@ function buildOverlayShell(item) {
   const backButton = document.createElement('button');
   backButton.type = 'button';
   backButton.className = 'jellio-stream-picker-back';
-  backButton.setAttribute('aria-label', 'Close');
+  backButton.setAttribute('aria-label', t('action_close'));
   const backIcon = el('span', 'material-icons arrow_back');
   backIcon.setAttribute('aria-hidden', 'true');
   backButton.appendChild(backIcon);
@@ -544,7 +545,7 @@ function buildChipRow(entries, onSelect) {
     });
     onSelect(value);
   }
-  const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', 'All');
+  const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', t('stream_all'));
   allChip.type = 'button';
   allChip.addEventListener('click', function () {
     setSelected(null, allChip);
@@ -566,8 +567,8 @@ function buildChipRow(entries, onSelect) {
 function buildRefreshChip(onRefresh) {
   const btn = el('button', 'jellio-stream-picker-filter-chip');
   btn.type = 'button';
-  btn.setAttribute('aria-label', 'Refresh streams');
-  btn.title = 'Refresh streams';
+  btn.setAttribute('aria-label', t('stream_refresh'));
+  btn.title = t('stream_refresh');
   const icon = el('span', 'material-icons refresh');
   icon.setAttribute('aria-hidden', 'true');
   icon.style.fontSize = '1.15em';
@@ -581,7 +582,7 @@ function buildDigitalReleaseFilterCard(onRefresh) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = 'jellio-stream-picker-card';
-  card.appendChild(el('div', 'jellio-stream-picker-card-title', '📅 Digital Release Filter'));
+  card.appendChild(el('div', 'jellio-stream-picker-card-title', '📅 ' + t('stream_picker_digital_release')));
   card.appendChild(
     el(
       'div',
@@ -757,7 +758,7 @@ export async function openStreamPicker(item, options) {
   if (!sources.length) {
     const emptyFilterRow = el('div', 'jellio-stream-picker-filters');
     emptyFilterRow.appendChild(buildRefreshChip(refreshStreams));
-    const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', 'All');
+    const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', t('stream_all'));
     allChip.type = 'button';
     emptyFilterRow.appendChild(allChip);
     panel.appendChild(emptyFilterRow);
@@ -788,7 +789,7 @@ export async function openStreamPicker(item, options) {
       if (judged) card.appendChild(buildOutlookBadge(playbackOutlook(judged.classification)));
       if (isBadSource(item.Id, source)) {
         card.classList.add('jellio-stream-picker-card-bad');
-        card.insertBefore(el('div', 'jellio-stream-picker-bad-note', '⚠ Didn’t play recently'), card.firstChild);
+        card.insertBefore(el('div', 'jellio-stream-picker-bad-note', '⚠ ' + t('stream_picker_not_played_recently')), card.firstChild);
       }
       list.appendChild(card);
     });

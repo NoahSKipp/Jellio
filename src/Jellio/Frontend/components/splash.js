@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Boot splash, shown exactly once per real login (app.js's own
 // `preloaded` latch), while app.js's own preloadInitialData() warms up
 // the sidebar's three universal calls, home's own rows and every real
@@ -41,7 +42,7 @@ export function showSplash() {
 
   const loading = document.createElement('div');
   loading.className = 'jellio-splash-loading';
-  loading.textContent = 'Loading…';
+  loading.textContent = t('status_loading');
   mark.appendChild(loading);
 
   splash.appendChild(mark);

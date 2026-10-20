@@ -317,7 +317,7 @@ export async function renderSearch(root, params) {
     reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
     abortInFlight();
     const thisRequest = ++requestId;
-    status.textContent = 'Searching…';
+    status.textContent = t('status_loading');
     results.textContent = '';
 
     const moviesSlot = el('div', 'jellio-search-type-slot');

@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Mihon's chapter settings for one series: filters (each off, only, or
 // without), the sort, and how a chapter is named. Changes apply as they
 // are made and are remembered per series (screens/mangaSeries.js saves
@@ -34,7 +35,7 @@ export function openChapterSettings(options) {
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Chapter settings');
+  overlay.setAttribute('aria-label', t('manga_chapter_settings'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) close();
   });
@@ -42,11 +43,11 @@ export function openChapterSettings(options) {
   const panel = el('div', 'jellio-avatar-picker-panel jellio-shelf-categories-panel');
   const closeButton = el('button', 'jellio-group-watch-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   closeButton.appendChild(el('span', 'material-icons close'));
   closeButton.addEventListener('click', close);
   panel.appendChild(closeButton);
-  panel.appendChild(el('h2', 'jellio-avatar-picker-title', 'Chapter settings'));
+  panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('manga_chapter_settings')));
 
   const tabs = el('div', 'jellio-shelf-tabs jellio-chapter-settings-tabs');
   tabs.setAttribute('role', 'tablist');
@@ -91,7 +92,7 @@ export function openChapterSettings(options) {
       const groups = el('button', 'jellio-chapter-settings-row');
       groups.type = 'button';
       groups.appendChild(el('span', 'material-icons groups'));
-      groups.appendChild(el('span', 'jellio-chapter-settings-label', 'Scanlators'));
+      groups.appendChild(el('span', 'jellio-chapter-settings-label', t('manga_scanlators')));
       if (options.shownGroups < options.scanlators.length) {
         groups.appendChild(el('span', 'jellio-chapter-settings-hint', options.shownGroups + ' of ' + options.scanlators.length));
       }
@@ -143,7 +144,7 @@ export function openChapterSettings(options) {
 
   function paintFooter() {
     footer.textContent = '';
-    const setDefault = el('button', 'jellio-chapter-settings-action', 'Set as default');
+    const setDefault = el('button', 'jellio-chapter-settings-action', t('manga_set_as_default'));
     setDefault.type = 'button';
     setDefault.addEventListener('click', function () {
       footer.textContent = '';
@@ -151,13 +152,13 @@ export function openChapterSettings(options) {
       const box = document.createElement('input');
       box.type = 'checkbox';
       ask.appendChild(box);
-      ask.appendChild(el('span', null, 'Also use these for every series on my shelf'));
+      ask.appendChild(el('span', null, t('manga_apply_shelf')));
       footer.appendChild(ask);
       const actions = el('div', 'jellio-shelf-categories-actions');
-      const cancel = el('button', 'jellio-chapter-settings-action', 'Cancel');
+      const cancel = el('button', 'jellio-chapter-settings-action', t('profile_cancel'));
       cancel.type = 'button';
       cancel.addEventListener('click', paintFooter);
-      const ok = el('button', 'jellio-shelf-categories-save', 'Use as default');
+      const ok = el('button', 'jellio-shelf-categories-save', t('manga_use_as_default'));
       ok.type = 'button';
       ok.addEventListener('click', function () {
         options.onSetDefault(box.checked);
@@ -167,9 +168,9 @@ export function openChapterSettings(options) {
       actions.appendChild(ok);
       footer.appendChild(actions);
     });
-    const reset = el('button', 'jellio-chapter-settings-action', 'Reset');
+    const reset = el('button', 'jellio-chapter-settings-action', t('action_reset'));
     reset.type = 'button';
-    reset.title = 'Go back to the defaults for this series';
+    reset.title = t('chapter_defaults_series');
     reset.addEventListener('click', function () {
       options.onReset();
       close();

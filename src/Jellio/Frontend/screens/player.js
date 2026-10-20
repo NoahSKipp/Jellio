@@ -274,7 +274,7 @@ function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   playButton.addEventListener('click', onPlayNow);
   const dismissButton = el('button', 'jellio-player-upnext-dismiss', t('player_dismiss'));
   dismissButton.type = 'button';
-  dismissButton.setAttribute('aria-label', 'Dismiss next episode preview');
+  dismissButton.setAttribute('aria-label', t('player_dismiss_upnext'));
   dismissButton.addEventListener('click', onDismiss);
   actions.appendChild(playButton);
   actions.appendChild(dismissButton);
@@ -302,7 +302,7 @@ function buildEndScreenModal(options) {
 
   const closeButton = el('button', 'jellio-player-endscreen-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close end screen');
+  closeButton.setAttribute('aria-label', t('player_close_endscreen'));
   const closeIcon = el('span', 'material-icons', 'close');
   closeIcon.setAttribute('aria-hidden', 'true');
   closeButton.appendChild(closeIcon);
@@ -420,7 +420,7 @@ function buildEndScreenModal(options) {
     const replayIcon = el('span', 'material-icons', 'replay');
     replayIcon.setAttribute('aria-hidden', 'true');
     replayBtn.appendChild(replayIcon);
-    replayBtn.appendChild(el('span', '', 'Replay'));
+    replayBtn.appendChild(el('span', '', t('player_replay')));
     replayBtn.addEventListener('click', function () {
       if (countdownTimer) {
         window.clearInterval(countdownTimer);
@@ -450,7 +450,7 @@ function buildEndScreenModal(options) {
     const replayIcon = el('span', 'material-icons', 'replay');
     replayIcon.setAttribute('aria-hidden', 'true');
     primaryBtn.appendChild(replayIcon);
-    primaryBtn.appendChild(el('span', '', 'Replay'));
+    primaryBtn.appendChild(el('span', '', t('player_replay')));
     primaryBtn.addEventListener('click', onReplay);
     actions.appendChild(primaryBtn);
 
@@ -472,7 +472,7 @@ function buildEndScreenModal(options) {
       window.clearInterval(countdownTimer);
       countdownTimer = null;
       const playText = primaryBtn.querySelector('.jellio-player-endscreen-btn-text');
-      if (playText) playText.textContent = 'Play Next Episode';
+      if (playText) playText.textContent = t('player_play_next_episode');
     }
   });
 
@@ -541,12 +541,12 @@ function renderPlaybackError(root, itemId, message, onRetry) {
   wrap.appendChild(el('p', 'jellio-service-empty', message));
   const actions = el('div', 'jellio-screen-retry-actions');
   if (onRetry) {
-    const retry = el('button', 'jellio-player-error-back', 'Retry');
+    const retry = el('button', 'jellio-player-error-back', t('action_retry'));
     retry.type = 'button';
     retry.addEventListener('click', onRetry);
     actions.appendChild(retry);
   }
-  const back = el('button', 'jellio-player-error-back', 'Back');
+  const back = el('button', 'jellio-player-error-back', t('onboarding_back'));
   back.type = 'button';
   back.addEventListener('click', function () {
     navigateTo(itemId ? '#/item?id=' + itemId : '#/home');
@@ -1262,7 +1262,7 @@ export async function renderPlayer(root, params) {
 
   const backButton = el('button', 'jellio-player-back');
   backButton.type = 'button';
-  backButton.setAttribute('aria-label', 'Back');
+  backButton.setAttribute('aria-label', t('onboarding_back'));
   const backIcon = el('span', 'material-icons arrow_back');
   backIcon.setAttribute('aria-hidden', 'true');
   backButton.appendChild(backIcon);
@@ -1454,7 +1454,7 @@ export async function renderPlayer(root, params) {
   if (currentSyncGroup) {
     const chatToggleButton = el('button', 'jellio-player-back jellio-player-chat-toggle');
     chatToggleButton.type = 'button';
-    chatToggleButton.setAttribute('aria-label', 'Group Watch chat');
+    chatToggleButton.setAttribute('aria-label', t('gw_chat_title'));
     chatToggleButton.setAttribute('aria-expanded', 'false');
     const chatToggleIcon = el('span', 'material-icons chat_bubble_outline');
     chatToggleIcon.setAttribute('aria-hidden', 'true');
@@ -1468,11 +1468,11 @@ export async function renderPlayer(root, params) {
     const chatInput = document.createElement('input');
     chatInput.type = 'text';
     chatInput.className = 'jellio-player-chat-input';
-    chatInput.placeholder = 'Message the group…';
+    chatInput.placeholder = t('gw_message_placeholder');
     chatInput.maxLength = 500;
     const chatSendButton = el('button', 'jellio-player-chat-send');
     chatSendButton.type = 'button';
-    chatSendButton.setAttribute('aria-label', 'Send');
+    chatSendButton.setAttribute('aria-label', t('action_send'));
     const chatSendIcon = el('span', 'material-icons send');
     chatSendIcon.setAttribute('aria-hidden', 'true');
     chatSendButton.appendChild(chatSendIcon);
@@ -1507,7 +1507,7 @@ export async function renderPlayer(root, params) {
         }
         row.appendChild(el('span', 'jellio-player-chat-message-author', (message.UserName || 'Someone') + ':'));
         row.appendChild(el('span', 'jellio-player-chat-message-text', message.Text));
-        if (message.ItemId) row.appendChild(el('span', 'jellio-player-chat-message-cta', 'Click to join'));
+        if (message.ItemId) row.appendChild(el('span', 'jellio-player-chat-message-cta', t('gw_click_to_join')));
         chatMessages.appendChild(row);
         chatLastMessageId = Math.max(chatLastMessageId, message.Id);
       });
@@ -1606,14 +1606,14 @@ export async function renderPlayer(root, params) {
 
   const skipBackButton = el('button', 'jellio-player-transport');
   skipBackButton.type = 'button';
-  skipBackButton.setAttribute('aria-label', 'Back 10 seconds');
+  skipBackButton.setAttribute('aria-label', t('player_back_10s'));
   const skipBackIcon = el('span', 'material-icons replay_10');
   skipBackIcon.setAttribute('aria-hidden', 'true');
   skipBackButton.appendChild(skipBackIcon);
 
   const playPauseButton = el('button', 'jellio-player-transport jellio-player-playpause-center');
   playPauseButton.type = 'button';
-  playPauseButton.setAttribute('aria-label', 'Pause');
+  playPauseButton.setAttribute('aria-label', t('action_pause'));
   const playPauseIcon = el('span', 'material-icons pause');
   playPauseIcon.setAttribute('aria-hidden', 'true');
   playPauseButton.appendChild(playPauseIcon);
@@ -1645,7 +1645,7 @@ export async function renderPlayer(root, params) {
 
   const skipForwardButton = el('button', 'jellio-player-transport');
   skipForwardButton.type = 'button';
-  skipForwardButton.setAttribute('aria-label', 'Forward 10 seconds');
+  skipForwardButton.setAttribute('aria-label', t('player_forward_10s'));
   const skipForwardIcon = el('span', 'material-icons forward_10');
   skipForwardIcon.setAttribute('aria-hidden', 'true');
   skipForwardButton.appendChild(skipForwardIcon);
@@ -1664,7 +1664,7 @@ export async function renderPlayer(root, params) {
   seekBar.min = '0';
   seekBar.max = '100';
   seekBar.value = '0';
-  seekBar.setAttribute('aria-label', 'Seek');
+  seekBar.setAttribute('aria-label', t('player_seek'));
   const durationLabel = el('span', 'jellio-player-time', durationSeconds ? formatTime(durationSeconds) : '--:--');
   seekWrap.appendChild(seekBar);
   seekRow.appendChild(currentTimeLabel);
@@ -1918,7 +1918,7 @@ export async function renderPlayer(root, params) {
   const volumeMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden jellio-player-popover-volume');
   const volumeMuteButton = el('button', 'jellio-player-popover-volume-mute');
   volumeMuteButton.type = 'button';
-  volumeMuteButton.setAttribute('aria-label', 'Mute');
+  volumeMuteButton.setAttribute('aria-label', t('player_mute'));
   const volumeMuteIcon = el('span', 'material-icons volume_up');
   volumeMuteIcon.setAttribute('aria-hidden', 'true');
   volumeMuteButton.appendChild(volumeMuteIcon);
@@ -1927,7 +1927,7 @@ export async function renderPlayer(root, params) {
   volumeSlider.className = 'jellio-player-popover-volume-slider';
   volumeSlider.min = '0';
   volumeSlider.max = '100';
-  volumeSlider.setAttribute('aria-label', 'Volume');
+  volumeSlider.setAttribute('aria-label', t('player_volume'));
   const volumeLevelLabel = el('span', 'jellio-player-popover-volume-level', '100%');
   volumeMenu.appendChild(volumeMuteButton);
   volumeMenu.appendChild(volumeSlider);
@@ -2374,7 +2374,7 @@ export async function renderPlayer(root, params) {
     // real column this one's own real Language filter, not a subtitle
     // selection: "no language filter, every track" is what selecting
     // this actually does, "All languages" says that outright instead.
-    const noneOption = el('button', 'jellio-player-popover-option jellio-player-popover-option-active', 'All languages');
+    const noneOption = el('button', 'jellio-player-popover-option jellio-player-popover-option-active', t('vocab_all_languages'));
     noneOption.type = 'button';
     noneOption.addEventListener('click', function () {
       selectedSubtitleLanguage = null;
@@ -2486,7 +2486,7 @@ export async function renderPlayer(root, params) {
   );
 
   const syncSection = el('div', 'jellio-player-style-group');
-  syncSection.appendChild(el('div', 'jellio-player-style-group-label', 'Delay / Sync'));
+  syncSection.appendChild(el('div', 'jellio-player-style-group-label', t('player_delay_sync')));
   const syncRow = el('div', 'jellio-player-subtitle-sync-row');
   const minusHalf = el('button', 'jellio-player-popover-option', '-0.5s');
   minusHalf.type = 'button';
@@ -2497,7 +2497,7 @@ export async function renderPlayer(root, params) {
   plusTenth.type = 'button';
   const plusHalf = el('button', 'jellio-player-popover-option', '+0.5s');
   plusHalf.type = 'button';
-  const resetBtn = el('button', 'jellio-player-popover-option', 'Reset');
+  const resetBtn = el('button', 'jellio-player-popover-option', t('action_reset'));
   resetBtn.type = 'button';
 
   function updateSubtitleOffset(delta, isReset) {
@@ -2631,7 +2631,7 @@ export async function renderPlayer(root, params) {
     boostOption.type = 'button';
     boostOption.addEventListener('click', function () {
       setDialogueBoost(!dialogueBoostEnabled);
-      boostOption.textContent = 'Dialogue Boost / Night Mode: ' + (dialogueBoostEnabled ? 'On' : 'Off');
+      boostOption.textContent = t('player_dialogue_boost', { status: dialogueBoostEnabled ? t('state_on') : t('state_off') });
       if (dialogueBoostEnabled) {
         boostOption.classList.add('jellio-player-popover-option-active');
         showPlayerToast('Dialogue Boost enabled (night mode dynamic compression)');
@@ -2754,7 +2754,7 @@ export async function renderPlayer(root, params) {
     }
   }
   const sleepMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
-  const cancelOption = el('button', 'jellio-player-popover-option', 'Cancel timer');
+  const cancelOption = el('button', 'jellio-player-popover-option', t('settings_sleep_timer_cancel'));
   cancelOption.type = 'button';
   cancelOption.addEventListener('click', function () {
     sleepTimerEpisodesRemaining = null;
@@ -2764,7 +2764,7 @@ export async function renderPlayer(root, params) {
     });
   });
   sleepMenu.appendChild(cancelOption);
-  sleepMenu.appendChild(el('div', 'jellio-player-style-group-label', 'Stop after'));
+  sleepMenu.appendChild(el('div', 'jellio-player-style-group-label', t('player_stop_after')));
   SLEEP_TIMER_OPTIONS.forEach(function (minutes) {
     const option = el('button', 'jellio-player-popover-option', minutes + ' min');
     option.type = 'button';
@@ -2777,7 +2777,7 @@ export async function renderPlayer(root, params) {
     });
     sleepMenu.appendChild(option);
   });
-  sleepMenu.appendChild(el('div', 'jellio-player-style-group-label', 'Or stop after'));
+  sleepMenu.appendChild(el('div', 'jellio-player-style-group-label', t('player_or_stop_after')));
   EPISODE_SLEEP_TIMER_OPTIONS.forEach(function (count) {
     const option = el('button', 'jellio-player-popover-option', count + (count === 1 ? ' episode' : ' episodes'));
     option.type = 'button';
@@ -2808,12 +2808,12 @@ export async function renderPlayer(root, params) {
   const castTitleIcon = el('span', 'material-icons cast');
   castTitleIcon.setAttribute('aria-hidden', 'true');
   castTitle.appendChild(castTitleIcon);
-  castTitle.appendChild(el('span', null, 'Cast to TV / Device'));
+  castTitle.appendChild(el('span', null, t('player_cast_to_device')));
   castHeader.appendChild(castTitle);
 
   const castRefreshBtn = el('button', 'jellio-player-cast-refresh');
   castRefreshBtn.type = 'button';
-  castRefreshBtn.setAttribute('aria-label', 'Refresh available devices');
+  castRefreshBtn.setAttribute('aria-label', t('player_refresh_devices'));
   const castRefreshIcon = el('span', 'material-icons refresh');
   castRefreshIcon.setAttribute('aria-hidden', 'true');
   castRefreshBtn.appendChild(castRefreshIcon);
@@ -2844,7 +2844,7 @@ export async function renderPlayer(root, params) {
       const disIcon = el('span', 'material-icons cast_connected');
       disIcon.setAttribute('aria-hidden', 'true');
       disconnectBtn.appendChild(disIcon);
-      disconnectBtn.appendChild(el('span', null, 'Disconnect'));
+      disconnectBtn.appendChild(el('span', null, t('player_disconnect')));
       disconnectBtn.addEventListener('click', async function (e) {
         e.stopPropagation();
         const res = await disconnectCast();
@@ -2924,7 +2924,7 @@ export async function renderPlayer(root, params) {
 
       // Wireless display & AirPlay section
       if (hasWireless) {
-        const wirelessTitle = el('div', 'jellio-player-cast-section-title', 'Wireless Display & Streaming');
+        const wirelessTitle = el('div', 'jellio-player-cast-section-title', t('player_wireless_display'));
         castBody.appendChild(wirelessTitle);
 
         if (googleCastAvailable) {
@@ -2938,7 +2938,7 @@ export async function renderPlayer(root, params) {
 
           const info = el('div', 'jellio-player-cast-device-info');
           info.appendChild(el('div', 'jellio-player-cast-device-name', 'Google Cast / Chromecast'));
-          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Opens browser menu to connect to Chromecast or Google TV'));
+          info.appendChild(el('div', 'jellio-player-cast-device-sub', t('player_cast_browser_desc')));
           gcastBtn.appendChild(info);
 
           gcastBtn.addEventListener('click', async function () {
@@ -2999,8 +2999,8 @@ export async function renderPlayer(root, params) {
           airplayBtn.appendChild(iconWrap);
 
           const info = el('div', 'jellio-player-cast-device-info');
-          info.appendChild(el('div', 'jellio-player-cast-device-name', 'Apple AirPlay'));
-          info.appendChild(el('div', 'jellio-player-cast-device-sub', 'Opens AirPlay menu to stream to Apple TV or AirPlay 2 Smart TV'));
+          info.appendChild(el('div', 'jellio-player-cast-device-name', t('player_airplay')));
+          info.appendChild(el('div', 'jellio-player-cast-device-sub', t('player_airplay_desc')));
           airplayBtn.appendChild(info);
 
           airplayBtn.addEventListener('click', function () {
@@ -3023,8 +3023,8 @@ export async function renderPlayer(root, params) {
       errIcon.setAttribute('aria-hidden', 'true');
       errIconWrap.appendChild(errIcon);
       errBox.appendChild(errIconWrap);
-      errBox.appendChild(el('div', 'jellio-player-cast-empty-title', 'Could not search for devices'));
-      errBox.appendChild(el('div', 'jellio-player-cast-empty-sub', 'Check your connection to the Jellyfin server and try again.'));
+      errBox.appendChild(el('div', 'jellio-player-cast-empty-title', t('player_search_devices_error')));
+      errBox.appendChild(el('div', 'jellio-player-cast-empty-sub', t('player_check_connection_retry')));
       castBody.appendChild(errBox);
     } finally {
       isScanningCast = false;
@@ -3052,7 +3052,7 @@ export async function renderPlayer(root, params) {
     btn.appendChild(info);
 
     if (target.isTv) {
-      btn.appendChild(el('span', 'jellio-player-cast-device-badge', 'Smart TV'));
+      btn.appendChild(el('span', 'jellio-player-cast-device-badge', t('player_smart_tv_label')));
     }
 
     btn.addEventListener('click', async function () {
@@ -3093,12 +3093,12 @@ export async function renderPlayer(root, params) {
 
   const castBannerIcon = el('span', 'material-icons cast_connected jellio-player-cast-banner-icon');
   castBannerIcon.setAttribute('aria-hidden', 'true');
-  const castBannerText = el('span', 'jellio-player-cast-banner-text', 'Streaming to Smart TV');
+  const castBannerText = el('span', 'jellio-player-cast-banner-text', t('player_streaming_to_smart_tv'));
 
   const castBannerControls = el('div', 'jellio-player-cast-banner-controls');
   const bannerSkipBack = el('button', 'jellio-player-cast-banner-btn');
   bannerSkipBack.type = 'button';
-  bannerSkipBack.setAttribute('aria-label', 'Skip back 10 seconds');
+  bannerSkipBack.setAttribute('aria-label', t('player_skip_back_10s'));
   bannerSkipBack.appendChild(el('span', 'material-icons replay_10'));
   bannerSkipBack.addEventListener('click', function () {
     skipBackButton.click();
@@ -3106,7 +3106,7 @@ export async function renderPlayer(root, params) {
 
   const bannerPlayPause = el('button', 'jellio-player-cast-banner-btn');
   bannerPlayPause.type = 'button';
-  bannerPlayPause.setAttribute('aria-label', 'Play or pause on TV');
+  bannerPlayPause.setAttribute('aria-label', t('player_play_pause_tv'));
   const bannerPlayPauseIcon = el('span', 'material-icons pause');
   bannerPlayPause.appendChild(bannerPlayPauseIcon);
   bannerPlayPause.addEventListener('click', function () {
@@ -3115,7 +3115,7 @@ export async function renderPlayer(root, params) {
 
   const bannerSkipForward = el('button', 'jellio-player-cast-banner-btn');
   bannerSkipForward.type = 'button';
-  bannerSkipForward.setAttribute('aria-label', 'Skip forward 30 seconds');
+  bannerSkipForward.setAttribute('aria-label', t('player_skip_fwd_30s'));
   bannerSkipForward.appendChild(el('span', 'material-icons forward_30'));
   bannerSkipForward.addEventListener('click', function () {
     skipForwardButton.click();
@@ -3179,7 +3179,7 @@ export async function renderPlayer(root, params) {
   const settingsMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
   const autoSkipOption = el('button', 'jellio-player-popover-option');
   autoSkipOption.type = 'button';
-  const autoSkipLabel = el('span', '', 'Auto-skip Intros');
+  const autoSkipLabel = el('span', '', t('player_autoskip'));
   autoSkipOption.appendChild(autoSkipLabel);
   function syncAutoSkipUI() {
     autoSkipOption.classList.toggle('jellio-player-popover-option-active', autoSkipEnabled);
@@ -3201,7 +3201,7 @@ export async function renderPlayer(root, params) {
   const sleepOptionIcon = el('span', 'material-icons bedtime');
   sleepOptionIcon.setAttribute('aria-hidden', 'true');
   sleepOptionLabel.appendChild(sleepOptionIcon);
-  sleepOptionLabel.appendChild(el('span', '', 'Sleep Timer'));
+  sleepOptionLabel.appendChild(el('span', '', t('player_sleep_timer')));
   sleepOption.appendChild(sleepOptionLabel);
   sleepOption.addEventListener('click', function () {
     closePopovers(sleepMenu);
@@ -3219,7 +3219,7 @@ export async function renderPlayer(root, params) {
 
   const shortcutsOption = el('button', 'jellio-player-popover-option jellio-player-popover-shortcuts-option');
   shortcutsOption.type = 'button';
-  shortcutsOption.appendChild(el('span', '', 'Keyboard Shortcuts'));
+  shortcutsOption.appendChild(el('span', '', t('player_keyboard_shortcuts')));
   const shortcutHint = el('span', 'jellio-player-shortcut-badge', '?');
   shortcutsOption.appendChild(shortcutHint);
   shortcutsOption.addEventListener('click', function () {
@@ -3235,10 +3235,10 @@ export async function renderPlayer(root, params) {
   const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
   const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
   const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
-  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', 'Keyboard Shortcuts'));
+  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', t('player_keyboard_shortcuts')));
   const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
   shortcutsClose.type = 'button';
-  shortcutsClose.setAttribute('aria-label', 'Close keyboard shortcuts');
+  shortcutsClose.setAttribute('aria-label', t('player_close_shortcuts'));
   shortcutsHeader.appendChild(shortcutsClose);
   shortcutsCard.appendChild(shortcutsHeader);
 
@@ -3365,8 +3365,8 @@ export async function renderPlayer(root, params) {
   // reused here rather than a second, plainer list. ===
   const sourcePanel = el('div', 'jellio-player-sidepanel jellio-player-sidepanel-hidden');
   const sourcePanelHeader = el('div', 'jellio-player-sidepanel-header');
-  sourcePanelHeader.appendChild(el('div', 'jellio-player-sidepanel-title', 'Sources'));
-  const sourceCloseButton = el('button', 'jellio-player-sidepanel-close', 'Close');
+  sourcePanelHeader.appendChild(el('div', 'jellio-player-sidepanel-title', t('player_sources')));
+  const sourceCloseButton = el('button', 'jellio-player-sidepanel-close', t('action_close'));
   sourceCloseButton.type = 'button';
   sourcePanelHeader.appendChild(sourceCloseButton);
   sourcePanel.appendChild(sourcePanelHeader);
@@ -3483,8 +3483,8 @@ export async function renderPlayer(root, params) {
   // until there is something real behind them). ===
   const episodesPanel = el('div', 'jellio-player-sidepanel jellio-player-sidepanel-hidden');
   const episodesPanelHeader = el('div', 'jellio-player-sidepanel-header');
-  episodesPanelHeader.appendChild(el('div', 'jellio-player-sidepanel-title', 'Episodes'));
-  const episodesCloseButton = el('button', 'jellio-player-sidepanel-close', 'Close');
+  episodesPanelHeader.appendChild(el('div', 'jellio-player-sidepanel-title', t('player_episodes')));
+  const episodesCloseButton = el('button', 'jellio-player-sidepanel-close', t('action_close'));
   episodesCloseButton.type = 'button';
   episodesPanelHeader.appendChild(episodesCloseButton);
   episodesPanel.appendChild(episodesPanelHeader);
@@ -4353,7 +4353,7 @@ export async function renderPlayer(root, params) {
     pauseOverlay.style.backgroundImage = 'url(' + pauseBackdropUrl + ')';
   }
   const pauseContent = el('div', 'jellio-player-pause-content');
-  pauseContent.appendChild(el('div', 'jellio-player-pause-eyebrow', 'You’re watching'));
+  pauseContent.appendChild(el('div', 'jellio-player-pause-eyebrow', t('player_youre_watching')));
   pauseContent.appendChild(el('div', 'jellio-player-pause-title', isEpisodeItem ? item.SeriesName : item.Name || ''));
   const pauseMeta = el('div', 'jellio-player-pause-meta');
   if (item.CommunityRating) pauseMeta.appendChild(buildRatingBadge(item.CommunityRating));
@@ -4386,12 +4386,12 @@ export async function renderPlayer(root, params) {
     body.appendChild(title);
 
     const actions = el('div', 'jellio-player-skip-actions');
-    const skipActionButton = el('button', 'jellio-player-skip-play', 'Skip');
+    const skipActionButton = el('button', 'jellio-player-skip-play', t('player_skip'));
     skipActionButton.type = 'button';
     skipActionButton.addEventListener('click', onSkip);
-    const dismissButton = el('button', 'jellio-player-skip-dismiss', 'Dismiss');
+    const dismissButton = el('button', 'jellio-player-skip-dismiss', t('player_dismiss'));
     dismissButton.type = 'button';
-    dismissButton.setAttribute('aria-label', 'Dismiss skip prompt');
+    dismissButton.setAttribute('aria-label', t('player_dismiss_skip'));
     dismissButton.addEventListener('click', onDismiss);
     actions.appendChild(skipActionButton);
     actions.appendChild(dismissButton);
@@ -4929,9 +4929,9 @@ export async function renderPlayer(root, params) {
   function updateUpNextCountdown() {
     if (upNextPlayButton) {
       if (upNextCountdownRemaining > 0) {
-        upNextPlayButton.textContent = 'Play now (' + upNextCountdownRemaining + ')';
+        upNextPlayButton.textContent = t('player_play_now_countdown', { seconds: upNextCountdownRemaining });
       } else {
-        upNextPlayButton.textContent = 'Play now';
+        upNextPlayButton.textContent = t('player_play_now');
       }
     }
   }
@@ -5123,7 +5123,7 @@ export async function renderPlayer(root, params) {
   if (failoverOverlay && mediaSource) {
     const textEl = failoverOverlay.querySelector('.jellio-player-failover-text');
     if (textEl) {
-      textEl.textContent = 'Trying the next one (attempt ' + (failoverTried.length + 1) + '): ' + sourceLabel(mediaSource);
+      textEl.textContent = t('player_failover_attempt', { attempt: failoverTried.length + 1, label: sourceLabel(mediaSource) });
     }
     const stop = failoverOverlay.querySelector('.jellio-player-failover-stop');
     if (stop) {
@@ -5628,14 +5628,14 @@ export async function renderPlayer(root, params) {
     stallHold = false;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     playPauseIcon.className = 'material-icons pause';
-    playPauseButton.setAttribute('aria-label', 'Pause');
+    playPauseButton.setAttribute('aria-label', t('action_pause'));
     pauseOverlay.classList.remove('jellio-player-pause-overlay-visible');
   });
   video.addEventListener('pause', function () {
     if (stallHold) return;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     playPauseIcon.className = 'material-icons play_arrow';
-    playPauseButton.setAttribute('aria-label', 'Play');
+    playPauseButton.setAttribute('aria-label', t('action_play'));
     // Ending playback also fires pause, the overlay would just be in the
     // way of whatever screen comes next rather than useful here.
     if (hasReportedStart && !video.ended) {

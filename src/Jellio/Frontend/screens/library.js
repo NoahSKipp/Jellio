@@ -160,7 +160,7 @@ export async function renderLibrary(root, params) {
   const filterBar = el('div', 'jellio-library-filters');
   const sortSelect = document.createElement('select');
   sortSelect.className = 'jellio-library-filter-select';
-  sortSelect.setAttribute('aria-label', 'Sort by');
+  sortSelect.setAttribute('aria-label', t('library_sort_by'));
   getSortOptions().forEach(function (option) {
     const optionEl = document.createElement('option');
     optionEl.value = option.value;
@@ -171,7 +171,7 @@ export async function renderLibrary(root, params) {
 
   const genreSelect = document.createElement('select');
   genreSelect.className = 'jellio-library-filter-select';
-  genreSelect.setAttribute('aria-label', 'Genre');
+  genreSelect.setAttribute('aria-label', t('library_filter_genre'));
   const allGenresOption = document.createElement('option');
   allGenresOption.value = '';
   allGenresOption.textContent = t('library_all_genres');
@@ -363,7 +363,7 @@ const ANIME_EMPTY_MESSAGE =
 // already avoids.
 function renderAnime(root, collectionType) {
   const header = el('header', 'jellio-library-header');
-  header.appendChild(el('h1', 'jellio-library-title', 'Anime'));
+  header.appendChild(el('h1', 'jellio-library-title', t('nav_anime')));
   root.appendChild(header);
 
   const rows = el('div', 'jellio-rows');

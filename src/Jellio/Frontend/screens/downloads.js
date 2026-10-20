@@ -57,12 +57,12 @@ function statusLine(record) {
 export function renderDownloads(root) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-downloads';
-  setTitle('Downloads - Jellio');
+  setTitle(t('nav_downloads') + ' - Jellio');
   const objectUrls = [];
   let cancelled = false;
 
   const header = el('header', 'jellio-library-header jellio-downloads-header');
-  header.appendChild(el('h1', 'jellio-library-title', 'Downloads'));
+  header.appendChild(el('h1', 'jellio-library-title', t('nav_downloads')));
   const summary = el('p', 'jellio-bookshelf-stats');
   header.appendChild(summary);
   root.appendChild(header);
@@ -145,14 +145,14 @@ export function renderDownloads(root) {
     if (record.Status === 'error') {
       const retry = el('button', 'jellio-downloads-action');
       retry.type = 'button';
-      retry.setAttribute('aria-label', 'Try again');
+      retry.setAttribute('aria-label', t('action_retry'));
       retry.appendChild(el('span', 'material-icons refresh'));
       retry.addEventListener('click', () => retryDownload(record.Id));
       actions.appendChild(retry);
     }
     const remove = el('button', 'jellio-downloads-action');
     remove.type = 'button';
-    remove.setAttribute('aria-label', record.Status === 'done' ? 'Remove download' : 'Cancel download');
+    remove.setAttribute('aria-label', record.Status === 'done' ? t('downloads_remove_single') : t('action_cancel'));
     remove.appendChild(el('span', 'material-icons ' + (record.Status === 'done' ? 'delete_outline' : 'close')));
     remove.addEventListener('click', function () {
       if (record.Status === 'done' && !window.confirm(t('downloads_remove_confirm', { title: record.Title }))) return;
@@ -191,8 +191,8 @@ export function renderDownloads(root) {
     // The whole series or show at once.
     const removeAll = el('button', 'jellio-downloads-action');
     removeAll.type = 'button';
-    removeAll.setAttribute('aria-label', 'Remove all of ' + title);
-    removeAll.title = 'Remove all';
+    removeAll.setAttribute('aria-label', t('downloads_remove_all_title', { title }));
+    removeAll.title = t('downloads_remove_all');
     removeAll.appendChild(el('span', 'material-icons delete_sweep'));
     removeAll.addEventListener('click', async function () {
       if (!window.confirm(t('downloads_remove_all_confirm', { count: records.length, title: title }))) return;
@@ -267,7 +267,7 @@ export function renderDownloads(root) {
       if (free > 0) {
         const freeSeg = el('div', 'jellio-storage-segment jellio-storage-segment-free');
         freeSeg.style.width = ((free / totalCapacity) * 100) + '%';
-        freeSeg.title = 'Free storage: ' + formatBytes(free);
+        freeSeg.title = t('downloads_free_storage', { bytes: formatBytes(free) });
         storageBar.appendChild(freeSeg);
       }
       storageSection.appendChild(storageBar);
@@ -288,7 +288,7 @@ export function renderDownloads(root) {
         const freeItem = el('div', 'jellio-storage-legend-item');
         const freeDot = el('span', 'jellio-storage-legend-dot jellio-storage-legend-dot-free');
         freeItem.appendChild(freeDot);
-        freeItem.appendChild(el('span', 'jellio-storage-legend-label', 'Free'));
+        freeItem.appendChild(el('span', 'jellio-storage-legend-label', t('offline_free')));
         freeItem.appendChild(el('span', 'jellio-storage-legend-value', formatBytes(free)));
         legend.appendChild(freeItem);
       }
@@ -325,7 +325,7 @@ export function renderDownloads(root) {
       if (!records.length) {
         const empty = el('div', 'jellio-bookshelf-empty');
         empty.appendChild(el('span', 'material-icons download_for_offline'));
-        empty.appendChild(el('p', null, 'Nothing downloaded yet.'));
+        empty.appendChild(el('p', null, t('offline_nothing')));
         empty.appendChild(
           el(
             'p',

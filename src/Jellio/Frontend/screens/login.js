@@ -178,7 +178,7 @@ function buildForgotUsernameForm(prefillUsername, onRequested, onCancel) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not request a password reset', err);
-        status.textContent = 'Could not request a reset code. Try again later.';
+        status.textContent = t('toast_request_reset_error');
         submit.disabled = false;
       });
   });
@@ -271,7 +271,7 @@ function buildForgotPinForm(username, onCancel) {
       })
       .catch(function (err) {
         console.warn('Jellio: could not reset password', err);
-        status.textContent = 'Could not reset the password. Try again.';
+        status.textContent = t('toast_reset_password_error');
         submit.disabled = false;
       });
   });
@@ -325,7 +325,7 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   const avatar = document.createElement('button');
   avatar.type = 'button';
   avatar.className = 'jellio-login-profile-avatar';
-  avatar.setAttribute('aria-label', 'Quick sign in as ' + (entry.name || ''));
+  avatar.setAttribute('aria-label', t('auth_quick_sign_in', { name: entry.name || '' }));
 
   if (entry.primaryImageTag) {
     avatar.style.backgroundImage = "url('" + getUserImageUrl(userId, entry.primaryImageTag, { maxWidth: 300 }) + "')";
@@ -351,7 +351,7 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.className = 'jellio-login-profile-remove';
-  remove.setAttribute('aria-label', 'Forget this profile');
+  remove.setAttribute('aria-label', t('action_forget_profile'));
   remove.textContent = '×';
   remove.addEventListener('click', function (event) {
     event.stopPropagation();
@@ -477,7 +477,7 @@ function buildAddTile(index, onClick) {
   const avatar = document.createElement('button');
   avatar.type = 'button';
   avatar.className = 'jellio-login-profile-avatar jellio-login-profile-avatar-add';
-  avatar.setAttribute('aria-label', 'Sign in as another user');
+  avatar.setAttribute('aria-label', t('auth_other_user'));
   const icon = el('span', 'material-icons add');
   icon.setAttribute('aria-hidden', 'true');
   avatar.appendChild(icon);

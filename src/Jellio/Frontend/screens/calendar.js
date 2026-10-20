@@ -87,7 +87,7 @@ function buildDateGroup(date, entries) {
 
 function buildHeader() {
   const header = el('header', 'jellio-calendar-header');
-  header.appendChild(el('h1', 'jellio-calendar-title', 'Calendar'));
+  header.appendChild(el('h1', 'jellio-calendar-title', t('nav_calendar')));
   header.appendChild(
     el(
       'p',

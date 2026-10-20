@@ -98,11 +98,11 @@ function buildRow(n) {
   if (!isAnnouncement && !isWhatsNew) {
     row.tabIndex = 0;
     row.setAttribute('role', 'button');
-    row.setAttribute('aria-label', 'Go to ' + (n.Name || 'title'));
+    row.setAttribute('aria-label', t('action_go_to', { name: n.Name || '' }));
   } else if (isWhatsNew) {
     row.tabIndex = 0;
     row.setAttribute('role', 'button');
-    row.setAttribute('aria-label', 'Toggle What\'s New highlights');
+    row.setAttribute('aria-label', t('notifications_toggle_highlights'));
   }
 
   const poster = el('div', 'jellio-notifications-row-poster');
@@ -147,7 +147,7 @@ function buildRow(n) {
 
   const deleteButton = el('button', 'jellio-notifications-row-delete');
   deleteButton.type = 'button';
-  deleteButton.setAttribute('aria-label', 'Dismiss this notification');
+  deleteButton.setAttribute('aria-label', t('notifications_dismiss'));
   const deleteIcon = el('span', 'material-icons close');
   deleteIcon.setAttribute('aria-hidden', 'true');
   deleteButton.appendChild(deleteIcon);
@@ -336,7 +336,7 @@ function poll() {
 function createPanel() {
   panel = el('div', 'jellio-notifications-panel');
   panel.setAttribute('role', 'region');
-  panel.setAttribute('aria-label', 'Notifications');
+  panel.setAttribute('aria-label', t('notifications_title'));
   panel.addEventListener('mouseenter', showNotificationsPanel);
   panel.addEventListener('mouseleave', scheduleHoverClose);
   document.body.appendChild(panel);

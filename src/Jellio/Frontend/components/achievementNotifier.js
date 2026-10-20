@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Badge unlock toast. Same real "don't announce the reader's own
 // entire backlog on a fresh page load, only a genuinely new unlock
 // during this live session" reasoning components/notifications.js's
@@ -28,7 +29,7 @@ function poll() {
       if (knownUnlockedIds) {
         badges.forEach(function (badge) {
           if (badge.Unlocked && !knownUnlockedIds.has(badge.Id)) {
-            showToast('Badge unlocked: ' + badge.Name, function () {
+            showToast(t('badge_unlocked_toast', { name: badge.Name }), function () {
               navigateTo('#/profile');
             });
           }

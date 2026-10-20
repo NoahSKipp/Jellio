@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // In-browser EPUB/PDF reader for a Jellyfin Book item. epub.js (with
 // JSZip) and pdf.js are vendored under Frontend/vendor and only loaded
 // when a book is actually opened. The file itself comes through
@@ -2044,12 +2045,12 @@ export async function renderReader(root, params) {
     });
     actions.appendChild(go);
     if (target && direction === 'next') {
-      const series = el('button', 'jellio-reader-chapter-card-secondary', 'Back to series');
+      const series = el('button', 'jellio-reader-chapter-card-secondary', t('manga_back_to_series'));
       series.type = 'button';
       series.addEventListener('click', goToSeries);
       actions.appendChild(series);
     }
-    const stay = el('button', 'jellio-reader-chapter-card-secondary', 'Stay');
+    const stay = el('button', 'jellio-reader-chapter-card-secondary', t('reader_stay'));
     stay.type = 'button';
     stay.addEventListener('click', closeChapterCard);
     actions.appendChild(stay);
@@ -2114,7 +2115,7 @@ export async function renderReader(root, params) {
   root.dataset.layout = settings.layout;
 
   const topbar = el('div', 'jellio-reader-topbar');
-  const backButton = iconButton('arrow_back', 'Back');
+  const backButton = iconButton('arrow_back', t('onboarding_back'));
   backButton.addEventListener('click', function () {
     goToSeries();
   });
@@ -2124,7 +2125,7 @@ export async function renderReader(root, params) {
   const chapterLabel = el('div', 'jellio-reader-title-chapter');
   titleBlock.appendChild(chapterLabel);
   topbar.appendChild(titleBlock);
-  const tocButton = iconButton('toc', 'Contents');
+  const tocButton = iconButton('toc', t('reader_contents'));
   const chaptersButton = iconButton('format_list_bulleted', 'Chapters');
   chaptersButton.hidden = true;
   const searchButton = iconButton('search', 'Search in book');
@@ -2165,7 +2166,7 @@ export async function renderReader(root, params) {
   scrubber.disabled = true;
   const progressLabel = el('span', 'jellio-reader-progress' + (isPaged ? ' jellio-reader-progress-clickable' : ''), '');
   if (isPaged) {
-    progressLabel.title = 'Click to jump to page (G)';
+    progressLabel.title = t('reader_jump_page_hint');
   }
   const jumpForm = el('form', 'jellio-reader-jump-form');
   jumpForm.style.display = 'none';
@@ -2173,8 +2174,8 @@ export async function renderReader(root, params) {
   jumpInput.type = 'number';
   jumpInput.className = 'jellio-reader-jump-input';
   jumpInput.placeholder = '#';
-  jumpInput.setAttribute('aria-label', 'Jump to page number');
-  const jumpSubmit = el('button', 'jellio-reader-jump-submit', 'Go');
+  jumpInput.setAttribute('aria-label', t('reader_jump_page'));
+  const jumpSubmit = el('button', 'jellio-reader-jump-submit', t('reader_jump_go'));
   jumpSubmit.type = 'submit';
   jumpForm.appendChild(jumpInput);
   jumpForm.appendChild(jumpSubmit);
@@ -2242,10 +2243,10 @@ export async function renderReader(root, params) {
   const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
   const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
   const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
-  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', 'Reader Shortcuts'));
+  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', t('reader_shortcuts')));
   const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
   shortcutsClose.type = 'button';
-  shortcutsClose.setAttribute('aria-label', 'Close shortcuts cheat sheet');
+  shortcutsClose.setAttribute('aria-label', t('reader_close_shortcuts'));
   shortcutsHeader.appendChild(shortcutsClose);
   shortcutsCard.appendChild(shortcutsHeader);
 
@@ -2593,7 +2594,7 @@ export async function renderReader(root, params) {
         try {
           await run();
         } catch (err) {
-          if (!err || err.name !== 'AbortError') status.textContent = 'That didn’t work here.';
+          if (!err || err.name !== 'AbortError') status.textContent = t('reader_not_work_here');
           return;
         }
         closePageMenu();
@@ -2719,7 +2720,7 @@ export async function renderReader(root, params) {
         : await openEpub(stage, file.buffer, latestLocator, settings, handlers);
   } catch (err) {
     console.warn('Jellio: could not render book', err);
-    renderRetry(root, 'Could not open this book.' + failureDetail(err), function () {
+    renderRetry(root, t('reader_open_error') + failureDetail(err), function () {
       renderReader(root, params);
     });
     return;
@@ -2909,16 +2910,16 @@ export async function renderReader(root, params) {
 
   function paintToc() {
     tocPanel.textContent = '';
-    tocPanel.appendChild(el('h2', 'jellio-reader-panel-title', 'Contents'));
+    tocPanel.appendChild(el('h2', 'jellio-reader-panel-title', t('reader_contents')));
     const list = el('div', 'jellio-reader-toc');
     tocPanel.appendChild(list);
-    list.appendChild(el('p', 'jellio-reader-empty', 'Loading…'));
+    list.appendChild(el('p', 'jellio-reader-empty', t('status_loading')));
     reader
       .toc()
       .then(function (entries) {
         list.textContent = '';
         if (!entries.length) {
-          list.appendChild(el('p', 'jellio-reader-empty', 'This book has no table of contents.'));
+          list.appendChild(el('p', 'jellio-reader-empty', t('reader_no_contents')));
           return;
         }
         entries.forEach(function (entry) {
@@ -2936,20 +2937,20 @@ export async function renderReader(root, params) {
       .catch(function (err) {
         console.warn('Jellio: could not read the table of contents', err);
         list.textContent = '';
-        list.appendChild(el('p', 'jellio-reader-empty', 'Could not read the table of contents.'));
+        list.appendChild(el('p', 'jellio-reader-empty', t('reader_read_contents_error')));
       });
   }
 
   function paintChapters() {
     chaptersPanel.textContent = '';
-    chaptersPanel.appendChild(el('h2', 'jellio-reader-panel-title', 'Chapters'));
+    chaptersPanel.appendChild(el('h2', 'jellio-reader-panel-title', t('reader_chapters')));
 
     let filterQuery = '';
     const filterWrap = el('div', 'jellio-reader-chapter-filter-wrap');
     const filterInput = document.createElement('input');
     filterInput.type = 'search';
     filterInput.className = 'jellio-reader-chapter-filter-input';
-    filterInput.placeholder = 'Filter chapters (e.g. 24, Extra, Epilogue)…';
+    filterInput.placeholder = t('reader_filter_chapters_placeholder');
     filterInput.autocomplete = 'off';
     filterInput.spellcheck = false;
     filterWrap.appendChild(filterInput);
@@ -3007,7 +3008,7 @@ export async function renderReader(root, params) {
     });
 
     if (!allChapters.length) {
-      list.appendChild(el('p', 'jellio-reader-empty', 'Loading chapters…'));
+      list.appendChild(el('p', 'jellio-reader-empty', t('reader_loading_chapters')));
       loadChapterNav().then(renderList);
     } else {
       renderList();
@@ -3024,12 +3025,12 @@ export async function renderReader(root, params) {
   let lastResults = [];
   function paintSearch() {
     searchPanel.textContent = '';
-    searchPanel.appendChild(el('h2', 'jellio-reader-panel-title', 'Search in book'));
+    searchPanel.appendChild(el('h2', 'jellio-reader-panel-title', t('reader_search_in_book')));
     const form = el('form', 'jellio-reader-search-form');
     const input = document.createElement('input');
     input.type = 'search';
     input.className = 'jellio-reader-search-input';
-    input.placeholder = 'Find a word or phrase';
+    input.placeholder = t('reader_find_phrase');
     input.value = lastQuery;
     form.appendChild(input);
     searchPanel.appendChild(form);
@@ -3062,14 +3063,14 @@ export async function renderReader(root, params) {
       event.preventDefault();
       const query = input.value.trim();
       if (query.length < 2) {
-        status.textContent = 'Type at least two characters.';
+        status.textContent = t('reader_type_two_chars');
         return;
       }
       const token = ++searchToken;
       lastQuery = query;
       lastResults = [];
       list.textContent = '';
-      status.textContent = 'Searching…';
+      status.textContent = t('status_searching');
       if (reader.setSearchQuery) reader.setSearchQuery(query);
       reader
         .search(query, function () {
@@ -3086,7 +3087,7 @@ export async function renderReader(root, params) {
         .catch(function (err) {
           if (token !== searchToken) return;
           console.warn('Jellio: book search failed', err);
-          status.textContent = 'Search failed.';
+          status.textContent = t('reader_search_failed');
         });
     });
     window.setTimeout(function () {
@@ -3129,12 +3130,12 @@ export async function renderReader(root, params) {
     const moreButton = el('button', 'jellio-reader-comic-tool');
     moreButton.type = 'button';
     moreButton.appendChild(el('span', 'material-icons settings'));
-    moreButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Settings'));
+    moreButton.appendChild(el('span', 'jellio-reader-comic-tool-label', t('settings_title')));
     const prevChapterButton = el('button', 'jellio-reader-comic-tool');
     prevChapterButton.type = 'button';
     prevChapterButton.hidden = true;
     prevChapterButton.appendChild(el('span', 'material-icons skip_previous'));
-    prevChapterButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Previous'));
+    prevChapterButton.appendChild(el('span', 'jellio-reader-comic-tool-label', t('nav_previous')));
     prevChapterButton.addEventListener('click', function () {
       if (chapterNav.prev) openChapter(chapterNav.prev);
     });
@@ -3142,7 +3143,7 @@ export async function renderReader(root, params) {
     nextChapterButton.type = 'button';
     nextChapterButton.hidden = true;
     nextChapterButton.appendChild(el('span', 'material-icons skip_next'));
-    nextChapterButton.appendChild(el('span', 'jellio-reader-comic-tool-label', 'Next'));
+    nextChapterButton.appendChild(el('span', 'jellio-reader-comic-tool-label', t('nav_next')));
     nextChapterButton.addEventListener('click', function () {
       if (chapterNav.next) openChapter(chapterNav.next);
     });
@@ -3218,7 +3219,7 @@ export async function renderReader(root, params) {
 
   function paintSettings() {
     settingsPanel.textContent = '';
-    settingsPanel.appendChild(el('h2', 'jellio-reader-panel-title', 'Reading settings'));
+    settingsPanel.appendChild(el('h2', 'jellio-reader-panel-title', t('reader_reading_settings')));
 
     const themeRow = el('div', 'jellio-reader-setting-row');
     THEMES.forEach(function (theme) {
@@ -3270,7 +3271,7 @@ export async function renderReader(root, params) {
       brightness.max = '100';
       brightness.step = '5';
       brightness.value = String(settings.comicBrightness);
-      brightness.setAttribute('aria-label', 'Brightness');
+      brightness.setAttribute('aria-label', t('reader_brightness'));
       brightness.addEventListener('input', function () {
         settings.comicBrightness = Number(brightness.value);
         persistSettings();
@@ -3446,7 +3447,7 @@ export async function renderReader(root, params) {
     brightness.max = '100';
     brightness.step = '5';
     brightness.value = String(settings.brightness);
-    brightness.setAttribute('aria-label', 'Brightness');
+    brightness.setAttribute('aria-label', t('reader_brightness'));
     brightness.addEventListener('input', function () {
       settings.brightness = Number(brightness.value);
       persistSettings();

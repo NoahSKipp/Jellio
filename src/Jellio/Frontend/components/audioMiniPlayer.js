@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Persistent audiobook session controller and mini-player dock component.
 // Manages singleton audio playback, Jellyfin progress reporting, MediaSession API,
 // and floating mini-player dock across navigation.
@@ -105,7 +106,7 @@ export function buildVolumeControl(extraClass) {
   slider.max = '100';
   slider.step = '1';
   slider.className = 'jellio-volume-slider';
-  slider.setAttribute('aria-label', 'Volume');
+  slider.setAttribute('aria-label', t('player_volume'));
   wrap.appendChild(muteButton);
   wrap.appendChild(slider);
 
@@ -763,8 +764,8 @@ export function syncMiniPlayer() {
     const controls = el('div', 'jellio-mini-player-controls');
     const backBtn = el('button', 'jellio-mini-player-btn');
     backBtn.type = 'button';
-    backBtn.setAttribute('aria-label', 'Back ' + SKIP_SECONDS_BACK + ' seconds');
-    backBtn.title = 'Back ' + SKIP_SECONDS_BACK + 's';
+    backBtn.setAttribute('aria-label', t('player_skip_back_seconds', { seconds: SKIP_SECONDS_BACK }));
+    backBtn.title = t('player_skip_back_seconds', { seconds: SKIP_SECONDS_BACK });
     backBtn.appendChild(el('span', 'material-icons replay_30'));
     backBtn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -773,8 +774,8 @@ export function syncMiniPlayer() {
 
     const playBtn = el('button', 'jellio-mini-player-btn jellio-mini-player-play-btn');
     playBtn.type = 'button';
-    playBtn.setAttribute('aria-label', 'Play/Pause');
-    playBtn.title = 'Play/Pause';
+    playBtn.setAttribute('aria-label', t('player_play_pause'));
+    playBtn.title = t('player_play_pause');
     playBtn.appendChild(el('span', 'material-icons play_arrow'));
     playBtn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -783,8 +784,8 @@ export function syncMiniPlayer() {
 
     const forwardBtn = el('button', 'jellio-mini-player-btn');
     forwardBtn.type = 'button';
-    forwardBtn.setAttribute('aria-label', 'Forward ' + SKIP_SECONDS_FORWARD + ' seconds');
-    forwardBtn.title = 'Forward ' + SKIP_SECONDS_FORWARD + 's';
+    forwardBtn.setAttribute('aria-label', t('player_skip_forward_seconds', { seconds: SKIP_SECONDS_FORWARD }));
+    forwardBtn.title = t('player_skip_forward_seconds', { seconds: SKIP_SECONDS_FORWARD });
     forwardBtn.appendChild(el('span', 'material-icons forward_30'));
     forwardBtn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -803,8 +804,8 @@ export function syncMiniPlayer() {
 
     const closeBtn = el('button', 'jellio-mini-player-btn jellio-mini-player-close-btn');
     closeBtn.type = 'button';
-    closeBtn.setAttribute('aria-label', 'Close player');
-    closeBtn.title = 'Close player';
+    closeBtn.setAttribute('aria-label', t('action_close_player'));
+    closeBtn.title = t('action_close_player');
     closeBtn.appendChild(el('span', 'material-icons close'));
     closeBtn.addEventListener('click', function (e) {
       e.stopPropagation();

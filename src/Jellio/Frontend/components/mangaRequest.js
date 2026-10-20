@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // The Manga shelf's "find a series" sheet, shared by the shelf and
 // Discover. Two ways to get a series, whichever the server has set up:
 // - Chapters, from Suwayomi (Controllers/MangaRequestController.cs): its
@@ -79,7 +80,7 @@ export function openMangaRequestSheet(root, options) {
   head.appendChild(el('h2', 'jellio-row-title', opts.heading || 'Find manga'));
   const closeButton = el('button', 'jellio-discover-back');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   closeButton.appendChild(el('span', 'material-icons close'));
   closeButton.addEventListener('click', close);
   head.appendChild(closeButton);
@@ -94,7 +95,7 @@ export function openMangaRequestSheet(root, options) {
   if (opts.suwayomi) panes.push({ key: 'chapters', label: 'Read online', build: buildChaptersPane });
   if (opts.chaptarr) panes.push({ key: 'volumes', label: 'Request volumes', build: buildVolumesPane });
   if (!panes.length) {
-    body.appendChild(el('p', 'jellio-bookshelf-stats', 'Manga requests aren’t set up on this server.'));
+    body.appendChild(el('p', 'jellio-bookshelf-stats', t('manga_not_configured')));
   }
 
   const built = {};
@@ -134,12 +135,12 @@ export function openMangaRequestSheet(root, options) {
     getMangaRequestStatus()
       .then(function (status) {
         if (!status || !status.Reachable) {
-          warnings.appendChild(el('p', 'jellio-manga-warning', 'Suwayomi isn’t reachable right now.'));
+          warnings.appendChild(el('p', 'jellio-manga-warning', t('manga_suwayomi_unreachable')));
           return;
         }
         if (!status.DownloadAsCbz) {
           warnings.appendChild(
-            el('p', 'jellio-manga-warning', 'Suwayomi saves chapters as image folders. Turn on “Download as CBZ” in its settings so series saved to the server can be read.'),
+            el('p', 'jellio-manga-warning', t('manga_cbz_warning')),
           );
         }
       })
@@ -149,9 +150,9 @@ export function openMangaRequestSheet(root, options) {
     const input = document.createElement('input');
     input.type = 'search';
     input.className = 'jellio-book-request-input';
-    input.placeholder = 'Series title';
+    input.placeholder = t('manga_series_title');
     input.value = opts.query || '';
-    const submit = el('button', 'jellio-book-request-submit', 'Search');
+    const submit = el('button', 'jellio-book-request-submit', t('action_search'));
     submit.type = 'submit';
     form.appendChild(input);
     form.appendChild(submit);
@@ -170,7 +171,7 @@ export function openMangaRequestSheet(root, options) {
       if (abort) abort.abort();
       abort = new AbortController();
       results.textContent = '';
-      status.textContent = 'Searching your Suwayomi sources…';
+      status.textContent = t('manga_searching_sources');
       submit.disabled = true;
       let shown = 0;
       function place(source) {
@@ -219,7 +220,7 @@ export function openMangaRequestSheet(root, options) {
         })
         .catch(function () {
           if (mine !== token) return;
-          status.textContent = 'Couldn’t reach Suwayomi. Check its URL and login in Jellio’s plugin settings, and that it’s running.';
+          status.textContent = t('manga_suwayomi_check_url');
         })
         .finally(function () {
           if (mine === token) submit.disabled = false;
@@ -267,7 +268,7 @@ export function openMangaRequestSheet(root, options) {
     const button = el('button', 'jellio-book-request-action');
     button.type = 'button';
     button.appendChild(el('span', 'material-icons menu_book'));
-    const text = el('span', null, 'Read');
+    const text = el('span', null, t('action_read'));
     button.appendChild(text);
     // Like opening a series in Mihon's Browse: Suwayomi loads its chapters
     // and the series page opens. It joins the reader's shelf when they
@@ -278,9 +279,9 @@ export function openMangaRequestSheet(root, options) {
       button.hidden = true;
       const choice = el('div', 'jellio-book-request-duplicate');
       choice.appendChild(
-        el('p', 'jellio-book-request-byline', '“' + existing.Title + '” is already in your library from another source.'),
+        el('p', 'jellio-book-request-byline', t('manga_already_in_library', { title: existing.Title })),
       );
-      const open = el('button', 'jellio-book-request-action', 'Open it');
+      const open = el('button', 'jellio-book-request-action', t('manga_open_it'));
       open.type = 'button';
       open.addEventListener('click', function () {
         if (opts.openSeries) {
@@ -288,11 +289,11 @@ export function openMangaRequestSheet(root, options) {
           opts.openSeries(existing.Key);
         }
       });
-      const move = el('button', 'jellio-book-request-action', 'Switch to this source');
+      const move = el('button', 'jellio-book-request-action', t('manga_switch_source'));
       move.type = 'button';
       move.addEventListener('click', function () {
         move.disabled = true;
-        move.textContent = 'Switching…';
+        move.textContent = t('action_switching');
         migrateMangaSeries(existing.MangaId, manga.MangaId)
           .then(function (result) {
             invalidateStreamLibrary();
@@ -300,21 +301,21 @@ export function openMangaRequestSheet(root, options) {
               close();
               opts.openSeries(result.Key);
             } else {
-              choice.textContent = 'Switched. Your progress came with it.';
+              choice.textContent = t('manga_switched_progress');
             }
           })
           .catch(function () {
             move.disabled = false;
-            move.textContent = 'Couldn’t switch';
+            move.textContent = t('manga_couldnt_switch');
           });
       });
-      const both = el('button', 'jellio-book-request-action', 'Add anyway');
+      const both = el('button', 'jellio-book-request-action', t('manga_add_anyway'));
       both.type = 'button';
       both.addEventListener('click', function () {
         choice.remove();
         button.hidden = false;
         button.disabled = true;
-        text.textContent = 'Opening…';
+        text.textContent = t('action_opening');
         requestMangaSeries(manga.MangaId, manga.Title, false, true)
           .then(function () {
             invalidateStreamLibrary();
@@ -324,7 +325,7 @@ export function openMangaRequestSheet(root, options) {
             }
           })
           .catch(function () {
-            text.textContent = 'Couldn’t open it';
+            text.textContent = t('manga_couldnt_open');
             button.disabled = false;
           });
       });
@@ -333,7 +334,7 @@ export function openMangaRequestSheet(root, options) {
     }
     button.addEventListener('click', function () {
       button.disabled = true;
-      text.textContent = 'Opening…';
+      text.textContent = t('action_opening');
       requestMangaSeries(manga.MangaId, manga.Title, false)
         .then(function (response) {
           invalidateStreamLibrary();
@@ -356,7 +357,7 @@ export function openMangaRequestSheet(root, options) {
           button.classList.add('jellio-book-request-action-done');
         })
         .catch(function () {
-          text.textContent = 'Couldn’t open it';
+          text.textContent = t('manga_couldnt_open');
           button.disabled = false;
           button.classList.add('jellio-book-request-action-error');
         });

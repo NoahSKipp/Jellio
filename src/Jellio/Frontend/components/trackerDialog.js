@@ -1,3 +1,4 @@
+import { t } from '../runtime/i18n.js';
 // Mihon's tracking, for AniList: connect the reader's account (the token
 // goes to the server and stays there), link this series to an AniList
 // entry, and set its status and score. Chapters read are written to
@@ -51,7 +52,7 @@ export function openTrackerDialog(options) {
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Tracking');
+  overlay.setAttribute('aria-label', t('tracker_title'));
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) close();
   });
@@ -60,11 +61,11 @@ export function openTrackerDialog(options) {
   const panel = el('div', 'jellio-avatar-picker-panel jellio-shelf-categories-panel jellio-tracker-panel');
   const closeButton = el('button', 'jellio-group-watch-close');
   closeButton.type = 'button';
-  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.setAttribute('aria-label', t('action_close'));
   closeButton.appendChild(el('span', 'material-icons close'));
   closeButton.addEventListener('click', close);
   panel.appendChild(closeButton);
-  panel.appendChild(el('h2', 'jellio-avatar-picker-title', 'Tracking'));
+  panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('tracker_title')));
   const body = el('div', 'jellio-tracker-body');
   panel.appendChild(body);
   overlay.appendChild(panel);
@@ -88,23 +89,23 @@ export function openTrackerDialog(options) {
     );
     const authorize =
       'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(status.ClientId) + '&response_type=token';
-    const open = el('a', 'jellio-chapter-settings-action jellio-tracker-link', 'Open AniList and authorise');
+    const open = el('a', 'jellio-chapter-settings-action jellio-tracker-link', t('tracker_auth'));
     open.href = authorize;
     open.target = '_blank';
     open.rel = 'noopener noreferrer';
     body.appendChild(open);
-    body.appendChild(el('p', 'jellio-avatar-picker-status', 'Then paste the token AniList gives you:'));
+    body.appendChild(el('p', 'jellio-avatar-picker-status', t('tracker_paste_token')));
     const input = document.createElement('input');
     input.type = 'password';
     input.className = 'jellio-tracker-input';
-    input.placeholder = 'AniList token';
+    input.placeholder = t('tracker_token');
     input.autocomplete = 'off';
     body.appendChild(input);
     const note = el('p', 'jellio-avatar-picker-status');
     body.appendChild(note);
     const save = button('Connect', 'jellio-shelf-categories-save', function () {
       save.disabled = true;
-      note.textContent = 'Checking…';
+      note.textContent = t('tracker_checking');
       connectTracker(input.value)
         .then(load)
         .catch(function (err) {
@@ -118,7 +119,7 @@ export function openTrackerDialog(options) {
 
   function searchView() {
     body.textContent = '';
-    body.appendChild(el('p', 'jellio-avatar-picker-status', 'Find this series on AniList.'));
+    body.appendChild(el('p', 'jellio-avatar-picker-status', t('tracker_find')));
     const input = document.createElement('input');
     input.type = 'search';
     input.className = 'jellio-tracker-input';
@@ -131,12 +132,12 @@ export function openTrackerDialog(options) {
       const mine = ++token;
       results.textContent = '';
       if (!input.value.trim()) return;
-      results.appendChild(el('p', 'jellio-avatar-picker-status', 'Searching…'));
+      results.appendChild(el('p', 'jellio-avatar-picker-status', t('status_searching')));
       searchTracker(input.value.trim(), options.mediaType || 'MANGA')
         .then(function (found) {
           if (mine !== token) return;
           results.textContent = '';
-          if (!found.length) results.appendChild(el('p', 'jellio-avatar-picker-status', 'Nothing found.'));
+          if (!found.length) results.appendChild(el('p', 'jellio-avatar-picker-status', t('tracker_nothing_found')));
           found.forEach(function (media) {
             const row = el('button', 'jellio-tracker-result');
             row.type = 'button';
@@ -157,7 +158,7 @@ export function openTrackerDialog(options) {
                   return syncTracker(options.key, options.mangaId, options.episode);
                 })
                 .then(load)
-                .catch(() => showToast('Couldn’t link that series'));
+                .catch(() => showToast(t('tracker_link_error')));
             });
             results.appendChild(row);
           });
@@ -165,7 +166,7 @@ export function openTrackerDialog(options) {
         .catch(function () {
           if (mine === token) {
             results.textContent = '';
-            results.appendChild(el('p', 'jellio-avatar-picker-status', 'AniList can’t be reached right now.'));
+            results.appendChild(el('p', 'jellio-avatar-picker-status', t('tracker_anilist_unreachable')));
           }
         });
     }
@@ -180,7 +181,7 @@ export function openTrackerDialog(options) {
 
   function linkedView(status, link, entry) {
     body.textContent = '';
-    body.appendChild(el('p', 'jellio-avatar-picker-status', 'Signed in as ' + (status.UserName || 'AniList') + '.'));
+    body.appendChild(el('p', 'jellio-avatar-picker-status', t('tracker_signed_in_as', { name: status.UserName || 'AniList' })));
     const title = el('a', 'jellio-tracker-linked-title', link.Title || 'AniList entry');
     title.href = (isAnime ? 'https://anilist.co/anime/' : 'https://anilist.co/manga/') + link.MediaId;
     title.target = '_blank';
@@ -188,14 +189,14 @@ export function openTrackerDialog(options) {
     body.appendChild(title);
 
     if (!entry) {
-      body.appendChild(el('p', 'jellio-avatar-picker-status', 'AniList isn’t answering, so its status can’t be shown right now.'));
+      body.appendChild(el('p', 'jellio-avatar-picker-status', t('tracker_anilist_no_status')));
     } else {
       const statusLabel = el('label', 'jellio-tracker-field');
-      statusLabel.appendChild(el('span', null, 'Status'));
+      statusLabel.appendChild(el('span', null, t('tracker_status_label')));
       const select = document.createElement('select');
       const none = document.createElement('option');
       none.value = '';
-      none.textContent = 'Not on your list';
+      none.textContent = t('tracker_not_on_list');
       none.disabled = true;
       select.appendChild(none);
       const statuses = isAnime
@@ -216,7 +217,7 @@ export function openTrackerDialog(options) {
       });
       select.value = entry.Status || '';
       select.addEventListener('change', function () {
-        setTrackerEntry(options.key, { Status: select.value }).catch(() => showToast('Couldn’t change the status'));
+        setTrackerEntry(options.key, { Status: select.value }).catch(() => showToast(t('tracker_change_status_error')));
       });
       statusLabel.appendChild(select);
       body.appendChild(statusLabel);
@@ -231,7 +232,7 @@ export function openTrackerDialog(options) {
       score.value = entry.ScoreRaw ? String(entry.ScoreRaw / 10) : '';
       score.addEventListener('change', function () {
         const value = Math.min(10, Math.max(0, Number(score.value) || 0));
-        setTrackerEntry(options.key, { ScoreRaw: Math.round(value * 10) }).catch(() => showToast('Couldn’t save the score'));
+        setTrackerEntry(options.key, { ScoreRaw: Math.round(value * 10) }).catch(() => showToast(t('tracker_save_score_error')));
       });
       scoreLabel.appendChild(score);
       body.appendChild(scoreLabel);
