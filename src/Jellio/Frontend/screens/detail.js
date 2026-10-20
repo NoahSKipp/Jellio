@@ -1,4 +1,4 @@
-import { t } from '../runtime/i18n.js';
+import { t, translateGenre } from '../runtime/i18n.js';
 // Metadata view for one item: backdrop, title, overview, genres, cast,
 // trailers.
 // Play opens components/streamPicker.js's own picker first when there
@@ -1186,7 +1186,7 @@ export async function renderDetail(root, params) {
   heroContent.appendChild(badgeSlot);
 
   if (item.Genres && item.Genres.length) {
-    const genres = el('div', 'jellio-detail-genres', item.Genres.join(', '));
+    const genres = el('div', 'jellio-detail-genres', item.Genres.map(translateGenre).join(', '));
     heroContent.appendChild(genres);
   }
 

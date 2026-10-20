@@ -1,3 +1,4 @@
+import { translateGenre } from '../runtime/i18n.js';
 import { t } from '../runtime/i18n.js';
 // Coverflow carousel for the library pages, ported from the original
 // codebase's own libraryCoverflow.js: three wide cards, the middle one
@@ -29,7 +30,7 @@ function metaLine(item) {
   const parts = [];
   if (item.ProductionYear) parts.push(String(item.ProductionYear));
   if (item.Genres && item.Genres.length) {
-    parts.push.apply(parts, item.Genres.slice(0, 2));
+    parts.push.apply(parts, item.Genres.slice(0, 2).map(translateGenre));
   }
   return parts.join(' · ');
 }

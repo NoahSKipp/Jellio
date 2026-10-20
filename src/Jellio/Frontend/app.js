@@ -152,7 +152,7 @@ const connectivityReady = checkServer();
 
 document.addEventListener('jellio:connectivity', function (event) {
   const offline = event.detail && event.detail.offline;
-  showToast(offline ? 'Offline. Your downloads still work.' : 'Back online.');
+  showToast(offline ? t('toast_offline') : t('toast_online'));
   // The reader and players keep going either way; other screens
   // re-render for the new state.
   // Back online: the sidebar may have been built while the libraries

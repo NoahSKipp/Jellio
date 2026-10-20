@@ -1,4 +1,4 @@
-import { t } from '../runtime/i18n.js';
+import { t, getBadgeName, getBadgeDescription } from '../runtime/i18n.js';
 // The general activity feed, from the reference table: "a dedicated Feed
 // tab... showcasing [everyone's] recent actions." Server wide rather than
 // a real friends graph this plugin has no concept of at all, backed by
@@ -39,7 +39,7 @@ function appendWatchDescription(container, entry) {
     container.appendChild(document.createTextNode(reading.lead));
     container.appendChild(el('span', 'jellio-feed-title', reading.title));
     if (reading.series) {
-      container.appendChild(document.createTextNode(' of '));
+      container.appendChild(document.createTextNode(' ' + t('feed_of') + ' '));
       container.appendChild(el('span', 'jellio-feed-title', reading.series));
     }
     if (reading.detail) container.appendChild(el('div', 'jellio-feed-badge-desc', reading.detail));
@@ -48,19 +48,19 @@ function appendWatchDescription(container, entry) {
   if (entry.ItemType === 'Episode' && entry.SeriesName) {
     container.appendChild(document.createTextNode(t('feed_watched') + ' '));
     if (entry.EpisodeCount > 1) {
-      const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
+      const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
       const range =
         entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
           ? t('feed_episodes_range', { first: entry.FirstEpisodeNumber, last: entry.LastEpisodeNumber })
           : t('feed_episodes_count', { count: entry.EpisodeCount });
-      container.appendChild(document.createTextNode(season + range + ' of '));
+      container.appendChild(document.createTextNode(season + range + ' ' + t('feed_of') + ' '));
     } else if (entry.FirstEpisodeNumber != null) {
-      const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
-      container.appendChild(document.createTextNode(season + t('feed_episode_single', { num: entry.FirstEpisodeNumber }) + ' '));
+      const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
+      container.appendChild(document.createTextNode(season + t('feed_episode_single', { num: entry.FirstEpisodeNumber }) + ' ' + t('feed_of') + ' '));
     }
     container.appendChild(el('span', 'jellio-feed-title', entry.SeriesName));
   } else {
-    container.appendChild(document.createTextNode('Watched '));
+    container.appendChild(document.createTextNode(t('feed_watched') + ' '));
     container.appendChild(el('span', 'jellio-feed-title', entry.ItemName));
   }
 }
@@ -71,11 +71,13 @@ function appendWatchDescription(container, entry) {
 // applied server side before either kind ever reaches this file.
 function appendBadgeDescription(container, entry) {
   container.appendChild(document.createTextNode(t('feed_unlocked') + ' '));
-  const title = el('span', 'jellio-feed-title', entry.BadgeName);
+  const badgeName = getBadgeName(entry.BadgeId, entry.BadgeName);
+  const badgeDesc = getBadgeDescription(entry.BadgeId, entry.BadgeDescription);
+  const title = el('span', 'jellio-feed-title', badgeName);
   title.style.color = 'var(--jellio-rarity-' + (entry.BadgeRarity || 'common').toLowerCase() + ')';
   container.appendChild(title);
-  if (entry.BadgeDescription) {
-    const sub = el('div', 'jellio-feed-badge-desc', entry.BadgeDescription);
+  if (badgeDesc) {
+    const sub = el('div', 'jellio-feed-badge-desc', badgeDesc);
     container.appendChild(sub);
   }
 }
@@ -165,14 +167,16 @@ function buildFeedRow(entry) {
 
 // Content type filter chips: every type shows by default; a chip that's
 // switched off stays visible, struck through, so it's clear what's hidden.
-const FEED_TYPES = [
-  { key: 'movies', label: 'Movies', icon: 'movie' },
-  { key: 'shows', label: 'Shows', icon: 'tv' },
-  { key: 'books', label: 'Books', icon: 'menu_book' },
-  { key: 'manga', label: 'Manga', icon: 'collections_bookmark' },
-  { key: 'audiobooks', label: 'Audiobooks', icon: 'headphones' },
-  { key: 'badges', label: 'Badges', icon: 'emoji_events' },
-];
+function getFeedTypes() {
+  return [
+    { key: 'movies', label: t('nav_movies'), icon: 'movie' },
+    { key: 'shows', label: t('nav_shows'), icon: 'tv' },
+    { key: 'books', label: t('nav_books'), icon: 'menu_book' },
+    { key: 'manga', label: 'Manga', icon: 'collections_bookmark' },
+    { key: 'audiobooks', label: t('nav_audiobooks'), icon: 'headphones' },
+    { key: 'badges', label: t('library_badges'), icon: 'emoji_events' },
+  ];
+}
 const FEED_HIDDEN_KEY = 'jellio-feed-hidden-types';
 
 function feedType(entry) {
@@ -265,7 +269,7 @@ export async function renderFeed(root) {
   filters.setAttribute('aria-label', t('feed_show_in_feed'));
   // Every type, even ones with nothing in the feed yet, so a reader can
   // set them up ahead of time.
-  FEED_TYPES.forEach(function (type) {
+  getFeedTypes().forEach(function (type) {
     const chip = el('button', 'jellio-feed-filter-chip');
     chip.type = 'button';
     chip.appendChild(el('span', 'material-icons ' + type.icon));
@@ -310,15 +314,17 @@ export async function renderFeed(root) {
 function buildRemoveButton(entry, own, item) {
   const button = el('button', 'jellio-feed-remove');
   button.type = 'button';
-  const label = entry.Kind === 'Badge' ? 'Remove this badge from the feed' : 'Remove this activity';
+  const label = entry.Kind === 'Badge' ? t('feed_remove_badge_label') : t('feed_remove_activity_label');
   button.setAttribute('aria-label', label);
-  button.title = own ? label : label + ' (admin)';
+  button.title = own ? label : label + ' (' + t('role_admin', null, 'admin') + ')';
   button.appendChild(el('span', 'material-icons close'));
   button.addEventListener('click', function () {
     const question =
       entry.Kind === 'Badge'
-        ? 'Remove this badge from the feed? The badge stays unlocked.'
-        : 'Remove this activity from the feed and ' + (own ? 'your' : entry.UserName + '’s') + ' profile?';
+        ? t('feed_remove_badge_confirm')
+        : own
+          ? t('feed_remove_activity_confirm_own')
+          : t('feed_remove_activity_confirm_other', { name: entry.UserName });
     if (!window.confirm(question)) return;
     button.disabled = true;
     const removal =

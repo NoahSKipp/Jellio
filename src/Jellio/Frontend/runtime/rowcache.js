@@ -498,7 +498,7 @@ export function createRowCache(options) {
   const leaseStore = opts.leaseStore || null;
   const tabId = opts.tabId || 'tab-' + now().toString(36) + '-' + Math.floor(random() * 1e9).toString(36);
 
-  let scope = opts.scope || { serverId: '', userId: '' };
+  let scope = opts.scope || { serverId: '', userId: '', language: '' };
   let storage = null;
   let maxBytes = opts.maxBytes || DEFAULT_MAX_BYTES;
   const index = new Map();
@@ -856,7 +856,7 @@ export function createRowCache(options) {
   // Signed in as someone else, or on another server: start over.
   function setScope(next) {
     if (scopePrefix(next) === scopePrefix(scope)) return;
-    scope = { serverId: next.serverId, userId: next.userId };
+    scope = { serverId: next.serverId, userId: next.userId, language: next.language || '' };
     wipe();
   }
 

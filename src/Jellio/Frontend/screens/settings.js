@@ -28,6 +28,7 @@ import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel } from '../runt
 import {
   getCurrentUser,
   saveServerDisplayLanguage,
+  saveServerDisplayPreferences,
   updateUserPassword,
   getSleepTimerStatus,
   cancelSleepTimer,
@@ -79,7 +80,7 @@ import {
 import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from '../components/audioMiniPlayer.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
-import { DISPLAY_LANGUAGES, getDisplayLanguage, setDisplayLanguage, t } from '../runtime/i18n.js';
+import { DISPLAY_LANGUAGES, getDisplayLanguage, setDisplayLanguage, t, translateGenre } from '../runtime/i18n.js';
 import {
   LANGUAGES,
   languageLabel,
@@ -408,7 +409,8 @@ function buildPlaybackCard() {
       getPrebufferLevel(),
       function (value, select, status) {
         setPrebufferLevel(value);
-        status.textContent = t('settings_saved_next_video');
+        saveServerDisplayPreferences({ prebuffer: value });
+        status.textContent = t('settings_saved_next_video') + ' (' + t('settings_saved_profile') + ')';
       },
     ),
   );
@@ -443,6 +445,7 @@ function buildPlaybackCard() {
         isAutoPipEnabled(),
         function (checked) {
           setAutoPipEnabled(checked);
+          saveServerDisplayPreferences({ auto_pip: checked ? 'on' : 'off' });
         },
       ),
     );
@@ -456,7 +459,8 @@ function buildPlaybackCard() {
       String(getUpNextCountdownSeconds()),
       function (value, select, status) {
         setUpNextCountdownSeconds(Number(value));
-        status.textContent = t('settings_saved_next_episode');
+        saveServerDisplayPreferences({ upnext_countdown: String(value) });
+        status.textContent = t('settings_saved_next_episode') + ' (' + t('settings_saved_profile') + ')';
       },
     ),
   );
@@ -1301,8 +1305,8 @@ function buildDisplayCategory() {
       function (value, select, status) {
         setDisplayLanguage(value);
         clearCachedRows();
-        saveServerDisplayLanguage(value);
-        status.textContent = t('action_saved') + ' (' + t('settings_saved_browser') + ')';
+        saveServerDisplayPreferences({ language: value });
+        status.textContent = t('action_saved') + ' (' + t('settings_saved_profile') + ')';
         window.setTimeout(function () {
           window.location.reload();
         }, 500);
@@ -1320,7 +1324,8 @@ function buildDisplayCategory() {
       getMotionPreference(),
       function (value, select, status) {
         setMotionPreference(value);
-        status.textContent = t('action_saved') + ' (' + t('settings_saved_browser') + ')';
+        saveServerDisplayPreferences({ seasonal_motion: value });
+        status.textContent = t('action_saved') + ' (' + t('settings_saved_profile') + ')';
       },
     ),
   );
@@ -1341,17 +1346,11 @@ function buildAboutCategory() {
     t('onboarding_wizard_card_title'),
     t('onboarding_wizard_card_desc'),
   );
-  const wizardRow = el('div', 'jellio-settings-row');
-  const wizardBtn = el('button', 'jellio-btn jellio-btn-secondary', t('onboarding_wizard_btn'));
-  wizardBtn.type = 'button';
-  wizardBtn.style.padding = '8px 18px';
-  wizardBtn.style.borderRadius = '999px';
-  wizardBtn.style.fontWeight = '600';
-  wizardBtn.addEventListener('click', function () {
-    openOnboardingModal();
-  });
-  wizardRow.appendChild(wizardBtn);
-  wizardBody.appendChild(wizardRow);
+  wizardBody.appendChild(
+    buildActionRow('auto_fix_high', t('onboarding_wizard_btn'), null, function () {
+      openOnboardingModal();
+    }),
+  );
   wrap.appendChild(wizardCard);
 
   const { card: whatsNewCard, body: whatsNewBody } = buildExpandableCard(

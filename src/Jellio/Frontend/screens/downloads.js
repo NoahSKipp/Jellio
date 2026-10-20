@@ -245,7 +245,7 @@ export function renderDownloads(root) {
 
       summary.textContent =
         records.length + (records.length === 1 ? ' download' : ' downloads') + ' · ' + formatBytes(totalUsed) +
-        (estimate && estimate.quota ? ' · ' + formatBytes(free) + ' free for Jellio on this device' : '');
+        (estimate && estimate.quota ? ' · ' + t('downloads_storage_free', { free: formatBytes(free) }) : '');
 
       const storageSection = el('div', 'jellio-downloads-storage');
       const storageBar = el('div', 'jellio-storage-bar');
@@ -310,12 +310,12 @@ export function renderDownloads(root) {
         return row;
       }
       quickSettings.appendChild(
-        buildQuickToggle('movie', 'Delete after watching', isAutoDeleteWatchedEnabled(), function (checked) {
+        buildQuickToggle('movie', t('settings_delete_watched'), isAutoDeleteWatchedEnabled(), function (checked) {
           setAutoDeleteWatchedEnabled(checked);
         }),
       );
       quickSettings.appendChild(
-        buildQuickToggle('auto_stories', 'Delete after reading', isAutoDeleteReadEnabled(), function (checked) {
+        buildQuickToggle('auto_stories', t('settings_delete_reading'), isAutoDeleteReadEnabled(), function (checked) {
           setAutoDeleteReadEnabled(checked);
         }),
       );
@@ -330,7 +330,7 @@ export function renderDownloads(root) {
           el(
             'p',
             'jellio-bookshelf-stats',
-            'Use Download on a book, a manga series, an audiobook, a film or an episode to keep it on this device and read, listen or watch without the server.',
+            t('downloads_empty_hint'),
           ),
         );
         body.appendChild(empty);

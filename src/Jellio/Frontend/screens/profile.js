@@ -1,4 +1,4 @@
-import { t } from '../runtime/i18n.js';
+import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
 // The profile page, from the reference table: AniList-style banner,
 // bio, badge showcase, activity feed. Own route (#/profile?id=X, own
 // signed in user's own id when the query is bare), reached from
@@ -66,7 +66,7 @@ function describeActivity(entry) {
     const reading = describeReading(entry);
     text(reading.lead);
     if (reading.series) {
-      text(reading.title + ' of ');
+      text(reading.title + ' ' + t('feed_of') + ' ');
       container.appendChild(link(reading.series));
     } else {
       container.appendChild(link(reading.title));
@@ -74,15 +74,15 @@ function describeActivity(entry) {
     if (reading.detail) text(' · ' + reading.detail);
     return container;
   }
-  text('Finished ');
+  text(t('profile_activity_finished') + ' ');
   if (entry.ItemType === 'Episode' && entry.SeriesName) {
     container.appendChild(link(entry.SeriesName));
     if (entry.EpisodeCount > 1) {
-      const season = entry.SeasonNumber != null ? 'Season ' + entry.SeasonNumber + ', ' : '';
+      const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
       const range =
         entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
-          ? 'Episodes ' + entry.FirstEpisodeNumber + '-' + entry.LastEpisodeNumber
-          : entry.EpisodeCount + ' episodes';
+          ? t('profile_activity_episodes_range', { first: entry.FirstEpisodeNumber, last: entry.LastEpisodeNumber })
+          : t('profile_activity_episodes_count', { count: entry.EpisodeCount });
       text(' - ' + season + range);
     } else {
       text(' - ' + entry.ItemName);
@@ -266,9 +266,9 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
   let filter = 'all';
   const filterBar = el('div', 'jellio-profile-filter-bar');
   const filters = [
-    { key: 'all', label: 'All (' + badges.length + ')' },
-    { key: 'unlocked', label: 'Unlocked (' + unlockedCount + ')' },
-    { key: 'locked', label: 'Locked (' + (badges.length - unlockedCount) + ')' },
+    { key: 'all', label: t('profile_filter_all', { count: badges.length }) },
+    { key: 'unlocked', label: t('profile_filter_unlocked', { count: unlockedCount }) },
+    { key: 'locked', label: t('profile_filter_locked', { count: badges.length - unlockedCount }) },
   ];
 
   const grid = el('div', 'jellio-profile-badges');
@@ -292,14 +292,14 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
       tile.dataset.unlocked = String(badge.Unlocked);
       const icon = el('span', 'material-icons jellio-profile-badge-icon', badge.Unlocked ? 'military_tech' : 'lock');
       tile.appendChild(icon);
-      tile.appendChild(el('span', 'jellio-profile-badge-name', badge.Name));
-      tile.title = badge.Description;
+      tile.appendChild(el('span', 'jellio-profile-badge-name', getBadgeName(badge)));
+      tile.title = getBadgeDescription(badge);
       if (isAdmin && badge.Unlocked) {
         const lockButton = el('button', 'jellio-profile-admin-lock', t('action_lock_again'));
         lockButton.type = 'button';
         lockButton.addEventListener('click', function (event) {
           event.stopPropagation();
-          if (!window.confirm(t('profile_lock_badge_confirm', { name: badge.Name }))) return;
+          if (!window.confirm(t('profile_lock_badge_confirm', { name: getBadgeName(badge) }))) return;
           lockButton.disabled = true;
           lockBadgeForUser(userId, badge.Id)
             .then(onChanged)
@@ -345,10 +345,10 @@ function buildActivitySection(entries, canRemove, userId, onChanged) {
   let filter = 'all';
   const filterBar = el('div', 'jellio-profile-filter-bar');
   const filters = [
-    { key: 'all', label: 'All (' + entries.length + ')' },
-    { key: 'video', label: 'Movies & Episodes' },
-    { key: 'reading', label: 'Books & Manga' },
-    { key: 'audio', label: 'Audiobooks' },
+    { key: 'all', label: t('profile_filter_all', { count: entries.length }) },
+    { key: 'video', label: t('profile_filter_movies_episodes') },
+    { key: 'reading', label: t('profile_filter_books_manga') },
+    { key: 'audio', label: t('profile_stat_audiobooks') },
   ];
 
   const list = el('ul', 'jellio-profile-activity');
@@ -588,7 +588,7 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
     const content = el('div', 'jellio-profile-spotlight-content');
     content.appendChild(el('span', 'jellio-profile-spotlight-eyebrow', t('profile_top_show')));
     content.appendChild(el('span', 'jellio-profile-spotlight-title', data.topSeriesName));
-    content.appendChild(el('span', 'jellio-profile-spotlight-sub', data.topSeriesCount + ' episodes watched in ' + selectedDate.toLocaleString('default', { month: 'short' })));
+    content.appendChild(el('span', 'jellio-profile-spotlight-sub', t('profile_monthly_episodes_watched', { count: data.topSeriesCount, month: selectedDate.toLocaleString(getDisplayLanguage(), { month: 'short' }) })));
     card.appendChild(content);
     spotlightWrap.appendChild(card);
     container.appendChild(spotlightWrap);
@@ -601,32 +601,32 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
 
   [
     [
-      'Watching in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      t('profile_monthly_watching', { month: selectedDate.toLocaleString(getDisplayLanguage(), { month: 'long' }) }),
       [
-        ['Movies', data.movies],
-        ['Episodes', data.episodes],
-        ['Total watched', data.totalWatched],
-        ['Active days', data.activeDays],
+        [t('profile_stat_movies'), data.movies],
+        [t('profile_stat_episodes'), data.episodes],
+        [t('profile_stat_total_watched'), data.totalWatched],
+        [t('profile_stat_active_days'), data.activeDays],
       ],
     ],
     [
-      'Books in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      t('profile_monthly_books', { month: selectedDate.toLocaleString(getDisplayLanguage(), { month: 'long' }) }),
       [
-        ['Finished', data.books],
-        ['Pages read', data.bookPages],
+        [t('profile_stat_finished'), data.books],
+        [t('profile_stat_pages_read'), data.bookPages],
       ],
     ],
     [
-      'Manga in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      t('profile_monthly_manga', { month: selectedDate.toLocaleString(getDisplayLanguage(), { month: 'long' }) }),
       [
-        ['Finished', data.mangaVolumes],
-        ['Pages read', data.mangaPages],
+        [t('profile_stat_finished'), data.mangaVolumes],
+        [t('profile_stat_pages_read'), data.mangaPages],
       ],
     ],
     [
-      'Audiobooks in ' + selectedDate.toLocaleString('default', { month: 'long' }),
+      t('profile_monthly_audiobooks', { month: selectedDate.toLocaleString(getDisplayLanguage(), { month: 'long' }) }),
       [
-        ['Time listening', formatMinutes(data.listenedMinutes)],
+        [t('profile_stat_time_listening'), formatMinutes(data.listenedMinutes)],
       ],
     ],
   ].forEach(function (group) {
@@ -753,9 +753,9 @@ export async function renderProfile(root, params) {
     let activeTab = 'stats'; // 'stats', 'badges', 'activity'
     const navTabs = el('div', 'jellio-profile-nav-tabs');
     const tabs = [
-      { key: 'stats', label: 'Overview & Stats', icon: 'analytics' },
-      { key: 'badges', label: 'Badges (' + unlockedBadgesCount + '/' + badges.length + ')', icon: 'military_tech' },
-      { key: 'activity', label: 'Recent Activity (' + activities.length + ')', icon: 'history' },
+      { key: 'stats', label: t('profile_tab_overview'), icon: 'analytics' },
+      { key: 'badges', label: t('profile_tab_badges', { unlocked: unlockedBadgesCount, total: badges.length }), icon: 'military_tech' },
+      { key: 'activity', label: t('profile_tab_activity', { count: activities.length }), icon: 'history' },
     ];
 
     const tabContentContainer = el('div', 'jellio-profile-tab-content');

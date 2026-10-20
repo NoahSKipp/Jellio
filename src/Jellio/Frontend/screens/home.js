@@ -1,4 +1,4 @@
-import { t } from '../runtime/i18n.js';
+import { t, translateGenre } from '../runtime/i18n.js';
 // First real screen, proof of the whole architecture end to end: its own
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
 // read or waited on.
@@ -198,7 +198,7 @@ function chooseHomeGenres() {
 }
 
 function buildGenreRow(entry, seen) {
-  const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
+  const row = buildRow(translateGenre(entry.title), dedupe(entry.items, seen), null, function () {
     return Promise.all([getGenreItems(null, 'Movie,Series', entry.title, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
       return withoutAnime(results[0], results[1]);
     });

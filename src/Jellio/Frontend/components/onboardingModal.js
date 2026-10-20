@@ -159,6 +159,14 @@ export function openOnboardingModal(options) {
         startMangaImport(mihonImportFile).catch(function () {});
       }
     }
+    // Netflix-style sync: save profile preferences to server
+    saveServerDisplayPreferences({
+      onboarding_done: 'true',
+      language: selectedDisplayLang,
+      remember_stream: rememberStream ? 'on' : 'off',
+      study_target_language: targetStudyLang,
+      audiobook_speed: String(audiobookSpeed),
+    }).catch(function () {});
     closeOnboardingModal();
     if (typeof onDone === 'function') onDone();
   }

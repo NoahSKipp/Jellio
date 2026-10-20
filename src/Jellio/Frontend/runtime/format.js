@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 // Small display formatters shared across screens/components, previously
 // copy pasted byte for byte in each caller (components/heroCarousel.js and
 // screens/detail.js both carried their own formatRuntime, screens/feed.js
@@ -33,19 +35,24 @@ function formatListened(ticks) {
 export function describeReading(entry) {
   const audio = entry.ItemType === 'AudioBook';
   let lead;
-  if (entry.Finished) lead = audio ? 'Finished listening to ' : 'Finished reading ';
-  else if (audio) lead = entry.ListenedTicks ? 'Listened to ' + formatListened(entry.ListenedTicks) + ' of ' : 'Listened to ';
-  else if (entry.PagesRead) lead = 'Read ' + entry.PagesRead + (entry.PagesRead === 1 ? ' page of ' : ' pages of ');
-  else lead = 'Read ';
+  if (entry.Finished) {
+    lead = audio ? t('format_finished_listening') : t('format_finished_reading');
+  } else if (audio) {
+    lead = entry.ListenedTicks ? t('format_listened_to_time', { time: formatListened(entry.ListenedTicks) }) : t('format_listened_to');
+  } else if (entry.PagesRead) {
+    lead = t('format_read_pages', { count: entry.PagesRead });
+  } else {
+    lead = t('format_read');
+  }
   let detail = '';
   if (!audio && entry.CurrentPage && entry.PageCount) {
-    detail = 'Page ' + entry.CurrentPage + ' of ' + entry.PageCount;
+    detail = t('format_page_of', { current: entry.CurrentPage, total: entry.PageCount });
   } else if (audio && entry.Finished && entry.ListenedTicks) {
-    detail = formatListened(entry.ListenedTicks) + ' listened';
+    detail = t('format_listened_time', { time: formatListened(entry.ListenedTicks) });
   }
   // Time spent in the reader, once it's at least a minute.
   if (!audio && entry.ListenedTicks >= 600000000) {
-    detail = (detail ? detail + ' · ' : '') + formatListened(entry.ListenedTicks) + ' reading';
+    detail = (detail ? detail + ' · ' : '') + t('format_reading_time', { time: formatListened(entry.ListenedTicks) });
   }
   // A manga chapter names its series too: "Chapter 5" of "Berserk".
   const series = entry.SeriesName && entry.SeriesName !== entry.ItemName ? entry.SeriesName : '';
@@ -57,14 +64,14 @@ export function formatRelativeTime(isoString) {
   if (Number.isNaN(then)) return '';
   const diffMs = Date.now() - then;
   const minutes = Math.round(diffMs / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return minutes + (minutes === 1 ? ' minute ago' : ' minutes ago');
+  if (minutes < 1) return t('time_just_now');
+  if (minutes < 60) return t('time_minutes_ago', { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+  if (hours < 24) return t('time_hours_ago', { count: hours });
   const days = Math.round(hours / 24);
-  if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
+  if (days < 30) return t('time_days_ago', { count: days });
   const months = Math.round(days / 30);
-  if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
+  if (months < 12) return t('time_months_ago', { count: months });
   const years = Math.round(months / 12);
-  return years + (years === 1 ? ' year ago' : ' years ago');
+  return t('time_years_ago', { count: years });
 }

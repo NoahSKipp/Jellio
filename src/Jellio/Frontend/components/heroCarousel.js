@@ -1,3 +1,4 @@
+import { translateGenre } from '../runtime/i18n.js';
 import { t } from '../runtime/i18n.js';
 // Home hero carousel: backdrop, logo art, metadata line, action row, auto
 // advance. Ported from the original Jellio codebase's own heroCarousel.js,
@@ -25,7 +26,7 @@ function metaLine(item) {
   const runtime = formatRuntime(item.RunTimeTicks);
   if (runtime) parts.push(runtime);
   if (item.OfficialRating) parts.push(item.OfficialRating);
-  if (item.Genres && item.Genres.length) parts.push(item.Genres.slice(0, 3).join(', '));
+  if (item.Genres && item.Genres.length) parts.push(item.Genres.slice(0, 3).map(translateGenre).join(', '));
   return parts.join(' • ');
 }
 

@@ -19,6 +19,30 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.8",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.8",
+    "summary": "Full achievement badge and stat localization, Netflix-style server preferences sync, dynamic catalog genre translations, and unified informal phrasing.",
+    "highlights": [
+      {
+        "title": "Full Achievement and Badge Localization",
+        "description": "All 46 achievement badges across reading, watching, binge streaks, and watch parties now feature translated names, descriptions, and unlock toasts across all 7 display languages."
+      },
+      {
+        "title": "Netflix-Style Server Preferences Sync",
+        "description": "User playback, display, and recommendation settings now sync seamlessly to the server profile across all devices."
+      },
+      {
+        "title": "Dynamic Genre Catalog Translation",
+        "description": "Home screen genre rows, settings genre selectors, and detail screen chips now translate catalog genres into the user display language."
+      },
+      {
+        "title": "Profile Stats and Feed Grammar Refinements",
+        "description": "Lifetime and monthly stats, relative timestamps, and activity feed descriptions now feature natural grammar and consistent informal phrasing."
+      }
+    ]
+  },
+  {
     "version": "1.87.7",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.7",
