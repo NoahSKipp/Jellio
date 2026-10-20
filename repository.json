@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.10] - 2026-10-20\n\n### Bug Fixes\n\n- *(search)* Resolve error toast when opening search results by handling unimported remote titles via on-demand metadata fallback\n- *(detail)* Harden detail view against non-array genres, null item payloads, and missing metadata fields\n- *(carousel)* Ensure hero carousel candidates require valid backdrop images and complete metadata, add art preloading, and synchronize slide state transitions\n- *(i18n)* Add missing home_action_details and core interface translation keys across all supported display languages",
+        "checksum": "8a4755dc2d41d6f8955016553b8c5c26",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.10/jellio_1.87.10.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-20T21:11:53Z",
+        "version": "1.87.10"
+      },
+      {
         "changelog": "## [1.87.9] - 2026-10-20\n\n### Features\n\n- *(subtitles)* Add explicit \"Off (no subtitles by default)\" option to the onboarding setup wizard and playback settings\n- *(playback)* Default subtitle selection in the onboarding setup wizard to Off to prevent forced auto-selection\n- *(sync)* Save SubtitleMode to None and synchronize default subtitles to server profile preferences across sessions and devices\n- *(player)* Ensure player auto-select respects SubtitleMode None and preferredLanguage off without attaching subtitle tracks\n",
         "checksum": "a4d3e0f603cc4267a96b88e9f335b634",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.9/jellio_1.87.9.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T00:00:23Z",
         "version": "1.83.4"
-      },
-      {
-        "changelog": "## [1.83.3] - 2026-10-16\n\n### 🐛 Bug Fixes\n\n- *(streams)* Relax single-stub stream detection and add Digital Release Filter card\n",
-        "checksum": "d8b3c85a0a3511b0d10b044013d9c1ff",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.3/jellio_1.83.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-16T22:48:10Z",
-        "version": "1.83.3"
       }
     ]
   }
