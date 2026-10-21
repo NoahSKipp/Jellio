@@ -22,7 +22,7 @@
 // an invite or a group's own item change can land while browsing
 // anywhere in the app.
 import { getGroupWatchInvites, getItem, getImageUrl, getCurrentUser } from '../runtime/api.js';
-import { isAuthenticated } from '../runtime/auth.js';
+import { isAuthenticated, getCurrentUserId } from '../runtime/auth.js';
 import { joinGroup, onWatchTargetChange, onGroupPresenceChange } from '../runtime/syncPlay.js';
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { showGroupWatchNotice } from './groupWatchNotice.js';
@@ -31,6 +31,28 @@ const POLL_INTERVAL_MS = 5000;
 
 let started = false;
 let lastInviteId = 0;
+
+// Remembered per user, so an invite already shown (or clicked away) doesn't
+// come back on every reload.
+function seenKey() {
+  return 'jellio_groupwatch_invite_seen_' + (getCurrentUserId() || '');
+}
+
+function loadLastInviteId() {
+  try {
+    return Number(window.localStorage.getItem(seenKey())) || 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function saveLastInviteId() {
+  try {
+    window.localStorage.setItem(seenKey(), String(lastInviteId));
+  } catch (err) {
+    // Not persisted: invites may show once more after a reload.
+  }
+}
 let myUserName = '';
 
 function pollInvites() {
@@ -38,6 +60,7 @@ function pollInvites() {
     .then(function (invites) {
       (invites || []).forEach(function (invite) {
         lastInviteId = Math.max(lastInviteId, invite.Id);
+        saveLastInviteId();
         showGroupWatchNotice({
           icon: 'mail',
           header: 'Group Watch Invite',
@@ -141,5 +164,6 @@ export function startGroupWatchInvites() {
       // A reader's own name only being used to self suppress a notice,
       // not fatal to the rest of this file if it never resolves.
     });
+  lastInviteId = loadLastInviteId();
   pollInvites();
 }

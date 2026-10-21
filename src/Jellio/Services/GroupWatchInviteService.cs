@@ -18,9 +18,12 @@ public record GroupWatchInvite(long Id, Guid ToUserId, Guid GroupId, string Grou
 public class GroupWatchInviteService
 {
     private const int MaxPendingPerUser = 20;
+    private static readonly TimeSpan InviteLifetime = TimeSpan.FromMinutes(10);
 
     private readonly ConcurrentDictionary<Guid, List<GroupWatchInvite>> _invitesByUser = new();
-    private long _nextId;
+    // Starts at the current time so ids keep growing across restarts and a
+    // client's remembered "last seen" id stays meaningful.
+    private long _nextId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     public GroupWatchInvite Add(Guid toUserId, Guid groupId, string groupName, Guid fromUserId, string fromUserName)
     {
@@ -56,6 +59,8 @@ public class GroupWatchInviteService
 
         lock (list)
         {
+            var cutoff = DateTime.UtcNow - InviteLifetime;
+            list.RemoveAll(i => i.Timestamp < cutoff);
             return list.Where(i => i.Id > afterId).ToList();
         }
     }
