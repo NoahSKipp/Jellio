@@ -99,7 +99,7 @@ export function renderDownloads(root) {
 
   function cover(record, className) {
     const box = el('div', className || 'jellio-downloads-cover');
-    box.appendChild(el('span', 'material-icons ' + (SECTIONS.find((section) => section.kind === record.Kind) || SECTIONS[0]).icon));
+    box.appendChild(el('span', 'material-icons ' + (getSections().find((section) => section.kind === record.Kind) || getSections()[0]).icon));
     const name = record.Kind === 'manga' ? 'seriescover' : 'cover';
     getOfflineObjectUrl(record.Id, name)
       .then((url) => url || (name !== 'cover' ? getOfflineObjectUrl(record.Id, 'cover') : null))

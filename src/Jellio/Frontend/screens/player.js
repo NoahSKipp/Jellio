@@ -3337,10 +3337,6 @@ export async function renderPlayer(root, params) {
         navigator.mediaSession.setActionHandler('nexttrack', function () {
           navigateTo('#/item?id=' + nextEpisode.Id);
         });
-      } else if (nextEpisodeButton && !nextEpisodeButton.disabled) {
-        navigator.mediaSession.setActionHandler('nexttrack', function () {
-          nextEpisodeButton.click();
-        });
       }
     } catch (e) {
       console.warn('Jellio: could not initialize MediaSession', e);
@@ -4214,8 +4210,7 @@ export async function renderPlayer(root, params) {
     }
     if (event.key === 'MediaTrackNext' || event.key === 'MediaNextTrack') {
       event.preventDefault();
-      if (nextEpisodeButton && !nextEpisodeButton.disabled) nextEpisodeButton.click();
-      else skipForwardButton.click();
+      skipForwardButton.click();
       return;
     }
     if (event.key === 'MediaTrackPrevious' || event.key === 'MediaPreviousTrack') {

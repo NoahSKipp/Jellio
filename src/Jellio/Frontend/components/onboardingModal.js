@@ -316,8 +316,6 @@ export async function openOnboardingModal(options) {
       renderStepLanguage(body);
     } else if (currentStepId === 'playback') {
       renderStepPlayback(body);
-    } else if (currentStepId === 'profile') {
-      renderStepProfile(body);
     } else if (currentStepId === 'reading') {
       renderStepReading(body);
     } else if (currentStepId === 'done') {

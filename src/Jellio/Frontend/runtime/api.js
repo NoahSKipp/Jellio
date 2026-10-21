@@ -1,4 +1,4 @@
-import { getDisplayCulture, getDisplayLanguage } from './i18n.js';
+import { getDisplayCulture, getDisplayLanguage, setDisplayLanguage } from './i18n.js';
 // Every server call Jellio's own screens need, built directly on fetch and
 // auth.js's own headers. Nothing here touches window.ApiClient: the whole
 // point of this runtime is that a screen's data never depends on native
