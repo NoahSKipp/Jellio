@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.12] - 2026-10-21\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.12 release notes\n\n### 💼 Other\n\n- Use informal Du across German translations\n- Add transient retry resilience and prevent clearing remembered session on 5xx errors\n",
+        "checksum": "5cc3effe98c52f652964b12259ccc48c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.12/jellio_1.87.12.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-21T13:59:36Z",
+        "version": "1.87.12"
+      },
+      {
         "changelog": "## [1.87.11] - 2026-10-21\n\n### Bug Fixes\n\n- *(onboarding)* Fix question mark help tooltip cutoff at screen top and restore existing saved preferences when rerunning the setup wizard",
         "checksum": "22f7ca239a9d050760ba71c2ffaba3fa",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.11/jellio_1.87.11.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T02:44:54Z",
         "version": "1.83.6"
-      },
-      {
-        "changelog": "## [1.83.5] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Key bad streams by release description and fallback to transcode on direct play failure\n",
-        "checksum": "3d1335fc1653e9b6c3707b2f5f0d1f2a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.5/jellio_1.83.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T01:23:33Z",
-        "version": "1.83.5"
       }
     ]
   }
