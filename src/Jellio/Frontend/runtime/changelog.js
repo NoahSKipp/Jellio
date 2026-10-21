@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.13",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.13",
+    "summary": "Title pages and libraries open again.",
+    "highlights": [
+      {
+        "title": "Title Pages Work Again",
+        "description": "Opening most titles, from Home or from search, showed \"Could not load that page\". Fixed."
+      },
+      {
+        "title": "Libraries and Manga Fixed",
+        "description": "Library pages, the bookshelf and the manga scanlator settings failed to load after the last update. They open normally again."
+      },
+      {
+        "title": "Smaller Fixes",
+        "description": "The keyboard's next-track key in the player, cover icons in Downloads and syncing your display language from the server work again."
+      }
+    ]
+  },
+  {
     "version": "1.87.12",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.12",
