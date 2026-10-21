@@ -1253,7 +1253,7 @@ export function renderBookshelf(root, params, parentId) {
   function renderBookSources(results, query) {
     sourcesResults.textContent = '';
     if (!results || !results.length) {
-      sourcesStatus.textContent = t('bookshelf_no_sources_found', { type: copy.many, query }));
+      sourcesStatus.textContent = t('bookshelf_no_sources_found', { type: copy.many, query });
       return;
     }
     sourcesStatus.textContent = '';

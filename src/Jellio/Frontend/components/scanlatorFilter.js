@@ -39,7 +39,7 @@ export function openScanlatorFilter(options) {
   panel.appendChild(closeButton);
   panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('manga_scanlators')));
   panel.appendChild(
-    el('p', 'jellio-avatar-picker-status', 't('manga_scanlators_desc')'),
+    el('p', 'jellio-avatar-picker-status', t('manga_scanlators_desc')),
   );
 
   const hidden = new Set((options.excluded || []).map((name) => name.toLowerCase()));
@@ -66,7 +66,7 @@ export function openScanlatorFilter(options) {
   duplicates.appendChild(duplicatesBox);
   const duplicatesText = el('span', null);
   duplicatesText.appendChild(el('span', 'jellio-scanlator-name', t('manga_mark_duplicate_read')));
-  duplicatesText.appendChild(el('span', 'jellio-scanlator-hint', 't('manga_mark_duplicate_read_desc')'));
+  duplicatesText.appendChild(el('span', 'jellio-scanlator-hint', t('manga_mark_duplicate_read_desc')));
   duplicates.appendChild(duplicatesText);
   panel.appendChild(duplicates);
 
