@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.88.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.88.0",
+    "summary": "Behind-the-scenes fixes for Skip Intro and stream loading.",
+    "highlights": [
+      {
+        "title": "Skip Intro Data",
+        "description": "Jellio now identifies itself to TheIntroDB, the community database behind Skip Intro, so they can reach us before changing anything on their side."
+      },
+      {
+        "title": "Streams Ready Sooner",
+        "description": "With the latest Gelato, streams are fetched in the background again while you browse, so titles start faster."
+      }
+    ]
+  },
+  {
     "version": "1.87.13",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.13",
