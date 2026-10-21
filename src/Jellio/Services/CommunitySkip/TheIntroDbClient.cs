@@ -107,6 +107,8 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
             }
 
             request.Headers.TryAddWithoutValidation("Accept", "application/json");
+            // TheIntroDB asked clients to identify themselves.
+            request.Headers.TryAddWithoutValidation("User-Agent", "Jellio/" + (JellioPlugin.Instance?.Version.ToString(3) ?? "unknown"));
 
             using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
