@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.87.12",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.87.12",
+    "summary": "Steadier when your server is busy, and friendlier German.",
+    "highlights": [
+      {
+        "title": "Rides Out Busy Moments",
+        "description": "When your server is briefly busy or the connection drops for a moment, Jellio now quietly tries again instead of showing an error straight away."
+      },
+      {
+        "title": "Saved Logins Stay Saved",
+        "description": "A short server hiccup no longer forgets a saved profile. It is only removed if the server really says the login is no longer valid."
+      },
+      {
+        "title": "German Says Du",
+        "description": "The German translation now uses the informal Du everywhere."
+      }
+    ]
+  },
+  {
     "version": "1.87.11",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.87.11",
