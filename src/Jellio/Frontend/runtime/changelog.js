@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.88.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.88.1",
+    "summary": "Group Watch fixes.",
+    "highlights": [
+      {
+        "title": "One Group at a Time",
+        "description": "Starting or joining a Group Watch now takes you out of any group you're in on your other devices, so you can't end up in several groups at once."
+      },
+      {
+        "title": "Invites Stay Dismissed",
+        "description": "A Group Watch invite you've seen or clicked away no longer pops up again every time you reload, and old invites expire after 10 minutes."
+      }
+    ]
+  },
+  {
     "version": "1.88.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.88.0",
