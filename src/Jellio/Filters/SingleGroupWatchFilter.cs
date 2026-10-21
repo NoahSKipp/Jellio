@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Controller.SyncPlay;
-using MediaBrowser.Model.SyncPlay.Requests;
+using MediaBrowser.Controller.SyncPlay.Requests;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
