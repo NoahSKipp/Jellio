@@ -21,6 +21,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection services, IServerApplicationHost host)
     {
         services.AddHostedService<StartupDiagnosticsService>();
+        services.AddScoped<Filters.SingleGroupWatchFilter>();
+        services.PostConfigure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+            options.Filters.AddService<Filters.SingleGroupWatchFilter>());
         services.AddHostedService<IndexHtmlPatchService>();
 
         // Registered as itself first, both the background loop and the
