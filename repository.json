@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.87.13] - 2026-10-21\n\n### 🐛 Bug Fixes\n\n- *(detail)* Title pages no longer fail to load on titles with genres\n- *(library)* Repair syntax errors that stopped library screens from loading\n- Remove references to names that no longer exist\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.13 release notes\n\n### 🧪 Testing\n\n- *(frontend)* Check syntax as modules so errors are not missed\n",
+        "checksum": "aec97d7def7f49fd58a88753304db8a2",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.13/jellio_1.87.13.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-21T18:39:23Z",
+        "version": "1.87.13"
+      },
+      {
         "changelog": "## [1.87.12] - 2026-10-21\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.12 release notes\n\n### 💼 Other\n\n- Use informal Du across German translations\n- Add transient retry resilience and prevent clearing remembered session on 5xx errors\n",
         "checksum": "5cc3effe98c52f652964b12259ccc48c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.12/jellio_1.87.12.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T03:17:53Z",
         "version": "1.83.7"
-      },
-      {
-        "changelog": "## [1.83.6] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Remux Matroska streams and keep loading artwork visible until playback starts\n",
-        "checksum": "220eeb769ccc27521dced93f7eb9e9c3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.6/jellio_1.83.6.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T02:44:54Z",
-        "version": "1.83.6"
       }
     ]
   }
