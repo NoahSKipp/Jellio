@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.88.1] - 2026-10-21\n\n### 🐛 Bug Fixes\n\n- *(groupwatch)* Invites no longer reappear on every reload\n- *(groupwatch)* Keep each person in one Group Watch at a time\n- *(groupwatch)* Use the controller namespace for LeaveGroupRequest\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.88.1 release notes\n",
+        "checksum": "c6cd19e4c7d9c19dc86d97f415331ef0",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.88.1/jellio_1.88.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-21T21:06:47Z",
+        "version": "1.88.1"
+      },
+      {
         "changelog": "## [1.88.0] - 2026-10-21\n\n### 🚀 Features\n\n- *(skip)* Identify Jellio to TheIntroDB with a User-Agent\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.88.0 release notes\n",
         "checksum": "94d1eaf2d0e6f078dbc5ae88bd4f92f7",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.88.0/jellio_1.88.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T13:54:31Z",
         "version": "1.83.9"
-      },
-      {
-        "changelog": "## [1.83.8] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Deduplicate sync rows, key health by release name, and fail over early on negotiation error\n",
-        "checksum": "477264cee4522aa5456d99803fce1103",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.8/jellio_1.83.8.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T12:24:13Z",
-        "version": "1.83.8"
       }
     ]
   }
