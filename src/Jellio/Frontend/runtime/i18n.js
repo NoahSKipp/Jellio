@@ -7191,7 +7191,7 @@ export const GENRE_TRANSLATIONS = {
 
 export function translateGenre(name, lang) {
   if (!name) return '';
-  const code = (lang || getDisplayLanguage() || 'en').toLowerCase();
+  const code = ((typeof lang === 'string' && lang) || getDisplayLanguage() || 'en').toLowerCase();
   if (GENRE_TRANSLATIONS[name] && GENRE_TRANSLATIONS[name][code]) {
     return GENRE_TRANSLATIONS[name][code];
   }
@@ -7214,7 +7214,7 @@ export function translateGenre(name, lang) {
 
 export function saveGenreTranslation(englishName, translatedName, lang) {
   if (!englishName || !translatedName) return;
-  const code = (lang || getDisplayLanguage() || 'en').toLowerCase();
+  const code = ((typeof lang === 'string' && lang) || getDisplayLanguage() || 'en').toLowerCase();
   try {
     const dynamicKey = 'jellio_genre_translations_' + code;
     const raw = window.localStorage.getItem(dynamicKey);

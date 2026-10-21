@@ -1202,7 +1202,7 @@ export async function renderDetail(root, params) {
     ? rawGenres.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
     : [];
   if (genresList.length) {
-    const genres = el('div', 'jellio-detail-genres', genresList.map(translateGenre).join(', '));
+    const genres = el('div', 'jellio-detail-genres', genresList.map(function (genre) { return translateGenre(genre); }).join(', '));
     heroContent.appendChild(genres);
   }
 
