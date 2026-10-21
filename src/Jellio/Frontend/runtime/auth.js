@@ -403,14 +403,42 @@ export async function quickSignIn(userId) {
   const entry = remembered[userId];
   if (!entry) throw new Error('No remembered session for this user');
 
-  const response = await fetch(getServerAddress() + '/Users/' + userId, {
-    headers: { Accept: 'application/json', Authorization: buildAuthHeaderForToken(entry.accessToken) },
-  });
-  if (!response.ok) {
-    delete remembered[userId];
-    writeRemembered(remembered);
-    const err = new Error('Remembered session is no longer valid');
-    err.status = response.status;
+  let response;
+  let attempts = 0;
+  while (attempts < 3) {
+    attempts++;
+    try {
+      response = await fetch(getServerAddress() + '/Users/' + userId, {
+        headers: { Accept: 'application/json', Authorization: buildAuthHeaderForToken(entry.accessToken) },
+      });
+      // Stop retrying on 2xx success or client errors (401 Unauthorized, 403 Forbidden, 404 Not Found)
+      if (response.ok || (response.status >= 400 && response.status < 500)) {
+        break;
+      }
+    } catch (netErr) {
+      if (attempts >= 3) throw netErr;
+    }
+    if (attempts < 3) {
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 500 * attempts);
+      });
+    }
+  }
+
+  if (!response || !response.ok) {
+    // Only prune remembered session if server explicitly confirms the token is invalid (401/403).
+    // A 5xx error (such as SQLite database is locked during UpdateDevice) or network failure
+    // must never wipe local credentials.
+    if (response && (response.status === 401 || response.status === 403)) {
+      delete remembered[userId];
+      writeRemembered(remembered);
+    }
+    const err = new Error(
+      response && (response.status === 401 || response.status === 403)
+        ? 'Remembered session is no longer valid'
+        : 'Failed to connect to server: ' + (response ? response.status : 'network error'),
+    );
+    err.status = response ? response.status : 0;
     throw err;
   }
 
@@ -540,18 +568,36 @@ export function pruneHiddenRememberedUsers(publicUsers) {
 // {Username, Pw}, response carries {AccessToken, User}. No native ApiClient
 // involved at all, this runtime authenticates itself directly.
 export async function authenticateByName(username, password) {
-  const response = await fetch(getServerAddress() + '/Users/AuthenticateByName', {
-    method: 'POST',
-    headers: Object.assign(
-      { 'Content-Type': 'application/json', Accept: 'application/json' },
-      getAuthHeaders(),
-    ),
-    body: JSON.stringify({ Username: username, Pw: password }),
-  });
+  let response;
+  let attempts = 0;
+  while (attempts < 3) {
+    attempts++;
+    try {
+      response = await fetch(getServerAddress() + '/Users/AuthenticateByName', {
+        method: 'POST',
+        headers: Object.assign(
+          { 'Content-Type': 'application/json', Accept: 'application/json' },
+          getAuthHeaders(),
+        ),
+        body: JSON.stringify({ Username: username, Pw: password }),
+      });
+      // Stop retrying on 2xx success or client errors (e.g. 401 Bad password)
+      if (response.ok || (response.status >= 400 && response.status < 500)) {
+        break;
+      }
+    } catch (netErr) {
+      if (attempts >= 3) throw netErr;
+    }
+    if (attempts < 3) {
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 500 * attempts);
+      });
+    }
+  }
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     const err = new Error('Authentication failed');
-    err.status = response.status;
+    err.status = response ? response.status : 0;
     throw err;
   }
 

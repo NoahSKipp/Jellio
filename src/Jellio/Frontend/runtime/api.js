@@ -227,26 +227,43 @@ async function requestJson(url, options, path, timeoutMs, externalSignal, priori
     }
 
     let response;
-    try {
-      response = await fetchWithTimeout(url, options, timeoutMs, externalSignal);
-    } catch (err) {
-      if (err && err.name === 'AbortError') {
-        // A caller-driven abort (search.js cancelling a superseded query) is
-        // not a real timeout, but nothing downstream tells the two apart
-        // today: every current caller either ignores a stale request's own
-        // rejection outright (search.js's own requestId guard) or has no
-        // caller-driven abort path to begin with, so folding both into the
-        // same timedOut shape is not yet a real bug, only a latent one.
-        const timeoutErr = new Error('Request timed out: ' + path);
-        timeoutErr.timedOut = true;
-        if (!(externalSignal && externalSignal.aborted)) reportNetworkFailure();
-        throw timeoutErr;
+    let attempts = 0;
+    const isIdempotent = !options || !options.method || options.method === 'GET' || options.method === 'HEAD';
+    const maxAttempts = isIdempotent ? 3 : 1;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        response = await fetchWithTimeout(url, options, timeoutMs, externalSignal);
+        if (response.ok || (response.status < 500 && response.status !== 429)) {
+          break;
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          // A caller-driven abort (search.js cancelling a superseded query) is
+          // not a real timeout, but nothing downstream tells the two apart
+          // today: every current caller either ignores a stale request's own
+          // rejection outright (search.js's own requestId guard) or has no
+          // caller-driven abort path to begin with, so folding both into the
+          // same timedOut shape is not yet a real bug, only a latent one.
+          const timeoutErr = new Error('Request timed out: ' + path);
+          timeoutErr.timedOut = true;
+          if (!(externalSignal && externalSignal.aborted)) reportNetworkFailure();
+          throw timeoutErr;
+        }
+        if (attempts >= maxAttempts || (externalSignal && externalSignal.aborted)) {
+          if (err) err.isNetworkError = true;
+          reportNetworkFailure();
+          throw err;
+        }
       }
-      // No answer at all: the server may have gone away.
-      if (err) err.isNetworkError = true;
-      reportNetworkFailure();
-      throw err;
+      if (attempts < maxAttempts && !(externalSignal && externalSignal.aborted)) {
+        await new Promise(function (resolve) {
+          setTimeout(resolve, 500 * attempts);
+        });
+      }
     }
+
     if (!response.ok) {
       // Real bug, found live: a caller further up (app.js's own
       // preloadInitialData(), most of all: runTrackedTasks() there
