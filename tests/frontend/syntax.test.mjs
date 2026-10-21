@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, resolve, dirname, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, copyFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 function collectJsFiles(dir) {
   const entries = readdirSync(dir);
@@ -23,9 +25,14 @@ const frontendDir = join(import.meta.dirname, '../../src/Jellio/Frontend');
 const jsFiles = collectJsFiles(frontendDir);
 
 test('all frontend JavaScript files have valid syntax with zero parser errors', () => {
+  // Checked as .mjs: on a plain .js path, Node 22's module detection lets a
+  // module with a syntax error pass --check without complaint.
+  const scratch = mkdtempSync(join(tmpdir(), 'jellio-syntax-'));
   for (const file of jsFiles) {
+    const copy = join(scratch, basename(file, '.js') + '-' + jsFiles.indexOf(file) + '.mjs');
+    copyFileSync(file, copy);
     try {
-      execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
+      execFileSync(process.execPath, ['--check', copy], { stdio: 'pipe' });
     } catch (err) {
       assert.fail('Syntax error in ' + file + ':\n' + (err.stderr || err.message));
     }
