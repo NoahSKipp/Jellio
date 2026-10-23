@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.89.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.89.0",
+    "summary": "Each season gets its own look.",
+    "highlights": [
+      {
+        "title": "Season by Season",
+        "description": "Picking a season on a show's page now shows that season's own description, cast and backdrop where it has them, so a new season with a new cast looks the part."
+      },
+      {
+        "title": "Sharper Player Backgrounds",
+        "description": "The pause and loading screens use the show's or season's backdrop instead of stretching a small poster across the screen."
+      },
+      {
+        "title": "Better German Feed",
+        "description": "Feed entries read naturally in German (\"Folge 3 von … gesehen\"), and the doubled \"von\" is gone."
+      }
+    ]
+  },
+  {
     "version": "1.88.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.88.1",
