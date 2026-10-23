@@ -753,7 +753,7 @@ async function resolveSeasonPlayTarget(item) {
 // place once seasons resolve rather than blocking the rest of the screen
 // on a series with a lot of them. Real endpoints, GET /Shows/{id}/Seasons
 // and GET /Shows/{id}/Episodes, the dedicated show hierarchy API.
-async function buildSeasonsSection(seriesId, targetPromise) {
+async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
   let seasons;
   try {
     seasons = await getSeasons(seriesId);
@@ -855,6 +855,7 @@ async function buildSeasonsSection(seriesId, targetPromise) {
     });
     tabButton.classList.add('jellio-season-tab-selected');
     tabButton.setAttribute('aria-selected', 'true');
+    if (onSeasonSelected) onSeasonSelected(season);
     track.textContent = '';
     for (let i = 0; i < 4; i++) {
       const skel = el('div', 'jellio-card jellio-card-skeleton');
@@ -1710,9 +1711,9 @@ export async function renderDetail(root, params) {
   hero.appendChild(heroContent);
   root.appendChild(hero);
 
-  if (item.Overview) {
-    root.appendChild(el('p', 'jellio-detail-overview', item.Overview));
-  }
+  const overviewEl = el('p', 'jellio-detail-overview', item.Overview || '');
+  overviewEl.hidden = !item.Overview;
+  root.appendChild(overviewEl);
 
   // Real bug, audit-found: buildCastRow/buildTrailersRow below are pure
   // sync builds off item fields already in hand, no network call of
@@ -1725,12 +1726,42 @@ export async function renderDetail(root, params) {
   // since taken over.
   let cancelled = false;
   let seasonsPromise = null;
+  // Seasons can differ a lot (a new cast, a new story, new key art): the
+  // selected season's own description, cast and backdrop replace the
+  // show's where it has them, and the show's come back where it doesn't.
+  const castMount = el('div', 'jellio-detail-cast-mount');
+  let shownBackdrop = backdropUrl;
+  function showSeasonDetails(season) {
+    getItemDetails(season.Id)
+      .then(function (seasonItem) {
+        if (cancelled || !seasonItem) return;
+        const overview = seasonItem.Overview || item.Overview || '';
+        overviewEl.textContent = overview;
+        overviewEl.hidden = !overview;
+        const people = seasonItem.People && seasonItem.People.length ? seasonItem.People : item.People;
+        castMount.textContent = '';
+        const seasonCast = buildCastRow(people);
+        if (seasonCast) castMount.appendChild(seasonCast);
+        const seasonBackdrop =
+          seasonItem.BackdropImageTags && seasonItem.BackdropImageTags[0]
+            ? getImageUrl(seasonItem.Id, 'Backdrop', { tag: seasonItem.BackdropImageTags[0], maxWidth: 1920 })
+            : backdropUrl;
+        if (seasonBackdrop && seasonBackdrop !== shownBackdrop) {
+          shownBackdrop = seasonBackdrop;
+          fadeInBackdrop(hero, seasonBackdrop);
+        }
+      })
+      .catch(function (err) {
+        console.warn('Jellio: could not load season details', err);
+      });
+  }
   if (item.Type === 'Series') {
-    seasonsPromise = buildSeasonsSection(canonicalId, seriesTargetPromise);
+    seasonsPromise = buildSeasonsSection(canonicalId, seriesTargetPromise, showSeasonDetails);
   }
 
   const castRow = buildCastRow(item.People);
-  if (castRow) root.appendChild(castRow);
+  if (castRow) castMount.appendChild(castRow);
+  root.appendChild(castMount);
 
   const trailersRow = buildTrailersRow(item.RemoteTrailers);
   if (trailersRow) root.appendChild(trailersRow);
@@ -1743,7 +1774,7 @@ export async function renderDetail(root, params) {
       // there: whichever of the two actually rendered is still the
       // real first child in root at this point, nothing else this
       // screen builds lands between them and here.
-      root.insertBefore(seasonsSection, castRow || trailersRow || null);
+      root.insertBefore(seasonsSection, castMount);
     });
   }
 

@@ -726,6 +726,18 @@ export async function renderPlayer(root, params) {
   }
 
   const posterUrl = seriesAwareArtworkUrl(1600);
+
+  // Full-screen art: the season's or show's backdrop asked for directly
+  // (Gelato episodes often carry no backdrop tag of their own, which left
+  // the show's poster stretched across the screen), with that artwork as
+  // a second layer that only shows if no backdrop exists.
+  function fullscreenArtCss() {
+    const backdropId = isEpisodeItem ? item.ParentBackdropItemId || item.SeriesId : null;
+    const layers = [];
+    if (backdropId) layers.push('url(' + getImageUrl(backdropId, 'Backdrop', { maxWidth: 1920 }) + ')');
+    if (posterUrl) layers.push('url(' + posterUrl + ')');
+    return layers.join(', ');
+  }
   const logoUrl = seriesAwareLogoUrl(800);
 
   // Show the backdrop and pulsing logo immediately while PlaybackInfo is
@@ -734,7 +746,7 @@ export async function renderPlayer(root, params) {
   root.textContent = '';
   if (posterUrl) {
     const preBackdrop = el('div', 'jellio-player-loading-backdrop');
-    preBackdrop.style.backgroundImage = 'url(' + posterUrl + ')';
+    preBackdrop.style.backgroundImage = fullscreenArtCss();
     root.appendChild(preBackdrop);
   }
   if (logoUrl) {
@@ -4345,10 +4357,8 @@ export async function renderPlayer(root, params) {
   // was the series name, real fields already distinguished the same
   // way screens/detail.js's own episode header just started doing).
   const pauseOverlay = el('div', 'jellio-player-pause-overlay');
-  const pauseBackdropUrl = seriesAwareArtworkUrl(1600);
-  if (pauseBackdropUrl) {
-    pauseOverlay.style.backgroundImage = 'url(' + pauseBackdropUrl + ')';
-  }
+  const pauseArt = fullscreenArtCss();
+  if (pauseArt) pauseOverlay.style.backgroundImage = pauseArt;
   const pauseContent = el('div', 'jellio-player-pause-content');
   pauseContent.appendChild(el('div', 'jellio-player-pause-eyebrow', t('player_youre_watching')));
   pauseContent.appendChild(el('div', 'jellio-player-pause-title', isEpisodeItem ? item.SeriesName : item.Name || ''));
