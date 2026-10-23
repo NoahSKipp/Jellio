@@ -1,4 +1,4 @@
-import { t, getBadgeName, getBadgeDescription } from '../runtime/i18n.js';
+import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
 // The general activity feed, from the reference table: "a dedicated Feed
 // tab... showcasing [everyone's] recent actions." Server wide rather than
 // a real friends graph this plugin has no concept of at all, backed by
@@ -45,24 +45,25 @@ function appendWatchDescription(container, entry) {
     if (reading.detail) container.appendChild(el('div', 'jellio-feed-badge-desc', reading.detail));
     return;
   }
+  // German puts the verb last ("Folge 3 von X gesehen"), like Jellio TV.
+  const verbLast = getDisplayLanguage() === 'de';
+  if (!verbLast) container.appendChild(document.createTextNode(t('feed_watched') + ' '));
   if (entry.ItemType === 'Episode' && entry.SeriesName) {
-    container.appendChild(document.createTextNode(t('feed_watched') + ' '));
+    const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
     if (entry.EpisodeCount > 1) {
-      const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
       const range =
         entry.FirstEpisodeNumber != null && entry.LastEpisodeNumber != null
           ? t('feed_episodes_range', { first: entry.FirstEpisodeNumber, last: entry.LastEpisodeNumber })
           : t('feed_episodes_count', { count: entry.EpisodeCount });
-      container.appendChild(document.createTextNode(season + range + ' ' + t('feed_of') + ' '));
+      container.appendChild(document.createTextNode(season + range + ' '));
     } else if (entry.FirstEpisodeNumber != null) {
-      const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
-      container.appendChild(document.createTextNode(season + t('feed_episode_single', { num: entry.FirstEpisodeNumber }) + ' ' + t('feed_of') + ' '));
+      container.appendChild(document.createTextNode(season + t('feed_episode_single', { num: entry.FirstEpisodeNumber }) + ' '));
     }
     container.appendChild(el('span', 'jellio-feed-title', entry.SeriesName));
   } else {
-    container.appendChild(document.createTextNode(t('feed_watched') + ' '));
     container.appendChild(el('span', 'jellio-feed-title', entry.ItemName));
   }
+  if (verbLast) container.appendChild(document.createTextNode(' ' + t('feed_watched').toLowerCase()));
 }
 
 // Badge unlocks ride the same feed rather than their own section:
