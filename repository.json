@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.89.1] - 2026-10-24\n\n### 🐛 Bug Fixes\n\n- *(web)* Faster startup, AirPlay for long movies, Android cast picker\n",
+        "checksum": "6fadce1108f3a2245342068ab45019b8",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.1/jellio_1.89.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-24T20:38:13Z",
+        "version": "1.89.1"
+      },
+      {
         "changelog": "## [1.89.0] - 2026-10-24\n\n### 🚀 Features\n\n- *(detail)* Show the selected season's description, cast and backdrop\n\n### 🐛 Bug Fixes\n\n- *(feed)* Natural German word order and no doubled \"of\" in watch entries\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.89.0 release notes\n",
         "checksum": "3419b275cd939701b62ea5dde68d85f6",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.0/jellio_1.89.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T15:45:38Z",
         "version": "1.83.11"
-      },
-      {
-        "changelog": "## [1.83.10] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(backend)* Adapt IDtoService.GetBaseItemDtos for Jellyfin 12 and add fallback\n",
-        "checksum": "129d10a0f12e75c63ed0fca377cd52a8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.10/jellio_1.83.10.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T14:30:45Z",
-        "version": "1.83.10"
       }
     ]
   }
