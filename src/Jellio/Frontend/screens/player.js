@@ -2937,6 +2937,26 @@ export async function renderPlayer(root, params) {
       }
 
       // Wireless display & AirPlay section
+      // AirPlay and Android's cast picker hand the TV the element's URL, which
+      // has to be something it can play on its own: a transcoded h264/aac stream.
+      function useDirectSourceForRemote(url, asHls) {
+        const positionSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
+        let next = url;
+        if (asHls) {
+          next = url.replace('/stream.mp4?', '/master.m3u8?').replace(/&?StartTimeTicks=\d+/, '');
+        }
+        if (video.currentSrc === next) return;
+        streamOffsetTicks = asHls ? 0 : Math.round(positionSec * TICKS_PER_SECOND);
+        video.src = next;
+        if (asHls) {
+          video.addEventListener('loadedmetadata', function () {
+            try { video.currentTime = positionSec; } catch (_) {}
+          }, { once: true });
+        }
+        video.load();
+        video.play().catch(function () {});
+      }
+
       if (hasWireless) {
         const wirelessTitle = el('div', 'jellio-player-cast-section-title', t('player_wireless_display'));
         castBody.appendChild(wirelessTitle);
@@ -2965,7 +2985,9 @@ export async function renderPlayer(root, params) {
                 subtitleStreamIndex: activeSubtitleStreamIndex,
               });
 
-              if (window.cast && window.cast.framework) {
+              const preferRemotePlayback = /Android/i.test(navigator.userAgent) &&
+                typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function';
+              if (window.cast && window.cast.framework && !preferRemotePlayback) {
                 await castToGoogleCast(castStreamUrl, item, currentSec, {
                   mediaSource: mediaSource,
                   startOffsetTicks: currentTicks,
@@ -2974,6 +2996,9 @@ export async function renderPlayer(root, params) {
                 video.pause();
                 showPlayerToast('Streaming via Google Cast');
               } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
+                // A Media Source stream cannot be handed to a cast device, so the
+                // picker would list nothing; route a plain stream URL instead.
+                useDirectSourceForRemote(castStreamUrl, false);
                 await promptRemotePlayback(video);
                 showPlayerToast('Streaming via Wireless Display');
               } else {
@@ -3020,6 +3045,10 @@ export async function renderPlayer(root, params) {
           airplayBtn.addEventListener('click', function () {
             castMenu.classList.add('jellio-player-popover-hidden');
             try {
+              useDirectSourceForRemote(buildCastStreamUrl(itemId, mediaSource, 0, {
+                audioStreamIndex: currentAudioStreamIndex,
+                subtitleStreamIndex: activeSubtitleStreamIndex,
+              }), true);
               promptAirPlay(video);
             } catch (err) {
               showPlayerToast('AirPlay not available');

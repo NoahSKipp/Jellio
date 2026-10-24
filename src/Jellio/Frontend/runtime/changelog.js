@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.89.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.89.1",
+    "summary": "Faster start and casting that finds your TV.",
+    "highlights": [
+      {
+        "title": "Quicker Start",
+        "description": "Jellio no longer waits for your saved preferences before showing the first page."
+      },
+      {
+        "title": "AirPlay for Long Movies",
+        "description": "AirPlay now sends the TV a stream it can play straight away, so long movies start instead of sitting on the AirPlay screen."
+      },
+      {
+        "title": "Casting on Android",
+        "description": "On Android the cast menu now opens the phone's own device picker, so every Chromecast and Google TV on your network shows up."
+      }
+    ]
+  },
+  {
     "version": "1.89.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.89.0",

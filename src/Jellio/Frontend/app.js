@@ -811,7 +811,7 @@ async function runSync() {
     loadGrouplistSetting();
     loadAdminStatus();
     loadSkipIntroCreditsMenuSetting();
-    await loadServerPreferences();
+    loadServerPreferences().catch(function () {});
     // Overwrites whatever native's own unmatched route transition just
     // set the tab to (router.js's own setTitle() header explains why
     // that happens on every single route this runtime owns); a screen
