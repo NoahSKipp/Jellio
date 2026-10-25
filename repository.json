@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.89.4] - 2026-10-25\n\n### 🐛 Bug Fixes\n\n- *(detail)* Try every header art candidate and move on when one fails\n",
+        "checksum": "7d0d8387ec8144e56c3e2cc57b629634",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.4/jellio_1.89.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-25T17:08:21Z",
+        "version": "1.89.4"
+      },
+      {
         "changelog": "## [1.89.3] - 2026-10-25\n\n### 🐛 Bug Fixes\n\n- *(detail)* Fall back to the thumb, then a blurred poster, for header art\n",
         "checksum": "4b6863bca569ae6168e5867da20a517f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.3/jellio_1.89.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-18T13:40:08Z",
         "version": "1.83.14"
-      },
-      {
-        "changelog": "## [1.83.13] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Clear outage-poisoned bad-stream marks and keep timeout marks soft\n",
-        "checksum": "734fa42962c155e87b04b6d66e7f2c66",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.13/jellio_1.83.13.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T20:50:36Z",
-        "version": "1.83.13"
       }
     ]
   }
