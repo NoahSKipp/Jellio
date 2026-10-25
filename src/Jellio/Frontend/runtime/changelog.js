@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.89.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.89.3",
+    "summary": "Every title gets header art.",
+    "highlights": [
+      {
+        "title": "Header Art Fallback",
+        "description": "Titles without a backdrop now use their wide thumbnail for the header, or a blurred version of the poster, instead of an empty header."
+      }
+    ]
+  },
+  {
     "version": "1.89.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.89.2",

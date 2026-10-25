@@ -229,6 +229,29 @@ function heroBackdropUrl(item, id) {
   if (item.Type === 'Episode' && item.ImageTags && item.ImageTags.Primary) {
     return getImageUrl(id, 'Primary', { tag: item.ImageTags.Primary, maxWidth: 1920 });
   }
+  const thumbTag = (item.ImageTags && item.ImageTags.Thumb) || item.ThumbImageTag;
+  if (thumbTag) {
+    return getImageUrl(id, 'Thumb', { tag: thumbTag, maxWidth: 1920 });
+  }
+  if (item.ParentThumbItemId && item.ParentThumbImageTag) {
+    return getImageUrl(item.ParentThumbItemId, 'Thumb', { tag: item.ParentThumbImageTag, maxWidth: 1920 });
+  }
+  return null;
+}
+
+// Header art: the backdrop chain above, else the poster blurred to fill the frame.
+function paintHeroArt(hero, item, id) {
+  const backdropUrl = heroBackdropUrl(item, id);
+  if (backdropUrl) {
+    fadeInBackdrop(hero, backdropUrl);
+    return backdropUrl;
+  }
+  const posterTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
+  if (posterTag) {
+    const blur = el('div', 'jellio-detail-hero-blur');
+    blur.style.backgroundImage = 'url(' + getImageUrl(id, 'Primary', { tag: posterTag, maxWidth: 600 }) + ')';
+    hero.insertBefore(blur, hero.firstChild);
+  }
   return null;
 }
 
@@ -997,10 +1020,7 @@ function fetchItemDetailsWithRetry(itemId, onRetrying) {
 function renderDetailSkeleton(root, preview) {
   root.textContent = '';
   const hero = el('div', 'jellio-detail-hero');
-  const backdropUrl = heroBackdropUrl(preview, preview.Id);
-  if (backdropUrl) {
-    fadeInBackdrop(hero, backdropUrl);
-  }
+  const backdropUrl = paintHeroArt(hero, preview, preview.Id);
   const heroContent = el('div', 'jellio-detail-hero-content');
   const titleText = preview.Type === 'Episode' && preview.SeriesName
     ? preview.SeriesName + (preview.Name ? ' · ' + preview.Name : '')
@@ -1117,10 +1137,7 @@ export async function renderDetail(root, params) {
   item.Id = canonicalId;
 
   const hero = el('div', 'jellio-detail-hero');
-  const backdropUrl = heroBackdropUrl(item, canonicalId);
-  if (backdropUrl) {
-    fadeInBackdrop(hero, backdropUrl);
-  }
+  const backdropUrl = paintHeroArt(hero, item, canonicalId);
 
   const heroContent = el('div', 'jellio-detail-hero-content');
 

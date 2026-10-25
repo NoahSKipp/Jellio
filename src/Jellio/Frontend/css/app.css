@@ -16027,3 +16027,14 @@
   color: var(--jellio-text-secondary);
   text-align: center;
 }
+
+/* Header fallback when a title has no backdrop or thumb: its poster, blurred. */
+.jellio-detail-hero-blur {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(36px) brightness(0.6);
+  z-index: 0;
+  pointer-events: none;
+}
