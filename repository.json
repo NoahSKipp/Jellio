@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.89.2] - 2026-10-25\n\n### 🐛 Bug Fixes\n\n- *(player)* Stop ghost playing sessions from leaked or long paused players\n",
+        "checksum": "c5977a65d41a2c913e6611d82bc5f52f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.2/jellio_1.89.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-25T02:26:47Z",
+        "version": "1.89.2"
+      },
+      {
         "changelog": "## [1.89.1] - 2026-10-24\n\n### 🐛 Bug Fixes\n\n- *(web)* Faster startup, AirPlay for long movies, Android cast picker\n",
         "checksum": "6fadce1108f3a2245342068ab45019b8",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.1/jellio_1.89.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-17T20:49:51Z",
         "version": "1.83.12"
-      },
-      {
-        "changelog": "## [1.83.11] - 2026-10-17\n\n### 🐛 Bug Fixes\n\n- *(player)* Resolve stream failover loop, restore transcode fallback, and add 1.83.11 changelog\n",
-        "checksum": "d660c124c40dd3165457fb55abe47040",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.83.11/jellio_1.83.11.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-17T15:45:38Z",
-        "version": "1.83.11"
       }
     ]
   }
