@@ -239,20 +239,42 @@ function heroBackdropUrl(item, id) {
   return null;
 }
 
-// Header art: the backdrop chain above, else the poster blurred to fill the frame.
+// Header art: every backdrop, the chain above, then the poster blurred. Each
+// candidate is tried in turn and a failed load moves on to the next; with
+// none at all the hero's own gradient frames the title.
 function paintHeroArt(hero, item, id) {
-  const backdropUrl = heroBackdropUrl(item, id);
-  if (backdropUrl) {
-    fadeInBackdrop(hero, backdropUrl);
-    return backdropUrl;
-  }
+  const candidates = [];
+  (item.BackdropImageTags || []).forEach(function (tag, index) {
+    candidates.push({ url: getImageUrl(id, index ? 'Backdrop/' + index : 'Backdrop', { tag: tag, maxWidth: 1920 }) });
+  });
+  const chained = heroBackdropUrl(item, id);
+  if (chained) candidates.push({ url: chained });
   const posterTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
-  if (posterTag) {
-    const blur = el('div', 'jellio-detail-hero-blur');
-    blur.style.backgroundImage = 'url(' + getImageUrl(id, 'Primary', { tag: posterTag, maxWidth: 600 }) + ')';
-    hero.insertBefore(blur, hero.firstChild);
-  }
-  return null;
+  if (posterTag) candidates.push({ url: getImageUrl(id, 'Primary', { tag: posterTag, maxWidth: 600 }), blur: true });
+
+  const seen = {};
+  const queue = candidates.filter(function (c) {
+    if (seen[c.url]) return false;
+    seen[c.url] = true;
+    return true;
+  });
+  (function tryNext() {
+    const next = queue.shift();
+    if (!next) return;
+    const probe = new Image();
+    probe.onload = function () {
+      if (next.blur) {
+        const blur = el('div', 'jellio-detail-hero-blur');
+        blur.style.backgroundImage = 'url(' + next.url + ')';
+        hero.insertBefore(blur, hero.firstChild);
+      } else {
+        fadeInBackdrop(hero, next.url);
+      }
+    };
+    probe.onerror = tryNext;
+    probe.src = next.url;
+  })();
+  return candidates.length && !candidates[0].blur ? candidates[0].url : null;
 }
 
 // RemoteTrailers, runtime/api.js's own getItemDetails() Fields list:

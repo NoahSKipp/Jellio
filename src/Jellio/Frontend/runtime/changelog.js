@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.89.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.89.4",
+    "summary": "Headers that always load.",
+    "highlights": [
+      {
+        "title": "Header Art Keeps Trying",
+        "description": "A title's header now tries each of its backdrops, then its wide thumbnail, then a blurred poster, moving on whenever an image fails to load."
+      }
+    ]
+  },
+  {
     "version": "1.89.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.89.3",
