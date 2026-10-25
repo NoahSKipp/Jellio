@@ -3,6 +3,7 @@ import { getDisplayCulture, getDisplayLanguage, setDisplayLanguage } from './i18
 // auth.js's own headers. Nothing here touches window.ApiClient: the whole
 // point of this runtime is that a screen's data never depends on native
 // jellyfin-web's own request/cache state, only on a real HTTP response.
+import { markPlaybackStarted, markPlaybackStopped, canReportProgress } from './playbackGuard.js';
 import { loadItemInfo } from './itemInfo.js';
 import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
 import { copyableVideoCodecs } from './transcodeClassifier.js';
@@ -3039,6 +3040,7 @@ export function pickTrickplayInfo(item, mediaSourceId) {
 // row, a card's own progress bar, both already built) come from exactly
 // these reports, not from this runtime inventing its own tracking.
 export function reportPlaybackStart(itemId, mediaSourceId, positionTicks) {
+  markPlaybackStarted(itemId, mediaSourceId);
   if (isOffline()) return Promise.resolve();
   return postJson('/Sessions/Playing', {
     ItemId: itemId,
@@ -3052,7 +3054,8 @@ export function reportPlaybackStart(itemId, mediaSourceId, positionTicks) {
 }
 
 export function reportPlaybackProgress(itemId, mediaSourceId, positionTicks, isPaused) {
-  if (isOffline()) return Promise.resolve();
+  // A Progress after Stopped would recreate the session on the server.
+  if (isOffline() || !canReportProgress(itemId, mediaSourceId)) return Promise.resolve();
   return postJson('/Sessions/Playing/Progress', {
     ItemId: itemId,
     MediaSourceId: mediaSourceId,
@@ -3069,6 +3072,7 @@ export function reportPlaybackProgress(itemId, mediaSourceId, positionTicks, isP
 }
 
 export function reportPlaybackStopped(itemId, mediaSourceId, positionTicks) {
+  markPlaybackStopped(itemId, mediaSourceId);
   // Offline (a downloaded video or audiobook): the position is sent as
   // the item's user data once the server is back.
   if (isOffline()) {

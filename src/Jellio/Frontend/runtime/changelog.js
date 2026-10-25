@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.89.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.89.2",
+    "summary": "No more ghost \"Playing\" sessions.",
+    "highlights": [
+      {
+        "title": "Paused Means Paused",
+        "description": "A player left paused for 10 minutes now ends its session, so it stops showing as Playing for everyone. Press play to pick up where you left off."
+      },
+      {
+        "title": "No Leftover Players",
+        "description": "Switching titles quickly could leave an old player running in the background, reporting playback for days. Every player now shuts down properly."
+      }
+    ]
+  },
+  {
     "version": "1.89.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.89.1",

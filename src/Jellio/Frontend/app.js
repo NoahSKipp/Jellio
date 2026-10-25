@@ -306,7 +306,11 @@ function routeKey(route) {
 // off that), and racing ahead of it meant Home's own very next fetch
 // could reach the server before that report had. Awaited now: every
 // real call site below already sits inside an async function.
+let renderToken = 0;
+
 async function teardownActiveScreen() {
+  // Any screen still mounting is stale now and cleans itself up when it resolves.
+  renderToken++;
   if (activeCleanup) {
     try {
       await activeCleanup();
@@ -839,6 +843,7 @@ async function runSync() {
     // hides both nav mounts instead now, so the built rail or pill is
     // simply sitting there, unrendered, the moment a real route wants
     // it again, no rebuild needed either way.
+    const token = ++renderToken;
     const tasks = [screen(content, route.params)];
     if (!FULLSCREEN_ROUTES.has(route.path)) {
       tasks.push(renderSidebar(sidebarMount));
@@ -846,7 +851,17 @@ async function runSync() {
     }
 
     const results = await Promise.all(tasks);
-    activeCleanup = typeof results[0] === 'function' ? results[0] : null;
+    const cleanup = typeof results[0] === 'function' ? results[0] : null;
+    if (token !== renderToken) {
+      // A newer navigation started while this screen was still mounting; its
+      // teardown could not see this cleanup, so run it now instead of leaking
+      // the screen (a leaked player kept reporting playback forever).
+      if (cleanup) {
+        try { await cleanup(); } catch (err) { console.warn('Jellio: screen cleanup failed', err); }
+      }
+      return;
+    }
+    activeCleanup = cleanup;
     fadeInContent(content);
 
     // Prompt first-run onboarding setup wizard on initial load

@@ -14,6 +14,7 @@ import { t } from '../runtime/i18n.js';
 // before writing this, see runtime/api.js's own getIntroSkipperSegments)
 // rather than jellyfin-web's own player chrome hooks, unreachable here
 // for the same reason as everything else in this file.
+import { createPauseGate, startProgressTimer, stopProgressTimer, PAUSE_IDLE_STOP_MS } from '../runtime/playbackGuard.js';
 import { isAutoPipEnabled } from '../runtime/pipSettings.js';
 import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled } from '../runtime/offline.js';
 import { renderOfflinePlayer } from './offlinePlayer.js';
@@ -5679,10 +5680,24 @@ export async function renderPlayer(root, params) {
     }
   });
 
-  const progressInterval = window.setInterval(function () {
+  // Paused: one report, then quiet, then Stopped after PAUSE_IDLE_STOP_MS so
+  // a player left open doesn't hold a "Playing" session forever. Pressing
+  // play again starts a fresh session.
+  const pauseGate = createPauseGate(PAUSE_IDLE_STOP_MS);
+  const progressInterval = startProgressTimer(function () {
+    if (screenTornDown) {
+      stopProgressTimer(progressInterval);
+      return;
+    }
     if (!hasReportedStart) return;
     lastReportedTicks = currentPositionTicks();
-    reportPlaybackProgress(itemId, mediaSource.Id, lastReportedTicks, video.paused);
+    const action = pauseGate.tick(video.paused, Date.now());
+    if (action === 'progress') {
+      reportPlaybackProgress(itemId, mediaSource.Id, lastReportedTicks, video.paused);
+    } else if (action === 'stop') {
+      reportPlaybackStopped(itemId, mediaSource.Id, lastReportedTicks);
+      hasReportedStart = false;
+    }
   }, PROGRESS_REPORT_MS);
 
   // Real Jellyfin SyncPlay command handling: applies a pushed
@@ -6059,7 +6074,7 @@ export async function renderPlayer(root, params) {
       subtitleStyleTag.remove();
       subtitleStyleTag = null;
     }
-    window.clearInterval(progressInterval);
+    stopProgressTimer(progressInterval);
     if (upNextCountdownInterval) window.clearInterval(upNextCountdownInterval);
     if (endScreenModalInstance) {
       endScreenModalInstance.cleanup();
