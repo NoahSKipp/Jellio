@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.91.1] - 2026-10-26\n\n### ⚡ Performance\n\n- *(state)* Keep large state files in memory and coalesce their writes\n",
+        "checksum": "087ec10f4754fd703da1eba80b38836b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.1/jellio_1.91.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-26T17:12:31Z",
+        "version": "1.91.1"
+      },
+      {
         "changelog": "## [1.91.0] - 2026-10-26\n\n### 🚀 Features\n\n- *(search)* Suggestions for searches that find nothing; View all lists load in pages\n- *(search)* Related titles on the web when a search finds nothing\n\n### 🐛 Bug Fixes\n\n- *(search)* Qualify MetadataProvider in the suggestions controller\n",
         "checksum": "e63db1fc22bc5ae010a467e76c12011f",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.0/jellio_1.91.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-19T19:21:28Z",
         "version": "1.86.0"
-      },
-      {
-        "changelog": "## [1.85.0] - 2026-10-19\n\n### 🚀 Features\n\n- *(anime)* Treat titles Gelato tagged as anime as anime everywhere\n\n### 🐛 Bug Fixes\n\n- *(hubs)* Give the Sky Go hub its logo\n- *(hubs)* Give the AMC+, Shudder and Discovery+ hubs their logos\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.85.0 release notes\n",
-        "checksum": "9a6295d89ec661b42f36e593493230d1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.85.0/jellio_1.85.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-19T09:44:29Z",
-        "version": "1.85.0"
       }
     ]
   }
