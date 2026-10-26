@@ -17,4 +17,5 @@ public record GroupedActivityEntry(
     int? CurrentPage = null,
     int? PageCount = null,
     long? ListenedTicks = null,
-    bool Finished = false);
+    bool Finished = false,
+    bool Rewatch = false);

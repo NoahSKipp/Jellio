@@ -70,7 +70,8 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
         int? CurrentPage = null,
         int? PageCount = null,
         long? ListenedTicks = null,
-        bool Finished = false);
+        bool Finished = false,
+        bool Rewatch = false);
 
     [HttpGet]
     public IActionResult Get()
@@ -115,7 +116,8 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
                         group.CurrentPage,
                         group.PageCount,
                         group.ListenedTicks,
-                        group.Finished)));
+                        group.Finished,
+                        group.Rewatch)));
 
             foreach (var badge in AchievementCatalog.All)
             {

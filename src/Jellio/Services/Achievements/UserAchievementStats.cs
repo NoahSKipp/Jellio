@@ -87,6 +87,9 @@ public class UserAchievementStats
     // event pipeline just for this.
     public List<ActivityEntry> RecentActivity { get; set; } = [];
 
+    /// <summary>Every movie and episode this user has finished, so a repeat shows as a rewatch.</summary>
+    public HashSet<Guid> CompletedItemIds { get; set; } = [];
+
     // Books, audiobooks and manga (AchievementService.CreditReadingSessionAsync,
     // fed by the reader and the audiobook player). A volume counts as
     // finished once, however many times it is reread.
@@ -162,4 +165,5 @@ public record ActivityEntry(
     int? CurrentPage = null,
     int? PageCount = null,
     long? ListenedTicks = null,
-    bool Finished = false);
+    bool Finished = false,
+    bool Rewatch = false);

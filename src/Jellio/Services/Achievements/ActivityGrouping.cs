@@ -65,7 +65,8 @@ public static class ActivityGrouping
                 first.CurrentPage,
                 first.PageCount,
                 first.ListenedTicks,
-                first.Finished);
+                first.Finished,
+                activity.Skip(i).Take(end - i + 1).All(entry => entry.Rewatch));
 
             i = end + 1;
         }

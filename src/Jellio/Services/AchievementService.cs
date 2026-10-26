@@ -243,6 +243,10 @@ public class AchievementService(
             stats.CurrentDayRuntimeTicks += item.RunTimeTicks ?? 0;
             stats.BestSingleDayRuntimeTicks = Math.Max(stats.BestSingleDayRuntimeTicks, stats.CurrentDayRuntimeTicks);
 
+            // Seen before (or still listed from before this was tracked): a rewatch.
+            var rewatch = stats.CompletedItemIds.Contains(item.Id)
+                || stats.RecentActivity.Any(entry => entry.ItemId == item.Id);
+            stats.CompletedItemIds.Add(item.Id);
             stats.RecentActivity.Insert(
                 0,
                 new ActivityEntry(
@@ -253,7 +257,8 @@ public class AchievementService(
                     (item as Episode)?.SeriesId,
                     nowUtc,
                     item.ParentIndexNumber,
-                    item.IndexNumber));
+                    item.IndexNumber,
+                    Rewatch: rewatch));
             if (stats.RecentActivity.Count > MaxRecentActivity)
             {
                 stats.RecentActivity.RemoveRange(MaxRecentActivity, stats.RecentActivity.Count - MaxRecentActivity);

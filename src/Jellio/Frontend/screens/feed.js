@@ -47,7 +47,9 @@ function appendWatchDescription(container, entry) {
   }
   // German puts the verb last ("Folge 3 von X gesehen"), like Jellio TV.
   const verbLast = getDisplayLanguage() === 'de';
-  if (!verbLast) container.appendChild(document.createTextNode(t('feed_watched') + ' '));
+  // A title the person had already finished before reads as a rewatch.
+  const verb = t(entry.Rewatch ? 'feed_rewatched' : 'feed_watched');
+  if (!verbLast) container.appendChild(document.createTextNode(verb + ' '));
   if (entry.ItemType === 'Episode' && entry.SeriesName) {
     const season = entry.SeasonNumber != null ? t('feed_season_single', { num: entry.SeasonNumber }) + ', ' : '';
     if (entry.EpisodeCount > 1) {
@@ -63,7 +65,7 @@ function appendWatchDescription(container, entry) {
   } else {
     container.appendChild(el('span', 'jellio-feed-title', entry.ItemName));
   }
-  if (verbLast) container.appendChild(document.createTextNode(' ' + t('feed_watched').toLowerCase()));
+  if (verbLast) container.appendChild(document.createTextNode(' ' + verb.toLowerCase()));
 }
 
 // Badge unlocks ride the same feed rather than their own section:
