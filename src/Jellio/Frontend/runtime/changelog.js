@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.91.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.91.0",
+    "summary": "Endless lists and smarter empty searches.",
+    "highlights": [
+      {
+        "title": "Endless View All",
+        "description": "Opening the full list of a genre, catalog or Studio Hub row is instant and keeps loading more titles as you scroll."
+      },
+      {
+        "title": "Search Suggestions",
+        "description": "When a search finds nothing, Jellio shows titles you have that are like it, with the same people, or from its genre."
+      }
+    ]
+  },
+  {
     "version": "1.90.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.90.2",

@@ -21,7 +21,8 @@ import { t } from '../runtime/i18n.js';
 // same query fresh, same real "screens fetch their own state" shape
 // every other screen here already uses rather than caching the actual
 // result set.
-import { searchItems, searchLibrary, searchMovies, searchSeries } from '../runtime/api.js';
+import { getSearchSuggestions, searchItems, searchLibrary, searchMovies, searchSeries } from '../runtime/api.js';
+import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildSkeletonRow } from '../components/homeSkeleton.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -357,7 +358,33 @@ export async function renderSearch(root, params) {
       paintLoading(state);
       if (movies.pending === 0 && series.pending === 0) {
         status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
+        if (!anyResults) showSuggestions();
       }
+    }
+
+    // Nothing found: titles related to what the search names, the way
+    // Netflix answers a title it doesn't carry.
+    function showSuggestions() {
+      getSearchSuggestions(term)
+        .then(function (answer) {
+          if (!current() || !answer.Rows || !answer.Rows.length) return;
+          if (answer.MatchedTitle) {
+            status.textContent = t('search_suggest_intro', { title: answer.MatchedTitle });
+          }
+          answer.Rows.forEach(function (row) {
+            const title =
+              row.Kind === 'similar'
+                ? t('search_suggest_similar', { title: answer.MatchedTitle || term })
+                : row.Kind === 'person'
+                  ? t('search_suggest_person', { name: row.Name })
+                  : t('search_suggest_genre', { name: row.Name });
+            const built = buildRow(title, row.Items || []);
+            if (built) results.appendChild(built);
+          });
+        })
+        .catch(function (err) {
+          console.warn('Jellio: search suggestions failed', err);
+        });
     }
 
     function request(fetcher) {

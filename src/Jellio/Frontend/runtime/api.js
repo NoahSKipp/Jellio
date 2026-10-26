@@ -4777,3 +4777,12 @@ export async function loadServerPreferences() {
   }
   return prefs;
 }
+
+// "You might like" rows for a search that found nothing
+// (Controllers/SearchSuggestionsController.cs): titles related to what the
+// query names on TMDB that are in this library.
+export function getSearchSuggestions(query) {
+  return getJson('/Jellio/search/suggestions?query=' + encodeURIComponent(query)).then(function (result) {
+    return result || { MatchedTitle: null, Rows: [] };
+  });
+}
