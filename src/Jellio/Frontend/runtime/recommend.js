@@ -147,11 +147,20 @@ export function titleKey(item) {
 // screens/home.js's own buildRecommendationRows() feeds the same
 // object back into its catalog/genre rows, those too), so several
 // rows do not become the same twenty titles several times over.
+function nameKey(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
 function pick(seed, entries, exclude, count) {
   const seedKey = titleKey(seed);
+  const seedNames = [nameKey(seed.SeriesName || seed.Name), nameKey(seed.Name)].filter(Boolean);
   const scored = entries
     .filter(function (entry) {
       if (entry.item.Id === seed.Id || titleKey(entry.item) === seedKey) return false;
+      // Never the row's own title under another id or year (a remake, a
+      // second import of the same show).
+      if (seedNames.indexOf(nameKey(entry.item.SeriesName || entry.item.Name)) !== -1) return false;
+      if (seed.SeriesId && (entry.item.Id === seed.SeriesId || entry.item.SeriesId === seed.SeriesId)) return false;
       if (exclude[entry.item.Id] || exclude[titleKey(entry.item)]) return false;
       if (entry.item.CommunityRating && entry.item.CommunityRating < MIN_RATING) return false;
       if (!notPlayed(entry.item)) return false;
