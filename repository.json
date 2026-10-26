@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.91.0] - 2026-10-26\n\n### 🚀 Features\n\n- *(search)* Suggestions for searches that find nothing; View all lists load in pages\n- *(search)* Related titles on the web when a search finds nothing\n\n### 🐛 Bug Fixes\n\n- *(search)* Qualify MetadataProvider in the suggestions controller\n",
+        "checksum": "e63db1fc22bc5ae010a467e76c12011f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.0/jellio_1.91.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-26T14:05:14Z",
+        "version": "1.91.0"
+      },
+      {
         "changelog": "## [1.90.2] - 2026-10-26\n\n### 🐛 Bug Fixes\n\n- *(recommend)* Keep the seed title and its namesakes out of its own row\n",
         "checksum": "6e6dbb7049093a7f8e3d3fcfbd27a73b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.90.2/jellio_1.90.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-19T09:44:29Z",
         "version": "1.85.0"
-      },
-      {
-        "changelog": "## [1.84.3] - 2026-10-19\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Sync macOS 0.6.1 release entry\n",
-        "checksum": "3a81de5a9927323261777dc5015443c9",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.3/jellio_1.84.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-19T08:56:37Z",
-        "version": "1.84.3"
       }
     ]
   }
