@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.89.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.89.5",
+    "summary": "A shorter name for stream choices.",
+    "highlights": [
+      {
+        "title": "Sources",
+        "description": "\"Streams & Sources\" is now simply \"Sources\"."
+      }
+    ]
+  },
+  {
     "version": "1.89.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.89.4",
