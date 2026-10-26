@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.90.2] - 2026-10-26\n\n### 🐛 Bug Fixes\n\n- *(recommend)* Keep the seed title and its namesakes out of its own row\n",
+        "checksum": "6e6dbb7049093a7f8e3d3fcfbd27a73b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.90.2/jellio_1.90.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-26T12:48:45Z",
+        "version": "1.90.2"
+      },
+      {
         "changelog": "## [1.90.1] - 2026-10-26\n\n### 🐛 Bug Fixes\n\n- *(home)* Keep watched and passed episodes out of Continue Watching\n\n### 📚 Documentation\n\n- *(changelog)* Label the rewatch entry as 1.90.0\n",
         "checksum": "8d811f2f37b14ed00e287b07fbf5540e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.90.1/jellio_1.90.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-19T08:56:37Z",
         "version": "1.84.3"
-      },
-      {
-        "changelog": "## [1.84.2] - 2026-10-19\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.84.2 release notes\n\n### 🚜 Refactor\n\n- *(settings)* Remove the unused Up Next display timing setting\n",
-        "checksum": "297837343f2659f6f37447d2cd7dcf0f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.84.2/jellio_1.84.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-19T01:01:02Z",
-        "version": "1.84.2"
       }
     ]
   }
