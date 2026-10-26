@@ -22,7 +22,6 @@ const ROW_LIMIT = 24;
 // from. No real Stremio catalog collection this runtime has ever seen
 // comes close to this, generous on purpose rather than tuned to a real
 // observed maximum.
-const ROW_LIST_LIMIT = 500;
 
 // The hero's own real backdrop: whichever item this service's real
 // catalogs actually turned up rates highest, the same "let the real
@@ -131,8 +130,8 @@ function buildRowSection(row, index) {
   const titleEl = el('h2', 'jellio-row-title', row.title);
   section.appendChild(titleEl);
   makeRowTitleClickable(titleEl, row.title, row.items, {
-    fetchAll: function () {
-      return getCollectionItems(row.collection.Id, row.kind, ROW_LIST_LIMIT);
+    fetchPage: function (start, size) {
+      return getCollectionItems(row.collection.Id, row.kind, size, start);
     },
   });
 

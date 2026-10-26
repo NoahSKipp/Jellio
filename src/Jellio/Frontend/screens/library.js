@@ -19,6 +19,7 @@ import {
   discoverGenres,
   getAllGenres,
   getGenreItems,
+  getGenreItemsPage,
   getCollections,
   getCollectionItems,
   isAnimeCollection,
@@ -316,10 +317,12 @@ export async function renderLibrary(root, params) {
             if (animeIds && animeIds.size) {
               items = withoutAnime(items, animeIds);
             }
-            const row = buildRow(genre, items, null, function () {
-              return getGenreItems(parentId, itemType, genre, ROW_LIST_LIMIT).then(function (all) {
-                return withoutAnime(all, animeIds);
-              });
+            const row = buildRow(genre, items, null, {
+              fetchPage: function (start, size) {
+                return getGenreItemsPage(parentId, itemType, genre, start, size).then(function (page) {
+                  return withoutAnime(page, animeIds);
+                });
+              },
             });
             if (row) placeGenreRow(row, index);
           });
@@ -469,8 +472,10 @@ function renderAnime(root, collectionType) {
       const items = result.value;
       const name = animeCollections[index].Name || '';
       const collectionId = animeCollections[index].Id;
-      const row = buildRow(name, items, null, function () {
-        return getCollectionItems(collectionId, collectionType, ROW_LIST_LIMIT);
+      const row = buildRow(name, items, null, {
+        fetchPage: function (start, size) {
+          return getCollectionItems(collectionId, collectionType, size, start);
+        },
       });
       if (row) rows.appendChild(row);
     });

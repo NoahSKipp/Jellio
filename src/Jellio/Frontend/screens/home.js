@@ -17,6 +17,7 @@ import {
   getCollectionItems,
   discoverGenres,
   getGenreItems,
+  getGenreItemsPage,
   isAnimeCollection,
   getCalendarEntries,
   getImageUrl,
@@ -76,7 +77,6 @@ const GENRE_ROW_LIMIT = 24;
 // depth for whichever row a reader actually opened, not the same
 // CATALOG_ROW_LIMIT/GENRE_ROW_LIMIT-capped array the row itself
 // already rendered from.
-const ROW_LIST_LIMIT = 500;
 
 // Catalogs worth leading with, in this order. Anything unlisted keeps
 // its own alphabetical order behind them.
@@ -151,10 +151,12 @@ function chooseCatalogs(collections) {
 }
 
 function buildCatalogRow(entry, seen) {
-  const row = buildRow(entry.title, dedupe(entry.items, seen), null, function () {
-    return Promise.all([getCollectionItems(entry.id, entry.kind, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
-      return withoutAnime(results[0], results[1]);
-    });
+  const row = buildRow(entry.title, dedupe(entry.items, seen), null, {
+    fetchPage: function (start, size) {
+      return Promise.all([getCollectionItems(entry.id, entry.kind, size, start), getAnimeIds()]).then(function (results) {
+        return withoutAnime(results[0], results[1]);
+      });
+    },
   });
   return row ? wrapRowForCustomization(row, 'catalog:' + entry.id) : null;
 }
@@ -199,10 +201,12 @@ function chooseHomeGenres() {
 }
 
 function buildGenreRow(entry, seen) {
-  const row = buildRow(translateGenre(entry.title), dedupe(entry.items, seen), null, function () {
-    return Promise.all([getGenreItems(null, 'Movie,Series', entry.title, ROW_LIST_LIMIT), getAnimeIds()]).then(function (results) {
-      return withoutAnime(results[0], results[1]);
-    });
+  const row = buildRow(translateGenre(entry.title), dedupe(entry.items, seen), null, {
+    fetchPage: function (start, size) {
+      return Promise.all([getGenreItemsPage(null, 'Movie,Series', entry.title, start, size), getAnimeIds()]).then(function (results) {
+        return withoutAnime(results[0], results[1]);
+      });
+    },
   });
   return row ? wrapRowForCustomization(row, 'genre:' + entry.title) : null;
 }

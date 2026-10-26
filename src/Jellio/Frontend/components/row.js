@@ -25,7 +25,8 @@ export function buildRow(title, items, cardOptions, fetchAll) {
   const section = el('section', 'jellio-row');
   const titleEl = el('h2', 'jellio-row-title', title);
   section.appendChild(titleEl);
-  makeRowTitleClickable(titleEl, title, items, { fetchAll: fetchAll });
+  // fetchAll may also be an options object ({ fetchAll, fetchPage }).
+  makeRowTitleClickable(titleEl, title, items, typeof fetchAll === 'function' ? { fetchAll: fetchAll } : fetchAll || {});
 
   const trackWrap = el('div', 'jellio-row-track-wrap');
   const track = el('div', 'jellio-row-track');

@@ -3625,7 +3625,7 @@ export function collectionKind(collection) {
   return 'movies';
 }
 
-export function getCollectionItems(collectionId, kind, limit) {
+export function getCollectionItems(collectionId, kind, limit, startIndex) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -3635,6 +3635,7 @@ export function getCollectionItems(collectionId, kind, limit) {
     Fields: 'ProductionYear,CommunityRating,Genres',
     SortBy: 'SortName',
   });
+  if (startIndex) params.set('StartIndex', String(startIndex));
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {
     return rowJson(path, 'rows');
@@ -4012,6 +4013,26 @@ export function getGenreItems(parentId, itemType, genre, limit) {
     .catch(function () {
       return getGenreItemsDirect(parentId, itemType, genre, limit);
     });
+}
+
+// One page of a genre, for list views that keep loading as they scroll.
+export function getGenreItemsPage(parentId, itemType, genre, startIndex, limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    Recursive: 'true',
+    IncludeItemTypes: itemType,
+    Genres: genre,
+    StartIndex: String(startIndex || 0),
+    Limit: String(limit || 60),
+    Fields: 'ProductionYear,CommunityRating',
+    SortBy: 'CommunityRating',
+    SortOrder: 'Descending',
+  });
+  if (parentId) params.set('ParentId', parentId);
+  return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'genres').then(function (result) {
+    return collapseAudiobookTracks((result && result.Items) || []);
+  });
 }
 
 function getGenreItemsDirect(parentId, itemType, genre, limit) {

@@ -107,6 +107,8 @@ function buildListItem(item, select) {
 // shown short list if it fails or if this row genuinely has no more
 // than that to begin with. options.onSelect defaults to this runtime's
 // own real item navigation; most callers just take that default.
+const PAGE_SIZE = 60;
+
 export function openRowListModal(title, items, options) {
   closeRowListModal();
   const token = ++openToken;
@@ -151,7 +153,52 @@ export function openRowListModal(title, items, options) {
   panel.appendChild(list);
 
   const loadingNote = el('p', 'jellio-avatar-picker-status', t('row_loading_rest'));
-  if (opts.fetchAll) {
+  if (opts.fetchPage) {
+    // Pages of PAGE_SIZE, the next one requested as the end of the list
+    // scrolls into view, until the server runs out.
+    let shown = items.slice();
+    const seenIds = {};
+    shown.forEach(function (item) { seenIds[item.Id] = true; });
+    let nextStart = 0;
+    let loading = false;
+    let done = false;
+    const sentinel = el('div', 'jellio-row-list-sentinel');
+    panel.appendChild(sentinel);
+    panel.appendChild(loadingNote);
+    const observer = new IntersectionObserver(function (entries) {
+      if (entries.some(function (entry) { return entry.isIntersecting; })) loadMore();
+    }, { rootMargin: '400px' });
+    function loadMore() {
+      if (loading || done || token !== openToken) return;
+      loading = true;
+      const start = nextStart;
+      opts.fetchPage(start, PAGE_SIZE).then(function (page) {
+        if (token !== openToken) return;
+        nextStart = start + PAGE_SIZE;
+        if (!page || page.length < PAGE_SIZE / 2) done = true;
+        (page || []).forEach(function (item) {
+          if (seenIds[item.Id]) return;
+          seenIds[item.Id] = true;
+          shown.push(item);
+          list.appendChild(buildListItem(item, select));
+        });
+      }).catch(function (err) {
+        console.warn('Jellio: could not load more of this row', err);
+        done = true;
+      }).then(function () {
+        loading = false;
+        if (done) {
+          observer.disconnect();
+          loadingNote.remove();
+          sentinel.remove();
+        } else if (token === openToken && sentinel.getBoundingClientRect().top < window.innerHeight + 400) {
+          loadMore();
+        }
+      });
+    }
+    observer.observe(sentinel);
+    loadMore();
+  } else if (opts.fetchAll) {
     panel.appendChild(loadingNote);
     opts
       .fetchAll()
