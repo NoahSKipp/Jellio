@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.91.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.91.1",
+    "summary": "A lighter load on the server.",
+    "highlights": [
+      {
+        "title": "Less Disk Work",
+        "description": "Reading progress, intro and credits times and manga imports are kept in memory and saved in batches instead of rewriting large files on every change."
+      }
+    ]
+  },
+  {
     "version": "1.91.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.91.0",

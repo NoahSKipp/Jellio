@@ -194,12 +194,14 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         return _cache;
     }
 
+    private DebouncedJsonWriter? _writer;
+
+    // Page turns save progress; coalesce them instead of rewriting the
+    // whole file each time.
     private void SaveLocked(Dictionary<string, Dictionary<string, ReadingProgressRecord>> all)
     {
         _cache = all;
-        Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        var temp = StorePath + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(all));
-        File.Move(temp, StorePath, true);
+        _writer ??= new DebouncedJsonWriter(_lock, () => StorePath, () => JsonSerializer.Serialize(_cache), TimeSpan.FromSeconds(2));
+        _writer.Schedule();
     }
 }

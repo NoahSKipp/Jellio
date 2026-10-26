@@ -25,6 +25,8 @@ namespace Jellio.Services.IntroCredits;
 public class IntroCreditsStore(IApplicationPaths applicationPaths)
 {
     private readonly object _lock = new();
+    private Dictionary<string, IntroCreditsRecord>? _cache;
+    private DebouncedJsonWriter? _writer;
 
     private string StorePath =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "intro-credits.json");
@@ -120,27 +122,37 @@ public class IntroCreditsStore(IApplicationPaths applicationPaths)
 
     private static long SecondsToTicks(double seconds) => (long)(seconds * TimeSpan.TicksPerSecond);
 
+    // The file is several MB: it is parsed once and kept in memory, and
+    // writes are coalesced instead of rewriting it on every change.
     private Dictionary<string, IntroCreditsRecord> LoadLocked()
     {
+        if (_cache is not null)
+        {
+            return _cache;
+        }
+
         if (!File.Exists(StorePath))
         {
-            return new Dictionary<string, IntroCreditsRecord>();
+            return _cache = new Dictionary<string, IntroCreditsRecord>();
         }
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, IntroCreditsRecord>>(File.ReadAllText(StorePath))
+            _cache = JsonSerializer.Deserialize<Dictionary<string, IntroCreditsRecord>>(File.ReadAllText(StorePath))
                 ?? new Dictionary<string, IntroCreditsRecord>();
         }
         catch (JsonException)
         {
-            return new Dictionary<string, IntroCreditsRecord>();
+            _cache = new Dictionary<string, IntroCreditsRecord>();
         }
+
+        return _cache;
     }
 
     private void SaveLocked(Dictionary<string, IntroCreditsRecord> all)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        File.WriteAllText(StorePath, JsonSerializer.Serialize(all));
+        _cache = all;
+        _writer ??= new DebouncedJsonWriter(_lock, () => StorePath, () => JsonSerializer.Serialize(_cache), TimeSpan.FromSeconds(5));
+        _writer.Schedule();
     }
 }

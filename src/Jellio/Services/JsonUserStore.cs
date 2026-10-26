@@ -76,6 +76,22 @@ public class JsonUserStore<T>(IApplicationPaths applicationPaths, string subdire
         }
     }
 
+    // Saves only when mutate reports a change, so a poll that finds nothing
+    // new does not rewrite the file.
+    public T UpdateIfChanged(Guid userId, Func<T, bool> mutate)
+    {
+        lock (_lock)
+        {
+            var value = LoadLocked(userId);
+            if (mutate(value))
+            {
+                SaveLocked(userId, value);
+            }
+
+            return value;
+        }
+    }
+
     private T LoadLocked(Guid userId)
     {
         var path = StorePath(userId);

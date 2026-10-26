@@ -54,6 +54,18 @@ public class NotificationStore(IApplicationPaths applicationPaths)
             TrimToLimit(notifications);
         });
 
+    public List<WatchlistNotification> UpdateIfChanged(Guid userId, Func<List<WatchlistNotification>, bool> mutate) =>
+        _store.UpdateIfChanged(userId, notifications =>
+        {
+            if (!mutate(notifications))
+            {
+                return false;
+            }
+
+            TrimToLimit(notifications);
+            return true;
+        });
+
     private static void TrimToLimit(List<WatchlistNotification> notifications)
     {
         if (notifications.Count > MaxStoredNotifications)

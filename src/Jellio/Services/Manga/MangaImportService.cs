@@ -725,26 +725,36 @@ public class MangaImportService(
         return builder.ToString();
     }
 
+    private Dictionary<string, List<PendingChapterProgress>>? _store;
+    private DebouncedJsonWriter? _writer;
+
+    // Read on every added comic during a library scan, so it is parsed once.
     private Dictionary<string, List<PendingChapterProgress>> LoadLocked()
     {
+        if (_store is not null)
+        {
+            return _store;
+        }
+
         try
         {
-            return File.Exists(StorePath)
+            _store = File.Exists(StorePath)
                 ? JsonSerializer.Deserialize<Dictionary<string, List<PendingChapterProgress>>>(File.ReadAllText(StorePath), JsonOptions) ?? new()
                 : new();
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Jellio: could not read the Mihon import progress store");
-            return new();
+            _store = new();
         }
+
+        return _store;
     }
 
     private void SaveLocked(Dictionary<string, List<PendingChapterProgress>> all)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        var temp = StorePath + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(all, JsonOptions));
-        File.Move(temp, StorePath, true);
+        _store = all;
+        _writer ??= new DebouncedJsonWriter(_storeLock, () => StorePath, () => JsonSerializer.Serialize(_store, JsonOptions), TimeSpan.FromSeconds(5));
+        _writer.Schedule();
     }
 }

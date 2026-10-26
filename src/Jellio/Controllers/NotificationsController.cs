@@ -79,12 +79,15 @@ public partial class NotificationsController(
             entries = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken!).ConfigureAwait(false);
         }
 
-        var notifications = store.Update(userId, notifications =>
+        var shelfData = entries == null ? null : shelfStore.Load(userId);
+        var notifications = store.UpdateIfChanged(userId, notifications =>
         {
             if (entries == null)
             {
-                return;
+                return false;
             }
+
+            var added = false;
 
             var today = DateTime.UtcNow.Date;
             var known = notifications.Select(n => n.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -104,8 +107,7 @@ public partial class NotificationsController(
 
                 // Check if user has muted notifications (SkipUpdates) for this show or movie
                 var itemKey = entry.ItemId.ToString("N").ToLowerInvariant();
-                var shelfData = shelfStore.Load(userId);
-                if (shelfData.Series.TryGetValue("s:" + itemKey, out var prefs) ||
+                if (shelfData!.Series.TryGetValue("s:" + itemKey, out var prefs) ||
                     shelfData.Series.TryGetValue(itemKey, out prefs) ||
                     shelfData.Series.TryGetValue(entry.ItemId.ToString(), out prefs))
                 {
@@ -135,7 +137,10 @@ public partial class NotificationsController(
                         false
                     )
                 );
+                added = true;
             }
+
+            return added;
         });
 
         return Ok(notifications);
