@@ -144,7 +144,9 @@ function getSession() {
       const recovered = {
         accessToken: server.AccessToken,
         userId: server.UserId,
-        user: { Id: server.UserId, Name: server.Name || '' },
+        // The credential entry names the server, not the user: the real
+        // name and avatar come from updateSessionUser once /Users/{id} answers.
+        user: { Id: server.UserId, Name: '' },
         ts: Date.now(),
       };
       writeJson(SESSION_KEY, recovered);
@@ -288,6 +290,16 @@ function syncNativeApiClientState(accessToken, user) {
 // server response carrying a fresh AccessToken and User. Called either
 // after this runtime's own direct authenticateByName call, or by the
 // console.log interception below when native login handled it instead.
+// The full user once the server has answered, for a session recovered from
+// native jellyfin-web's credentials (which carry no user name or image).
+export function updateSessionUser(user) {
+  const session = readJson(SESSION_KEY);
+  if (!session || !user || user.Id !== session.userId) return;
+  session.user = Object.assign({}, session.user, user);
+  writeJson(SESSION_KEY, session);
+  if (session.accessToken) rememberUser(session.accessToken, user);
+}
+
 export function setSession(accessToken, user) {
   if (!accessToken || !user || !user.Id) return;
   writeJson(SESSION_KEY, {

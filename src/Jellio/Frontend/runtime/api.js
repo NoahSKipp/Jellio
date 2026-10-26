@@ -8,7 +8,7 @@ import { loadItemInfo } from './itemInfo.js';
 import { avoidingVideoTranscodes, browserCaps, getVideoTranscodePolicy, setVideoTranscodePolicy } from './transcodePolicy.js';
 import { copyableVideoCodecs } from './transcodeClassifier.js';
 import { hasStreamInfo, filterPlayableSources } from './quality.js';
-import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser } from './auth.js';
+import { getServerAddress, getAuthHeaders, getCurrentUserId, getAccessToken, getDeviceId, clearSession, getCurrentUser as getSessionUser, updateSessionUser } from './auth.js';
 export { getCurrentUserId };
 import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
@@ -766,7 +766,10 @@ export function getCurrentUser() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   return cached('user:' + userId, function () {
-    return rowJson('/Users/' + userId, 'user');
+    return rowJson('/Users/' + userId, 'user').then(function (user) {
+      updateSessionUser(user);
+      return user;
+    });
   });
 }
 

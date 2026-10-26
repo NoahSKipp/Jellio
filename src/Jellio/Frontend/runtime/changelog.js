@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.91.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.91.2",
+    "summary": "Your own name and picture in the account switcher.",
+    "highlights": [
+      {
+        "title": "Your Profile in the Switcher",
+        "description": "After signing in through Jellyfin's own login page, the account switcher showed the server's name and a blank avatar. It now shows your name and profile picture."
+      }
+    ]
+  },
+  {
     "version": "1.91.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.91.1",

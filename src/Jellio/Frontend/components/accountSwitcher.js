@@ -17,7 +17,7 @@ import {
   authenticateByName,
   logout,
 } from '../runtime/auth.js';
-import { getUserImageUrl, clearCache, getOnlineUserIds } from '../runtime/api.js';
+import { getUserImageUrl, clearCache, getOnlineUserIds, getCurrentUser } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -258,6 +258,19 @@ export async function openAccountSwitcher() {
   info.appendChild(actions);
   header.appendChild(info);
   panel.appendChild(header);
+
+  // The stored session can lack the name and avatar (one taken over from
+  // the native login); the server's answer fills them in.
+  getCurrentUser().then(function (user) {
+    if (!user || user.Id !== currentId) return;
+    const nameEl = info.querySelector('.jellio-account-switcher-current-name');
+    if (nameEl && user.Name) nameEl.textContent = user.Name;
+    if (user.PrimaryImageTag) {
+      currentAvatar.textContent = '';
+      currentAvatar.style.backgroundImage =
+        "url('" + getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 200 }) + "')";
+    }
+  }).catch(function () {});
 
   panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('nav_switch_account')));
 
