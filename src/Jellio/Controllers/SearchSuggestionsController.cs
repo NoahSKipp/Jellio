@@ -149,7 +149,7 @@ public class SearchSuggestionsController(
                 Recursive = true,
             }))
             {
-                var tmdb = item.GetProviderId(MetadataProvider.Tmdb);
+                var tmdb = item.GetProviderId(MediaBrowser.Model.Entities.MetadataProvider.Tmdb);
                 if (!string.IsNullOrEmpty(tmdb))
                 {
                     byTmdb.TryAdd((item is MediaBrowser.Controller.Entities.Movies.Movie ? "movie:" : "tv:") + tmdb, item.Id);
