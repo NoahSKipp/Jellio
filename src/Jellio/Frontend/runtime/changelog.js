@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.90.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.90.1",
+    "summary": "Continue Watching without leftovers.",
+    "highlights": [
+      {
+        "title": "Tidier Continue Watching",
+        "description": "Episodes you've already watched, or that a show's Next Up has moved past, no longer linger in Continue Watching."
+      }
+    ]
+  },
+  {
     "version": "1.90.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.90.0",

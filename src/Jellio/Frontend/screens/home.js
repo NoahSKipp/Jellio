@@ -2,6 +2,7 @@ import { t, translateGenre } from '../runtime/i18n.js';
 // First real screen, proof of the whole architecture end to end: its own
 // markup, fed entirely by runtime/api.js's own fetch calls, no native DOM
 // read or waited on.
+import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
 import {
   getCurrentUser,
@@ -601,9 +602,15 @@ async function buildCheapSections() {
   // Every request starts now, together, and renders to its predetermined slot
   // the exact millisecond it arrives: Up Next and Continue Watching never wait
   // on slower book scans or Coming Soon calendar lookups.
-  const resume = settle(getResumeItems(20)).then(function (result) {
+  // Next Up starts with the resume list; Continue Watching waits for it to
+  // drop episodes the show has already moved past.
+  const nextUpResult = settle(getNextUp(20));
+  const resume = Promise.all([settle(getResumeItems(20)), nextUpResult]).then(function (results) {
+    const result = results[0];
     if (result.status === 'fulfilled') {
-      const row = buildRow(t('home_continue_watching'), result.value, { continueWatching: true });
+      const nextUpItems = results[1].status === 'fulfilled' ? results[1].value : [];
+      const items = withoutStaleEpisodes(result.value, nextUpItems);
+      const row = buildRow(t('home_continue_watching'), items, { continueWatching: true });
       if (row) push(wrapRowForCustomization(row, 'continue-watching'), 'continue-watching');
     }
   });
@@ -622,7 +629,7 @@ async function buildCheapSections() {
     }
   });
 
-  const nextUp = settle(getNextUp(20)).then(function (result) {
+  const nextUp = nextUpResult.then(function (result) {
     if (result.status === 'fulfilled') {
       const row = buildRow(t('home_next_up'), result.value, { upNext: true });
       if (row) push(wrapRowForCustomization(row, 'up-next'), 'up-next');
