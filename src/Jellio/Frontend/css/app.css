@@ -12137,60 +12137,6 @@
   height: 100%;
 }
 
-/* screens/calendar.js's own real screen: header/tagline above a list of
-   date groups, each one reusing components/rowListModal.js's own real
-   .jellio-row-list-item row shape rather than a second row language
-   just for this one screen. */
-.jellio-calendar-header {
-  padding: clamp(24px, 4vw, 56px) var(--jellio-safe-gutter) clamp(8px, 1.5vw, 16px);
-}
-
-.jellio-calendar-title {
-  margin: 0;
-  font-size: clamp(1.4em, 2.2vw, 2em);
-  font-weight: 700;
-}
-
-.jellio-calendar-tagline {
-  margin: 0.4em 0 0;
-  max-width: 42em;
-  color: var(--jellio-text-secondary);
-  font-size: clamp(0.85em, 1vw, 1em);
-  line-height: 1.5;
-}
-
-.jellio-calendar-body {
-  padding: clamp(8px, 1.5vw, 16px) var(--jellio-safe-gutter) clamp(40px, 5vw, 80px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(20px, 2.5vw, 36px);
-}
-
-.jellio-calendar-group-heading {
-  margin: 0 0 0.7em;
-  font-size: 1em;
-  font-weight: 700;
-  color: var(--jellio-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Real full page context, not the modal this same class also renders
-   inside: no real reason to cap this list's own height and scroll it
-   separately from the rest of the page the way a popover panel needs
-   to, the whole real page already scrolls on its own. */
-.jellio-calendar-group-list {
-  max-height: none;
-  overflow-y: visible;
-  gap: 0.5em;
-}
-
-.jellio-calendar-group-list .jellio-row-list-item {
-  max-width: 34em;
-  border-radius: var(--jellio-card-radius);
-  background: rgb(255 255 255 / 0.03);
-}
-
 /* Profile: banner + avatar + bio, badges, activity feed. Rarity tokens
    mirror the badge case reference sheet (Common/Rare/Epic/Legendary),
    Legendary reusing the app's own --jellio-trending-color rather than a

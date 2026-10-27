@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.92.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.92.0",
+    "summary": "Everything coming up, right on Home.",
+    "highlights": [
+      {
+        "title": "Coming Soon Replaces the Calendar",
+        "description": "New episodes and digital releases from your Watchlist now all live in the Coming Soon row on Home, labelled New episode or Digital release, and the Calendar tab is gone from the sidebar."
+      }
+    ]
+  },
+  {
     "version": "1.91.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.91.4",

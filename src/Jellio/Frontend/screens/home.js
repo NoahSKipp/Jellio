@@ -276,17 +276,11 @@ function buildHubStrip(collections) {
   return section;
 }
 
-const COMING_SOON_LIMIT = 12;
+// Everything the Calendar screen used to list lives in this row now.
+const COMING_SOON_LIMIT = 60;
 
-// Real feedback (the same audit that found rows missing a Movies row
-// past the first 100 collections): nothing on this whole page ever
-// looked forward, every row here is either what already exists in a
-// real catalog or what this reader already watched. screens/calendar.js's
-// own full page covers the same real Watchlist-driven data in depth;
-// this is the same real CalendarController answer, a handful of cards
-// wide, the same "here's what to look forward to" glance Nuvio/Netflix
-// both put right on their own home page rather than behind a second
-// real screen only.
+// What's coming for the reader's Watchlist (new episodes and digital
+// releases), from CalendarController. This row replaced the Calendar screen.
 //
 // A dedicated card here rather than components/card.js's own buildCard:
 // that real card assumes a real playable item (progress bar, watchlist/
@@ -297,9 +291,9 @@ const COMING_SOON_LIMIT = 12;
 // worth of fields this never needed anyway.
 function comingSoonKindLabel(entry) {
   if (entry.Kind === 'episode') {
-    return entry.Detail ? entry.Detail : 'New episode';
+    return entry.Detail ? t('calendar_new_episode') + ' · ' + entry.Detail : t('calendar_new_episode');
   }
-  return 'Digital release';
+  return t('calendar_digital_release');
 }
 
 function comingSoonDateLabel(entry) {

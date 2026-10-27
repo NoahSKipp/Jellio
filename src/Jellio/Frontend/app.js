@@ -80,7 +80,6 @@ const loadSettings = () => import('./screens/settings.js').then((m) => m.renderS
 const loadPerson = () => import('./screens/person.js').then((m) => m.renderPerson);
 const loadProfile = () => import('./screens/profile.js').then((m) => m.renderProfile);
 const loadFeed = () => import('./screens/feed.js').then((m) => m.renderFeed);
-const loadCalendar = () => import('./screens/calendar.js').then((m) => m.renderCalendar);
 const loadReader = () => import('./screens/reader.js').then((m) => m.renderReader);
 const loadListen = () => import('./screens/listen.js').then((m) => m.renderListen);
 const loadVocab = () => import('./screens/vocab.js').then((m) => m.renderVocab);
@@ -112,7 +111,14 @@ const SCREENS = {
   person: async (content, params) => (await loadPerson())(content, params),
   profile: async (content, params) => (await loadProfile())(content, params),
   feed: async (content, params) => (await loadFeed())(content, params),
-  calendar: async (content, params) => (await loadCalendar())(content, params),
+  // The Calendar screen is gone; its entries are the Coming Soon row on
+  // Home. Old links and bookmarks land there.
+  calendar: (content, params) => {
+    try {
+      window.history.replaceState(null, '', '#/home');
+    } catch (err) {}
+    return renderHome(content, params);
+  },
   read: async (content, params) => (await loadReader())(content, params),
   listen: async (content, params) => (await loadListen())(content, params),
   vocab: async (content, params) => (await loadVocab())(content, params),

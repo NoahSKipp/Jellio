@@ -291,14 +291,7 @@ export async function renderSidebar(container) {
   FIXED_NAV_LINKS.forEach(function (link) {
     rail.appendChild(buildLink(link));
   });
-  // Calendar (desktop rail only for now, real feedback's own scope:
-  // the mobile pill bar's own real link set comes from
-  // getPrimaryNavLinks() below, shared with this rail, and stays
-  // untouched, same real reason Group Watch/Now Playing below are
-  // already this rail's own additions, not part of that shared list)
-  // sits right after Feed, its own divider closing out this fixed
-  // group before the reader's own libraries start.
-  rail.appendChild(buildLink({ icon: 'calendar_month', label: 'Calendar', hash: '#/calendar' }));
+  // A divider closes this fixed group before the reader's own libraries.
   const divider = document.createElement('div');
   divider.className = 'jellio-sidebar-divider';
   rail.appendChild(divider);
