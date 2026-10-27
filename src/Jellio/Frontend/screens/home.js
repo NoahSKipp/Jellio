@@ -970,18 +970,33 @@ export async function renderHome(root, params) {
   let active = true;
   function placeSection(section) {
     if (!active) return;
-    // A rebuilt row replaces the one already showing under the same key.
+    // A rebuilt row replaces the one already showing under the same key,
+    // keeping how far the reader had scrolled it.
     const key = section.dataset.jellioRowKey;
+    let scrolled = null;
     if (key) {
       const current = rows.querySelector('[data-jellio-row-key="' + CSS.escape(key) + '"]');
-      if (current && current !== section) current.remove();
+      if (current && current !== section) {
+        scrolled = Array.from(current.querySelectorAll('.jellio-row-track')).map(function (track) {
+          return track.scrollLeft;
+        });
+        current.remove();
+      }
     }
     const order = Number(section.dataset.jellioHomeOrder || 0);
     const after = Array.from(rows.children).find(function (child) {
       return child !== section && child !== skeleton && Number(child.dataset.jellioHomeOrder || 0) > order;
     });
     const insertTarget = after || (skeleton.parentNode === rows ? skeleton : null);
-    rows.insertBefore(section, insertTarget);
+    // Moving a row already in place would reset its scroll position.
+    if (section.parentNode !== rows || section.nextSibling !== insertTarget) {
+      rows.insertBefore(section, insertTarget);
+    }
+    if (scrolled && scrolled.some(Boolean)) {
+      section.querySelectorAll('.jellio-row-track').forEach(function (track, i) {
+        if (scrolled[i]) track.scrollLeft = scrolled[i];
+      });
+    }
     markHomeRowPainted();
     applyHomeCustomization(rows, editMode);
 

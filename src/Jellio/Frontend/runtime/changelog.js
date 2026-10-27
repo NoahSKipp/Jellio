@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.91.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.91.3",
+    "summary": "Rows stay where you scrolled them.",
+    "highlights": [
+      {
+        "title": "No More Jumping Rows",
+        "description": "Scrolling a row while Home is still loading no longer snaps it back to the start each time another row arrives."
+      }
+    ]
+  },
+  {
     "version": "1.91.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.91.2",

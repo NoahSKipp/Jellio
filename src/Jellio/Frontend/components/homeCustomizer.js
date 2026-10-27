@@ -243,20 +243,29 @@ export function applyHomeCustomization(rowsContainer, editMode) {
   const customization = getHomeCustomization();
   const order = effectiveOrder(liveKeys, customization);
 
+  // Only rows out of place are moved: re-inserting a row that is already
+  // where it belongs still detaches it, which snaps its scroll back to the
+  // start, and this runs every time another row arrives.
   const skeleton = rowsContainer.querySelector(':scope > .jellio-home-skeleton');
-  order.forEach(function (key) {
-    const wrapper = byKey.get(key);
-    if (wrapper) {
-      if (skeleton && skeleton.parentNode === rowsContainer) {
-        rowsContainer.insertBefore(wrapper, skeleton);
-      } else {
-        rowsContainer.appendChild(wrapper);
-      }
+  const ordered = order.map(function (key) {
+    return byKey.get(key);
+  }).filter(Boolean);
+  // Same arrangement as before (other sections, then the rows in the
+  // reader's order, then the skeleton), walked with a cursor so a node
+  // already in its place stays attached.
+  const desired = Array.from(rowsContainer.children)
+    .filter(function (child) {
+      return child !== skeleton && !child.classList.contains('jellio-row-editor');
+    })
+    .concat(ordered, skeleton && skeleton.parentNode === rowsContainer ? [skeleton] : []);
+  let anchor = rowsContainer.firstElementChild;
+  desired.forEach(function (node) {
+    if (node === anchor) {
+      anchor = anchor.nextElementSibling;
+    } else {
+      rowsContainer.insertBefore(node, anchor);
     }
   });
-  if (skeleton && skeleton.parentNode === rowsContainer) {
-    rowsContainer.appendChild(skeleton);
-  }
 
   function onChange(mutate) {
     const current = getHomeCustomization();
