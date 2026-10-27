@@ -252,7 +252,9 @@ public class IndexHtmlPatchService(
             + "<script>\n"
             + EarlySessionCaptureScript
             + "</script>\n"
-            + "<script src=\"https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1\"></script>\n"
+            // async: a classic script in <head> held up the whole page until
+            // gstatic.com answered. cast.js waits for the SDK's own callback.
+            + "<script async src=\"https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1\"></script>\n"
             // css/app.css's own --jellio-font-family names Inter first,
             // real feedback was that the sidebar (and everything else)
             // never actually looked like it, every device this renders on
@@ -262,7 +264,9 @@ public class IndexHtmlPatchService(
             // fallback stack it always has, no worse off than before.
             + "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n"
             + "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n"
-            + "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap\">\n"
+            // Not render blocking: the page paints in the fallback font and
+            // switches once Inter arrives, instead of waiting on Google.
+            + "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap\" media=\"print\" onload=\"this.media='all'\">\n"
             + $"<link rel=\"stylesheet\" href=\"/Jellio/frontend/css/app.css?v={version}\">\n"
             + $"<script type=\"importmap\">{BuildImportMap(version)}</script>\n"
             + preloadLinks

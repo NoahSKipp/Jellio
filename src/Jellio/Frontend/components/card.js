@@ -283,23 +283,29 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
 function landscapeImageCandidates(item) {
   if (!item || !item.Id) return [];
   const urls = [];
+  // An item that came with its image tags says which images exist; asking
+  // for one it doesn't have is a certain 404 before the art that does.
+  const knowsImages = hasImageInfo(item);
   const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
   if (backdropTag) {
     urls.push(getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 500, quality: 85 }));
+  } else if (!knowsImages) {
+    urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 500, quality: 85 }));
   }
-  urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 500, quality: 85 }));
 
   const primaryTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
   if (primaryTag) {
     urls.push(getImageUrl(item.Id, 'Primary', { tag: primaryTag, maxWidth: 500, quality: 85 }));
+  } else if (!knowsImages) {
+    urls.push(getImageUrl(item.Id, 'Primary', { maxWidth: 500, quality: 85 }));
   }
-  urls.push(getImageUrl(item.Id, 'Primary', { maxWidth: 500, quality: 85 }));
 
   if (item.ParentThumbItemId) {
     if (item.ParentThumbImageTag) {
       urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { tag: item.ParentThumbImageTag, maxWidth: 500, quality: 85 }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { maxWidth: 500, quality: 85 }));
     }
-    urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { maxWidth: 500, quality: 85 }));
   }
   if (item.ParentBackdropItemId) {
     if (item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
@@ -308,14 +314,25 @@ function landscapeImageCandidates(item) {
         maxWidth: 500,
         quality: 85,
       }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 500, quality: 85 }));
     }
-    urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 500, quality: 85 }));
   }
   if (item.SeriesId) {
-    urls.push(getImageUrl(item.SeriesId, 'Backdrop', { maxWidth: 500, quality: 85 }));
-    urls.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 500, quality: 85 }));
+    if (!knowsImages) urls.push(getImageUrl(item.SeriesId, 'Backdrop', { maxWidth: 500, quality: 85 }));
+    if (item.SeriesPrimaryImageTag) {
+      urls.push(getImageUrl(item.SeriesId, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 500, quality: 85 }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 500, quality: 85 }));
+    }
   }
   return Array.from(new Set(urls.filter(Boolean)));
+}
+
+// Jellyfin always sends ImageTags (possibly empty) and BackdropImageTags
+// with an item's image info; without either, nothing is known.
+function hasImageInfo(item) {
+  return !!(item && (item.ImageTags || item.BackdropImageTags));
 }
 
 function landscapeImageUrl(item) {
@@ -451,11 +468,15 @@ function buildLandscapeCard(item, options) {
 function cardImageCandidates(item) {
   if (!item || !item.Id) return [];
   const urls = [];
+  // Books keep their untagged guesses (covers live outside image tags).
+  const isBookLike = item.Type === 'AudioBook' || item.Type === 'Book';
+  const knowsImages = !isBookLike && hasImageInfo(item);
   const ownPrimaryTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
   if (ownPrimaryTag) {
     urls.push(getImageUrl(item.Id, 'Primary', { tag: ownPrimaryTag, maxWidth: 400, quality: 85 }));
+  } else if (!knowsImages) {
+    urls.push(getImageUrl(item.Id, 'Primary', { maxWidth: 400, quality: 85 }));
   }
-  urls.push(getImageUrl(item.Id, 'Primary', { maxWidth: 400, quality: 85 }));
 
   if (item.Type === 'AudioBook') {
     if (item.AlbumId) {
@@ -505,41 +526,47 @@ function cardImageCandidates(item) {
     const seriesTag = item.SeriesPrimaryImageTag || (item.ImageTags && item.ImageTags.SeriesPrimary);
     if (seriesTag) {
       urls.push(getImageUrl(item.SeriesId, 'Primary', { tag: seriesTag, maxWidth: 400, quality: 85 }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 400, quality: 85 }));
     }
-    urls.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 400, quality: 85 }));
   }
 
   if (item.ParentThumbItemId) {
     if (item.ParentThumbImageTag) {
       urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { tag: item.ParentThumbImageTag, maxWidth: 400, quality: 85 }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { maxWidth: 400, quality: 85 }));
     }
-    urls.push(getImageUrl(item.ParentThumbItemId, 'Thumb', { maxWidth: 400, quality: 85 }));
   }
 
   if (item.ParentId) {
     if (item.ParentPrimaryImageTag) {
       urls.push(getImageUrl(item.ParentId, 'Primary', { tag: item.ParentPrimaryImageTag, maxWidth: 400, quality: 85 }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.ParentId, 'Primary', { maxWidth: 400, quality: 85 }));
     }
-    urls.push(getImageUrl(item.ParentId, 'Primary', { maxWidth: 400, quality: 85 }));
   }
 
   const thumbTag = (item.ImageTags && item.ImageTags.Thumb) || item.ThumbImageTag;
   if (thumbTag) {
     urls.push(getImageUrl(item.Id, 'Thumb', { tag: thumbTag, maxWidth: 400, quality: 85 }));
+  } else if (!knowsImages) {
+    urls.push(getImageUrl(item.Id, 'Thumb', { maxWidth: 400, quality: 85 }));
   }
-  urls.push(getImageUrl(item.Id, 'Thumb', { maxWidth: 400, quality: 85 }));
 
   const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
   if (backdropTag) {
     urls.push(getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 400, quality: 85 }));
+  } else if (!knowsImages) {
+    urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 400, quality: 85 }));
   }
-  urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 400, quality: 85 }));
 
   if (item.ParentBackdropItemId) {
     if (item.ParentBackdropImageTags && item.ParentBackdropImageTags[0]) {
       urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { tag: item.ParentBackdropImageTags[0], maxWidth: 400, quality: 85 }));
+    } else if (!knowsImages) {
+      urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 400, quality: 85 }));
     }
-    urls.push(getImageUrl(item.ParentBackdropItemId, 'Backdrop', { maxWidth: 400, quality: 85 }));
   }
 
   return Array.from(new Set(urls.filter(Boolean)));

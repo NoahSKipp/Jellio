@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.91.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.91.4",
+    "summary": "A quicker first open in the browser.",
+    "highlights": [
+      {
+        "title": "Faster First Paint",
+        "description": "The page no longer waits for Google's Cast script and web font before showing anything, and cards stop asking for artwork a title doesn't have, so the art that exists shows sooner."
+      }
+    ]
+  },
+  {
     "version": "1.91.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.91.3",
