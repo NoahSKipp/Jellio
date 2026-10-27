@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.91.4] - 2026-10-27\n\n### ⚡ Performance\n\n- *(web)* Stop blocking first paint on Cast and fonts, skip images a title lacks\n",
+        "checksum": "40769387ed336a31361b853a8e52c2b5",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.4/jellio_1.91.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-27T10:24:11Z",
+        "version": "1.91.4"
+      },
+      {
         "changelog": "## [1.91.3] - 2026-10-27\n\n### 🐛 Bug Fixes\n\n- *(home)* Keep a row's scroll position while other rows load\n",
         "checksum": "003626f252fca9c02a5a766125c7cd74",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.3/jellio_1.91.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-19T20:48:27Z",
         "version": "1.86.3"
-      },
-      {
-        "changelog": "## [1.86.2] - 2026-10-19\n\n### 🐛 Bug Fixes\n\n- *(auth)* Report Jellio's real version to Jellyfin instead of 0.1.0\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.86.2 release notes\n",
-        "checksum": "a461a9822a41531e4ad6f3778636b26f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.86.2/jellio_1.86.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-19T20:20:24Z",
-        "version": "1.86.2"
       }
     ]
   }
