@@ -215,6 +215,10 @@ export async function getPrimaryNavLinks() {
     // link at all rather than one that goes nowhere useful, real
     // feedback asked for it gone outright, not just deprioritised.
     if (view.CollectionType === 'boxsets') return;
+    if (view.CollectionType === 'livetv') {
+      links.push({ icon: 'live_tv', label: t('nav_live_tv'), hash: '#/livetv' });
+      return;
+    }
     // One Jellyfin Books library holds both ebooks and audiobooks; they
     // get a shelf each. A Books library named for manga or comics is its
     // own Manga shelf instead. group: 'reading' puts these after the

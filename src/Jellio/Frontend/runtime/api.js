@@ -4789,3 +4789,116 @@ export function getSearchSuggestions(query) {
     return result || { MatchedTitle: null, Rows: [] };
   });
 }
+
+// Live TV. Channels and guide come from Jellyfin's LiveTv endpoints; a
+// channel is opened through PlaybackInfo with AutoOpenLiveStream, which
+// starts the upstream stream (about 7 s the first time) and holds one of
+// the tuner slots until /LiveStreams/Close.
+const LIVE_OPEN_TIMEOUT_MS = 30000;
+
+export function getLiveChannels(options) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const params = new URLSearchParams({
+    UserId: userId,
+    Limit: '1000',
+    SortBy: 'SortName',
+    AddCurrentProgram: 'true',
+    EnableUserData: 'true',
+    EnableImageTypes: 'Primary',
+    ImageTypeLimit: '1',
+  });
+  const path = '/LiveTv/Channels?' + params.toString();
+  if (options && options.fresh) invalidateCache('live:channels');
+  return cached('live:channels', function () {
+    return getJson(path, 20000).then(function (result) {
+      return (result && result.Items) || [];
+    });
+  }, 60000);
+}
+
+export function getLivePrograms(channelIds, fromMs, untilMs) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  return postJson('/LiveTv/Programs', {
+    UserId: userId,
+    ChannelIds: channelIds,
+    MinEndDate: new Date(fromMs).toISOString(),
+    MaxStartDate: new Date(untilMs).toISOString(),
+    SortBy: ['StartDate'],
+    Limit: 500,
+    EnableTotalRecordCount: false,
+    EnableImages: false,
+  }, 20000).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
+// No direct play: browsers cannot play the raw MPEG-TS, so Jellyfin hands
+// back an HLS TranscodingUrl. h264 and aac match the source, so the video
+// and audio are copied into the segments, not re-encoded.
+const LIVE_HLS_PROFILE = {
+  MaxStreamingBitrate: 40000000,
+  MaxStaticBitrate: 40000000,
+  DirectPlayProfiles: [],
+  TranscodingProfiles: [
+    {
+      Container: 'ts',
+      Type: 'Video',
+      VideoCodec: 'h264',
+      AudioCodec: 'aac',
+      Protocol: 'hls',
+      Context: 'Streaming',
+      MaxAudioChannels: '6',
+      MinSegments: 1,
+      BreakOnNonKeyFrames: true,
+    },
+  ],
+  ContainerProfiles: [],
+  CodecProfiles: [],
+  SubtitleProfiles: [],
+};
+
+export async function openLiveChannel(channelId) {
+  const userId = getCurrentUserId();
+  if (!userId) throw new Error('Not signed in');
+  const path = '/Items/' + channelId + '/PlaybackInfo?UserId=' + userId + '&AutoOpenLiveStream=true';
+  const info = await postJson(path, {
+    UserId: userId,
+    AutoOpenLiveStream: true,
+    DeviceProfile: LIVE_HLS_PROFILE,
+    MaxStreamingBitrate: LIVE_HLS_PROFILE.MaxStreamingBitrate,
+  }, LIVE_OPEN_TIMEOUT_MS);
+  if (info && info.ErrorCode) {
+    const err = new Error(info.ErrorCode);
+    err.code = info.ErrorCode;
+    throw err;
+  }
+  const source = info && info.MediaSources && info.MediaSources[0];
+  if (!source || !source.TranscodingUrl) {
+    const err = new Error('No playable live stream');
+    if (source && source.LiveStreamId) err.liveStreamId = source.LiveStreamId;
+    throw err;
+  }
+  return {
+    liveStreamId: source.LiveStreamId || null,
+    playSessionId: info.PlaySessionId || null,
+    mediaSourceId: source.Id,
+    hlsUrl: getServerAddress() + source.TranscodingUrl,
+  };
+}
+
+// keepalive so it still goes out when the tab is closing.
+export function closeLiveStream(liveStreamId) {
+  if (!liveStreamId) return Promise.resolve();
+  return fetch(getServerAddress() + '/LiveStreams/Close?liveStreamId=' + encodeURIComponent(liveStreamId), {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    keepalive: true,
+  }).then(function () {});
+}
+
+export function setChannelFavorite(channelId, favorite) {
+  invalidateCache('live:channels');
+  return setWatchlist(channelId, favorite);
+}

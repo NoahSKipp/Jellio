@@ -101,6 +101,9 @@ if (typeof window !== 'undefined') {
 // (movies/tv/music/books/homevideos/musicvideos, plus the generic list
 // fallback) are the same set components/sidebar.js's own LIBRARY_ROUTES
 // can produce, kept in sync by hand since there are only the two places.
+const loadLiveTv = () => import('./screens/liveTv.js').then((m) => m.renderLiveTv);
+const loadLivePlayer = () => import('./screens/livePlayer.js').then((m) => m.renderLivePlayer);
+
 const SCREENS = {
   home: renderHome,
   search: async (content, params) => (await loadSearch())(content, params),
@@ -113,6 +116,8 @@ const SCREENS = {
   feed: async (content, params) => (await loadFeed())(content, params),
   // The Calendar screen is gone; its entries are the Coming Soon row on
   // Home. Old links and bookmarks land there.
+  livetv: async (content, params) => (await loadLiveTv())(content, params),
+  live: async (content, params) => (await loadLivePlayer())(content, params),
   calendar: (content, params) => {
     try {
       window.history.replaceState(null, '', '#/home');
@@ -135,7 +140,7 @@ const SCREENS = {
 
 // The player owns the whole viewport, no persistent sidebar competing
 // with video controls for space or attention.
-const FULLSCREEN_ROUTES = new Set(['play', 'read', 'listen']);
+const FULLSCREEN_ROUTES = new Set(['play', 'read', 'listen', 'live']);
 
 // What still works without the server (runtime/offline.js): downloads,
 // and the reader and players opening them. Any other route shows
@@ -169,7 +174,7 @@ document.addEventListener('jellio:connectivity', function (event) {
     scheduleNavRecheck(2, 0);
   }
   const path = parseRoute().path;
-  if (path === 'read' || path === 'listen' || path === 'play') return;
+  if (path === 'read' || path === 'listen' || path === 'play' || path === 'live') return;
   lastRenderedRouteKey = null;
   sync();
 });

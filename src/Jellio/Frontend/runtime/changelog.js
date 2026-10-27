@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.93.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.93.0",
+    "summary": "Live TV comes to Jellio.",
+    "highlights": [
+      {
+        "title": "Live TV",
+        "description": "A Live TV page lists every channel with what is on now and how far along it is, your favourites first, with search and a 24 hour guide for each channel."
+      },
+      {
+        "title": "Live Player",
+        "description": "Change channel with the arrow keys, press I for now and next or G for the guide. Short drops in the signal are ridden out, and the channel is released as soon as you leave."
+      }
+    ]
+  },
+  {
     "version": "1.92.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.92.0",

@@ -15984,3 +15984,406 @@
   z-index: 0;
   pointer-events: none;
 }
+
+/* Live TV: channel grid, guide sheet and the live player. */
+.jellio-live-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 24px var(--jellio-safe-gutter) 8px;
+}
+
+.jellio-live-count {
+  color: var(--jellio-text-tertiary);
+  font-size: 0.95em;
+}
+
+.jellio-live-search {
+  flex: 1 1 280px;
+  max-width: 520px;
+  margin-left: auto;
+}
+
+.jellio-live-body {
+  padding: 0 var(--jellio-safe-gutter) 48px;
+}
+
+.jellio-live-body .jellio-row-title {
+  margin: 24px 0 12px;
+}
+
+.jellio-live-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--jellio-card-gap);
+}
+
+.jellio-live-tile {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  background: var(--jellio-card-bg);
+  border-radius: var(--jellio-card-radius);
+  overflow: hidden;
+  transition: transform 160ms var(--jellio-ease-out), box-shadow 160ms var(--jellio-ease-out);
+}
+
+.jellio-live-tile:hover,
+.jellio-live-tile:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px rgb(var(--jellio-focus-color-rgb) / 0.85);
+}
+
+.jellio-live-tile-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 8px 12px 12px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-live-tile-main:focus-visible {
+  outline: none;
+}
+
+.jellio-live-logo {
+  position: relative;
+  flex: 0 0 auto;
+  width: 72px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--jellio-bg-elevated);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.jellio-live-logo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.jellio-live-logo-loaded img {
+  opacity: 1;
+}
+
+.jellio-live-logo-loaded .jellio-live-logo-initials {
+  visibility: hidden;
+}
+
+.jellio-live-logo-initials {
+  font-weight: 700;
+  color: var(--jellio-text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.jellio-live-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.jellio-live-tile-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-live-tile-now {
+  color: var(--jellio-text-secondary);
+  font-size: 0.92em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-live-tile-idle {
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-live-tile-times {
+  color: var(--jellio-text-tertiary);
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-live-progress {
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.14);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.jellio-live-progress-fill {
+  height: 100%;
+  background: var(--jellio-season-accent);
+}
+
+.jellio-live-tile-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px 6px 0;
+}
+
+.jellio-live-icon-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+}
+
+.jellio-live-icon-button:hover,
+.jellio-live-icon-button:focus-visible {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--jellio-text-color);
+  outline: none;
+}
+
+.jellio-live-icon-button-active {
+  color: var(--jellio-trending-color);
+}
+
+.jellio-live-empty {
+  color: var(--jellio-text-secondary);
+  padding: 32px 0;
+}
+
+.jellio-live-guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgb(0 0 0 / 0.6);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.jellio-live-guide {
+  width: min(520px, 100%);
+  height: 100%;
+  background: var(--jellio-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -12px 0 40px rgb(0 0 0 / 0.5);
+}
+
+.jellio-live-guide-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border-bottom: 1px solid var(--jellio-border-color);
+}
+
+.jellio-live-guide-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jellio-live-guide-channel {
+  font-weight: 700;
+  font-size: 1.15em;
+}
+
+.jellio-live-guide-sub {
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-live-guide-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.jellio-live-guide-list {
+  overflow-y: auto;
+  padding: 8px 20px 32px;
+}
+
+.jellio-live-guide-day {
+  position: sticky;
+  top: 0;
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-tertiary);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 14px 0 6px;
+}
+
+.jellio-live-guide-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.jellio-live-guide-row-airing .jellio-live-guide-title {
+  font-weight: 700;
+}
+
+.jellio-live-guide-time {
+  color: var(--jellio-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-screen-live-player {
+  padding: 0;
+}
+
+.jellio-live-stage {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 1000;
+}
+
+.jellio-live-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.jellio-live-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.jellio-live-status-text {
+  color: var(--jellio-text-color);
+  font-size: 1.1em;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
+}
+
+.jellio-live-info {
+  position: absolute;
+  left: var(--jellio-safe-gutter);
+  bottom: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: min(720px, calc(100% - 2 * var(--jellio-safe-gutter)));
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: rgb(0 0 0 / 0.65);
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 220ms var(--jellio-ease-out), transform 220ms var(--jellio-ease-out);
+  pointer-events: none;
+}
+
+.jellio-live-info-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.jellio-live-info-text {
+  min-width: 0;
+}
+
+.jellio-live-info-channel {
+  font-weight: 700;
+  font-size: 1.2em;
+}
+
+.jellio-live-info-now,
+.jellio-live-info-next {
+  color: var(--jellio-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-live-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px var(--jellio-safe-gutter);
+  background: linear-gradient(rgb(0 0 0 / 0.7), transparent);
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.jellio-live-topbar-visible,
+.jellio-live-topbar:focus-within {
+  opacity: 1;
+}
+
+.jellio-live-topbar .jellio-live-icon-button {
+  color: var(--jellio-text-color);
+}
+
+.jellio-live-hint {
+  margin-left: auto;
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+}
+
+.jellio-live-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgb(0 0 0 / 0.75);
+  text-align: center;
+  padding: 24px;
+}
+
+.jellio-live-error-text {
+  max-width: 520px;
+  font-size: 1.1em;
+}
+
+@media (max-width: 700px) {
+  .jellio-live-hint {
+    display: none;
+  }
+  .jellio-live-guide-row {
+    grid-template-columns: 90px 1fr;
+  }
+}
+
+.jellio-live-status[hidden],
+.jellio-live-error[hidden] {
+  display: none;
+}
