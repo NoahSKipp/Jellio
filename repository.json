@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.93.0] - 2026-10-27\n\n### 🚀 Features\n\n- *(livetv)* Live TV screen, guide and live player\n",
+        "checksum": "452539ecf4d5ef67a0a149c35ea92b80",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.93.0/jellio_1.93.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-27T22:48:52Z",
+        "version": "1.93.0"
+      },
+      {
         "changelog": "## [1.92.0] - 2026-10-27\n\n### 🚀 Features\n\n- *(home)* Fold the Calendar into the Coming Soon row and remove the Calendar tab\n",
         "checksum": "1dedda056aa6ce5c3198ecfd92d0e374",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.92.0/jellio_1.92.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T11:31:27Z",
         "version": "1.87.1"
-      },
-      {
-        "changelog": "## [1.87.0] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Add display language selection and onboarding setup wizard\n- *(i18n)* Add French, Italian, and Portuguese translations and streamline onboarding\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.0 release notes\n",
-        "checksum": "b0f1b5cfa63926cfbe871e612bc3eba6",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.0/jellio_1.87.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T10:59:35Z",
-        "version": "1.87.0"
       }
     ]
   }
