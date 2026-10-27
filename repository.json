@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.92.0] - 2026-10-27\n\n### 🚀 Features\n\n- *(home)* Fold the Calendar into the Coming Soon row and remove the Calendar tab\n",
+        "checksum": "1dedda056aa6ce5c3198ecfd92d0e374",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.92.0/jellio_1.92.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-27T22:32:49Z",
+        "version": "1.92.0"
+      },
+      {
         "changelog": "## [1.91.4] - 2026-10-27\n\n### ⚡ Performance\n\n- *(web)* Stop blocking first paint on Cast and fonts, skip images a title lacks\n",
         "checksum": "40769387ed336a31361b853a8e52c2b5",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.4/jellio_1.91.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T10:59:35Z",
         "version": "1.87.0"
-      },
-      {
-        "changelog": "## [1.86.3] - 2026-10-19\n\n### 🐛 Bug Fixes\n\n- *(hubs)* Centre the brand glow behind the hub's logo\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.86.3 release notes\n- *(changelog)* Note the wider hub glow in 1.86.3\n\n### 🎨 Styling\n\n- *(hubs)* Wider glow behind the hub logo, fading out below the header\n",
-        "checksum": "0a70e6327a5979545786b2a4e768aa73",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.86.3/jellio_1.87.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-19T20:48:27Z",
-        "version": "1.86.3"
       }
     ]
   }
