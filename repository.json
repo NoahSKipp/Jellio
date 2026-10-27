@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.91.3] - 2026-10-27\n\n### 🐛 Bug Fixes\n\n- *(home)* Keep a row's scroll position while other rows load\n",
+        "checksum": "003626f252fca9c02a5a766125c7cd74",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.3/jellio_1.91.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-27T10:05:14Z",
+        "version": "1.91.3"
+      },
+      {
         "changelog": "## [1.91.2] - 2026-10-26\n\n### 🐛 Bug Fixes\n\n- *(auth)* Use the real user name and avatar for a session taken over from the native login\n",
         "checksum": "8e9fa75e4d5dd62b3902b030fccc39e5",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.2/jellio_1.91.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-19T20:20:24Z",
         "version": "1.86.2"
-      },
-      {
-        "changelog": "## [1.86.1] - 2026-10-19\n\n### 🐛 Bug Fixes\n\n- *(player)* Credits at the start of an episode no longer trigger Skip Credits and Next Episode\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.86.1 release notes\n",
-        "checksum": "d4050029415e88ec84e22abe4fb400c3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.86.1/jellio_1.86.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-19T19:54:18Z",
-        "version": "1.86.1"
       }
     ]
   }
