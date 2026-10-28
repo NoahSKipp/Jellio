@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.98.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.98.1",
+    "summary": "Adding a stream finds players nested one level deeper.",
+    "highlights": [
+      {
+        "title": "Better Stream Links",
+        "description": "Adding a link to a page whose player sits inside a second embedded player now finds the stream, and pages that only show their player after being opened from their own site get a second try that way."
+      }
+    ]
+  },
+  {
     "version": "1.98.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.98.0",
