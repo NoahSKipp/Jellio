@@ -340,10 +340,9 @@ function buildComingSoonCard(entry) {
 async function buildComingSoonRow() {
   let entries = [];
   try {
-    const [all, animeIds] = await Promise.all([getCalendarEntries(), getAnimeIds()]);
-    entries = (all || []).filter(function (entry) {
-      return !animeIds.has(String(entry.ItemId || '').replace(/-/g, '').toLowerCase());
-    });
+    // Built from the reader's own Watchlist, so anime they follow stays in
+    // (the Calendar this row replaced never left it out either).
+    entries = (await getCalendarEntries()) || [];
   } catch (err) {
     console.warn('Jellio: could not load Coming Soon', err);
     return null;
