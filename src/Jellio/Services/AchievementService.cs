@@ -506,6 +506,27 @@ public class AchievementService(
         }
     }
 
+    public async Task CreditLiveWatchingAsync(Guid userId, long ticks)
+    {
+        if (ticks <= 0)
+        {
+            return;
+        }
+
+        await _writeLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var stats = store.Load(userId);
+            stats.LiveTvTicks += ticks;
+            ApplyCatalog(stats, DateTime.UtcNow);
+            store.Save(userId, stats);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
     private static void ApplyCatalog(UserAchievementStats stats, DateTime nowUtc)
     {
         foreach (var badge in AchievementCatalog.All)

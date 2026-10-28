@@ -243,6 +243,7 @@ public class AchievementsController(AchievementStore store, AchievementService a
             s.CurrentDailyStreak = fresh.CurrentDailyStreak;
             s.BestDailyStreak = fresh.BestDailyStreak;
             s.GroupsStarted = fresh.GroupsStarted;
+            s.LiveTvTicks = fresh.LiveTvTicks;
             s.GroupWatchesTogether = fresh.GroupWatchesTogether;
             s.GenreCompletions = fresh.GenreCompletions;
             s.CurrentDayKey = fresh.CurrentDayKey;
@@ -296,6 +297,7 @@ public class AchievementsController(AchievementStore store, AchievementService a
             stats.PagesRead,
             ListenedHours = (int)(stats.ListenedTicks / TimeSpan.TicksPerHour),
             ListenedMinutes = (int)(stats.ListenedTicks / TimeSpan.TicksPerMinute),
+            LiveTvMinutes = (int)(stats.LiveTvTicks / TimeSpan.TicksPerMinute),
             ReadingMinutes = (int)(stats.ReadingTicks / TimeSpan.TicksPerMinute),
             MangaReadingMinutes = (int)(stats.MangaReadingTicks / TimeSpan.TicksPerMinute),
             BookPagesRead = Math.Max(0, stats.PagesRead - stats.MangaPagesRead),

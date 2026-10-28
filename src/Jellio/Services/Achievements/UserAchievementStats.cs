@@ -44,6 +44,10 @@ public class UserAchievementStats
     // own two group-watch endpoints credit these directly instead.
     public int GroupsStarted { get; set; }
 
+    // Time spent watching Live TV channels and streams added by link, from
+    // LiveWatchingService's check-ins.
+    public long LiveTvTicks { get; set; }
+
     public int GroupWatchesTogether { get; set; }
 
     public Dictionary<string, int> GenreCompletions { get; set; } = new(StringComparer.OrdinalIgnoreCase);

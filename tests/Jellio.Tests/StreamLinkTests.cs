@@ -405,3 +405,57 @@ internal class StreamLinkStoreTestsPaths : System.Reflection.DispatchProxy
 
     protected override object? Invoke(System.Reflection.MethodInfo? targetMethod, object?[]? args) => _dir;
 }
+
+public class LiveWatchingTests
+{
+    private static Jellio.Services.LiveWatchingEntry At(Guid user, DateTimeOffset when, bool paused = false) =>
+        new(user, "noah", "ch1", "Sky Sports F1", "Qualifying", "tuner", null, paused, "TV", "Jellio TV", when);
+
+    [Fact]
+    public async Task CountsTimeBetweenCheckInsAndFlushesEveryFiveMinutes()
+    {
+        var credited = new List<long>();
+        var service = new Jellio.Services.LiveWatchingService((_, ticks) => { credited.Add(ticks); return Task.CompletedTask; });
+        var user = Guid.NewGuid();
+        var start = DateTimeOffset.UtcNow;
+
+        for (var i = 0; i <= 10; i++)
+        {
+            await service.ReportAsync(At(user, start.AddSeconds(30 * i)));
+        }
+
+        // Ten half-minute gaps: written once at five minutes.
+        Assert.Equal(new[] { TimeSpan.FromMinutes(5).Ticks }, credited);
+        Assert.Equal(0, service.PendingTicks(user));
+        Assert.Single(service.Current());
+    }
+
+    [Fact]
+    public async Task PausesAndLongGapsDoNotCountAndStopFlushes()
+    {
+        var credited = new List<long>();
+        var service = new Jellio.Services.LiveWatchingService((_, ticks) => { credited.Add(ticks); return Task.CompletedTask; });
+        var user = Guid.NewGuid();
+        var start = DateTimeOffset.UtcNow;
+
+        await service.ReportAsync(At(user, start));
+        await service.ReportAsync(At(user, start.AddSeconds(30)));
+        await service.ReportAsync(At(user, start.AddSeconds(60), paused: true));
+        await service.ReportAsync(At(user, start.AddSeconds(90), paused: true));
+        await service.ReportAsync(At(user, start.AddSeconds(120)));
+        await service.ReportAsync(At(user, start.AddSeconds(420)));
+        Assert.Equal(TimeSpan.FromSeconds(30).Ticks, service.PendingTicks(user));
+
+        await service.StopAsync(user);
+        Assert.Equal(new[] { TimeSpan.FromSeconds(30).Ticks }, credited);
+        Assert.Empty(service.Current());
+    }
+
+    [Fact]
+    public void LiveBadgesUnlockByHours()
+    {
+        var stats = new Jellio.Services.Achievements.UserAchievementStats { LiveTvTicks = TimeSpan.FromHours(26).Ticks };
+        var unlocked = Jellio.Services.Achievements.AchievementCatalog.All.Where(b => b.Id.StartsWith("live-") && b.IsUnlocked(stats)).Select(b => b.Id);
+        Assert.Equal(new[] { "live-tuned-in", "live-regular" }, unlocked);
+    }
+}

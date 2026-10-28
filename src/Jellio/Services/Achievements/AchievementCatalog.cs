@@ -90,6 +90,10 @@ public static class AchievementCatalog
         new("horror-fan", "Horror Fan", "Finish 25 horror titles.", AchievementRarity.Rare, s => s.GenreCompletions.GetValueOrDefault("Horror") >= 25),
         new("comedy-fan", "Comedy Fan", "Finish 25 comedy titles.", AchievementRarity.Rare, s => s.GenreCompletions.GetValueOrDefault("Comedy") >= 25),
         new("documentary-buff", "Documentary Buff", "Finish 25 documentaries.", AchievementRarity.Rare, s => s.GenreCompletions.GetValueOrDefault("Documentary") >= 25),
+        new("live-tuned-in", "Tuned In", "Watch 1 hour of Live TV.", AchievementRarity.Common, s => s.LiveTvTicks >= TicksPerHour),
+        new("live-regular", "Live Regular", "Watch 25 hours of Live TV.", AchievementRarity.Rare, s => s.LiveTvTicks >= 25 * TicksPerHour),
+        new("live-front-row", "Front Row Seat", "Watch 100 hours of Live TV.", AchievementRarity.Epic, s => s.LiveTvTicks >= 100 * TicksPerHour),
+        new("live-always-on-air", "Always On Air", "Watch 500 hours of Live TV.", AchievementRarity.Legendary, s => s.LiveTvTicks >= 500 * TicksPerHour),
         .. ReadingBadges,
     ];
 }
