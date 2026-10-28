@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.99.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.99.2",
+    "summary": "A slow or unreachable player no longer stops Add Stream.",
+    "highlights": [
+      {
+        "title": "Add Stream Keeps Looking",
+        "description": "When one of a channel page's players can't be reached, Jellio moves on to the next one instead of giving up with a timeout."
+      }
+    ]
+  },
+  {
     "version": "1.99.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.99.1",
