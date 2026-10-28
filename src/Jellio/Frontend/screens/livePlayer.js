@@ -414,7 +414,7 @@ export async function renderLivePlayer(root, params) {
   } catch (err) {
     showError(describeOpenFailure(err));
   }
-  const id = params && params.id;
+  const id = params && params.get('id');
   const target = channels.find(function (c) {
     return c.id === id;
   }) || (id ? { id: id, name: '', imageTag: null, now: null } : null);
