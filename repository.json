@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.99.2] - 2026-10-28\n\n### 🐛 Bug Fixes\n\n- *(streams)* An unreachable player route no longer ends the whole search\n\n### 📚 Documentation\n\n- *(changelog)* Note the Add Stream timeout fix in 1.99.2\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.99.2\n",
+        "checksum": "08ea45d6183cacc29a76b2df7e1401e3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.2/jellio_1.99.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-28T13:28:25Z",
+        "version": "1.99.2"
+      },
+      {
         "changelog": "## [1.99.1] - 2026-10-28\n\n### 🐛 Bug Fixes\n\n- *(streams)* Skip pages already tried and allow 60 s to resolve a link\n\n### 📚 Documentation\n\n- *(changelog)* Note faster stream links in 1.99.1\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.99.1\n",
         "checksum": "3d0a7eafd373578a37c91dcd58a0663b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.1/jellio_1.99.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T21:11:53Z",
         "version": "1.87.10"
-      },
-      {
-        "changelog": "## [1.87.9] - 2026-10-20\n\n### Features\n\n- *(subtitles)* Add explicit \"Off (no subtitles by default)\" option to the onboarding setup wizard and playback settings\n- *(playback)* Default subtitle selection in the onboarding setup wizard to Off to prevent forced auto-selection\n- *(sync)* Save SubtitleMode to None and synchronize default subtitles to server profile preferences across sessions and devices\n- *(player)* Ensure player auto-select respects SubtitleMode None and preferredLanguage off without attaching subtitle tracks\n",
-        "checksum": "a4d3e0f603cc4267a96b88e9f335b634",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.9/jellio_1.87.9.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T16:28:46Z",
-        "version": "1.87.9"
       }
     ]
   }
