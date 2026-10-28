@@ -48,6 +48,9 @@ function messageFor(n) {
   if (n.Kind === 'streamlink') {
     return t('live_link_dead_notice', { name: n.Name });
   }
+  if (n.Kind === 'streamlink_removed') {
+    return t('live_link_removed_notice', { name: n.Name, days: n.Detail || '' });
+  }
   if (n.Kind === 'whatsnew') {
     return n.Name;
   }
@@ -65,6 +68,7 @@ function messageFor(n) {
 
 function subtitleFor(n) {
   if (n.Kind === 'streamlink') return t('live_link_dead_sub');
+  if (n.Kind === 'streamlink_removed') return t('live_link_section');
   if (n.Kind === 'whatsnew') return n.Detail || "What's new in Jellio";
   if (n.Kind === 'announcement') return 'From the server';
   if (n.Kind === 'manga') return n.Detail || 'New chapter';
@@ -74,7 +78,7 @@ function subtitleFor(n) {
 function openItem(n) {
   if (n.Kind === 'announcement' || n.Kind === 'whatsnew') return;
   hideNotificationsPanel();
-  if (n.Kind === 'streamlink') {
+  if (n.Kind === 'streamlink' || n.Kind === 'streamlink_removed') {
     navigateTo('#/livetv');
     return;
   }
@@ -122,7 +126,7 @@ function buildRow(n) {
     const icon = el('span', 'material-icons jellio-notifications-row-poster-icon auto_awesome');
     icon.setAttribute('aria-hidden', 'true');
     poster.appendChild(icon);
-  } else if (n.Kind === 'streamlink') {
+  } else if (n.Kind === 'streamlink' || n.Kind === 'streamlink_removed') {
     const icon = el('span', 'material-icons jellio-notifications-row-poster-icon link_off');
     icon.setAttribute('aria-hidden', 'true');
     poster.appendChild(icon);
