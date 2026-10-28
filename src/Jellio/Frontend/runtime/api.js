@@ -5010,6 +5010,21 @@ export function reportLiveChannel(channelId, ok, error) {
   reportQuietly('/Jellio/LiveHealth/' + encodeURIComponent(channelId), { Ok: !!ok, Error: error || null });
 }
 
+// Now Playing and the live TV badges: every half minute while live plays.
+export function reportLiveWatching(body) {
+  reportQuietly('/Jellio/now-playing/live', body);
+}
+
+export function stopLiveWatching() {
+  try {
+    fetch(getServerAddress() + '/Jellio/now-playing/live', {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (err) {}
+}
+
 export function reportStreamLinkPlay(linkId, ok) {
   reportQuietly('/Jellio/StreamLinks/' + encodeURIComponent(linkId) + '/report', { Ok: !!ok });
 }

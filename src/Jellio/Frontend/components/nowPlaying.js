@@ -43,6 +43,7 @@ function pageText(item) {
 }
 
 function subtitle(item) {
+  if (item.Type === 'TvChannel') return item.SeriesName || '';
   if (item.Type === 'Episode') {
     const parts = [];
     if (item.ParentIndexNumber != null && item.IndexNumber != null) {
@@ -66,6 +67,7 @@ function displayTitle(item) {
 
 function statusWord(session) {
   if (session.Activity === 'reading') return 'Reading';
+  if (session.Activity === 'watching_live') return session.IsPaused ? 'Paused' : t('live_now_playing');
   if (session.IsPaused) return 'Paused';
   return session.Activity === 'listening' ? 'Listening' : 'Playing';
 }
@@ -73,6 +75,10 @@ function statusWord(session) {
 // Covers: a manga's series cover, a book's (Chaptarr) cover, an
 // audiobook's album art, else the item's own image.
 function posterUrls(item, imageId) {
+  if (item.Type === 'TvChannel') {
+    if (item.Source === 'link') return item.LogoUrl ? [item.LogoUrl] : [];
+    return item.Id ? [getImageUrl(item.Id, 'Primary', { maxWidth: 200 })] : [];
+  }
   if (item.Type === 'Manga') {
     return [item.MangaId ? getStreamCoverUrl(item.MangaId) : getMangaSeriesCoverUrl(item.Id)];
   }
@@ -128,6 +134,11 @@ function buildRow(session) {
 
   function open() {
     hideNowPlayingPanel();
+    // A live channel opens that channel; someone else's link opens Live TV.
+    if (item.Type === 'TvChannel') {
+      navigateTo(item.Source !== 'link' && item.Id ? '#/live?id=' + encodeURIComponent(item.Id) : '#/livetv');
+      return;
+    }
     // A manga opens its series on the Manga shelf.
     if (item.Type === 'Manga' && item.SeriesName) {
       getMangaShelfHash().then(function (shelf) {

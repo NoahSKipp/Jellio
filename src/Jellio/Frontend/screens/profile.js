@@ -420,6 +420,7 @@ function buildLifetimeStats(achievements) {
         ['Episodes', achievements.EpisodesCompleted],
         ['Total watched', achievements.TotalCompleted],
         ['Best binge', achievements.BestBingeStreak],
+        ['Live TV', formatMinutes(achievements.LiveTvMinutes)],
       ],
     ],
     [

@@ -19,6 +19,8 @@ import {
   getLiveHealth,
   reportLiveChannel,
   reportStreamLinkPlay,
+  reportLiveWatching,
+  stopLiveWatching,
 } from '../runtime/api.js';
 import { flattenStreamLinks, parseLinkChannelId, streamLinkErrorKey, playableInBrowser } from '../runtime/streamLinks.js';
 import {
@@ -128,6 +130,8 @@ export async function renderLivePlayer(root, params) {
   let chromeTimer = null;
   let attempt = 0;
   let playingSince = 0;
+  let watchTimer = null;
+  let currentProgramme = null;
 
   // Streams added by link hold no tuner: nothing to close for them.
   function openAny(id) {
@@ -216,6 +220,7 @@ export async function renderLivePlayer(root, params) {
       const programs = await getLivePrograms([shown.id], nowMs, nowMs + 6 * 60 * 60 * 1000);
       if (shown !== channel) return;
       const pair = nowAndNext(programs, Date.now());
+      if (shown === channel) currentProgramme = pair.now ? pair.now.name : null;
       if (pair.now) nowLine.textContent = t('live_on_now') + ': ' + pair.now.name + ' (' + formatTime(pair.now.start) + ' – ' + formatTime(pair.now.end) + ')';
       if (pair.next) nextLine.textContent = t('live_up_next') + ': ' + pair.next.name + ' (' + formatTime(pair.next.start) + ')';
     } catch (err) {}
@@ -323,6 +328,7 @@ export async function renderLivePlayer(root, params) {
       setStatus('');
       playingSince = Date.now();
       reportOutcome(target, true);
+      startWatchReports();
       const report = {
         Channel: target.name,
         OpenMs: openedMs,
@@ -456,7 +462,28 @@ export async function renderLivePlayer(root, params) {
   stage.addEventListener('mousemove', showChrome);
 
   // The tab closing still releases the tuner slot.
+  // Who's watching what, and the hours for the live TV badges.
+  function sendWatchReport() {
+    if (!channel || left || !playingSince) return;
+    reportLiveWatching({
+      ChannelId: channel.userStream ? null : channel.id,
+      ChannelName: channel.name || t('nav_live_tv'),
+      Programme: channel.userStream ? channel.group || null : currentProgramme || (channel.now && channel.now.name) || null,
+      Source: channel.userStream ? 'link' : 'tuner',
+      LogoUrl: channel.userStream ? channel.logoUrl || null : null,
+      IsPaused: video.paused,
+      DeviceName: navigator.platform || null,
+      Client: 'Jellio Web',
+    });
+  }
+
+  function startWatchReports() {
+    sendWatchReport();
+    if (!watchTimer) watchTimer = window.setInterval(sendWatchReport, 30000);
+  }
+
   function onPageHide() {
+    stopLiveWatching();
     const stream = lifecycle.current();
     if (stream && stream.liveStreamId) closeLiveStream(stream.liveStreamId).catch(function () {});
   }
@@ -489,6 +516,8 @@ export async function renderLivePlayer(root, params) {
     attempt++;
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('pagehide', onPageHide);
+    window.clearInterval(watchTimer);
+    stopLiveWatching();
     window.clearInterval(stallTimer);
     window.clearTimeout(infoTimer);
     window.clearTimeout(switchTimer);
