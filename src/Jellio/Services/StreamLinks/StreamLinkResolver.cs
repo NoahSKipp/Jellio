@@ -22,9 +22,10 @@ public class StreamLinkResolver : IDisposable
 
     private const int MaxTextBytes = 4 * 1024 * 1024;
     private const int SniffBytes = 4096;
-    private const int MaxFetchesPerResolve = 12;
-    // Page -> player iframe -> nested player iframe -> the stream itself.
-    private const int MaxDepth = 3;
+    // A page that offers several players can need a few dead ends before the right one.
+    private const int MaxFetchesPerResolve = 24;
+    // Channel page -> player page -> embedded player -> nested player -> the stream itself.
+    private const int MaxDepth = 4;
     private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(2);
 

@@ -117,6 +117,18 @@ public class StreamLinkTests
     }
 
     [Fact]
+    public void FollowsPlayerButtonsAfterIframes()
+    {
+        var page = new Uri("https://example.com/watch.php?id=9");
+        var html = "<iframe src=\"/stream/stream-9.php\"></iframe>"
+            + "<button class=\"player-btn\" data-url=\"https://example.com/stream/stream-9.php\">Player 1</button>"
+            + "<button class=\"player-btn\" data-url=\"https://example.com/player/stream-9.php\">Player 2</button>";
+        var found = StreamLinkParser.FindCandidates(html, page).Select(u => u.AbsoluteUri).ToList();
+
+        Assert.Equal(new[] { "https://example.com/stream/stream-9.php", "https://example.com/player/stream-9.php" }, found);
+    }
+
+    [Fact]
     public void SniffsMediaContainers()
     {
         var ts = new byte[400];

@@ -290,6 +290,13 @@ public static partial class StreamLinkParser
             Add(m.Groups[1].Value);
         }
 
+        // Pages that offer several players as buttons keep each player's
+        // page in a data attribute; those are the last ones worth trying.
+        foreach (Match m in DataPlayerRegex().Matches(text))
+        {
+            Add(m.Groups[1].Value);
+        }
+
         return found;
     }
 
@@ -397,6 +404,9 @@ public static partial class StreamLinkParser
 
     [GeneratedRegex(@"<iframe\b[^>]*?\bsrc\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase)]
     private static partial Regex IframeRegex();
+
+    [GeneratedRegex(@"\bdata-(?:url|src|embed|player)\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase)]
+    private static partial Regex DataPlayerRegex();
 
     [GeneratedRegex(@"URI=""([^""]+)""")]
     private static partial Regex UriAttributeRegex();
