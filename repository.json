@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.99.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Channel pages that offer several players resolve as pasted\n\n### 🐛 Bug Fixes\n\n- *(streams)* Find players nested a level deeper, retry with the site's own referer\n- *(streams)* Throw when no stream is found without a throw expression\n\n### 📚 Documentation\n\n- *(changelog)* Note better stream links in 1.98.1\n- *(changelog)* Reword the 1.98.1 stream link note\n- *(changelog)* File the stream link note under 1.99.0, the version this release gets\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.98.1\n",
+        "checksum": "ed6a4b3aa941c1840609d66043c2ca25",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.0/jellio_1.99.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-28T11:34:18Z",
+        "version": "1.99.0"
+      },
+      {
         "changelog": "## [1.98.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(now-playing)* Live TV check-ins and badges for hours watched\n- *(livetv)* Show live viewing in Now Playing and Live TV time on profiles\n\n### 📚 Documentation\n\n- *(changelog)* Note Live TV in Now Playing in 1.98.0\n",
         "checksum": "49636ef3d1a68ac236e2050b01c79f09",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.98.0/jellio_1.98.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T16:15:09Z",
         "version": "1.87.8"
-      },
-      {
-        "changelog": "## [1.87.7] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Complete 100% deep-dive UI localization across all remaining screens, components, dialogs, toasts, and controls\n- *(i18n)* Exact dictionary parity across all 7 supported display languages (en, de, es, pl, fr, it, pt) with 795 keys each\n- *(vocab)* Full localization for vocabulary deck management, SRS review sessions, flashcard intervals, and dictionary lookup states\n- *(manga)* Localize chapter search filters, source checking statuses, Suwayomi CBZ format warnings, and shelf category assignment\n- *(player)* Translate dialogue boost and night mode status toggles, cast device section, wireless streaming, and failover notifications\n- *(settings)* Localize native application update descriptions and status indicators for macOS\n",
-        "checksum": "83a2c69715ae1cbe216cf2c3b3033720",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.7/jellio_1.87.7.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T14:50:29Z",
-        "version": "1.87.7"
       }
     ]
   }
