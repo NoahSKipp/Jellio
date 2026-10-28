@@ -1,10 +1,21 @@
 // Live TV: every channel with what is on now, favourites first, a search
-// box, and a 24 hour guide per channel. Picking a channel opens the live
-// player (screens/livePlayer.js).
+// box, and a 24 hour guide per channel. Streams the user added by link sit
+// on top as My streams. Picking a channel opens the live player
+// (screens/livePlayer.js).
 import { t, getDisplayLanguage } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
-import { getLiveChannels, getLivePrograms, getImageUrl, setChannelFavorite } from '../runtime/api.js';
+import {
+  getLiveChannels,
+  getLivePrograms,
+  getImageUrl,
+  setChannelFavorite,
+  getStreamLinks,
+  addStreamLink,
+  removeStreamLink,
+  refreshStreamLink,
+} from '../runtime/api.js';
+import { flattenStreamLinks, groupStreamLinks, streamLinkErrorKey, PLAYLIST_PREVIEW } from '../runtime/streamLinks.js';
 import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, GUIDE_HOURS } from '../runtime/liveTv.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -65,12 +76,18 @@ export function buildChannelLogo(channel, size) {
   const wrap = el('div', 'jellio-live-logo');
   const fallback = el('span', 'jellio-live-logo-initials', initials(channel.name));
   wrap.appendChild(fallback);
-  if (channel.imageTag) {
+  const src = channel.imageTag
+    ? getImageUrl(channel.id, 'Primary', { tag: channel.imageTag, maxWidth: size || 160 })
+    : channel.logoUrl && /^https:/i.test(channel.logoUrl)
+      ? channel.logoUrl
+      : null;
+  if (src) {
     const img = document.createElement('img');
     img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
-    img.src = getImageUrl(channel.id, 'Primary', { tag: channel.imageTag, maxWidth: size || 160 });
+    img.referrerPolicy = 'no-referrer';
+    img.src = src;
     img.addEventListener('load', function () {
       wrap.classList.add('jellio-live-logo-loaded');
     });
@@ -226,6 +243,149 @@ function buildChannelTile(channel, onFavorite) {
   return tile;
 }
 
+function buildUserTile(channel, onRemove) {
+  const tile = el('div', 'jellio-live-tile');
+  const main = el('button', 'jellio-live-tile-main');
+  main.type = 'button';
+  main.setAttribute('aria-label', channel.name);
+  main.addEventListener('click', function () {
+    openChannel(channel);
+  });
+  main.appendChild(buildChannelLogo(channel));
+  const text = el('div', 'jellio-live-tile-text');
+  text.appendChild(el('div', 'jellio-live-tile-name', channel.name));
+  if (channel.group) text.appendChild(el('div', 'jellio-live-tile-now jellio-live-tile-idle', channel.group));
+  main.appendChild(text);
+  tile.appendChild(main);
+  if (onRemove) {
+    const side = el('div', 'jellio-live-tile-actions');
+    side.appendChild(confirmButton('delete', t('live_link_remove'), onRemove));
+    tile.appendChild(side);
+  }
+  return tile;
+}
+
+// Removing asks for a second press within a few seconds instead of a dialog.
+function confirmButton(icon, label, onConfirm) {
+  const button = el('button', 'jellio-live-icon-button');
+  button.type = 'button';
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  const glyph = el('span', 'material-icons', icon);
+  button.appendChild(glyph);
+  let armed = null;
+  button.addEventListener('click', function () {
+    if (armed) {
+      window.clearTimeout(armed);
+      armed = null;
+      onConfirm();
+      return;
+    }
+    button.classList.add('jellio-live-icon-button-armed');
+    glyph.textContent = 'delete_forever';
+    button.title = t('live_link_remove_confirm');
+    button.setAttribute('aria-label', t('live_link_remove_confirm'));
+    armed = window.setTimeout(function () {
+      armed = null;
+      button.classList.remove('jellio-live-icon-button-armed');
+      glyph.textContent = icon;
+      button.title = label;
+      button.setAttribute('aria-label', label);
+    }, 4000);
+  });
+  return button;
+}
+
+// A link to a stream, an M3U list or a page with a player; the server
+// finds the stream and saves it for this user.
+function openAddSheet(onAdded) {
+  const overlay = el('div', 'jellio-live-guide-overlay');
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  const panel = el('form', 'jellio-live-guide jellio-live-add');
+  panel.noValidate = true;
+  const header = el('div', 'jellio-live-guide-header');
+  const titles = el('div', 'jellio-live-guide-titles');
+  titles.appendChild(el('div', 'jellio-live-guide-channel', t('live_link_add_title')));
+  titles.appendChild(el('div', 'jellio-live-guide-sub', t('live_link_add_intro')));
+  header.appendChild(titles);
+  const closeButton = el('button', 'jellio-settings-button', '✕');
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Close');
+  closeButton.addEventListener('click', close);
+  header.appendChild(closeButton);
+  panel.appendChild(header);
+
+  function field(labelText, input) {
+    const label = el('label', 'jellio-live-add-field');
+    label.appendChild(el('span', 'jellio-live-add-label', labelText));
+    label.appendChild(input);
+    return label;
+  }
+  const url = document.createElement('input');
+  url.type = 'url';
+  url.inputMode = 'url';
+  url.autocomplete = 'off';
+  url.placeholder = 'https://';
+  url.className = 'jellio-search-input';
+  const name = document.createElement('input');
+  name.type = 'text';
+  name.maxLength = 80;
+  name.autocomplete = 'off';
+  name.className = 'jellio-search-input';
+  panel.appendChild(field(t('live_link_url'), url));
+  panel.appendChild(field(t('live_link_name'), name));
+  const submit = el('button', 'jellio-settings-button jellio-live-add-submit', t('live_link_add'));
+  submit.type = 'submit';
+  panel.appendChild(submit);
+  const status = el('p', 'jellio-live-add-status', '');
+  status.setAttribute('role', 'status');
+  panel.appendChild(status);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  url.focus();
+
+  let busy = false;
+  panel.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (busy) return;
+    const value = url.value.trim();
+    if (!/^https?:\/\//i.test(value)) {
+      status.textContent = t('live_link_error_invalid');
+      url.focus();
+      return;
+    }
+    busy = true;
+    submit.disabled = true;
+    status.textContent = t('live_link_adding');
+    try {
+      const link = await addStreamLink(value, name.value.trim());
+      close();
+      onAdded(link);
+    } catch (err) {
+      status.textContent = t(streamLinkErrorKey(err && err.code));
+      submit.disabled = false;
+      busy = false;
+    }
+  });
+
+  function onKey(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    }
+  }
+  function close() {
+    document.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+  }
+  document.addEventListener('keydown', onKey, true);
+  overlay.addEventListener('click', function (event) {
+    if (event.target === overlay) close();
+  });
+}
+
 export async function renderLiveTv(root) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-livetv';
@@ -234,6 +394,16 @@ export async function renderLiveTv(root) {
   header.appendChild(el('h1', 'jellio-settings-title', t('nav_live_tv')));
   const count = el('div', 'jellio-live-count', '');
   header.appendChild(count);
+  const addButton = el('button', 'jellio-settings-button jellio-live-add-button');
+  addButton.type = 'button';
+  addButton.appendChild(el('span', 'material-icons', 'add_link'));
+  addButton.appendChild(el('span', '', t('live_link_add_title')));
+  addButton.addEventListener('click', function () {
+    openAddSheet(function () {
+      loadLinks().then(render);
+    });
+  });
+  header.appendChild(addButton);
   const search = document.createElement('input');
   search.type = 'search';
   search.className = 'jellio-search-input jellio-live-search';
@@ -252,37 +422,112 @@ export async function renderLiveTv(root) {
   renderLoading(body);
 
   let channels = [];
+  let links = [];
+  let userChannels = [];
   let refreshTimer = null;
   let scrollTimer = null;
   let restoredScroll = false;
 
+  // My streams failing to load never hides the server's channels.
+  function loadLinks() {
+    return getStreamLinks().then(function (result) {
+      links = result;
+      userChannels = flattenStreamLinks(links);
+    }).catch(function () {});
+  }
+
   async function load(fresh) {
+    const linksLoaded = loadLinks();
     try {
       channels = mapChannels(await getLiveChannels({ fresh: fresh }), Date.now());
     } catch (err) {
-      renderRetry(body, describeNetworkFailure(err), function () {
-        renderLoading(body);
-        load(true);
-      });
-      return;
+      await linksLoaded;
+      if (!links.length) {
+        renderRetry(body, describeNetworkFailure(err), function () {
+          renderLoading(body);
+          load(true);
+        });
+        return;
+      }
+      channels = [];
     }
+    await linksLoaded;
     render();
+  }
+
+  async function removeLink(link) {
+    try {
+      await removeStreamLink(link.Id);
+    } catch (err) {}
+    await loadLinks();
+    render();
+  }
+
+  function renderMyStreams(visibleUser) {
+    if (!links.length) return;
+    const narrowed = !!search.value.trim() || !!liveFilters().kind || !!liveFilters().language;
+    const groups = groupStreamLinks(links, narrowed ? visibleUser.map(function (c) { return c.id; }) : null);
+    if (!groups.singles.length && !groups.playlists.some(function (p) { return p.channels.length; })) return;
+    body.appendChild(el('h2', 'jellio-row-title', t('live_link_section')));
+    if (groups.singles.length) {
+      const grid = el('div', 'jellio-live-grid');
+      groups.singles.forEach(function (single) {
+        grid.appendChild(buildUserTile(single.channel, function () {
+          removeLink(single.link);
+        }));
+      });
+      body.appendChild(grid);
+    }
+    groups.playlists.forEach(function (playlist) {
+      if (!playlist.channels.length && narrowed) return;
+      const head = el('div', 'jellio-live-playlist-head');
+      head.appendChild(el('h3', 'jellio-live-playlist-title', playlist.link.Name));
+      head.appendChild(el('span', 'jellio-live-count', t('live_channel_count', { count: playlist.channels.length })));
+      const refresh = el('button', 'jellio-live-icon-button');
+      refresh.type = 'button';
+      refresh.setAttribute('aria-label', t('live_link_refresh'));
+      refresh.title = t('live_link_refresh');
+      refresh.appendChild(el('span', 'material-icons', 'refresh'));
+      refresh.addEventListener('click', async function () {
+        refresh.disabled = true;
+        try {
+          await refreshStreamLink(playlist.link.Id);
+        } catch (err) {}
+        await loadLinks();
+        render();
+      });
+      head.appendChild(refresh);
+      head.appendChild(confirmButton('delete', t('live_link_remove'), function () {
+        removeLink(playlist.link);
+      }));
+      body.appendChild(head);
+      const grid = el('div', 'jellio-live-grid');
+      playlist.channels.slice(0, PLAYLIST_PREVIEW).forEach(function (channel) {
+        grid.appendChild(buildUserTile(channel, null));
+      });
+      body.appendChild(grid);
+      if (playlist.channels.length > PLAYLIST_PREVIEW) {
+        body.appendChild(el('p', 'jellio-live-empty', t('live_link_more', { count: playlist.channels.length - PLAYLIST_PREVIEW })));
+      }
+    });
   }
 
   function render() {
     body.textContent = '';
-    if (!channels.length) {
+    if (!channels.length && !links.length) {
       body.appendChild(el('p', 'jellio-live-empty', t('live_no_channels')));
       count.textContent = '';
       return;
     }
     renderFilters();
     const visible = filterChannels(channels, search.value, liveFilters());
-    count.textContent = t('live_channel_count', { count: visible.length });
-    if (!visible.length) {
+    const visibleUser = filterChannels(userChannels, search.value, liveFilters());
+    count.textContent = t('live_channel_count', { count: visible.length + visibleUser.length });
+    if (!visible.length && !visibleUser.length) {
       body.appendChild(el('p', 'jellio-live-empty', t('live_no_results')));
       return;
     }
+    renderMyStreams(visibleUser);
     const groups = arrangeChannels(visible);
     if (groups.favorites.length) {
       body.appendChild(el('h2', 'jellio-row-title', t('live_favorites')));
@@ -328,7 +573,7 @@ export async function renderLiveTv(root) {
       }));
     });
     filterBar.appendChild(types);
-    const facets = languageFacets(channels);
+    const facets = languageFacets(channels.concat(userChannels));
     if (facets.length > 1) {
       const languages = el('div', 'jellio-service-chips');
       languages.appendChild(chip(t('live_language_all'), !current.language, function () {

@@ -4898,6 +4898,83 @@ export function closeLiveStream(liveStreamId) {
   }).then(function () {});
 }
 
+// Jellio/StreamLinks: errors come back as { Error: code } with a 422,
+// which the caller turns into a sentence.
+async function streamLinkRequest(method, path, body, timeoutMs) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(function () {
+    controller.abort();
+  }, timeoutMs || 20000);
+  try {
+    const headers = Object.assign({ Accept: 'application/json' }, getAuthHeaders());
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const response = await fetch(getServerAddress() + '/Jellio/StreamLinks' + path, {
+      method: method,
+      headers: headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (err) {}
+    if (!response.ok) {
+      const err = new Error('Stream link request failed: ' + response.status);
+      err.status = response.status;
+      err.code = (data && (data.Error || data.error)) || (response.status === 404 ? 'not_found' : 'failed');
+      throw err;
+    }
+    return data;
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      const timeout = new Error('Stream link request timed out');
+      timeout.code = 'timeout';
+      throw timeout;
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+export function getStreamLinks() {
+  return streamLinkRequest('GET', '', undefined, 15000).then(function (links) {
+    return links || [];
+  });
+}
+
+// Following a page to its stream can take a while.
+export function addStreamLink(url, name) {
+  return streamLinkRequest('POST', '', { Url: url, Name: name || null }, 45000);
+}
+
+export function removeStreamLink(id) {
+  return streamLinkRequest('DELETE', '/' + encodeURIComponent(id), undefined, 15000);
+}
+
+export function renameStreamLink(id, name) {
+  return streamLinkRequest('POST', '/' + encodeURIComponent(id) + '/rename', { Name: name }, 15000);
+}
+
+export function refreshStreamLink(id) {
+  return streamLinkRequest('POST', '/' + encodeURIComponent(id) + '/refresh', undefined, 45000);
+}
+
+// Resolved fresh on every play; the proxy address is what the browser
+// plays, so streams on other sites and plain http still work.
+export async function playStreamLink(linkId, entry) {
+  const query = entry == null ? '' : '?entry=' + entry;
+  const info = await streamLinkRequest('POST', '/' + encodeURIComponent(linkId) + '/play' + query, undefined, 40000);
+  return {
+    name: info.Name,
+    format: info.Format,
+    mime: info.Mime,
+    url: getServerAddress() + '/' + info.ProxyPath,
+  };
+}
+
 export function setChannelFavorite(channelId, favorite) {
   invalidateCache('live:channels');
   return setWatchlist(channelId, favorite);

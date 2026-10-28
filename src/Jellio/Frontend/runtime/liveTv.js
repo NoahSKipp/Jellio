@@ -95,7 +95,7 @@ export function filterChannels(channels, query, filters) {
     if (f.kind && channel.kind !== f.kind) return false;
     if (f.language && channel.language !== f.language) return false;
     if (!words.length) return true;
-    const haystack = normalize(channel.name + ' ' + (channel.now ? channel.now.name : ''));
+    const haystack = normalize(channel.name + ' ' + (channel.group || '') + ' ' + (channel.now ? channel.now.name : ''));
     return words.every(function (word) {
       return haystack.indexOf(word) !== -1;
     });

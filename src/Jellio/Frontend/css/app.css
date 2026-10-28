@@ -16398,3 +16398,77 @@
 .jellio-live-filters .jellio-service-chips {
   flex-wrap: wrap;
 }
+
+/* My streams: links a user added */
+.jellio-live-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+}
+
+.jellio-live-add-button .material-icons {
+  font-size: 1.2em;
+}
+
+.jellio-live-add {
+  overflow-y: auto;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.jellio-live-add .jellio-live-guide-header {
+  align-items: flex-start;
+}
+
+.jellio-live-add-field {
+  display: grid;
+  gap: 6px;
+  padding: 0 20px;
+}
+
+.jellio-live-add-label {
+  color: var(--jellio-text-secondary);
+  font-size: 0.9em;
+}
+
+.jellio-live-add-field .jellio-search-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.jellio-live-add-submit {
+  margin: 0 20px;
+}
+
+.jellio-live-add-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.jellio-live-add-status {
+  margin: 0;
+  padding: 0 20px;
+  min-height: 1.5em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-live-playlist-head {
+  display: flex;
+  align-items: center;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.jellio-live-playlist-title {
+  margin: 0;
+  font-size: 1.05em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.jellio-live-icon-button-armed {
+  color: var(--jellio-danger-color, #ef5350);
+  background: rgb(239 83 80 / 0.14);
+}

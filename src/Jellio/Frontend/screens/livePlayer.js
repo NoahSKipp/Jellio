@@ -9,7 +9,8 @@ import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
 import { getAuthHeaders } from '../runtime/auth.js';
 import { loadVendorScript } from '../runtime/vendorScript.js';
-import { getLiveChannels, getLivePrograms, openLiveChannel, closeLiveStream } from '../runtime/api.js';
+import { getLiveChannels, getLivePrograms, openLiveChannel, closeLiveStream, getStreamLinks, playStreamLink } from '../runtime/api.js';
+import { flattenStreamLinks, parseLinkChannelId, streamLinkErrorKey, playableInBrowser } from '../runtime/streamLinks.js';
 import {
   mapChannels,
   arrangeChannels,
@@ -116,7 +117,20 @@ export async function renderLivePlayer(root, params) {
   let attempt = 0;
   let playingSince = 0;
 
-  const lifecycle = createLiveLifecycle(openLiveChannel, closeLiveStream);
+  // Streams added by link hold no tuner: nothing to close for them.
+  function openAny(id) {
+    const link = parseLinkChannelId(id);
+    if (!link) return openLiveChannel(id);
+    return playStreamLink(link.linkId, link.entry).then(function (info) {
+      return { liveStreamId: null, hlsUrl: info.url, format: info.format };
+    });
+  }
+  const lifecycle = createLiveLifecycle(openAny, closeLiveStream);
+
+  function openFailureText(err) {
+    if (channel && channel.userStream) return t(streamLinkErrorKey(err && err.code));
+    return describeOpenFailure(err);
+  }
 
   function setStatus(text) {
     status.hidden = !text;
@@ -158,10 +172,17 @@ export async function renderLivePlayer(root, params) {
   async function renderInfo() {
     if (!channel) return;
     const shown = channel;
+    guideButton.hidden = !!shown.userStream;
     info.textContent = '';
     info.appendChild(buildChannelLogo(shown, 120));
     const text = el('div', 'jellio-live-info-text');
     text.appendChild(el('div', 'jellio-live-info-channel', shown.name));
+    if (shown.userStream) {
+      if (shown.group) text.appendChild(el('div', 'jellio-live-info-now', shown.group));
+      info.appendChild(text);
+      showInfo();
+      return;
+    }
     const nowLine = el('div', 'jellio-live-info-now', shown.now ? t('live_on_now') + ': ' + shown.now.name : '');
     const nextLine = el('div', 'jellio-live-info-next', '');
     text.appendChild(nowLine);
@@ -194,7 +215,12 @@ export async function renderLivePlayer(root, params) {
     }, 3000);
   }
 
-  async function attach(url) {
+  async function attach(url, format) {
+    if (format && !playableInBrowser(format)) throw new Error(t('live_link_tv_only'));
+    if (format === 'mp4' || format === 'other') {
+      video.src = url;
+      return;
+    }
     const Hls = await loadHls().catch(function () {
       return null;
     });
@@ -254,7 +280,7 @@ export async function renderLivePlayer(root, params) {
     } catch (err) {
       if (mine !== attempt || left) return;
       if (err && err.liveStreamId) closeLiveStream(err.liveStreamId).catch(function () {});
-      showError(describeOpenFailure(err));
+      showError(openFailureText(err));
       return;
     }
     if (!stream || mine !== attempt || left) return;
@@ -262,7 +288,7 @@ export async function renderLivePlayer(root, params) {
     lastProgressAt = Date.now();
     lastTime = -1;
     try {
-      await attach(stream.hlsUrl);
+      await attach(stream.hlsUrl, stream.format);
     } catch (err) {
       showError(err.message);
       return;
@@ -278,6 +304,7 @@ export async function renderLivePlayer(root, params) {
         OpenMs: openedMs,
         FirstFrameMs: Math.round(performance.now() - started),
         Engine: hls ? 'hls.js' : 'native',
+        Source: target.userStream ? 'link' : 'tuner',
         Restarts: restarts,
       };
       window.__jellioLiveStats = report;
@@ -289,7 +316,7 @@ export async function renderLivePlayer(root, params) {
   async function restart(reason) {
     if (left || !channel) return;
     if (restarts >= MAX_RESTARTS) {
-      showError(describeOpenFailure({ message: reason }));
+      showError(channel.userStream ? t('live_link_error_failed') : describeOpenFailure({ message: reason }));
       return;
     }
     restarts++;
@@ -324,6 +351,8 @@ export async function renderLivePlayer(root, params) {
   stallTimer = window.setInterval(watch, 1000);
 
   function orderedChannels() {
+    // My streams keep the order they were added in, playlists their own.
+    if (channel && channel.userStream) return filterChannels(channels, rememberedFilter(), liveFilters());
     const groups = arrangeChannels(filterChannels(channels, rememberedFilter(), liveFilters()));
     return groups.favorites.concat(groups.others);
   }
@@ -346,7 +375,7 @@ export async function renderLivePlayer(root, params) {
 
   let guideClose = null;
   async function showGuide() {
-    if (!channel || guideClose) return;
+    if (!channel || guideClose || channel.userStream) return;
     guideClose = await openGuide(channel, null);
     guideClose = null;
   }
@@ -409,15 +438,16 @@ export async function renderLivePlayer(root, params) {
   window.addEventListener('pagehide', onPageHide);
 
   setStatus(t('live_starting', { name: '' }));
-  try {
-    channels = mapChannels(await getLiveChannels(), Date.now());
-  } catch (err) {
-    showError(describeOpenFailure(err));
-  }
   const id = params && params.get('id');
+  const fromLink = !!parseLinkChannelId(id);
+  try {
+    channels = fromLink ? flattenStreamLinks(await getStreamLinks()) : mapChannels(await getLiveChannels(), Date.now());
+  } catch (err) {
+    showError(fromLink ? t(streamLinkErrorKey(err && err.code)) : describeOpenFailure(err));
+  }
   const target = channels.find(function (c) {
     return c.id === id;
-  }) || (id ? { id: id, name: '', imageTag: null, now: null } : null);
+  }) || (id ? { id: id, name: '', imageTag: null, now: null, userStream: fromLink } : null);
   if (target) {
     play(target);
   } else if (channels.length) {
