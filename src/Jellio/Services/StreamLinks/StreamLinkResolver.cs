@@ -26,7 +26,7 @@ public class StreamLinkResolver : IDisposable
     private const int MaxFetchesPerResolve = 24;
     // Channel page -> player page -> embedded player -> nested player -> the stream itself.
     private const int MaxDepth = 4;
-    private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(2);
 
     private readonly ILogger<StreamLinkResolver> _logger;
@@ -150,6 +150,12 @@ public class StreamLinkResolver : IDisposable
     private async Task<ResolveResult?> ResolveInnerAsync(Uri url, Uri? referer, int depth, Budget budget, CancellationToken ct, Uri? firstReferer = null)
     {
         if (++budget.Used > MaxFetchesPerResolve)
+        {
+            return null;
+        }
+
+        // Several player routes of one page often lead to the same dead end.
+        if (!budget.Visited.Add(url.AbsoluteUri))
         {
             return null;
         }
@@ -316,6 +322,8 @@ public class StreamLinkResolver : IDisposable
     private sealed class Budget
     {
         public int Used { get; set; }
+
+        public HashSet<string> Visited { get; } = new(StringComparer.Ordinal);
     }
 
     private sealed record Fetched(Uri FinalUri, string? MediaFormat, string? Text);
