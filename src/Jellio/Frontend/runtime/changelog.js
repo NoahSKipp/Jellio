@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.97.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.97.0",
+    "summary": "Broken channels and streams sort themselves out.",
+    "highlights": [
+      {
+        "title": "Not Working Channels",
+        "description": "A Live TV channel that fails to start for anyone on the server is marked Not working and folded away at the bottom, and changing channel skips it. One good start brings it back; busy tuners never count against a channel."
+      },
+      {
+        "title": "Faster Dead-Link Marks",
+        "description": "A stream in My streams that fails when you play it is marked straight away instead of waiting for the next check. Links that have not worked for two weeks are removed, with a notification; your server admin can change or turn that off."
+      }
+    ]
+  },
+  {
     "version": "1.96.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.96.0",
