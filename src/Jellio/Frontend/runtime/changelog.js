@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.95.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.95.0",
+    "summary": "Add your own streams to Live TV.",
+    "highlights": [
+      {
+        "title": "My Streams",
+        "description": "Add stream in Live TV takes a link to a stream, an M3U channel list or a web page with a live player. Jellio finds the stream and keeps it under My streams, with the same search and filters as your channels."
+      },
+      {
+        "title": "Send Links from Your Phone",
+        "description": "Jellio TV shows a code to scan: paste a link on your phone and it appears on the TV straight away."
+      },
+      {
+        "title": "The Right Channel",
+        "description": "Picking a channel in Live TV opens that channel again, not the first one in the list."
+      }
+    ]
+  },
+  {
     "version": "1.94.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.94.0",
