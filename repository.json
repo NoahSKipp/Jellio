@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.98.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(now-playing)* Live TV check-ins and badges for hours watched\n- *(livetv)* Show live viewing in Now Playing and Live TV time on profiles\n\n### 📚 Documentation\n\n- *(changelog)* Note Live TV in Now Playing in 1.98.0\n",
+        "checksum": "49636ef3d1a68ac236e2050b01c79f09",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.98.0/jellio_1.98.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-28T10:18:14Z",
+        "version": "1.98.0"
+      },
+      {
         "changelog": "## [1.97.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(livetv)* Track channels that fail to start and remove long-broken links\n- *(livetv)* Fold away channels that are not working and skip them when zapping\n- *(notifications)* Say when a broken stream link was removed\n\n### 📚 Documentation\n\n- *(changelog)* Note Not working channels in 1.97.0\n",
         "checksum": "ab77092cddbd3250ca826ef60ba6a7c6",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.97.0/jellio_1.97.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T14:50:29Z",
         "version": "1.87.7"
-      },
-      {
-        "changelog": "## [1.87.5] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(settings)* Translate all remaining Settings cards, form fields, action buttons, status messages, recommendation controls, and category headers across all supported languages\n- *(onboarding)* Persist onboarding completion status to server display preferences so accounts that already configured settings or finished onboarding never see the setup wizard repeatedly on other devices\n- *(home)* Localize home greetings (Good morning, Still up?) and dynamic recommendation headers (Top Picks for You, Because you watched)\n- *(switcher)* Localize account switcher actions and profile titles\n",
-        "checksum": "ca9aa869d98b6e99d9f0fe099b4482a7",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.5/jellio_1.87.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T13:50:28Z",
-        "version": "1.87.5"
       }
     ]
   }
