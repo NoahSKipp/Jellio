@@ -19,6 +19,26 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.96.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.96.0",
+    "summary": "My streams know when a link stops working.",
+    "highlights": [
+      {
+        "title": "Dead Link Check",
+        "description": "Jellio checks your saved stream links every few hours. One that stops working is marked Not working in My streams and you get a notification, so you know to swap it."
+      },
+      {
+        "title": "Stream Details",
+        "description": "Adding a link picks up the page's description, picture and site name, and the best quality the stream offers."
+      },
+      {
+        "title": "Tidy Channel Lists",
+        "description": "Remove single channels from a channel list you added. They stay gone when the list is refreshed."
+      }
+    ]
+  },
+  {
     "version": "1.95.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.95.0",
