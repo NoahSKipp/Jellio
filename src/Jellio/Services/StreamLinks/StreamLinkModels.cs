@@ -30,6 +30,44 @@ public sealed class StreamLink
     public DateTime AddedAt { get; set; }
 
     public DateTime? RefreshedAt { get; set; }
+
+    // From the page the link points at, when it says.
+    public string? Description { get; set; }
+
+    public string? ImageUrl { get; set; }
+
+    public string? SiteName { get; set; }
+
+    // Best rendition the stream offers, e.g. "1080p".
+    public string? Quality { get; set; }
+
+    // Kept up by StreamLinkHealthService: "ok" or "failing".
+    public string? Health { get; set; }
+
+    public DateTime? LastCheckedAt { get; set; }
+
+    public int FailedChecks { get; set; }
+
+    public string? LastError { get; set; }
+
+    // Channels the user removed from a playlist; a refresh leaves them out.
+    public List<string> HiddenEntries { get; set; } = [];
+}
+
+public static class StreamLinkHealth
+{
+    public const string Ok = "ok";
+    public const string Failing = "failing";
+}
+
+public sealed record StreamLinkMetadata(string? Title, string? Description, string? ImageUrl, string? SiteName)
+{
+    public static readonly StreamLinkMetadata Empty = new(null, null, null, null);
+
+    // Values already here win; the other fills the gaps.
+    public StreamLinkMetadata Or(StreamLinkMetadata? other) => other == null
+        ? this
+        : new(Title ?? other.Title, Description ?? other.Description, ImageUrl ?? other.ImageUrl, SiteName ?? other.SiteName);
 }
 
 public static class StreamLinkKinds
@@ -49,7 +87,12 @@ public static class StreamFormats
 public sealed record ResolvedStream(string Format, Uri Url, Uri? Referer);
 
 // What a link turned out to be: a playable stream, or a channel list.
-public sealed record ResolveResult(ResolvedStream? Stream, List<StreamLinkEntry>? Entries, string? Title);
+public sealed record ResolveResult(ResolvedStream? Stream, List<StreamLinkEntry>? Entries, string? Title)
+{
+    public StreamLinkMetadata Metadata { get; init; } = StreamLinkMetadata.Empty;
+
+    public string? Quality { get; init; }
+}
 
 public sealed class StreamLinkException(string code, string? detail = null) : Exception(detail ?? code)
 {

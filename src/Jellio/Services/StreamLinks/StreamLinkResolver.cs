@@ -152,7 +152,10 @@ public class StreamLinkResolver : IDisposable
 
         if (StreamLinkParser.IsHlsPlaylist(fetched.Text))
         {
-            return new ResolveResult(new ResolvedStream(StreamFormats.Hls, finalUri, referer), null, null);
+            return new ResolveResult(new ResolvedStream(StreamFormats.Hls, finalUri, referer), null, null)
+            {
+                Quality = StreamLinkParser.HlsQuality(fetched.Text),
+            };
         }
 
         if (StreamLinkParser.IsChannelList(fetched.Text))
@@ -176,7 +179,9 @@ public class StreamLinkResolver : IDisposable
             return null;
         }
 
-        var title = StreamLinkParser.PageTitle(fetched.Text);
+        // The page the user linked describes the stream better than an
+        // embedded player page does, so its details come first.
+        var page = StreamLinkParser.PageMetadata(fetched.Text, finalUri);
         foreach (var candidate in StreamLinkParser.FindCandidates(fetched.Text, finalUri))
         {
             try
@@ -184,7 +189,8 @@ public class StreamLinkResolver : IDisposable
                 var inner = await ResolveInnerAsync(candidate, finalUri, depth + 1, budget, ct).ConfigureAwait(false);
                 if (inner != null)
                 {
-                    return inner with { Title = inner.Title ?? title };
+                    var metadata = page.Or(inner.Metadata);
+                    return inner with { Title = metadata.Title ?? inner.Title, Metadata = metadata };
                 }
             }
             catch (StreamLinkException)

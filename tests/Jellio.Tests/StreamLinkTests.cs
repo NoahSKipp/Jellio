@@ -173,3 +173,145 @@ public class StreamLinkTests
         Assert.Null(service.Status(owner, pairing.Code));
     }
 }
+
+public class StreamLinkMetadataTests
+{
+    [Fact]
+    public void ReadsPageDetailsInAnyAttributeOrder()
+    {
+        var html = "<html><head><title>Fallback title</title>"
+            + "<meta content=\"Live football all day\" property=\"og:description\">"
+            + "<meta name=\"description\" content=\"Plain description\">"
+            + "<meta property=\"og:site_name\" content=\"Example Sports\">"
+            + "<meta property=\"og:image\" content=\"/img/cover.jpg\">"
+            + "<link rel=\"icon\" href=\"/favicon.ico\">"
+            + "</head></html>";
+        var meta = Jellio.Services.StreamLinks.StreamLinkParser.PageMetadata(html, new Uri("https://example.com/live/1"));
+
+        Assert.Equal("Fallback title", meta.Title);
+        Assert.Equal("Live football all day", meta.Description);
+        Assert.Equal("Example Sports", meta.SiteName);
+        Assert.Equal("https://example.com/img/cover.jpg", meta.ImageUrl);
+    }
+
+    [Fact]
+    public void FallsBackToIconsAndSkipsPlainHttpImages()
+    {
+        var html = "<meta property=\"og:image\" content=\"http://insecure.example/a.jpg\">"
+            + "<link href=\"/icon-180.png\" rel=\"apple-touch-icon\"><link rel=\"shortcut icon\" href=\"/favicon.ico\">";
+        var meta = Jellio.Services.StreamLinks.StreamLinkParser.PageMetadata(html, new Uri("https://example.com/"));
+
+        Assert.Equal("https://example.com/icon-180.png", meta.ImageUrl);
+        Assert.Null(meta.Description);
+        Assert.Null(meta.Title);
+    }
+
+    [Fact]
+    public void DescriptionsAreTidiedAndCapped()
+    {
+        var html = "<meta name=\"description\" content=\"  Lots   of\n spaces &amp; " + new string('x', 400) + "\">";
+        var meta = Jellio.Services.StreamLinks.StreamLinkParser.PageMetadata(html, new Uri("https://example.com/"));
+
+        Assert.StartsWith("Lots of spaces & xx", meta.Description);
+        Assert.EndsWith("…", meta.Description);
+        Assert.True(meta.Description!.Length <= 301);
+    }
+
+    [Theory]
+    [InlineData("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360\nlow.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\nhigh.m3u8\n", "1080p")]
+    [InlineData("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=20000000,RESOLUTION=3840x2160\nuhd.m3u8\n", "4K")]
+    [InlineData("#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\nseg.ts\n", null)]
+    public void ReadsTheBestQuality(string playlist, string? expected)
+    {
+        Assert.Equal(expected, Jellio.Services.StreamLinks.StreamLinkParser.HlsQuality(playlist));
+    }
+
+    [Fact]
+    public void MetadataPrefersWhatItAlreadyHas()
+    {
+        var page = new Jellio.Services.StreamLinks.StreamLinkMetadata("Page", null, "https://a/i.png", null);
+        var player = new Jellio.Services.StreamLinks.StreamLinkMetadata("Player", "From the player", "https://b/i.png", "Player site");
+        var merged = page.Or(player);
+
+        Assert.Equal("Page", merged.Title);
+        Assert.Equal("From the player", merged.Description);
+        Assert.Equal("https://a/i.png", merged.ImageUrl);
+        Assert.Equal("Player site", merged.SiteName);
+    }
+}
+
+public class StreamLinkStoreTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "jellio-links-" + Guid.NewGuid().ToString("N"));
+    private readonly Jellio.Services.StreamLinks.StreamLinkStore _store;
+    private readonly Guid _user = Guid.NewGuid();
+
+    public StreamLinkStoreTests()
+    {
+        _store = new Jellio.Services.StreamLinks.StreamLinkStore(PathsProxy.Create(_dir));
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+        {
+            Directory.Delete(_dir, true);
+        }
+    }
+
+    private static Jellio.Services.StreamLinks.ResolveResult Playlist(params string[] urls) =>
+        new(null, urls.Select(u => new Jellio.Services.StreamLinks.StreamLinkEntry { Name = u, Url = u }).ToList(), null)
+        {
+            Metadata = new Jellio.Services.StreamLinks.StreamLinkMetadata("T", "Desc", "https://a/i.png", "Site"),
+        };
+
+    [Fact]
+    public void LinksTurnFailingOnTheSecondMissAndRecover()
+    {
+        var link = _store.Add(_user, "https://a/list.m3u", "List", Playlist("https://a/1", "https://a/2"));
+        Assert.Equal("ok", link.Health);
+        Assert.Equal("Desc", link.Description);
+
+        Assert.False(_store.RecordCheck(_user, link.Id, "unreachable", 2));
+        Assert.Equal("ok", _store.Get(_user, link.Id)!.Health);
+        Assert.True(_store.RecordCheck(_user, link.Id, "unreachable", 2));
+        Assert.Equal("failing", _store.Get(_user, link.Id)!.Health);
+        // Already failing: no second notification.
+        Assert.False(_store.RecordCheck(_user, link.Id, "timeout", 2));
+        Assert.Equal("timeout", _store.Get(_user, link.Id)!.LastError);
+
+        Assert.False(_store.RecordCheck(_user, link.Id, null, 2));
+        var healed = _store.Get(_user, link.Id)!;
+        Assert.Equal("ok", healed.Health);
+        Assert.Equal(0, healed.FailedChecks);
+        Assert.Null(healed.LastError);
+    }
+
+    [Fact]
+    public void RemovedChannelsStayGoneAfterARefresh()
+    {
+        var link = _store.Add(_user, "https://a/list.m3u", "List", Playlist("https://a/1", "https://a/2", "https://a/3"));
+        Assert.True(_store.RemoveEntry(_user, link.Id, 1));
+        Assert.False(_store.RemoveEntry(_user, link.Id, 9));
+        Assert.Equal(new[] { "https://a/1", "https://a/3" }, _store.Get(_user, link.Id)!.Entries.Select(e => e.Url));
+
+        var refreshed = _store.Refresh(_user, link.Id, Playlist("https://a/3", "https://a/2", "https://a/4") with { Metadata = Jellio.Services.StreamLinks.StreamLinkMetadata.Empty });
+        Assert.Equal(new[] { "https://a/3", "https://a/4" }, refreshed!.Entries.Select(e => e.Url));
+        // A refresh without page details keeps the ones it had.
+        Assert.Equal("Desc", refreshed.Description);
+    }
+
+    private class PathsProxy : System.Reflection.DispatchProxy
+    {
+        private string _dir = string.Empty;
+
+        public static MediaBrowser.Common.Configuration.IApplicationPaths Create(string dir)
+        {
+            var proxy = Create<MediaBrowser.Common.Configuration.IApplicationPaths, PathsProxy>();
+            ((PathsProxy)(object)proxy)._dir = dir;
+            return proxy;
+        }
+
+        protected override object? Invoke(System.Reflection.MethodInfo? targetMethod, object?[]? args) => _dir;
+    }
+}

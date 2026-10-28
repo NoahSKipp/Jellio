@@ -72,9 +72,14 @@ public class StreamLinksController(
         }
         catch (StreamLinkException err)
         {
+            // Checked by hand: shows as not working straight away.
+            store.RecordCheck(userId, id, err.Code, failuresBeforeFailing: 1);
             return Failure(err);
         }
     }
+
+    [HttpDelete("{id}/entries/{index:int}")]
+    public IActionResult RemoveEntry(string id, int index) => store.RemoveEntry(GetUserId(), id, index) ? Ok() : NotFound();
 
     [HttpPost("{id}/rename")]
     public IActionResult Rename(string id, [FromBody] StreamLinkRenameRequest body)

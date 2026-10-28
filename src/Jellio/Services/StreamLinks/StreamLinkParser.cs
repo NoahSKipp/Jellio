@@ -131,6 +131,108 @@ public static partial class StreamLinkParser
         return entries;
     }
 
+    // What a page says about itself: Open Graph first, then plain tags.
+    public static StreamLinkMetadata PageMetadata(string html, Uri pageUri)
+    {
+        string? Meta(params string[] names)
+        {
+            foreach (var name in names)
+            {
+                foreach (Match tag in MetaTagRegex().Matches(html))
+                {
+                    var attributes = tag.Value;
+                    var key = MetaKeyRegex().Match(attributes);
+                    if (!key.Success || !key.Groups[2].Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var content = MetaContentRegex().Match(attributes);
+                    if (content.Success)
+                    {
+                        var value = Clean(content.Groups[2].Value, 300);
+                        if (value != null)
+                        {
+                            return value;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        string? image = null;
+        foreach (var candidate in new[] { Meta("og:image", "og:image:url", "og:image:secure_url", "twitter:image"), IconHref(html) })
+        {
+            if (candidate != null && TryResolve(pageUri, candidate, out var imageUri) && imageUri.Scheme == Uri.UriSchemeHttps)
+            {
+                image = imageUri.AbsoluteUri;
+                break;
+            }
+        }
+
+        return new StreamLinkMetadata(
+            Meta("og:title", "twitter:title") ?? PageTitle(html),
+            Meta("og:description", "description", "twitter:description"),
+            image,
+            Meta("og:site_name", "application-name"));
+    }
+
+    // Highest RESOLUTION a master playlist offers, as "1080p".
+    public static string? HlsQuality(string playlist)
+    {
+        var best = 0;
+        foreach (Match m in ResolutionRegex().Matches(playlist))
+        {
+            if (int.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var height) && height > best)
+            {
+                best = height;
+            }
+        }
+
+        return best switch
+        {
+            >= 2000 => "4K",
+            > 0 => best + "p",
+            _ => null,
+        };
+    }
+
+    private static string? IconHref(string html)
+    {
+        string? fallback = null;
+        foreach (Match link in LinkTagRegex().Matches(html))
+        {
+            var rel = LinkRelRegex().Match(link.Value);
+            var href = LinkHrefRegex().Match(link.Value);
+            if (!rel.Success || !href.Success)
+            {
+                continue;
+            }
+
+            var relValue = rel.Groups[2].Value.ToLowerInvariant();
+            if (relValue.Contains("apple-touch-icon", StringComparison.Ordinal))
+            {
+                return href.Groups[2].Value;
+            }
+
+            if (relValue.Split(' ').Contains("icon"))
+            {
+                fallback ??= href.Groups[2].Value;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static string? Clean(string value, int max)
+    {
+        var text = WebUtility.HtmlDecode(value).Trim();
+        text = Regex.Replace(text, @"\s+", " ");
+        return text.Length == 0 ? null : text.Length > max ? text[..max].TrimEnd() + "…" : text;
+    }
+
     public static string? PageTitle(string html)
     {
         var og = OgTitleRegex().Match(html);
@@ -304,4 +406,25 @@ public static partial class StreamLinkParser
 
     [GeneratedRegex(@"<title[^>]*>([^<]+)</title>", RegexOptions.IgnoreCase)]
     private static partial Regex TitleRegex();
+
+    [GeneratedRegex(@"<meta\b[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex MetaTagRegex();
+
+    [GeneratedRegex(@"\b(property|name)\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase)]
+    private static partial Regex MetaKeyRegex();
+
+    [GeneratedRegex(@"\b(content)\s*=\s*[""']([^""']*)[""']", RegexOptions.IgnoreCase)]
+    private static partial Regex MetaContentRegex();
+
+    [GeneratedRegex(@"<link\b[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex LinkTagRegex();
+
+    [GeneratedRegex(@"\b(rel)\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase)]
+    private static partial Regex LinkRelRegex();
+
+    [GeneratedRegex(@"\b(href)\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase)]
+    private static partial Regex LinkHrefRegex();
+
+    [GeneratedRegex(@"RESOLUTION=\d+x(\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex ResolutionRegex();
 }

@@ -13,6 +13,8 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
 
     public List<StreamLink> List(Guid userId) => _store.Load(userId);
 
+    public IReadOnlyList<Guid> UserIds() => _store.UserIds();
+
     public StreamLink? Get(Guid userId, string id) =>
         _store.Load(userId).FirstOrDefault(link => link.Id == id);
 
@@ -35,9 +37,7 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
                 AddedAt = DateTime.UtcNow,
             };
             saved.Name = name;
-            saved.Kind = resolved.Entries != null ? StreamLinkKinds.Playlist : StreamLinkKinds.Stream;
-            saved.Entries = resolved.Entries ?? [];
-            saved.RefreshedAt = DateTime.UtcNow;
+            Apply(saved, resolved);
             if (existing == null)
             {
                 links.Insert(0, saved);
@@ -58,12 +58,92 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
                 return;
             }
 
-            updated.Kind = resolved.Entries != null ? StreamLinkKinds.Playlist : StreamLinkKinds.Stream;
-            updated.Entries = resolved.Entries ?? [];
-            updated.RefreshedAt = DateTime.UtcNow;
+            Apply(updated, resolved);
         });
 
         return updated;
+    }
+
+    // A refresh keeps what the page no longer says rather than blanking it.
+    private static void Apply(StreamLink link, ResolveResult resolved)
+    {
+        var hidden = new HashSet<string>(link.HiddenEntries, StringComparer.Ordinal);
+        link.Kind = resolved.Entries != null ? StreamLinkKinds.Playlist : StreamLinkKinds.Stream;
+        link.Entries = (resolved.Entries ?? []).Where(entry => !hidden.Contains(entry.Url)).ToList();
+        link.RefreshedAt = DateTime.UtcNow;
+        link.Description = resolved.Metadata.Description ?? link.Description;
+        link.ImageUrl = resolved.Metadata.ImageUrl ?? link.ImageUrl;
+        link.SiteName = resolved.Metadata.SiteName ?? link.SiteName;
+        link.Quality = resolved.Quality ?? link.Quality;
+        MarkHealthy(link);
+    }
+
+    private static void MarkHealthy(StreamLink link)
+    {
+        link.Health = StreamLinkHealth.Ok;
+        link.FailedChecks = 0;
+        link.LastError = null;
+        link.LastCheckedAt = DateTime.UtcNow;
+    }
+
+    // One channel out of a playlist, by its address so a refresh that
+    // reorders the list still leaves it out.
+    public bool RemoveEntry(Guid userId, string id, int index)
+    {
+        var removed = false;
+        _store.UpdateIfChanged(userId, links =>
+        {
+            var link = links.FirstOrDefault(l => l.Id == id);
+            if (link == null || link.Kind != StreamLinkKinds.Playlist || index < 0 || index >= link.Entries.Count)
+            {
+                return false;
+            }
+
+            var url = link.Entries[index].Url;
+            link.Entries.RemoveAt(index);
+            if (!link.HiddenEntries.Contains(url))
+            {
+                link.HiddenEntries.Add(url);
+            }
+
+            removed = true;
+            return true;
+        });
+
+        return removed;
+    }
+
+    // Two failed checks in a row before a link counts as failing, so one
+    // bad moment on the site doesn't flag it. True when it has just
+    // started failing.
+    public bool RecordCheck(Guid userId, string id, string? error, int failuresBeforeFailing)
+    {
+        var turnedFailing = false;
+        _store.Update(userId, links =>
+        {
+            var link = links.FirstOrDefault(l => l.Id == id);
+            if (link == null)
+            {
+                return;
+            }
+
+            if (error == null)
+            {
+                MarkHealthy(link);
+                return;
+            }
+
+            link.FailedChecks++;
+            link.LastError = error;
+            link.LastCheckedAt = DateTime.UtcNow;
+            if (link.FailedChecks >= failuresBeforeFailing && link.Health != StreamLinkHealth.Failing)
+            {
+                link.Health = StreamLinkHealth.Failing;
+                turnedFailing = true;
+            }
+        });
+
+        return turnedFailing;
     }
 
     public bool Rename(Guid userId, string id, string name)

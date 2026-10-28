@@ -87,6 +87,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<Jellio.Services.StreamLinks.StreamLinkResolver>();
         services.AddSingleton(_ => new Jellio.Services.StreamLinks.StreamProxySigner());
         services.AddSingleton(_ => new Jellio.Services.StreamLinks.StreamPairingService());
+        services.AddSingleton<Jellio.Services.StreamLinks.StreamLinkHealthService>();
+        services.AddHostedService(sp => sp.GetRequiredService<Jellio.Services.StreamLinks.StreamLinkHealthService>());
         services.AddSingleton<Jellio.Services.Reading.ShelfStore>();
         services.AddSingleton<Jellio.Services.Reading.NowReadingService>();
         services.AddSingleton<NotificationStore>();
