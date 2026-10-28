@@ -23,7 +23,8 @@ public class StreamLinkResolver : IDisposable
     private const int MaxTextBytes = 4 * 1024 * 1024;
     private const int SniffBytes = 4096;
     private const int MaxFetchesPerResolve = 12;
-    private const int MaxDepth = 2;
+    // Page -> player iframe -> nested player iframe -> the stream itself.
+    private const int MaxDepth = 3;
     private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(2);
 
@@ -105,8 +106,18 @@ public class StreamLinkResolver : IDisposable
         var started = DateTime.UtcNow;
         try
         {
-            var result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token).ConfigureAwait(false)
-                ?? throw new StreamLinkException(StreamLinkErrors.NoStream);
+            var result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token).ConfigureAwait(false);
+            if (result == null)
+            {
+                // Some sites only put the player on a page that was opened
+                // from the site itself, as a browser click-through does.
+                // Tried second, so links that already work send nothing new.
+                budget = new Budget();
+                var home = new Uri(url.GetLeftPart(UriPartial.Authority) + "/");
+                result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token, firstReferer: home).ConfigureAwait(false);
+            }
+
+            result ??= throw new StreamLinkException(StreamLinkErrors.NoStream);
             _logger.LogInformation(
                 "Jellio stream link resolved on {Host} as {Kind} after {Fetches} fetches in {Ms} ms",
                 url.Host,
@@ -131,14 +142,14 @@ public class StreamLinkResolver : IDisposable
         }
     }
 
-    private async Task<ResolveResult?> ResolveInnerAsync(Uri url, Uri? referer, int depth, Budget budget, CancellationToken ct)
+    private async Task<ResolveResult?> ResolveInnerAsync(Uri url, Uri? referer, int depth, Budget budget, CancellationToken ct, Uri? firstReferer = null)
     {
         if (++budget.Used > MaxFetchesPerResolve)
         {
             return null;
         }
 
-        var fetched = await FetchAsync(url, referer, ct).ConfigureAwait(false);
+        var fetched = await FetchAsync(url, referer ?? firstReferer, ct).ConfigureAwait(false);
         var finalUri = fetched.FinalUri;
         if (fetched.MediaFormat != null)
         {

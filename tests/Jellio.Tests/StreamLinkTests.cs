@@ -105,6 +105,18 @@ public class StreamLinkTests
     }
 
     [Fact]
+    public void FindsSignedStreamInNestedPlayerConfig()
+    {
+        // A player page that keeps its signed playlist in an inline config
+        // object with escaped slashes, one level below the page the user linked.
+        var player = new Uri("https://player.example.net/player/channel-one");
+        var html = "<script>window.cfg = { streamUrl: \"https:\\/\\/ds1.cdn.example.org\\/channel-one\\/index.m3u8?t=abc.def&e=1\", tokenExpiresIn: 300 };</script>";
+        var found = StreamLinkParser.FindCandidates(html, player).Select(u => u.AbsoluteUri).ToList();
+
+        Assert.Equal("https://ds1.cdn.example.org/channel-one/index.m3u8?t=abc.def&e=1", found[0]);
+    }
+
+    [Fact]
     public void SniffsMediaContainers()
     {
         var ts = new byte[400];
