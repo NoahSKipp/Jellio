@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.95.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Resolve, save and proxy stream links per user\n- *(livetv)* My streams on Live TV with Add stream\n\n### 🐛 Bug Fixes\n\n- *(livetv)* Open the channel that was picked, not the first one\n\n### 📚 Documentation\n\n- *(changelog)* Note My streams in 1.95.0\n\n### ⚙️ Miscellaneous Tasks\n\n- Remove a stray dev server log from the frontend folder\n",
+        "checksum": "6c4f24691aa66ad881c99a73af38d9e5",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.95.0/jellio_1.95.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-28T07:05:34Z",
+        "version": "1.95.0"
+      },
+      {
         "changelog": "## [1.94.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(livetv)* Filter channels by type and language\n\n### 🐛 Bug Fixes\n\n- *(home)* Keep anime from the reader's Watchlist in Coming Soon\n",
         "checksum": "e01a8608bbc9da79560004e93c45dde8",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.94.0/jellio_1.94.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T12:36:31Z",
         "version": "1.87.3"
-      },
-      {
-        "changelog": "## [1.87.2] - 2026-10-20\n\n### 🐛 Bug Fixes\n\n- *(onboarding)* Ensure established accounts and existing installs with configured preferences are never prompted with first-run onboarding\n",
-        "checksum": "2db26cd62ddf00106616de88736b0490",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.2/jellio_1.87.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T12:30:04Z",
-        "version": "1.87.2"
       }
     ]
   }
