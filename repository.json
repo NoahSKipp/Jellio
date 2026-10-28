@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.97.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(livetv)* Track channels that fail to start and remove long-broken links\n- *(livetv)* Fold away channels that are not working and skip them when zapping\n- *(notifications)* Say when a broken stream link was removed\n\n### 📚 Documentation\n\n- *(changelog)* Note Not working channels in 1.97.0\n",
+        "checksum": "ab77092cddbd3250ca826ef60ba6a7c6",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.97.0/jellio_1.97.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-28T08:48:52Z",
+        "version": "1.97.0"
+      },
+      {
         "changelog": "## [1.96.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Link details, dead-link checks and channel removal\n- *(livetv)* Show link details and Not working in My streams\n\n### 📚 Documentation\n\n- *(changelog)* Note dead-link checks in 1.96.0\n",
         "checksum": "7dbb939c13964bf00f5faf506a54d9f1",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.96.0/jellio_1.96.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T13:50:28Z",
         "version": "1.87.5"
-      },
-      {
-        "changelog": "## [1.87.4] - 2026-10-20\n\n### 🚀 Features\n\n- *(i18n)* Full multi-language UI translation across all Jellio components (sidebar, navigation, home rows, detail actions, card context menus, search, login, settings)\n- *(api)* Request localized item descriptions and titles using active display language Culture parameter with English fallback\n- *(cache)* Segment offline row and item caches by active display language and refresh on language changes\n",
-        "checksum": "4d3fd5bf1c00670d1fa601867de6ee82",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.4/jellio_1.87.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T13:11:43Z",
-        "version": "1.87.4"
       }
     ]
   }
