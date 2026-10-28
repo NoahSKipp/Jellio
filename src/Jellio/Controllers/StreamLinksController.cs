@@ -19,6 +19,8 @@ public sealed record StreamLinkRequest(string? Url, string? Name);
 
 public sealed record StreamLinkRenameRequest(string? Name);
 
+public sealed record StreamLinkPlayReport(bool Ok);
+
 /// <summary>
 /// Streams a user adds by link: a playlist, a channel list or a page with
 /// a player on it. Saved per user and shown in Live TV.
@@ -31,6 +33,7 @@ public class StreamLinksController(
     StreamLinkResolver resolver,
     StreamProxySigner signer,
     StreamPairingService pairing,
+    StreamLinkHealthService health,
     ILogger<StreamLinksController> logger) : ControllerBase
 {
     private const int MaxPlaylistBytes = 4 * 1024 * 1024;
@@ -76,6 +79,20 @@ public class StreamLinksController(
             store.RecordCheck(userId, id, err.Code, failuresBeforeFailing: 1);
             return Failure(err);
         }
+    }
+
+    // A play that worked or failed in a client counts like a check.
+    [HttpPost("{id}/report")]
+    public IActionResult Report(string id, [FromBody] StreamLinkPlayReport body)
+    {
+        var userId = GetUserId();
+        if (store.Get(userId, id) == null)
+        {
+            return NotFound();
+        }
+
+        health.RecordPlay(userId, id, body.Ok);
+        return Ok();
     }
 
     [HttpDelete("{id}/entries/{index:int}")]

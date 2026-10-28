@@ -81,6 +81,7 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
     private static void MarkHealthy(StreamLink link)
     {
         link.Health = StreamLinkHealth.Ok;
+        link.FailingSince = null;
         link.FailedChecks = 0;
         link.LastError = null;
         link.LastCheckedAt = DateTime.UtcNow;
@@ -139,6 +140,7 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
             if (link.FailedChecks >= failuresBeforeFailing && link.Health != StreamLinkHealth.Failing)
             {
                 link.Health = StreamLinkHealth.Failing;
+                link.FailingSince = DateTime.UtcNow;
                 turnedFailing = true;
             }
         });
@@ -164,6 +166,20 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
         });
 
         return found;
+    }
+
+    // Links that have been failing since before the cutoff, taken out.
+    public List<StreamLink> RemoveFailingSince(Guid userId, DateTime cutoff)
+    {
+        var removed = new List<StreamLink>();
+        _store.UpdateIfChanged(userId, links =>
+        {
+            removed.AddRange(links.Where(l => l.Health == StreamLinkHealth.Failing && l.FailingSince is { } since && since < cutoff));
+            links.RemoveAll(removed.Contains);
+            return removed.Count > 0;
+        });
+
+        return removed;
     }
 
     public bool Remove(Guid userId, string id)

@@ -331,6 +331,16 @@
             </div>
           </div>
 
+          <div class="inputContainer">
+            <label class="inputLabel" for="numStreamLinkAutoRemoveDays">Remove broken My streams after (days)</label>
+            <input is="emby-input" type="number" min="0" max="365" id="numStreamLinkAutoRemoveDays" />
+            <div class="fieldDescription">
+              Links users added to Live TV are checked every few hours. One that has not worked
+              for this many days is removed from that user's My streams and they get a
+              notification. 0 keeps broken links until the user removes them.
+            </div>
+          </div>
+
           <div class="selectContainer">
             <label class="selectLabel" for="selVideoTranscodePolicy">Video transcode policy</label>
             <select is="emby-select" id="selVideoTranscodePolicy" class="emby-select-withcolor emby-select">
@@ -657,6 +667,7 @@
           document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked = withDefault(config.SkipIntroCreditsAdminMenuEnabled, false);
           document.querySelector('#selVideoTranscodePolicy').value = withDefault(config.VideoTranscodePolicy, 'Allow');
           document.querySelector('#chkHomeRowCache').checked = withDefault(config.HomeRowCache, true);
+          document.querySelector('#numStreamLinkAutoRemoveDays').value = withDefault(config.StreamLinkAutoRemoveDays, 14);
           Dashboard.hideLoadingMsg();
         });
       }
@@ -688,6 +699,8 @@
           config.SkipIntroCreditsAdminMenuEnabled = document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked;
           config.VideoTranscodePolicy = document.querySelector('#selVideoTranscodePolicy').value || 'Allow';
           config.HomeRowCache = document.querySelector('#chkHomeRowCache').checked;
+          const removeDays = parseInt(document.querySelector('#numStreamLinkAutoRemoveDays').value, 10);
+          config.StreamLinkAutoRemoveDays = isNaN(removeDays) ? 14 : Math.min(365, Math.max(0, removeDays));
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });

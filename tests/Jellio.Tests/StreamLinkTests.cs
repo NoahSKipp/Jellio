@@ -315,3 +315,93 @@ public class StreamLinkStoreTests : IDisposable
         protected override object? Invoke(System.Reflection.MethodInfo? targetMethod, object?[]? args) => _dir;
     }
 }
+
+public class LiveChannelHealthTests : IDisposable
+{
+    private readonly string _path = Path.Combine(Path.GetTempPath(), "jellio-health-" + Guid.NewGuid().ToString("N"), "h.json");
+    private DateTime _now = new(2026, 10, 28, 12, 0, 0, DateTimeKind.Utc);
+
+    public void Dispose()
+    {
+        var dir = Path.GetDirectoryName(_path)!;
+        if (Directory.Exists(dir))
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private Jellio.Services.LiveChannelHealthStore NewStore() => new(_path, () => _now);
+
+    [Fact]
+    public void TwoFailuresMarkAChannelAndASuccessClearsIt()
+    {
+        var store = NewStore();
+        store.Report("ch1", false, "timeout");
+        Assert.Empty(store.Broken());
+        store.Report("ch1", false, "timeout");
+        Assert.Equal("failing", store.Broken()["ch1"].Status);
+
+        // Survives a restart.
+        Assert.True(NewStore().Broken().ContainsKey("ch1"));
+
+        store.Report("ch1", true, null);
+        Assert.Empty(store.Broken());
+        store.Report("ch2", true, null);
+        Assert.Empty(store.Broken());
+    }
+
+    [Fact]
+    public void MarksLapseAfterADay()
+    {
+        var store = NewStore();
+        store.Report("ch1", false, null);
+        store.Report("ch1", false, null);
+        _now = _now.AddHours(23);
+        Assert.Single(store.Broken());
+        _now = _now.AddHours(2);
+        Assert.Empty(store.Broken());
+    }
+}
+
+public class StreamLinkAutoRemoveTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "jellio-autoremove-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+        {
+            Directory.Delete(_dir, true);
+        }
+    }
+
+    [Fact]
+    public void OnlyLinksFailingSinceBeforeTheCutoffGo()
+    {
+        var store = new Jellio.Services.StreamLinks.StreamLinkStore(StreamLinkStoreTestsPaths.Create(_dir));
+        var user = Guid.NewGuid();
+        var stream = new Jellio.Services.StreamLinks.ResolveResult(new Jellio.Services.StreamLinks.ResolvedStream("hls", new Uri("https://a/x.m3u8"), null), null, null);
+        var broken = store.Add(user, "https://a/1", "Broken", stream);
+        var fine = store.Add(user, "https://a/2", "Fine", stream);
+        store.RecordCheck(user, broken.Id, "unreachable", 1);
+
+        Assert.Empty(store.RemoveFailingSince(user, DateTime.UtcNow.AddDays(-1)));
+        var removed = store.RemoveFailingSince(user, DateTime.UtcNow.AddMinutes(1));
+        Assert.Equal(new[] { "Broken" }, removed.Select(l => l.Name));
+        Assert.Equal(new[] { fine.Id }, store.List(user).Select(l => l.Id));
+    }
+}
+
+internal class StreamLinkStoreTestsPaths : System.Reflection.DispatchProxy
+{
+    private string _dir = string.Empty;
+
+    public static MediaBrowser.Common.Configuration.IApplicationPaths Create(string dir)
+    {
+        var proxy = Create<MediaBrowser.Common.Configuration.IApplicationPaths, StreamLinkStoreTestsPaths>();
+        ((StreamLinkStoreTestsPaths)(object)proxy)._dir = dir;
+        return proxy;
+    }
+
+    protected override object? Invoke(System.Reflection.MethodInfo? targetMethod, object?[]? args) => _dir;
+}

@@ -218,4 +218,8 @@ public class PluginConfiguration : BasePluginConfiguration
     // for readers to link their list from the manga series page. It is
     // public, not a secret; each reader's own token stays on the server.
     public string AniListClientId { get; set; } = string.Empty;
+
+    // A stream a user added by link that has not worked for this many days
+    // is removed from their My streams, with a notification. 0 keeps them.
+    public int StreamLinkAutoRemoveDays { get; set; } = 14;
 }

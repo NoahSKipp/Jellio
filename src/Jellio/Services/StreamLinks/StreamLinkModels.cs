@@ -48,6 +48,8 @@ public sealed class StreamLink
 
     public int FailedChecks { get; set; }
 
+    public DateTime? FailingSince { get; set; }
+
     public string? LastError { get; set; }
 
     // Channels the user removed from a playlist; a refresh leaves them out.
