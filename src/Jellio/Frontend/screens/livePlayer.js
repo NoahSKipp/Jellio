@@ -178,7 +178,8 @@ export async function renderLivePlayer(root, params) {
     const text = el('div', 'jellio-live-info-text');
     text.appendChild(el('div', 'jellio-live-info-channel', shown.name));
     if (shown.userStream) {
-      if (shown.group) text.appendChild(el('div', 'jellio-live-info-now', shown.group));
+      if (shown.description) text.appendChild(el('div', 'jellio-live-info-now', shown.description));
+      if (shown.group) text.appendChild(el('div', 'jellio-live-info-next', shown.group + (shown.quality ? ' · ' + shown.quality : '')));
       info.appendChild(text);
       showInfo();
       return;

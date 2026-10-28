@@ -45,6 +45,9 @@ let knownIds = null;
 // Guid.Empty for its own ItemId, nothing real to fetch a poster for or
 // navigate to.
 function messageFor(n) {
+  if (n.Kind === 'streamlink') {
+    return t('live_link_dead_notice', { name: n.Name });
+  }
   if (n.Kind === 'whatsnew') {
     return n.Name;
   }
@@ -61,6 +64,7 @@ function messageFor(n) {
 }
 
 function subtitleFor(n) {
+  if (n.Kind === 'streamlink') return t('live_link_dead_sub');
   if (n.Kind === 'whatsnew') return n.Detail || "What's new in Jellio";
   if (n.Kind === 'announcement') return 'From the server';
   if (n.Kind === 'manga') return n.Detail || 'New chapter';
@@ -70,6 +74,10 @@ function subtitleFor(n) {
 function openItem(n) {
   if (n.Kind === 'announcement' || n.Kind === 'whatsnew') return;
   hideNotificationsPanel();
+  if (n.Kind === 'streamlink') {
+    navigateTo('#/livetv');
+    return;
+  }
   if (n.Kind === 'manga') {
     getMangaShelfHash().then(function (hash) {
       if (hash) navigateTo(hash + '&series=' + encodeURIComponent(String(n.SeriesKey || '').replace(/^s:/, '')));
@@ -112,6 +120,10 @@ function buildRow(n) {
     poster.appendChild(icon);
   } else if (isWhatsNew) {
     const icon = el('span', 'material-icons jellio-notifications-row-poster-icon auto_awesome');
+    icon.setAttribute('aria-hidden', 'true');
+    poster.appendChild(icon);
+  } else if (n.Kind === 'streamlink') {
+    const icon = el('span', 'material-icons jellio-notifications-row-poster-icon link_off');
     icon.setAttribute('aria-hidden', 'true');
     poster.appendChild(icon);
   } else {

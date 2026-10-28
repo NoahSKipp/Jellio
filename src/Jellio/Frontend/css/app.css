@@ -16472,3 +16472,43 @@
   color: var(--jellio-danger-color, #ef5350);
   background: rgb(239 83 80 / 0.14);
 }
+
+.jellio-live-tile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.jellio-live-tile-name-row .jellio-live-tile-name {
+  min-width: 0;
+}
+
+.jellio-live-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: rgb(255 255 255 / 0.12);
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-live-badge-failing {
+  background: rgb(239 83 80 / 0.18);
+  color: #ef5350;
+}
+
+.jellio-live-tile-failing .jellio-live-logo {
+  opacity: 0.5;
+}
+
+.jellio-live-tile-description {
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

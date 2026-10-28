@@ -4954,6 +4954,11 @@ export function removeStreamLink(id) {
   return streamLinkRequest('DELETE', '/' + encodeURIComponent(id), undefined, 15000);
 }
 
+// One channel out of a playlist; it stays out after a refresh.
+export function removeStreamLinkEntry(id, index) {
+  return streamLinkRequest('DELETE', '/' + encodeURIComponent(id) + '/entries/' + index, undefined, 15000);
+}
+
 export function renameStreamLink(id, name) {
   return streamLinkRequest('POST', '/' + encodeURIComponent(id) + '/rename', { Name: name }, 15000);
 }

@@ -11,7 +11,7 @@ import {
 import { filterChannels } from '../../src/Jellio/Frontend/runtime/liveTv.js';
 
 const LINKS = [
-  { Id: 'a1', Name: 'Red Bull TV', SourceUrl: 'https://rb.example/live', Kind: 'stream', Entries: [] },
+  { Id: 'a1', Name: 'Red Bull TV', SourceUrl: 'https://rb.example/live', Kind: 'stream', Entries: [], Description: 'Extreme sports', SiteName: 'Red Bull', Quality: '1080p', ImageUrl: 'http://rb.example/i.png', Health: 'failing' },
   {
     Id: 'p1',
     Name: 'Free channels',
@@ -39,7 +39,13 @@ test('channel ids round trip', () => {
 test('flattening expands playlists in order and classifies by name and group', () => {
   const flat = flattenStreamLinks(LINKS);
   assert.deepEqual(flat.map((c) => c.id), ['link:a1', 'link:p1:0', 'link:p1:1']);
-  assert.equal(flat[0].group, 'rb.example');
+  assert.equal(flat[0].group, 'Red Bull');
+  assert.equal(flat[0].description, 'Extreme sports');
+  assert.equal(flat[0].quality, '1080p');
+  assert.equal(flat[0].failing, true);
+  // Plain http images are not shown.
+  assert.equal(flat[0].logoUrl, null);
+  assert.equal(flat[1].failing, false);
   assert.equal(flat[1].kind, 'sports');
   assert.equal(flat[1].language, 'German');
   assert.equal(flat[1].logoUrl, 'https://a/1.png');

@@ -14,6 +14,7 @@ import {
   addStreamLink,
   removeStreamLink,
   refreshStreamLink,
+  removeStreamLinkEntry,
 } from '../runtime/api.js';
 import { flattenStreamLinks, groupStreamLinks, streamLinkErrorKey, PLAYLIST_PREVIEW } from '../runtime/streamLinks.js';
 import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, GUIDE_HOURS } from '../runtime/liveTv.js';
@@ -243,8 +244,15 @@ function buildChannelTile(channel, onFavorite) {
   return tile;
 }
 
-function buildUserTile(channel, onRemove) {
-  const tile = el('div', 'jellio-live-tile');
+function failingBadge() {
+  const badge = el('span', 'jellio-live-badge jellio-live-badge-failing', t('live_link_failing'));
+  badge.title = t('live_link_failing_hint');
+  return badge;
+}
+
+// actions: { remove, removeLabel, check }
+function buildUserTile(channel, actions) {
+  const tile = el('div', 'jellio-live-tile' + (channel.failing ? ' jellio-live-tile-failing' : ''));
   const main = el('button', 'jellio-live-tile-main');
   main.type = 'button';
   main.setAttribute('aria-label', channel.name);
@@ -253,16 +261,41 @@ function buildUserTile(channel, onRemove) {
   });
   main.appendChild(buildChannelLogo(channel));
   const text = el('div', 'jellio-live-tile-text');
-  text.appendChild(el('div', 'jellio-live-tile-name', channel.name));
+  const nameRow = el('div', 'jellio-live-tile-name-row');
+  nameRow.appendChild(el('div', 'jellio-live-tile-name', channel.name));
+  if (channel.quality) nameRow.appendChild(el('span', 'jellio-live-badge', channel.quality));
+  if (channel.failing && channel.entry == null) nameRow.appendChild(failingBadge());
+  text.appendChild(nameRow);
+  if (channel.description) text.appendChild(el('div', 'jellio-live-tile-description', channel.description));
   if (channel.group) text.appendChild(el('div', 'jellio-live-tile-now jellio-live-tile-idle', channel.group));
   main.appendChild(text);
   tile.appendChild(main);
-  if (onRemove) {
+  const a = actions || {};
+  if (a.remove || a.check) {
     const side = el('div', 'jellio-live-tile-actions');
-    side.appendChild(confirmButton('delete', t('live_link_remove'), onRemove));
+    if (a.check) side.appendChild(checkButton(a.check));
+    if (a.remove) side.appendChild(confirmButton('delete', a.removeLabel || t('live_link_remove'), a.remove));
     tile.appendChild(side);
   }
   return tile;
+}
+
+// Tries the link again now instead of waiting for the next check.
+function checkButton(onCheck) {
+  const button = el('button', 'jellio-live-icon-button');
+  button.type = 'button';
+  button.setAttribute('aria-label', t('live_link_check'));
+  button.title = t('live_link_check');
+  button.appendChild(el('span', 'material-icons', 'refresh'));
+  button.addEventListener('click', async function () {
+    button.disabled = true;
+    try {
+      await onCheck();
+    } finally {
+      button.disabled = false;
+    }
+  });
+  return button;
 }
 
 // Removing asks for a second press within a few seconds instead of a dialog.
@@ -455,6 +488,22 @@ export async function renderLiveTv(root) {
     render();
   }
 
+  async function checkLink(link) {
+    try {
+      await refreshStreamLink(link.Id);
+    } catch (err) {}
+    await loadLinks();
+    render();
+  }
+
+  async function removeEntry(link, index) {
+    try {
+      await removeStreamLinkEntry(link.Id, index);
+    } catch (err) {}
+    await loadLinks();
+    render();
+  }
+
   async function removeLink(link) {
     try {
       await removeStreamLink(link.Id);
@@ -472,8 +521,13 @@ export async function renderLiveTv(root) {
     if (groups.singles.length) {
       const grid = el('div', 'jellio-live-grid');
       groups.singles.forEach(function (single) {
-        grid.appendChild(buildUserTile(single.channel, function () {
-          removeLink(single.link);
+        grid.appendChild(buildUserTile(single.channel, {
+          remove: function () {
+            removeLink(single.link);
+          },
+          check: single.channel.failing ? function () {
+            return checkLink(single.link);
+          } : null,
         }));
       });
       body.appendChild(grid);
@@ -482,6 +536,7 @@ export async function renderLiveTv(root) {
       if (!playlist.channels.length && narrowed) return;
       const head = el('div', 'jellio-live-playlist-head');
       head.appendChild(el('h3', 'jellio-live-playlist-title', playlist.link.Name));
+      if (playlist.link.Health === 'failing') head.appendChild(failingBadge());
       head.appendChild(el('span', 'jellio-live-count', t('live_channel_count', { count: playlist.channels.length })));
       const refresh = el('button', 'jellio-live-icon-button');
       refresh.type = 'button';
@@ -503,7 +558,12 @@ export async function renderLiveTv(root) {
       body.appendChild(head);
       const grid = el('div', 'jellio-live-grid');
       playlist.channels.slice(0, PLAYLIST_PREVIEW).forEach(function (channel) {
-        grid.appendChild(buildUserTile(channel, null));
+        grid.appendChild(buildUserTile(channel, {
+          removeLabel: t('live_link_remove_channel'),
+          remove: function () {
+            removeEntry(playlist.link, channel.entry);
+          },
+        }));
       });
       body.appendChild(grid);
       if (playlist.channels.length > PLAYLIST_PREVIEW) {

@@ -27,9 +27,13 @@ function hostOf(url) {
   }
 }
 
+function httpsOnly(url) {
+  return url && /^https:\/\//i.test(url) ? url : null;
+}
+
 function userChannel(link, entry, index) {
   const name = entry ? entry.Name || link.Name : link.Name;
-  const group = entry ? entry.Group || link.Name : hostOf(link.SourceUrl);
+  const group = entry ? entry.Group || link.Name : link.SiteName || hostOf(link.SourceUrl);
   const kind = classifyChannel(name + ' ' + (entry && entry.Group ? entry.Group : ''));
   return {
     id: linkChannelId(link.Id, entry ? index : null),
@@ -37,7 +41,10 @@ function userChannel(link, entry, index) {
     entry: entry ? index : null,
     name: name || hostOf(link.SourceUrl),
     group: group,
-    logoUrl: entry && entry.Logo ? entry.Logo : null,
+    logoUrl: httpsOnly(entry ? entry.Logo : link.ImageUrl),
+    description: entry ? null : link.Description || null,
+    quality: entry ? null : link.Quality || null,
+    failing: link.Health === 'failing',
     kind: kind.kind,
     language: kind.language,
     imageTag: null,
