@@ -7,6 +7,7 @@ import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
 import {
   getLiveChannels,
+  getLiveHealth,
   getLivePrograms,
   getImageUrl,
   setChannelFavorite,
@@ -17,7 +18,7 @@ import {
   removeStreamLinkEntry,
 } from '../runtime/api.js';
 import { flattenStreamLinks, groupStreamLinks, streamLinkErrorKey, PLAYLIST_PREVIEW } from '../runtime/streamLinks.js';
-import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, GUIDE_HOURS } from '../runtime/liveTv.js';
+import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, applyHealth, GUIDE_HOURS } from '../runtime/liveTv.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 
@@ -205,7 +206,15 @@ function buildChannelTile(channel, onFavorite) {
   });
   main.appendChild(buildChannelLogo(channel));
   const text = el('div', 'jellio-live-tile-text');
-  text.appendChild(el('div', 'jellio-live-tile-name', channel.name));
+  if (channel.failing) {
+    tile.classList.add('jellio-live-tile-failing');
+    const nameRow = el('div', 'jellio-live-tile-name-row');
+    nameRow.appendChild(el('div', 'jellio-live-tile-name', channel.name));
+    nameRow.appendChild(failingBadge());
+    text.appendChild(nameRow);
+  } else {
+    text.appendChild(el('div', 'jellio-live-tile-name', channel.name));
+  }
   if (channel.now) {
     text.appendChild(el('div', 'jellio-live-tile-now', channel.now.name || t('live_nothing_listed')));
     const times = el('div', 'jellio-live-tile-times', formatTime(channel.now.start) + ' – ' + formatTime(channel.now.end));
@@ -455,6 +464,7 @@ export async function renderLiveTv(root) {
   renderLoading(body);
 
   let channels = [];
+  let brokenOpen = false;
   let links = [];
   let userChannels = [];
   let refreshTimer = null;
@@ -472,7 +482,8 @@ export async function renderLiveTv(root) {
   async function load(fresh) {
     const linksLoaded = loadLinks();
     try {
-      channels = mapChannels(await getLiveChannels({ fresh: fresh }), Date.now());
+      const health = getLiveHealth({ fresh: fresh });
+      channels = applyHealth(mapChannels(await getLiveChannels({ fresh: fresh }), Date.now()), await health);
     } catch (err) {
       await linksLoaded;
       if (!links.length) {
@@ -604,6 +615,27 @@ export async function renderLiveTv(root) {
         grid.appendChild(buildChannelTile(channel, toggleFavorite));
       });
       body.appendChild(grid);
+    }
+    // Channels that failed to start recently, folded away at the bottom.
+    if (groups.broken.length) {
+      const toggle = el('button', 'jellio-live-broken-toggle');
+      toggle.type = 'button';
+      toggle.setAttribute('aria-expanded', brokenOpen ? 'true' : 'false');
+      toggle.appendChild(el('span', 'material-icons', brokenOpen ? 'expand_less' : 'expand_more'));
+      toggle.appendChild(el('span', '', t('live_broken_section', { count: groups.broken.length })));
+      toggle.addEventListener('click', function () {
+        brokenOpen = !brokenOpen;
+        render();
+      });
+      body.appendChild(toggle);
+      if (brokenOpen) {
+        body.appendChild(el('p', 'jellio-live-broken-hint', t('live_broken_hint')));
+        const grid = el('div', 'jellio-live-grid');
+        groups.broken.forEach(function (channel) {
+          grid.appendChild(buildChannelTile(channel, toggleFavorite));
+        });
+        body.appendChild(grid);
+      }
     }
     if (!restoredScroll) {
       restoredScroll = true;

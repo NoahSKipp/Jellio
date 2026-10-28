@@ -142,3 +142,33 @@ test('type and language filters combine with search; facets count languages', as
   assert.deepEqual(filterChannels(list, 'dazn', { kind: 'sports', language: 'German' }).map((c) => c.id), ['d']);
   assert.deepEqual(languageFacets(list), [{ language: 'English', count: 2 }, { language: 'German', count: 2 }]);
 });
+
+import { applyHealth, playableNeighbour, countsAsChannelFailure } from '../../src/Jellio/Frontend/runtime/liveTv.js';
+
+test('channels reported broken are marked and grouped last', () => {
+  const channels = mapChannels([
+    { Id: 'a', Name: 'Alpha', UserData: { IsFavorite: true } },
+    { Id: 'b', Name: 'Bravo' },
+    { Id: 'c', Name: 'Charlie', UserData: { IsFavorite: true } },
+  ], Date.now());
+  const marked = applyHealth(channels, { c: { Status: 'failing' }, b: { Status: 'failing' } });
+  assert.deepEqual(marked.map((c) => c.failing), [false, true, true]);
+  const groups = arrangeChannels(marked);
+  assert.deepEqual(groups.favorites.map((c) => c.id), ['a']);
+  assert.deepEqual(groups.others.map((c) => c.id), []);
+  assert.deepEqual(groups.broken.map((c) => c.id), ['b', 'c']);
+  assert.equal(applyHealth(marked, {})[1].failing, false);
+});
+
+test('changing channel steps over broken ones but not the one on', () => {
+  const list = [{ id: '1' }, { id: '2', failing: true }, { id: '3' }];
+  assert.equal(playableNeighbour(list, '1', 1).id, '3');
+  assert.equal(playableNeighbour(list, '3', -1).id, '1');
+  assert.equal(playableNeighbour(list, '2', 1).id, '3');
+});
+
+test('busy tuners do not count against a channel', () => {
+  assert.equal(countsAsChannelFailure(new Error('No available tuner')), false);
+  assert.equal(countsAsChannelFailure(new Error('Request timed out')), true);
+  assert.equal(countsAsChannelFailure({ code: 'unreachable' }), true);
+});

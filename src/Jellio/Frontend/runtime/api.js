@@ -4980,6 +4980,40 @@ export async function playStreamLink(linkId, entry) {
   };
 }
 
+// Channels that failed to start for anyone recently: { id: { Status, Since } }.
+export function getLiveHealth(options) {
+  if (options && options.fresh) invalidateCache('live:health');
+  return cached('live:health', function () {
+    return getJson('/Jellio/LiveHealth', 10000).then(function (result) {
+      return result || {};
+    });
+  }, 60000).catch(function () {
+    return {};
+  });
+}
+
+function reportQuietly(path, body) {
+  try {
+    fetch(getServerAddress() + path, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+      body: JSON.stringify(body),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (err) {}
+}
+
+// What happened when this client opened a channel, so others can see a
+// broken one before trying it.
+export function reportLiveChannel(channelId, ok, error) {
+  invalidateCache('live:health');
+  reportQuietly('/Jellio/LiveHealth/' + encodeURIComponent(channelId), { Ok: !!ok, Error: error || null });
+}
+
+export function reportStreamLinkPlay(linkId, ok) {
+  reportQuietly('/Jellio/StreamLinks/' + encodeURIComponent(linkId) + '/report', { Ok: !!ok });
+}
+
 export function setChannelFavorite(channelId, favorite) {
   invalidateCache('live:channels');
   return setWatchlist(channelId, favorite);

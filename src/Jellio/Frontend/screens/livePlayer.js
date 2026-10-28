@@ -9,13 +9,25 @@ import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
 import { getAuthHeaders } from '../runtime/auth.js';
 import { loadVendorScript } from '../runtime/vendorScript.js';
-import { getLiveChannels, getLivePrograms, openLiveChannel, closeLiveStream, getStreamLinks, playStreamLink } from '../runtime/api.js';
+import {
+  getLiveChannels,
+  getLivePrograms,
+  openLiveChannel,
+  closeLiveStream,
+  getStreamLinks,
+  playStreamLink,
+  getLiveHealth,
+  reportLiveChannel,
+  reportStreamLinkPlay,
+} from '../runtime/api.js';
 import { flattenStreamLinks, parseLinkChannelId, streamLinkErrorKey, playableInBrowser } from '../runtime/streamLinks.js';
 import {
   mapChannels,
   arrangeChannels,
   filterChannels,
-  neighbourChannel,
+  playableNeighbour,
+  applyHealth,
+  countsAsChannelFailure,
   nowAndNext,
   createLiveLifecycle,
   describeOpenFailure,
@@ -126,6 +138,15 @@ export async function renderLivePlayer(root, params) {
     });
   }
   const lifecycle = createLiveLifecycle(openAny, closeLiveStream);
+
+  // Tells the server how the channel did, so it can be marked for everyone.
+  function reportOutcome(target, ok, reason) {
+    if (!target) return;
+    const link = parseLinkChannelId(target.id);
+    if (link) reportStreamLinkPlay(link.linkId, ok);
+    else reportLiveChannel(target.id, ok, ok ? null : String(reason || 'failed').slice(0, 60));
+    target.failing = !ok && target.failing;
+  }
 
   function openFailureText(err) {
     if (channel && channel.userStream) return t(streamLinkErrorKey(err && err.code));
@@ -281,6 +302,7 @@ export async function renderLivePlayer(root, params) {
     } catch (err) {
       if (mine !== attempt || left) return;
       if (err && err.liveStreamId) closeLiveStream(err.liveStreamId).catch(function () {});
+      if (countsAsChannelFailure(err)) reportOutcome(target, false, (err && (err.code || err.message)) || 'open failed');
       showError(openFailureText(err));
       return;
     }
@@ -300,6 +322,7 @@ export async function renderLivePlayer(root, params) {
       if (mine !== attempt) return;
       setStatus('');
       playingSince = Date.now();
+      reportOutcome(target, true);
       const report = {
         Channel: target.name,
         OpenMs: openedMs,
@@ -317,6 +340,7 @@ export async function renderLivePlayer(root, params) {
   async function restart(reason) {
     if (left || !channel) return;
     if (restarts >= MAX_RESTARTS) {
+      reportOutcome(channel, false, 'stalled');
       showError(channel.userStream ? t('live_link_error_failed') : describeOpenFailure({ message: reason }));
       return;
     }
@@ -360,7 +384,7 @@ export async function renderLivePlayer(root, params) {
 
   function zap(delta) {
     if (!channel) return;
-    const next = neighbourChannel(orderedChannels(), channel.id, delta);
+    const next = playableNeighbour(orderedChannels(), channel.id, delta);
     if (!next || next.id === channel.id) return;
     // Rapid presses settle on the last channel before anything opens.
     channel = next;
@@ -442,7 +466,9 @@ export async function renderLivePlayer(root, params) {
   const id = params && params.get('id');
   const fromLink = !!parseLinkChannelId(id);
   try {
-    channels = fromLink ? flattenStreamLinks(await getStreamLinks()) : mapChannels(await getLiveChannels(), Date.now());
+    channels = fromLink
+      ? flattenStreamLinks(await getStreamLinks())
+      : applyHealth(mapChannels(await getLiveChannels(), Date.now()), await getLiveHealth());
   } catch (err) {
     showError(fromLink ? t(streamLinkErrorKey(err && err.code)) : describeOpenFailure(err));
   }

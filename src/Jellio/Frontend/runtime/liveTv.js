@@ -103,15 +103,21 @@ export function filterChannels(channels, query, filters) {
 }
 
 // Favourites first, then channels with something on now, then the rest,
-// each group in name order.
+// each group in name order. Channels marked not working go last, apart.
 export function arrangeChannels(channels) {
   function byName(a, b) {
     return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
   }
-  const favorites = channels.filter(function (c) {
+  const broken = channels.filter(function (c) {
+    return c.failing;
+  }).sort(byName);
+  const working = channels.filter(function (c) {
+    return !c.failing;
+  });
+  const favorites = working.filter(function (c) {
     return c.favorite;
   }).sort(byName);
-  const rest = channels.filter(function (c) {
+  const rest = working.filter(function (c) {
     return !c.favorite;
   });
   const live = rest.filter(function (c) {
@@ -120,7 +126,31 @@ export function arrangeChannels(channels) {
   const idle = rest.filter(function (c) {
     return !c.now;
   }).sort(byName);
-  return { favorites: favorites, others: live.concat(idle) };
+  return { favorites: favorites, others: live.concat(idle), broken: broken };
+}
+
+// Marks the channels Jellio/LiveHealth reports as failing to start.
+export function applyHealth(channels, health) {
+  const map = health || {};
+  return channels.map(function (channel) {
+    const failing = !!map[channel.id];
+    return channel.failing === failing ? channel : Object.assign({}, channel, { failing: failing });
+  });
+}
+
+// Changing channel steps over ones marked not working, unless it is the
+// one already on.
+export function playableNeighbour(list, currentId, delta) {
+  const usable = (list || []).filter(function (c) {
+    return !c.failing || c.id === currentId;
+  });
+  return neighbourChannel(usable, currentId, delta);
+}
+
+// Busy tuners say nothing about the channel itself.
+export function countsAsChannelFailure(err) {
+  const text = String((err && (err.message || err.status || err.code)) || '').toLowerCase();
+  return !/tuner|no available|too many|limit/.test(text);
 }
 
 // Languages present, most channels first, with their counts.
