@@ -118,7 +118,11 @@ public class StreamLinkResolver : IDisposable
                 result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token, firstReferer: home).ConfigureAwait(false);
             }
 
-            result ??= throw new StreamLinkException(StreamLinkErrors.NoStream);
+            if (result == null)
+            {
+                throw new StreamLinkException(StreamLinkErrors.NoStream);
+            }
+
             _logger.LogInformation(
                 "Jellio stream link resolved on {Host} as {Kind} after {Fetches} fetches in {Ms} ms",
                 url.Host,
