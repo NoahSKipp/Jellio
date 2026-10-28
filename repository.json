@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.99.1] - 2026-10-28\n\n### 🐛 Bug Fixes\n\n- *(streams)* Skip pages already tried and allow 60 s to resolve a link\n\n### 📚 Documentation\n\n- *(changelog)* Note faster stream links in 1.99.1\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.99.1\n",
+        "checksum": "3d0a7eafd373578a37c91dcd58a0663b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.1/jellio_1.99.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-28T11:51:57Z",
+        "version": "1.99.1"
+      },
+      {
         "changelog": "## [1.99.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Channel pages that offer several players resolve as pasted\n\n### 🐛 Bug Fixes\n\n- *(streams)* Find players nested a level deeper, retry with the site's own referer\n- *(streams)* Throw when no stream is found without a throw expression\n\n### 📚 Documentation\n\n- *(changelog)* Note better stream links in 1.98.1\n- *(changelog)* Reword the 1.98.1 stream link note\n- *(changelog)* File the stream link note under 1.99.0, the version this release gets\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.98.1\n",
         "checksum": "ed6a4b3aa941c1840609d66043c2ca25",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.0/jellio_1.99.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T16:28:46Z",
         "version": "1.87.9"
-      },
-      {
-        "changelog": "## [1.87.8] - 2026-10-20\n\n### Features\n\n- *(achievements)* Complete translation coverage across all 46 achievement badges (names, descriptions, and unlock toasts) in all 7 supported display languages\n- *(settings)* Netflix-style server preferences sync: seamlessly sync user playback, display, and recommendation settings to server profile across devices\n- *(genres)* Dynamic catalog genre translations across Home screen rows, Settings genre selectors, and Detail view tags\n- *(profile)* Fully localize lifetime and monthly statistics, category labels, overview tabs, and filter chips\n- *(feed)* Refactor activity feed watch descriptions to prevent double prepositions (\"von of\"), translate season headers, and localize relative timestamps\n- *(i18n)* Unified informal German phrasing (\"Du / dein / dir / dich\") and consistent informal tone across all languages\n- *(settings)* Replace unstyled onboarding wizard button with native action card row\n- *(cache)* Ensure complete cache purge and reload on display language change so metadata refreshes immediately in the target language\n",
-        "checksum": "639d7f8ab5e7aa3b590b9d3934e587bd",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.8/jellio_1.87.8.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T16:15:09Z",
-        "version": "1.87.8"
       }
     ]
   }
