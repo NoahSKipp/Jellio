@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Jellio · Add a stream</title>
+<style>
+  :root { color-scheme: dark; --bg: #0d0d0d; --card: #1a1a1a; --border: #333; --text: #fff; --muted: #a3a3a3; --light: #f5f5f5; --ok: #4caf50; --bad: #ef5350; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; align-items: flex-start; justify-content: center; padding: max(24px, env(safe-area-inset-top)) 16px 32px; }
+  main { width: 100%; max-width: 460px; display: grid; gap: 18px; }
+  .brand { font-weight: 800; font-size: 22px; letter-spacing: 0.02em; }
+  h1 { margin: 0; font-size: 24px; text-wrap: balance; }
+  p { margin: 0; color: var(--muted); }
+  form { display: grid; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
+  label { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+  input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  input:focus { outline: 2px solid var(--light); outline-offset: 1px; }
+  .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.2em; text-transform: uppercase; }
+  button { font: inherit; font-weight: 700; border: 0; border-radius: 999px; padding: 12px 18px; cursor: pointer; }
+  .primary { background: var(--light); color: var(--bg); }
+  .primary:disabled { opacity: 0.5; cursor: default; }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; min-width: 0; }
+  .ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .status { min-height: 1.5em; }
+  .status.ok { color: var(--ok); }
+  .status.bad { color: var(--bad); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Jellio</div>
+  <h1 data-t="title">Add a stream</h1>
+  <p data-t="intro">Paste a link to a stream, an M3U playlist or a page with a live player. It shows up on your TV right away.</p>
+  <form id="form" novalidate>
+    <label id="codeField" hidden><span data-t="code">Code shown on your TV</span>
+      <input id="code" class="code" autocomplete="off" autocapitalize="characters" maxlength="8" required>
+    </label>
+    <label><span data-t="link">Link</span>
+      <div class="row">
+        <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://" required>
+        <button type="button" class="ghost" id="paste" hidden data-t="paste">Paste</button>
+      </div>
+    </label>
+    <label><span data-t="name">Name (optional)</span>
+      <input id="name" maxlength="80" autocomplete="off">
+    </label>
+    <button class="primary" id="send" type="submit" data-t="send">Send to TV</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </form>
+</main>
+<script>
+(function () {
+  var STRINGS = {
+    en: { title: 'Add a stream', intro: 'Paste a link to a stream, an M3U playlist or a page with a live player. It shows up on your TV right away.', code: 'Code shown on your TV', link: 'Link', paste: 'Paste', name: 'Name (optional)', send: 'Send to TV', sending: 'Looking for the stream…', sent: 'Sent to your TV: {name}', channels: '{count} channels', invalid_code: 'This code has expired or was already used. Show a new one on the TV.', invalid_url: 'That doesn\'t look like a web link.', blocked_address: 'Links to private or local network addresses can\'t be added.', unreachable: 'The link couldn\'t be opened.', timeout: 'The link took too long to answer.', no_stream_found: 'No stream was found at that link.', too_many_links: 'You have saved the most links allowed. Remove one on the TV first.', throttled: 'Too many attempts. Try again in a few minutes.', failed: 'Something went wrong. Try again.' },
+    de: { title: 'Stream hinzufügen', intro: 'Füge einen Link zu einem Stream, einer M3U-Playlist oder einer Seite mit Live-Player ein. Er erscheint sofort auf deinem TV.', code: 'Code auf deinem TV', link: 'Link', paste: 'Einfügen', name: 'Name (optional)', send: 'An TV senden', sending: 'Stream wird gesucht…', sent: 'An deinen TV gesendet: {name}', channels: '{count} Sender', invalid_code: 'Dieser Code ist abgelaufen oder wurde schon benutzt. Lass dir auf dem TV einen neuen anzeigen.', invalid_url: 'Das sieht nicht nach einem Weblink aus.', blocked_address: 'Links zu privaten oder lokalen Netzwerkadressen können nicht hinzugefügt werden.', unreachable: 'Der Link konnte nicht geöffnet werden.', timeout: 'Der Link hat zu lange nicht geantwortet.', no_stream_found: 'Unter diesem Link wurde kein Stream gefunden.', too_many_links: 'Du hast die maximale Anzahl an Links gespeichert. Entferne zuerst einen auf dem TV.', throttled: 'Zu viele Versuche. Versuche es in ein paar Minuten erneut.', failed: 'Etwas ist schiefgelaufen. Versuche es erneut.' },
+    es: { title: 'Añadir un stream', intro: 'Pega un enlace a un stream, una lista M3U o una página con reproductor en directo. Aparecerá en tu TV al instante.', code: 'Código que muestra tu TV', link: 'Enlace', paste: 'Pegar', name: 'Nombre (opcional)', send: 'Enviar a la TV', sending: 'Buscando el stream…', sent: 'Enviado a tu TV: {name}', channels: '{count} canales', invalid_code: 'Este código ha caducado o ya se usó. Muestra uno nuevo en la TV.', invalid_url: 'Eso no parece un enlace web.', blocked_address: 'No se pueden añadir enlaces a direcciones de red privadas o locales.', unreachable: 'No se pudo abrir el enlace.', timeout: 'El enlace tardó demasiado en responder.', no_stream_found: 'No se encontró ningún stream en ese enlace.', too_many_links: 'Has guardado el máximo de enlaces. Elimina uno en la TV primero.', throttled: 'Demasiados intentos. Inténtalo de nuevo en unos minutos.', failed: 'Algo salió mal. Inténtalo de nuevo.' },
+    fr: { title: 'Ajouter un flux', intro: 'Collez un lien vers un flux, une playlist M3U ou une page avec un lecteur en direct. Il apparaît aussitôt sur votre TV.', code: 'Code affiché sur votre TV', link: 'Lien', paste: 'Coller', name: 'Nom (facultatif)', send: 'Envoyer à la TV', sending: 'Recherche du flux…', sent: 'Envoyé à votre TV : {name}', channels: '{count} chaînes', invalid_code: 'Ce code a expiré ou a déjà servi. Affichez-en un nouveau sur la TV.', invalid_url: 'Cela ne ressemble pas à un lien web.', blocked_address: 'Les liens vers des adresses réseau privées ou locales ne peuvent pas être ajoutés.', unreachable: 'Impossible d\'ouvrir le lien.', timeout: 'Le lien a mis trop de temps à répondre.', no_stream_found: 'Aucun flux trouvé à ce lien.', too_many_links: 'Vous avez enregistré le nombre maximal de liens. Supprimez-en un sur la TV.', throttled: 'Trop de tentatives. Réessayez dans quelques minutes.', failed: 'Un problème est survenu. Réessayez.' },
+    it: { title: 'Aggiungi uno stream', intro: 'Incolla un link a uno stream, una playlist M3U o una pagina con un player live. Comparirà subito sulla tua TV.', code: 'Codice mostrato sulla TV', link: 'Link', paste: 'Incolla', name: 'Nome (facoltativo)', send: 'Invia alla TV', sending: 'Ricerca dello stream…', sent: 'Inviato alla tua TV: {name}', channels: '{count} canali', invalid_code: 'Questo codice è scaduto o è già stato usato. Mostrane uno nuovo sulla TV.', invalid_url: 'Non sembra un link web.', blocked_address: 'Non si possono aggiungere link a indirizzi di rete privati o locali.', unreachable: 'Impossibile aprire il link.', timeout: 'Il link ha impiegato troppo a rispondere.', no_stream_found: 'Nessuno stream trovato a questo link.', too_many_links: 'Hai salvato il numero massimo di link. Rimuovine uno sulla TV.', throttled: 'Troppi tentativi. Riprova tra qualche minuto.', failed: 'Qualcosa è andato storto. Riprova.' },
+    pl: { title: 'Dodaj stream', intro: 'Wklej link do streamu, playlisty M3U lub strony z odtwarzaczem na żywo. Od razu pojawi się na telewizorze.', code: 'Kod wyświetlany na telewizorze', link: 'Link', paste: 'Wklej', name: 'Nazwa (opcjonalnie)', send: 'Wyślij do TV', sending: 'Szukanie streamu…', sent: 'Wysłano na telewizor: {name}', channels: '{count} kanałów', invalid_code: 'Ten kod wygasł lub został już użyty. Wyświetl nowy na telewizorze.', invalid_url: 'To nie wygląda na link internetowy.', blocked_address: 'Nie można dodawać linków do prywatnych ani lokalnych adresów sieciowych.', unreachable: 'Nie udało się otworzyć linku.', timeout: 'Link zbyt długo nie odpowiadał.', no_stream_found: 'Pod tym linkiem nie znaleziono streamu.', too_many_links: 'Zapisano maksymalną liczbę linków. Najpierw usuń jeden na telewizorze.', throttled: 'Zbyt wiele prób. Spróbuj ponownie za kilka minut.', failed: 'Coś poszło nie tak. Spróbuj ponownie.' },
+    pt: { title: 'Adicionar um stream', intro: 'Cole um link para um stream, uma playlist M3U ou uma página com um player ao vivo. Ele aparece na sua TV na hora.', code: 'Código mostrado na TV', link: 'Link', paste: 'Colar', name: 'Nome (opcional)', send: 'Enviar para a TV', sending: 'Procurando o stream…', sent: 'Enviado para a sua TV: {name}', channels: '{count} canais', invalid_code: 'Este código expirou ou já foi usado. Mostre um novo na TV.', invalid_url: 'Isso não parece um link da web.', blocked_address: 'Links para endereços de rede privados ou locais não podem ser adicionados.', unreachable: 'Não foi possível abrir o link.', timeout: 'O link demorou demais para responder.', no_stream_found: 'Nenhum stream encontrado nesse link.', too_many_links: 'Você salvou o máximo de links permitido. Remova um na TV primeiro.', throttled: 'Tentativas demais. Tente de novo em alguns minutos.', failed: 'Algo deu errado. Tente novamente.' }
+  };
+  var lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+  var S = STRINGS[lang] || STRINGS.en;
+  document.documentElement.lang = STRINGS[lang] ? lang : 'en';
+  function t(key, params) {
+    var text = S[key] || STRINGS.en[key] || key;
+    Object.keys(params || {}).forEach(function (k) { text = text.replace('{' + k + '}', params[k]); });
+    return text;
+  }
+  document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+  document.title = 'Jellio · ' + t('title');
+
+  var form = document.getElementById('form');
+  var codeField = document.getElementById('codeField');
+  var codeInput = document.getElementById('code');
+  var urlInput = document.getElementById('url');
+  var nameInput = document.getElementById('name');
+  var send = document.getElementById('send');
+  var status = document.getElementById('status');
+  var paste = document.getElementById('paste');
+  var code = (new URLSearchParams(location.search).get('c') || '').replace(/[^a-z0-9]/gi, '').toUpperCase();
+
+  function show(text, kind) {
+    status.textContent = text;
+    status.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  if (!code) {
+    codeField.hidden = false;
+  } else {
+    // Say so early when the code has already gone.
+    fetch('StreamLinks/pair/' + encodeURIComponent(code) + '/check').then(function (res) {
+      if (res.status === 404) { codeField.hidden = false; codeInput.value = ''; show(t('invalid_code'), 'bad'); }
+      if (res.status === 429) show(t('throttled'), 'bad');
+    }).catch(function () {});
+  }
+
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    paste.hidden = false;
+    paste.addEventListener('click', function () {
+      navigator.clipboard.readText().then(function (text) { urlInput.value = (text || '').trim(); }).catch(function () { urlInput.focus(); });
+    });
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var useCode = codeField.hidden ? code : codeInput.value.replace(/[^a-z0-9]/gi, '').toUpperCase();
+    var url = urlInput.value.trim();
+    if (!useCode) { codeInput.focus(); return; }
+    if (!/^https?:\/\//i.test(url)) { show(t('invalid_url'), 'bad'); urlInput.focus(); return; }
+    send.disabled = true;
+    show(t('sending'));
+    fetch('StreamLinks/pair/' + encodeURIComponent(useCode) + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Url: url, Name: nameInput.value.trim() || null })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) { return { res: res, body: body }; });
+    }).then(function (r) {
+      if (r.res.ok) {
+        var name = r.body.Name || url;
+        show(t('sent', { name: name }) + (r.body.Channels > 1 ? ' · ' + t('channels', { count: r.body.Channels }) : ''), 'ok');
+        urlInput.value = '';
+        nameInput.value = '';
+        send.disabled = false;
+        return;
+      }
+      send.disabled = false;
+      if (r.res.status === 429) { show(t('throttled'), 'bad'); return; }
+      var error = (r.body && (r.body.Error || r.body.error)) || 'failed';
+      if (error === 'invalid_code') codeField.hidden = false;
+      show(t(STRINGS.en[error] ? error : 'failed'), 'bad');
+    }).catch(function () {
+      send.disabled = false;
+      show(t('failed'), 'bad');
+    });
+  });
+})();
+</script>
+</body>
+</html>

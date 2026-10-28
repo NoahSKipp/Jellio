@@ -83,6 +83,10 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // the odd one out against every other store above already being
         // its own shared singleton). Same no-state-of-its-own shape.
         services.AddSingleton<NextUpHiddenStore>();
+        services.AddSingleton<Jellio.Services.StreamLinks.StreamLinkStore>();
+        services.AddSingleton<Jellio.Services.StreamLinks.StreamLinkResolver>();
+        services.AddSingleton(_ => new Jellio.Services.StreamLinks.StreamProxySigner());
+        services.AddSingleton(_ => new Jellio.Services.StreamLinks.StreamPairingService());
         services.AddSingleton<Jellio.Services.Reading.ShelfStore>();
         services.AddSingleton<Jellio.Services.Reading.NowReadingService>();
         services.AddSingleton<NotificationStore>();
