@@ -221,6 +221,14 @@ public class StreamLinkResolver : IDisposable
             catch (HttpRequestException)
             {
             }
+            catch (IOException)
+            {
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // One route timing out to connect must not end the search;
+                // only the overall limit does (ct is cancelled then).
+            }
         }
 
         return null;
