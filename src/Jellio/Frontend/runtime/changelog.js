@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.98.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.98.0",
+    "summary": "Live TV in Now Playing, and badges for it.",
+    "highlights": [
+      {
+        "title": "Live TV in Now Playing",
+        "description": "Now Playing shows who is watching which channel or stream, with what is on. Picking a channel there tunes in to it."
+      },
+      {
+        "title": "Live TV Badges",
+        "description": "Four new badges for hours of Live TV: Tuned In, Live Regular, Front Row Seat and Always On Air. Your profile shows your Live TV time too."
+      }
+    ]
+  },
+  {
     "version": "1.97.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.97.0",
