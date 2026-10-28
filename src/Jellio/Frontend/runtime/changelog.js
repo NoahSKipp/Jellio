@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.94.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.94.0",
+    "summary": "Live TV filters and a complete Coming Soon.",
+    "highlights": [
+      {
+        "title": "Filter Live TV",
+        "description": "Narrow the channel list to Sports or regular TV, and to a language, worked out from each channel's name. Changing channel in the player follows the same filters."
+      },
+      {
+        "title": "Coming Soon Shows Everything",
+        "description": "New episodes of shows on your Watchlist appear in Coming Soon again, anime included, just as the Calendar listed them."
+      }
+    ]
+  },
+  {
     "version": "1.93.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.93.0",

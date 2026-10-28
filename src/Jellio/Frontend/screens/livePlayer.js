@@ -19,7 +19,7 @@ import {
   createLiveLifecycle,
   describeOpenFailure,
 } from '../runtime/liveTv.js';
-import { openGuide, buildChannelLogo } from './liveTv.js';
+import { openGuide, buildChannelLogo, liveFilters } from './liveTv.js';
 
 const STALL_NOTICE_MS = 15000;
 const STALL_RESTART_MS = 30000;
@@ -324,7 +324,7 @@ export async function renderLivePlayer(root, params) {
   stallTimer = window.setInterval(watch, 1000);
 
   function orderedChannels() {
-    const groups = arrangeChannels(filterChannels(channels, rememberedFilter()));
+    const groups = arrangeChannels(filterChannels(channels, rememberedFilter(), liveFilters()));
     return groups.favorites.concat(groups.others);
   }
 

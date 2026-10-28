@@ -119,3 +119,26 @@ test('a busy tuner gets its own message', () => {
   assert.match(describeOpenFailure({ message: 'Request timed out' }), /too long/);
   assert.match(describeOpenFailure(null), /could not be started/);
 });
+
+test('channel names give a type and a language when they say so', async () => {
+  const { classifyChannel } = await import('../../src/Jellio/Frontend/runtime/liveTv.js');
+  assert.deepEqual(classifyChannel('Sky Sports F1 UK'), { kind: 'sports', language: 'English' });
+  assert.deepEqual(classifyChannel('RTL Germany'), { kind: 'tv', language: 'German' });
+  assert.deepEqual(classifyChannel('ESPN Deportes'), { kind: 'sports', language: 'Spanish' });
+  assert.deepEqual(classifyChannel('beIN Sports 1 France'), { kind: 'sports', language: 'French' });
+  assert.deepEqual(classifyChannel('Channel 4'), { kind: 'tv', language: null });
+});
+
+test('type and language filters combine with search; facets count languages', async () => {
+  const { languageFacets } = await import('../../src/Jellio/Frontend/runtime/liveTv.js');
+  const list = mapChannels([
+    { Id: 'a', Name: 'Sky Sports UK' },
+    { Id: 'b', Name: 'BBC One UK' },
+    { Id: 'c', Name: 'RTL Germany' },
+    { Id: 'd', Name: 'DAZN 1 Germany' },
+  ], NOW);
+  assert.deepEqual(filterChannels(list, '', { kind: 'sports' }).map((c) => c.id), ['a', 'd']);
+  assert.deepEqual(filterChannels(list, '', { language: 'German' }).map((c) => c.id), ['c', 'd']);
+  assert.deepEqual(filterChannels(list, 'dazn', { kind: 'sports', language: 'German' }).map((c) => c.id), ['d']);
+  assert.deepEqual(languageFacets(list), [{ language: 'English', count: 2 }, { language: 'German', count: 2 }]);
+});

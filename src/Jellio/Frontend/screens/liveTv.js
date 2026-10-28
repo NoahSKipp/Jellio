@@ -1,11 +1,11 @@
 // Live TV: every channel with what is on now, favourites first, a search
 // box, and a 24 hour guide per channel. Picking a channel opens the live
 // player (screens/livePlayer.js).
-import { t } from '../runtime/i18n.js';
+import { t, getDisplayLanguage } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
 import { getLiveChannels, getLivePrograms, getImageUrl, setChannelFavorite } from '../runtime/api.js';
-import { mapChannels, filterChannels, arrangeChannels, guideWindow, GUIDE_HOURS } from '../runtime/liveTv.js';
+import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, GUIDE_HOURS } from '../runtime/liveTv.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 
@@ -24,6 +24,26 @@ function writeState(patch) {
   try {
     window.sessionStorage.setItem(STATE_KEY, JSON.stringify(Object.assign(readState(), patch)));
   } catch (err) {}
+}
+
+const LANGUAGE_CODES = {
+  English: 'en', German: 'de', French: 'fr', Spanish: 'es', Portuguese: 'pt', Italian: 'it',
+  Dutch: 'nl', Polish: 'pl', Turkish: 'tr', Arabic: 'ar', Greek: 'el',
+};
+
+function languageName(language) {
+  const code = LANGUAGE_CODES[language];
+  if (!code || typeof Intl === 'undefined' || !Intl.DisplayNames) return language;
+  try {
+    return new Intl.DisplayNames([getDisplayLanguage()], { type: 'language' }).of(code) || language;
+  } catch (err) {
+    return language;
+  }
+}
+
+export function liveFilters() {
+  const state = readState();
+  return { kind: state.kind || null, language: state.language || null };
 }
 
 function formatTime(ms) {
@@ -224,6 +244,9 @@ export async function renderLiveTv(root) {
   header.appendChild(search);
   root.appendChild(header);
 
+  const filterBar = el('div', 'jellio-live-filters');
+  root.appendChild(filterBar);
+
   const body = el('div', 'jellio-live-body');
   root.appendChild(body);
   renderLoading(body);
@@ -253,7 +276,8 @@ export async function renderLiveTv(root) {
       count.textContent = '';
       return;
     }
-    const visible = filterChannels(channels, search.value);
+    renderFilters();
+    const visible = filterChannels(channels, search.value, liveFilters());
     count.textContent = t('live_channel_count', { count: visible.length });
     if (!visible.length) {
       body.appendChild(el('p', 'jellio-live-empty', t('live_no_results')));
@@ -280,6 +304,50 @@ export async function renderLiveTv(root) {
       restoredScroll = true;
       const y = readState().scrollY;
       if (typeof y === 'number') window.requestAnimationFrame(function () { window.scrollTo(0, y); });
+    }
+  }
+
+  function chip(label, active, onClick) {
+    const button = el('button', 'jellio-service-chip' + (active ? ' jellio-service-chip-active' : ''), label);
+    button.type = 'button';
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  // Type, then the languages present, most channels first.
+  function renderFilters() {
+    const focusedLabel = filterBar.contains(document.activeElement) ? document.activeElement.textContent : null;
+    const current = liveFilters();
+    filterBar.textContent = '';
+    const types = el('div', 'jellio-service-chips');
+    [[null, t('live_type_all')], ['sports', t('live_type_sports')], ['tv', t('live_type_tv')]].forEach(function (entry) {
+      types.appendChild(chip(entry[1], current.kind === entry[0], function () {
+        writeState({ kind: entry[0] });
+        render();
+      }));
+    });
+    filterBar.appendChild(types);
+    const facets = languageFacets(channels);
+    if (facets.length > 1) {
+      const languages = el('div', 'jellio-service-chips');
+      languages.appendChild(chip(t('live_language_all'), !current.language, function () {
+        writeState({ language: null });
+        render();
+      }));
+      facets.forEach(function (facet) {
+        languages.appendChild(chip(languageName(facet.language) + ' · ' + facet.count, current.language === facet.language, function () {
+          writeState({ language: current.language === facet.language ? null : facet.language });
+          render();
+        }));
+      });
+      filterBar.appendChild(languages);
+    }
+    if (focusedLabel) {
+      const again = Array.from(filterBar.querySelectorAll('button')).find(function (b) {
+        return b.textContent === focusedLabel;
+      });
+      if (again) again.focus();
     }
   }
 

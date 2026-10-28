@@ -28,11 +28,42 @@ function mapProgramme(dto, nowMs) {
   };
 }
 
+// Channel names are the only signal for type and language (the M3U carries
+// no groups through Jellyfin), e.g. "Sky Sports F1 UK", "RTL Germany",
+// "ESPN Deportes". Unknown stays unknown rather than guessed.
+const SPORTS = /\b(sports?|deportes?|desporto|esporte|espn|bein|dazn|eurosport|f1|formula ?1|nba|nfl|nhl|mlb|golf|tennis|cricket|rugby|boxing|ufc|wwe|racing|motogp|supersport|tsn|sportsnet|premier league|laliga|ligue ?1|bundesliga|serie a|eleven|setanta|willow|polsat sport|movistar|match!?|nova sport|digi sport|sportklub|viaplay|ziggo|arena|sky sport|tnt sport|fox sport|cbs sports|nbc sports|astro|ptv sports|stars? sports|sportv|claro sports|tudn|nfl network|redzone|racing tv|sky racing)\b/i;
+
+const LANGUAGES = [
+  ['English', /\b(uk|usa|us|english|eng|canada|ca|australia|au|nz|ireland|ie|scotland)\b/i],
+  ['German', /\b(de|germany|deutschland|deutsch|german|austria|at|schweiz|swiss|ch)\b/i],
+  ['French', /\b(fr|france|french|fran[cç]ais|belgique|quebec)\b/i],
+  ['Spanish', /\b(es|spain|espa[nñ]a|mexico|mx|argentina|latam|latino|colombia|chile|peru|deportes|espanol|español)\b/i],
+  ['Portuguese', /\b(pt|portugal|brazil|brasil|br|desporto|esporte)\b/i],
+  ['Italian', /\b(it|italy|italia|italiano)\b/i],
+  ['Dutch', /\b(nl|netherlands|holland|nederland|ziggo)\b/i],
+  ['Polish', /\b(pl|poland|polska|polsat)\b/i],
+  ['Turkish', /\b(tr|turkey|t[uü]rkiye)\b/i],
+  ['Arabic', /\b(arabic|arabia|mena|qatar|ksa|uae|egypt|alkass|ssc)\b/i],
+  ['Greek', /\b(gr|greece|greek|nova sport)\b/i],
+  ['Balkan', /\b(serbia|srbija|croatia|hrvatska|bosnia|slovenia|arena sport|sportklub)\b/i],
+];
+
+export function classifyChannel(name) {
+  const text = String(name || '');
+  const language = LANGUAGES.find(function (entry) {
+    return entry[1].test(text);
+  });
+  return { kind: SPORTS.test(text) ? 'sports' : 'tv', language: language ? language[0] : null };
+}
+
 export function mapChannel(dto, nowMs) {
   const now = mapProgramme(dto.CurrentProgram, nowMs);
+  const kind = classifyChannel(dto.Name);
   return {
     id: dto.Id,
     name: dto.Name || '',
+    kind: kind.kind,
+    language: kind.language,
     number: dto.ChannelNumber || dto.Number || '',
     imageTag: (dto.ImageTags && dto.ImageTags.Primary) || null,
     favorite: !!(dto.UserData && dto.UserData.IsFavorite),
@@ -55,11 +86,15 @@ function normalize(text) {
     .replace(/[̀-ͯ]/g, '');
 }
 
-// Matches the channel name or what is on now; every word has to appear.
-export function filterChannels(channels, query) {
+// Matches the channel name or what is on now (every word has to appear),
+// then the type and language filters when set.
+export function filterChannels(channels, query, filters) {
+  const f = filters || {};
   const words = normalize(query).split(/\s+/).filter(Boolean);
-  if (!words.length) return channels.slice();
   return channels.filter(function (channel) {
+    if (f.kind && channel.kind !== f.kind) return false;
+    if (f.language && channel.language !== f.language) return false;
+    if (!words.length) return true;
     const haystack = normalize(channel.name + ' ' + (channel.now ? channel.now.name : ''));
     return words.every(function (word) {
       return haystack.indexOf(word) !== -1;
@@ -86,6 +121,22 @@ export function arrangeChannels(channels) {
     return !c.now;
   }).sort(byName);
   return { favorites: favorites, others: live.concat(idle) };
+}
+
+// Languages present, most channels first, with their counts.
+export function languageFacets(channels) {
+  const counts = new Map();
+  channels.forEach(function (channel) {
+    if (!channel.language) return;
+    counts.set(channel.language, (counts.get(channel.language) || 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .map(function (entry) {
+      return { language: entry[0], count: entry[1] };
+    })
+    .sort(function (a, b) {
+      return b.count - a.count || a.language.localeCompare(b.language);
+    });
 }
 
 // The programmes of the next `hours`, in start order, the one airing now

@@ -16387,3 +16387,14 @@
 .jellio-live-error[hidden] {
   display: none;
 }
+
+.jellio-live-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 var(--jellio-safe-gutter);
+}
+
+.jellio-live-filters .jellio-service-chips {
+  flex-wrap: wrap;
+}
