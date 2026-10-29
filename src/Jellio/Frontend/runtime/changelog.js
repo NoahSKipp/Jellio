@@ -19,9 +19,9 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
-    "version": "1.100.0",
+    "version": "1.101.0",
     "title": "What's New in Jellio",
-    "subtitle": "Version 1.100.0",
+    "subtitle": "Version 1.101.0",
     "summary": "Add Stream can find streams on pages whose player is built by scripts.",
     "highlights": [
       {
