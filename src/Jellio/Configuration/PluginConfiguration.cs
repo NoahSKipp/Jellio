@@ -222,4 +222,9 @@ public class PluginConfiguration : BasePluginConfiguration
     // A stream a user added by link that has not worked for this many days
     // is removed from their My streams, with a notification. 0 keeps them.
     public int StreamLinkAutoRemoveDays { get; set; } = 14;
+
+    // Address of a stream finder (a headless browser service) that Add
+    // Stream asks when a page holds no stream in its HTML, e.g.
+    // http://gluetun-sf:8780. Empty keeps Add Stream to its own crawl.
+    public string StreamFinderUrl { get; set; } = string.Empty;
 }

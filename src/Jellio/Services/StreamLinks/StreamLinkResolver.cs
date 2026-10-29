@@ -26,7 +26,7 @@ public class StreamLinkResolver : IDisposable
     private const int MaxFetchesPerResolve = 24;
     // Channel page -> player page -> embedded player -> nested player -> the stream itself.
     private const int MaxDepth = 4;
-    private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(2);
 
     private readonly ILogger<StreamLinkResolver> _logger;
@@ -118,6 +118,11 @@ public class StreamLinkResolver : IDisposable
                 result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token, firstReferer: home).ConfigureAwait(false);
             }
 
+            // Pages whose player builds its address with scripts hold no
+            // stream in their HTML; a headless browser, when one is set up,
+            // opens the page and reports what the player asks for.
+            result ??= await FindWithBrowserAsync(url, timeout.Token).ConfigureAwait(false);
+
             if (result == null)
             {
                 throw new StreamLinkException(StreamLinkErrors.NoStream);
@@ -144,6 +149,70 @@ public class StreamLinkResolver : IDisposable
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             throw new StreamLinkException(StreamLinkErrors.Timeout);
+        }
+    }
+
+
+    private static readonly HttpClient FinderClient = new(new SocketsHttpHandler { UseProxy = false, ConnectTimeout = TimeSpan.FromSeconds(5) })
+    {
+        Timeout = TimeSpan.FromSeconds(60),
+    };
+
+    // Asks the stream finder (a separate service that runs a browser) what
+    // the page's player requests. Null when none is configured or it found
+    // nothing; whatever it returns is checked like any other link.
+    private async Task<ResolveResult?> FindWithBrowserAsync(Uri page, CancellationToken ct)
+    {
+        var finder = JellioPlugin.Instance?.Configuration.StreamFinderUrl?.Trim();
+        if (string.IsNullOrEmpty(finder) || !Uri.TryCreate(finder.TrimEnd('/') + "/find", UriKind.Absolute, out var endpoint)
+            || (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { url = page.AbsoluteUri }), Encoding.UTF8, "application/json"),
+            };
+            request.Headers.TryAddWithoutValidation("X-Streamfinder", "1");
+            using var response = await FinderClient.SendAsync(request, ct).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Jellio stream finder found nothing on {Host}: HTTP {Status}", page.Host, (int)response.StatusCode);
+                return null;
+            }
+
+            using var doc = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false), cancellationToken: ct).ConfigureAwait(false);
+            var root = doc.RootElement;
+            var streamText = root.TryGetProperty("url", out var u) ? u.GetString() : null;
+            if (!PublicAddressGuard.TryParseLink(streamText, out var streamUri))
+            {
+                return null;
+            }
+
+            Uri? referer = null;
+            if (root.TryGetProperty("referer", out var r) && PublicAddressGuard.TryParseLink(r.GetString(), out var parsed))
+            {
+                referer = parsed;
+            }
+
+            var kind = root.TryGetProperty("kind", out var k) ? k.GetString() : null;
+            var format = kind switch
+            {
+                "hls" => StreamFormats.Hls,
+                "mp4" => StreamFormats.Mp4,
+                _ => StreamLinkParser.FormatFromPath(streamUri),
+            };
+            var title = root.TryGetProperty("title", out var t) ? t.GetString() : null;
+            _logger.LogInformation("Jellio stream finder resolved {Host} as {Kind}", page.Host, format);
+            return new ResolveResult(new ResolvedStream(format, streamUri, referer), null, title);
+        }
+        catch (Exception err) when (err is HttpRequestException or System.Text.Json.JsonException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("Jellio stream finder unavailable for {Host}: {Error}", page.Host, err.GetType().Name);
+            return null;
         }
     }
 

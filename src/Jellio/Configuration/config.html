@@ -341,6 +341,16 @@
             </div>
           </div>
 
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtStreamFinderUrl">Stream finder address</label>
+            <input is="emby-input" type="text" id="txtStreamFinderUrl" placeholder="http://gluetun-sf:8780" />
+            <div class="fieldDescription">
+              Optional. A headless-browser service Add Stream asks when a linked page has no stream in
+              its HTML (players that build the address with scripts). Leave empty to keep Add Stream to
+              its own crawl.
+            </div>
+          </div>
+
           <div class="selectContainer">
             <label class="selectLabel" for="selVideoTranscodePolicy">Video transcode policy</label>
             <select is="emby-select" id="selVideoTranscodePolicy" class="emby-select-withcolor emby-select">
@@ -668,6 +678,7 @@
           document.querySelector('#selVideoTranscodePolicy').value = withDefault(config.VideoTranscodePolicy, 'Allow');
           document.querySelector('#chkHomeRowCache').checked = withDefault(config.HomeRowCache, true);
           document.querySelector('#numStreamLinkAutoRemoveDays').value = withDefault(config.StreamLinkAutoRemoveDays, 14);
+          document.querySelector('#txtStreamFinderUrl').value = withDefault(config.StreamFinderUrl, '');
           Dashboard.hideLoadingMsg();
         });
       }
@@ -701,6 +712,7 @@
           config.HomeRowCache = document.querySelector('#chkHomeRowCache').checked;
           const removeDays = parseInt(document.querySelector('#numStreamLinkAutoRemoveDays').value, 10);
           config.StreamLinkAutoRemoveDays = isNaN(removeDays) ? 14 : Math.min(365, Math.max(0, removeDays));
+          config.StreamFinderUrl = document.querySelector('#txtStreamFinderUrl').value.trim();
           window.ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });
