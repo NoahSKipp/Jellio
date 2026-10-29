@@ -22,6 +22,18 @@ export const CHANGELOG_RELEASES = [
     "version": "1.100.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.100.0",
+    "summary": "Add Stream can find streams on pages whose player is built by scripts.",
+    "highlights": [
+      {
+        "title": "Streams From Any Page With a Player",
+        "description": "When a linked page holds no stream in its HTML, Add Stream can now open it in a browser on the server and pick up what the player asks for, so channel and embed pages work as pasted. The server admin sets the stream finder address in Jellio's settings."
+      }
+    ]
+  },
+  {
+    "version": "1.100.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.100.0",
     "summary": "Take shows out of Coming Soon.",
     "highlights": [
       {
