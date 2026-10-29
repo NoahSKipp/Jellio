@@ -48,6 +48,7 @@ public class CalendarService(
     IHttpClientFactory httpClientFactory,
     ILibraryManager libraryManager,
     IUserDataManager userDataManager,
+    UpcomingHiddenStore upcomingHidden,
     ILogger<CalendarService> logger
 )
 {
@@ -96,6 +97,8 @@ public class CalendarService(
     /// episodes, not on the series, so the last watched date comes from the
     /// user's episode history.
     /// </summary>
+    public void ForgetMonitored(Guid userId) => _monitoredCache.TryRemove(userId, out _);
+
     public IReadOnlyList<BaseItem> GetMonitoredItems(User user)
     {
         if (_monitoredCache.TryGetValue(user.Id, out var hit) && DateTime.UtcNow - hit.At < MonitoredCacheTtl)
@@ -132,7 +135,9 @@ public class CalendarService(
             }
         }
 
-        var result = monitored.Values.ToList();
+        // Taken out of Upcoming by the user: no row entry, no notification.
+        var hidden = upcomingHidden.Load(user.Id);
+        var result = monitored.Values.Where(item => !hidden.Contains(item.Id)).ToList();
         _monitoredCache[user.Id] = (DateTime.UtcNow, result);
         logger.LogInformation(
             "Jellio: calendar watches {Count} titles for {User} ({Watched} watched series)",

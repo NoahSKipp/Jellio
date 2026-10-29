@@ -45,6 +45,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // Safe to call again even if the host already registered this
         // itself, AddHttpClient() is idempotent by design.
         services.AddHttpClient();
+        services.AddSingleton<UpcomingHiddenStore>();
         services.AddSingleton<CalendarService>();
 
         // Registered as itself first, same real reason SleepTimerService

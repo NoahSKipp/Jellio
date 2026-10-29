@@ -28,9 +28,38 @@ namespace Jellio.Controllers;
 [Authorize]
 public class CalendarController(
     IUserManager userManager,
-    CalendarService calendarService
+    CalendarService calendarService,
+    UpcomingHiddenStore upcomingHidden
 ) : ControllerBase
 {
+    // Remove from Upcoming on a card; DELETE puts it back.
+    [HttpPost("hidden/{itemId:guid}")]
+    public IActionResult Hide(Guid itemId) => SetHidden(itemId, hide: true);
+
+    [HttpDelete("hidden/{itemId:guid}")]
+    public IActionResult Unhide(Guid itemId) => SetHidden(itemId, hide: false);
+
+    private IActionResult SetHidden(Guid itemId, bool hide)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        if (hide)
+        {
+            upcomingHidden.Hide(userId, itemId);
+        }
+        else
+        {
+            upcomingHidden.Unhide(userId, itemId);
+        }
+
+        calendarService.ForgetMonitored(userId);
+        return NoContent();
+    }
+
     [HttpGet]
     public async Task<IActionResult> Get()
     {

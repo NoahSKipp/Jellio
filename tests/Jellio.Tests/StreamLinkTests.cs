@@ -483,3 +483,34 @@ public class LiveWatchingTests
         Assert.Equal(new[] { "live-tuned-in", "live-regular" }, unlocked);
     }
 }
+
+public class UpcomingHiddenTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "jellio-upcoming-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+        {
+            Directory.Delete(_dir, true);
+        }
+    }
+
+    [Fact]
+    public void HidesAndUnhidesPerUser()
+    {
+        var store = new Jellio.Services.UpcomingHiddenStore(StreamLinkStoreTestsPaths.Create(_dir));
+        var user = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        var show = Guid.NewGuid();
+
+        Assert.True(store.Hide(user, show));
+        Assert.False(store.Hide(user, show));
+        Assert.Contains(show, store.Load(user));
+        Assert.Empty(store.Load(other));
+
+        Assert.True(store.Unhide(user, show));
+        Assert.False(store.Unhide(user, show));
+        Assert.Empty(store.Load(user));
+    }
+}
