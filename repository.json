@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.100.0] - 2026-10-29\n\n### 🚀 Features\n\n- *(calendar)* Let users take titles out of Coming Soon\n- *(home)* Remove from Coming Soon in the card menu\n\n### 📚 Documentation\n\n- *(changelog)* Note Remove from Coming Soon in 1.100.0\n",
+        "checksum": "71985e0c8ee09a79c329c2baf064ac23",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.100.0/jellio_1.100.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-29T07:11:31Z",
+        "version": "1.100.0"
+      },
+      {
         "changelog": "## [1.99.2] - 2026-10-28\n\n### 🐛 Bug Fixes\n\n- *(streams)* An unreachable player route no longer ends the whole search\n\n### 📚 Documentation\n\n- *(changelog)* Note the Add Stream timeout fix in 1.99.2\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.99.2\n",
         "checksum": "08ea45d6183cacc29a76b2df7e1401e3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.2/jellio_1.99.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-20T23:14:52Z",
         "version": "1.87.11"
-      },
-      {
-        "changelog": "## [1.87.10] - 2026-10-20\n\n### Bug Fixes\n\n- *(search)* Resolve error toast when opening search results by handling unimported remote titles via on-demand metadata fallback\n- *(detail)* Harden detail view against non-array genres, null item payloads, and missing metadata fields\n- *(carousel)* Ensure hero carousel candidates require valid backdrop images and complete metadata, add art preloading, and synchronize slide state transitions\n- *(i18n)* Add missing home_action_details and core interface translation keys across all supported display languages",
-        "checksum": "8a4755dc2d41d6f8955016553b8c5c26",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.10/jellio_1.87.10.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T21:11:53Z",
-        "version": "1.87.10"
       }
     ]
   }
