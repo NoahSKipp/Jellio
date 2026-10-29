@@ -2264,6 +2264,9 @@ export async function setWatchlist(itemId, isWatchlisted) {
     err.status = response.status;
     throw err;
   }
+  // Adding a title to the Watchlist brings it back to Upcoming if it was
+  // taken out.
+  if (isWatchlisted) setUpcomingHidden(itemId, false).catch(function () {});
   invalidateUserDataRows();
   return response.json();
 }
@@ -3381,6 +3384,17 @@ export function sendGroupWatchInvite(groupId, groupName, toUserId) {
 // token configured yet or a Watchlist with nothing upcoming on it.
 export function getCalendarEntries() {
   return rowJson('/Jellio/calendar', 'watchlist');
+}
+
+// Remove from Upcoming (or put back): a series watched once is otherwise
+// followed for years.
+export async function setUpcomingHidden(itemId, hidden) {
+  const response = await fetch(getServerAddress() + '/Jellio/calendar/hidden/' + encodeURIComponent(itemId), {
+    method: hidden ? 'POST' : 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Request failed: calendar/hidden');
+  invalidateUserDataRows();
 }
 
 // Jellio's own NotificationsController: the same real Watchlist scan

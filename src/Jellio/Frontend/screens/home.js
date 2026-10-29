@@ -20,6 +20,7 @@ import {
   getGenreItemsPage,
   isAnimeCollection,
   getCalendarEntries,
+  setUpcomingHidden,
   getImageUrl,
   getAnimeIds,
   withoutAnime,
@@ -49,6 +50,8 @@ import {
   resetHomeCustomization,
 } from '../components/homeCustomizer.js';
 import { navigateTo } from '../runtime/router.js';
+import { attachCardOptionsTrigger, animateCardRemoval } from '../components/cardOptionsMenu.js';
+import { showToast } from '../components/toast.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { onUserDataChange } from '../runtime/syncPlay.js';
 import { el } from '../runtime/dom.js';
@@ -333,6 +336,44 @@ function buildComingSoonCard(entry) {
 
   card.appendChild(el('div', 'jellio-card-title', entry.Name));
   card.appendChild(el('div', 'jellio-card-subtitle', comingSoonKindLabel(entry)));
+
+  // Right click or a long press: details, or take the title out of Upcoming.
+  attachCardOptionsTrigger(card, { Id: entry.ItemId, Name: entry.Name }, null, {
+    onlyExtra: true,
+    extraOptions: [
+      {
+        label: t('menu_go_to_details'),
+        icon: 'info',
+        onClick: function () {
+          navigateTo('#/item?id=' + entry.ItemId);
+        },
+      },
+      {
+        label: t('menu_remove_upcoming'),
+        icon: 'event_busy',
+        onClick: function () {
+          const track = card.parentNode;
+          const next = card.nextSibling;
+          setUpcomingHidden(entry.ItemId, true)
+            .then(function () {
+              animateCardRemoval(card);
+              showToast(t('toast_removed_upcoming', { name: entry.Name }), function () {
+                setUpcomingHidden(entry.ItemId, false)
+                  .then(function () {
+                    card.style.visibility = '';
+                    if (track) track.insertBefore(card, next && next.parentNode === track ? next : null);
+                  })
+                  .catch(function () {});
+              });
+            })
+            .catch(function (err) {
+              console.warn('Jellio: could not remove from Upcoming', err);
+              showToast(t('toast_remove_upcoming_error'));
+            });
+        },
+      },
+    ],
+  });
 
   return card;
 }
