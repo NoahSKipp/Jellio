@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.101.0] - 2026-10-29\n\n### 🚀 Features\n\n- *(streams)* Ask a stream finder service when a page holds no stream in its HTML\n\n### 📚 Documentation\n\n- *(changelog)* Note the stream finder in 1.100.0\n- *(changelog)* File the stream finder note under 1.101.0\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.101.0\n",
+        "checksum": "7229deb81232fc2f430ad431fcf40bab",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.101.0/jellio_1.101.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-29T09:20:04Z",
+        "version": "1.101.0"
+      },
+      {
         "changelog": "## [1.100.0] - 2026-10-29\n\n### 🚀 Features\n\n- *(calendar)* Let users take titles out of Coming Soon\n- *(home)* Remove from Coming Soon in the card menu\n\n### 📚 Documentation\n\n- *(changelog)* Note Remove from Coming Soon in 1.100.0\n",
         "checksum": "71985e0c8ee09a79c329c2baf064ac23",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.100.0/jellio_1.100.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-21T13:59:36Z",
         "version": "1.87.12"
-      },
-      {
-        "changelog": "## [1.87.11] - 2026-10-21\n\n### Bug Fixes\n\n- *(onboarding)* Fix question mark help tooltip cutoff at screen top and restore existing saved preferences when rerunning the setup wizard",
-        "checksum": "22f7ca239a9d050760ba71c2ffaba3fa",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.11/jellio_1.87.11.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-20T23:14:52Z",
-        "version": "1.87.11"
       }
     ]
   }
