@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.100.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.100.0",
+    "summary": "Take shows out of Coming Soon.",
+    "highlights": [
+      {
+        "title": "Remove from Coming Soon",
+        "description": "Right click or press and hold a Coming Soon card to remove it. Handy for shows you tried once that would otherwise keep appearing while they air. It stays gone on all your devices and stops its release notifications; adding the title to your Watchlist brings it back."
+      }
+    ]
+  },
+  {
     "version": "1.99.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.99.2",
