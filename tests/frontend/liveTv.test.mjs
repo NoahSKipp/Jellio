@@ -114,6 +114,15 @@ test('a stream that finishes opening after leaving is closed straight away', asy
   assert.deepEqual(closed, ['late']);
 });
 
+test('closing a stream also hands over its play session so the transcode can be stopped', async () => {
+  const closed = [];
+  const life = createLiveLifecycle(async (id) => ({ liveStreamId: id + '-live', playSessionId: id + '-session' }), async (id, session) => closed.push([id, session]));
+  await life.start('a');
+  await life.start('b');
+  await life.stop();
+  assert.deepEqual(closed, [['a-live', 'a-session'], ['b-live', 'b-session']]);
+});
+
 test('a busy tuner gets its own message', () => {
   assert.match(describeOpenFailure(new Error('No available tuner')), /tuners are busy/);
   assert.match(describeOpenFailure({ message: 'Request timed out' }), /too long/);
@@ -127,6 +136,20 @@ test('channel names give a type and a language when they say so', async () => {
   assert.deepEqual(classifyChannel('ESPN Deportes'), { kind: 'sports', language: 'Spanish' });
   assert.deepEqual(classifyChannel('beIN Sports 1 France'), { kind: 'sports', language: 'French' });
   assert.deepEqual(classifyChannel('Channel 4'), { kind: 'tv', language: null });
+});
+
+test('German stations and sports stems that carry no country are still recognised', async () => {
+  const { classifyChannel } = await import('../../src/Jellio/Frontend/runtime/liveTv.js');
+  assert.deepEqual(classifyChannel('RTL'), { kind: 'tv', language: 'German' });
+  assert.deepEqual(classifyChannel('ProSieben MAXX'), { kind: 'tv', language: 'German' });
+  assert.deepEqual(classifyChannel('ARD One'), { kind: 'tv', language: 'German' });
+  assert.deepEqual(classifyChannel('SPORT1'), { kind: 'sports', language: 'German' });
+  assert.deepEqual(classifyChannel('ESPN2 USA'), { kind: 'sports', language: 'English' });
+  assert.deepEqual(classifyChannel('TSN3'), { kind: 'sports', language: null });
+  assert.deepEqual(classifyChannel('Canal+ Extra 3 Poland'), { kind: 'sports', language: 'Polish' });
+  // a stated country wins over a station name
+  assert.deepEqual(classifyChannel('RTL Croatia'), { kind: 'tv', language: 'Balkan' });
+  assert.deepEqual(classifyChannel('Sky Cinema Premiere UK'), { kind: 'tv', language: 'English' });
 });
 
 test('type and language filters combine with search; facets count languages', async () => {

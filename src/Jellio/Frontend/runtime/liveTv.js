@@ -31,7 +31,7 @@ function mapProgramme(dto, nowMs) {
 // Channel names are the only signal for type and language (the M3U carries
 // no groups through Jellyfin), e.g. "Sky Sports F1 UK", "RTL Germany",
 // "ESPN Deportes". Unknown stays unknown rather than guessed.
-const SPORTS = /\b(sports?|deportes?|desporto|esporte|espn|bein|dazn|eurosport|f1|formula ?1|nba|nfl|nhl|mlb|golf|tennis|cricket|rugby|boxing|ufc|wwe|racing|motogp|supersport|tsn|sportsnet|premier league|laliga|ligue ?1|bundesliga|serie a|eleven|setanta|willow|polsat sport|movistar|match!?|nova sport|digi sport|sportklub|viaplay|ziggo|arena|sky sport|tnt sport|fox sport|cbs sports|nbc sports|astro|ptv sports|stars? sports|sportv|claro sports|tudn|nfl network|redzone|racing tv|sky racing)\b/i;
+const SPORTS = /\b(sports?|deportes?|desporto|esporte|espn|bein|dazn|eurosport|f1|formula ?1|nba|nfl|nhl|mlb|golf|tennis|cricket|rugby|boxing|ufc|wwe|racing|motogp|supersport|tsn|sportsnet|premier league|laliga|ligue ?1|bundesliga|serie a|eleven|setanta|willow|polsat sport|movistar|match!?|nova sport|digi sport|sportklub|viaplay|ziggo|arena|sky sport|tnt sport|fox sport|cbs sports|nbc sports|astro|ptv sports|stars? sports|sportv|claro sports|tudn|nfl network|redzone|racing tv|sky racing)\b|sport|espn|\btsn\d|laliga|soccer|\bfoot\b|fight network|canal\+ extra|premier brasil/i;
 
 const LANGUAGES = [
   ['English', /\b(uk|usa|us|english|eng|canada|ca|australia|au|nz|ireland|ie|scotland)\b/i],
@@ -48,12 +48,17 @@ const LANGUAGES = [
   ['Balkan', /\b(serbia|srbija|croatia|hrvatska|bosnia|slovenia|arena sport|sportklub)\b/i],
 ];
 
+// German stations carry no country in their name ("RTL", "ProSieben"), so
+// they are told by name, but only when nothing else said a language.
+const GERMAN_STATIONS = /\b(ard|arte|zdf|zdfneo|zdfinfo|das erste|rtl|rtl zwei|rtl nitro|rtlup|vox|sat\.?1|pro ?sieben( maxx)?|kabel ?eins|sixx|dmax|nitro|super rtl|tele ?5|ntv|n-tv|welt|phoenix|3sat|tagesschau24|servus tv|sport1|sportdigital)\b/i;
+
 export function classifyChannel(name) {
   const text = String(name || '');
   const language = LANGUAGES.find(function (entry) {
     return entry[1].test(text);
   });
-  return { kind: SPORTS.test(text) ? 'sports' : 'tv', language: language ? language[0] : null };
+  const label = language ? language[0] : GERMAN_STATIONS.test(text) ? 'German' : null;
+  return { kind: SPORTS.test(text) ? 'sports' : 'tv', language: label };
 }
 
 export function mapChannel(dto, nowMs) {
@@ -222,7 +227,7 @@ export function createLiveLifecycle(open, close) {
     current = null;
     if (stream && stream.liveStreamId) {
       try {
-        await close(stream.liveStreamId);
+        await close(stream.liveStreamId, stream.playSessionId);
       } catch (err) {}
     }
   }
@@ -236,7 +241,7 @@ export function createLiveLifecycle(open, close) {
         // Superseded (a fast channel change or leaving) while opening.
         if (stream && stream.liveStreamId) {
           try {
-            await close(stream.liveStreamId);
+            await close(stream.liveStreamId, stream.playSessionId);
           } catch (err) {}
         }
         return null;

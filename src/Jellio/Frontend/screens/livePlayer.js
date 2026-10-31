@@ -306,7 +306,7 @@ export async function renderLivePlayer(root, params) {
       stream = await lifecycle.start(target.id);
     } catch (err) {
       if (mine !== attempt || left) return;
-      if (err && err.liveStreamId) closeLiveStream(err.liveStreamId).catch(function () {});
+      if (err && err.liveStreamId) closeLiveStream(err.liveStreamId, err.playSessionId).catch(function () {});
       if (countsAsChannelFailure(err)) reportOutcome(target, false, (err && (err.code || err.message)) || 'open failed');
       showError(openFailureText(err));
       return;
@@ -485,7 +485,7 @@ export async function renderLivePlayer(root, params) {
   function onPageHide() {
     stopLiveWatching();
     const stream = lifecycle.current();
-    if (stream && stream.liveStreamId) closeLiveStream(stream.liveStreamId).catch(function () {});
+    if (stream && stream.liveStreamId) closeLiveStream(stream.liveStreamId, stream.playSessionId).catch(function () {});
   }
   window.addEventListener('pagehide', onPageHide);
 

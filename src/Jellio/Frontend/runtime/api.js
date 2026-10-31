@@ -4892,6 +4892,7 @@ export async function openLiveChannel(channelId) {
   if (!source || !source.TranscodingUrl) {
     const err = new Error('No playable live stream');
     if (source && source.LiveStreamId) err.liveStreamId = source.LiveStreamId;
+    if (info && info.PlaySessionId) err.playSessionId = info.PlaySessionId;
     throw err;
   }
   return {
@@ -4903,13 +4904,23 @@ export async function openLiveChannel(channelId) {
 }
 
 // keepalive so it still goes out when the tab is closing.
-export function closeLiveStream(liveStreamId) {
+export function closeLiveStream(liveStreamId, playSessionId) {
   if (!liveStreamId) return Promise.resolve();
-  return fetch(getServerAddress() + '/LiveStreams/Close?liveStreamId=' + encodeURIComponent(liveStreamId), {
+  const headers = getAuthHeaders();
+  const closing = fetch(getServerAddress() + '/LiveStreams/Close?liveStreamId=' + encodeURIComponent(liveStreamId), {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: headers,
     keepalive: true,
   }).then(function () {});
+  if (!playSessionId) return closing;
+  // Closing the live stream does not stop the transcode reading the channel:
+  // Jellyfin keeps it running for a minute or so. A provider that allows one
+  // connection would refuse the next channel for that long, so stop it now.
+  const stopping = fetch(
+    getServerAddress() + '/Videos/ActiveEncodings?deviceId=' + encodeURIComponent(getDeviceId()) + '&playSessionId=' + encodeURIComponent(playSessionId),
+    { method: 'DELETE', headers: headers, keepalive: true },
+  ).then(function () {}).catch(function () {});
+  return Promise.all([closing, stopping]).then(function () {});
 }
 
 // Jellio/StreamLinks: errors come back as { Error: code } with a 422,
