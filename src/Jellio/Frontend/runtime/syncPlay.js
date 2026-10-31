@@ -72,6 +72,33 @@ const ExplicitLeaveGraceMs = 20000;
 
 let started = false;
 let explicitLeaveUntil = 0;
+
+// The group THIS browser joined. GET /SyncPlay/List only names accounts,
+// so a group listing this account's name may hold another of its devices
+// (the TV, a second browser): reconcile only ever restores this one.
+const MY_GROUP_KEY = 'jellio.syncplay.groupId';
+let pendingCreateName = null;
+let pendingCreateUntil = 0;
+
+function readMyGroupId() {
+  try {
+    return window.localStorage.getItem(MY_GROUP_KEY) || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function writeMyGroupId(groupId) {
+  try {
+    if (groupId) window.localStorage.setItem(MY_GROUP_KEY, groupId);
+    else window.localStorage.removeItem(MY_GROUP_KEY);
+  } catch (err) {}
+}
+
+export function sameId(a, b) {
+  if (!a || !b) return false;
+  return String(a).replace(/-/g, '').toLowerCase() === String(b).replace(/-/g, '').toLowerCase();
+}
 let apiClient = null;
 let timeOffsetMeasurements = [];
 let pingTimer = null;
@@ -221,6 +248,8 @@ function onApiClientMessage(event, msg) {
 // nothing about its queue or last command is ours to trust yet.
 function applyGroupJoined(groupData) {
   currentGroup = groupData;
+  if (groupData && groupData.GroupId) writeMyGroupId(groupData.GroupId);
+  pendingCreateName = null;
   currentQueue = null;
   lastCommand = null;
   lastNotifiedPlaylistItemId = null;
@@ -234,6 +263,7 @@ function applyGroupJoined(groupData) {
 // this exact identity's own WebSocket.
 function resetGroupState() {
   currentGroup = null;
+  writeMyGroupId(null);
   currentQueue = null;
   lastCommand = null;
   lastNotifiedPlaylistItemId = null;
@@ -506,9 +536,20 @@ async function reconcileGroupMembership() {
     const [groups, user] = await Promise.all([getSyncPlayGroups(), getCurrentUser()]);
     if (user && user.Name) myUserName = user.Name;
     if (!myUserName) return;
-    const mine = (groups || []).find(function (group) {
-      return (group.Participants || []).indexOf(myUserName) !== -1;
-    });
+    const list = groups || [];
+    const myGroupId = readMyGroupId();
+    let mine = myGroupId
+      ? list.find(function (group) {
+          return sameId(group.GroupId, myGroupId);
+        })
+      : null;
+    // A group this browser just created whose GroupJoined push went missing.
+    if (!mine && pendingCreateName && Date.now() < pendingCreateUntil) {
+      mine = list.find(function (group) {
+        return group.GroupName === pendingCreateName && (group.Participants || []).indexOf(myUserName) !== -1;
+      });
+    }
+    if (myGroupId && !mine) writeMyGroupId(null);
     const mineGroupId = mine && mine.GroupId;
     if (mineGroupId !== lastLoggedReconcileGroupId) {
       lastLoggedReconcileGroupId = mineGroupId;
@@ -521,7 +562,7 @@ async function reconcileGroupMembership() {
       // rejoining right back into a group the reader only just left.
       return;
     }
-    if (mine && (!currentGroup || currentGroup.GroupId !== mine.GroupId)) {
+    if (mine && (!currentGroup || !sameId(currentGroup.GroupId, mine.GroupId))) {
       const joinedGroupId = mine.GroupId;
       try {
         await joinGroup(joinedGroupId);
@@ -538,21 +579,15 @@ async function reconcileGroupMembership() {
       // never shows up at all, so reconcile stops silently re-joining
       // every tick forever with nothing to show for it.
       window.setTimeout(function () {
-        if (!currentGroup || currentGroup.GroupId !== joinedGroupId) {
+        if (!currentGroup || !sameId(currentGroup.GroupId, joinedGroupId)) {
           console.warn('Jellio SyncPlay: GroupJoined push never arrived after a real join, applying the REST snapshot directly');
           applyGroupJoined(mine);
         }
       }, 3000);
-    } else if (!mine && currentGroup) {
-      // Mirror case: this session left (leaveGroup(), or was removed
-      // server side) but the real NotInGroup/GroupLeft push confirming
-      // that never reached this exact identity's own WebSocket, same
-      // real gap the join side above already works around. The REST
-      // snapshot above is already the ground truth this reader trusts
-      // for the join case, so it is just as trustworthy here: if this
-      // session's own display name is genuinely not a participant of
-      // any group any more, nothing server side is still waiting on a
-      // push, only this file's own stale local state is.
+    } else if (currentGroup && !list.some(function (group) {
+      return sameId(group.GroupId, currentGroup.GroupId);
+    })) {
+      // The group itself is gone and the push saying so never arrived.
       console.warn('Jellio SyncPlay: reconcile found this session is no longer a participant, clearing stale local group state for', currentGroup.GroupId);
       resetGroupState();
     }
@@ -646,6 +681,12 @@ export function startSyncPlay() {
 
 export function getCurrentGroup() {
   return currentGroup;
+}
+
+// The last command pushed, for a player that only learns the group's
+// queue item after the command for it already arrived.
+export function getLastCommand() {
+  return lastCommand;
 }
 
 // The real item id (and PlaylistItemId) the group is currently on, or
@@ -762,6 +803,17 @@ export { remoteToLocal, localToRemote, estimateCurrentTicks, getTimeOffsetMs, Ti
 // their own left over from before that fix existed, only the one real
 // gap it does not cover: a genuinely stale REST snapshot, which
 // reconcileGroupMembership() above already works around on its own.
+// Lets reconcile adopt a group this browser creates if its GroupJoined
+// push is lost.
+export function noteCreatingGroup(name) {
+  pendingCreateName = name;
+  pendingCreateUntil = Date.now() + 15000;
+}
+
+export function getMyGroupId() {
+  return (currentGroup && currentGroup.GroupId) || readMyGroupId();
+}
+
 export function joinGroup(groupId) {
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   // A fresh, explicit join always supersedes an earlier leave's own
@@ -770,12 +822,16 @@ export function joinGroup(groupId) {
   // for a lost push on this exact join should not stay suppressed
   // behind a leave that is no longer the last real thing they did.
   explicitLeaveUntil = 0;
-  return apiClient.joinSyncPlayGroup({ GroupId: groupId });
+  return apiClient.joinSyncPlayGroup({ GroupId: groupId }).then(function (result) {
+    writeMyGroupId(groupId);
+    return result;
+  });
 }
 
 export function leaveGroup() {
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   explicitLeaveUntil = Date.now() + ExplicitLeaveGraceMs;
+  writeMyGroupId(null);
   return apiClient.leaveSyncPlayGroup();
 }
 

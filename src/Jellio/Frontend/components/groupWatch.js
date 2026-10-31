@@ -35,7 +35,7 @@ import {
   voteRankingSession,
 } from '../runtime/api.js';
 import { getPublicUsers } from '../runtime/auth.js';
-import { joinGroup, leaveGroup } from '../runtime/syncPlay.js';
+import { joinGroup, leaveGroup, getMyGroupId, noteCreatingGroup, sameId } from '../runtime/syncPlay.js';
 import { navigateTo } from '../runtime/router.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import {
@@ -626,7 +626,8 @@ export async function openGroupWatch() {
 
     groups.forEach(function (group) {
       const participants = group.Participants || [];
-      const isMember = currentUserName && participants.indexOf(currentUserName) !== -1;
+      // This browser's own group, not any group listing this account's name.
+      const isMember = sameId(getMyGroupId(), group.GroupId);
 
       const row = el('div', 'jellio-group-watch-row' + (isMember ? ' jellio-group-watch-row-active' : ''));
       const info = el('div', 'jellio-group-watch-row-info');
@@ -706,7 +707,9 @@ export async function openGroupWatch() {
   createButton.addEventListener('click', function () {
     createButton.disabled = true;
     status.textContent = t('gw_starting_group');
-    createSyncPlayGroup(nameInput.value.trim() || 'Group Watch')
+    const newName = nameInput.value.trim() || 'Group Watch';
+    noteCreatingGroup(newName);
+    createSyncPlayGroup(newName)
       .then(function () {
         nameInput.value = '';
         creditGroupWatchStarted().catch(function () {
