@@ -19,6 +19,22 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.101.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.101.1",
+    "summary": "Better Live TV filters and quicker channel changes.",
+    "highlights": [
+      {
+        "title": "Sports and Language Filters",
+        "description": "Sports channels such as ESPN2 or TSN now sit under Sports instead of TV, and German stations like RTL or ProSieben are found under German."
+      },
+      {
+        "title": "Quicker Channel Changes",
+        "description": "Leaving a channel now stops it on the server straight away, so the next channel starts without waiting for the old one to time out."
+      }
+    ]
+  },
+  {
     "version": "1.101.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.101.0",
