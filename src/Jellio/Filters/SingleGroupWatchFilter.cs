@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Controller.SyncPlay;
 using MediaBrowser.Controller.SyncPlay.Requests;
@@ -16,11 +17,14 @@ namespace Jellio.Filters;
 /// One Group Watch per person. Jellyfin keeps each session (device) in at
 /// most one SyncPlay group, but the same person's browser, TV and Mac are
 /// separate sessions and could each sit in a different group. Creating or
-/// joining a group first takes the person's other devices out of theirs.
+/// joining a group first takes the person's other devices out of theirs,
+/// except when joining a group they are already in on another device: then
+/// both devices watch together instead of throwing each other out.
 /// </summary>
 public class SingleGroupWatchFilter(
     ISessionManager sessionManager,
     ISyncPlayManager syncPlayManager,
+    IUserManager userManager,
     ILogger<SingleGroupWatchFilter> logger) : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -32,6 +36,13 @@ public class SingleGroupWatchFilter(
         )
         {
             var deviceId = context.HttpContext.User.FindFirst("Jellyfin-DeviceId")?.Value;
+            if (context.ActionDescriptor is ControllerActionDescriptor { ActionName: "SyncPlayJoinGroup" }
+                && AlreadyInTargetGroup(context, userId, deviceId))
+            {
+                await next().ConfigureAwait(false);
+                return;
+            }
+
             var others = sessionManager.Sessions
                 .Where(s => s.UserId == userId && !string.Equals(s.DeviceId, deviceId, StringComparison.Ordinal))
                 .ToList();
@@ -49,5 +60,38 @@ public class SingleGroupWatchFilter(
         }
 
         await next().ConfigureAwait(false);
+    }
+
+    // Whether this person is already a participant of the group being
+    // joined (on another of their devices). Groups only list names.
+    private bool AlreadyInTargetGroup(ActionExecutingContext context, Guid userId, string? deviceId)
+    {
+        var targetId = context.ActionArguments.Values
+            .Select(value => value?.GetType().GetProperty("GroupId")?.GetValue(value))
+            .OfType<Guid>()
+            .FirstOrDefault();
+        var userName = userManager.GetUserById(userId)?.Username;
+        if (targetId == Guid.Empty || string.IsNullOrEmpty(userName))
+        {
+            return false;
+        }
+
+        var session = sessionManager.Sessions.FirstOrDefault(s => s.UserId == userId && string.Equals(s.DeviceId, deviceId, StringComparison.Ordinal))
+            ?? sessionManager.Sessions.FirstOrDefault(s => s.UserId == userId);
+        if (session == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var target = syncPlayManager.ListGroups(session, new ListGroupsRequest()).FirstOrDefault(g => g.GroupId == targetId);
+            return target != null && target.Participants.Contains(userName, StringComparer.Ordinal);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Jellio: could not read the Group Watch being joined");
+            return false;
+        }
     }
 }
