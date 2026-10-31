@@ -3319,8 +3319,73 @@ export function getGroupWatchMessages(groupId, afterId) {
 // toast appeared still has a real, permanent way to reach it: the chat
 // message rendering it below reuses the same real navigateTo('#/play?...')
 // that toast's own onClick already does.
-export function sendGroupWatchMessage(groupId, text, itemId) {
-  return postJson('/Jellio/groupwatch/' + groupId + '/messages', { Text: text, ItemId: itemId || null });
+export function sendGroupWatchMessage(groupId, text, itemId, replyToId) {
+  return postJson('/Jellio/groupwatch/' + groupId + '/messages', { Text: text, ItemId: itemId || null, ReplyToId: replyToId || null });
+}
+
+// Watch parties (Controllers/PartiesController.cs): the party side of a
+// Group Watch, SyncPlay still does the syncing.
+export function getParties() {
+  return getJson('/Jellio/parties', 15000);
+}
+
+export function setupParty(groupId, options) {
+  return postJson('/Jellio/parties/' + groupId + '/setup', {
+    Private: options.private == null ? null : !!options.private,
+    HostOnly: options.hostOnly == null ? null : !!options.hostOnly,
+    ScheduleId: options.scheduleId || null,
+  });
+}
+
+export function getPartyState(groupId, afterRequestId) {
+  return getJson('/Jellio/parties/' + groupId + '/state?after=' + (afterRequestId || 0), 10000);
+}
+
+export function setPartyItem(groupId, itemId) {
+  return postJson('/Jellio/parties/' + groupId + '/item', { ItemId: itemId });
+}
+
+export function transferPartyHost(groupId, userId) {
+  return postJson('/Jellio/parties/' + groupId + '/host', { UserId: userId });
+}
+
+export function requestPartyControl(groupId, kind, positionTicks) {
+  return postJson('/Jellio/parties/' + groupId + '/request', { Kind: kind, PositionTicks: positionTicks == null ? null : Math.round(positionTicks) });
+}
+
+export function setPartyReady(groupId, playlistItemId, ready) {
+  return postJson('/Jellio/parties/' + groupId + '/ready', { PlaylistItemId: playlistItemId, Ready: !!ready });
+}
+
+export function startPartyCountdown(groupId, playlistItemId, seconds) {
+  return postJson('/Jellio/parties/' + groupId + '/countdown', { PlaylistItemId: playlistItemId, Seconds: seconds });
+}
+
+export function resolvePartyCode(code) {
+  return postJson('/Jellio/parties/code', { Code: code });
+}
+
+export function scheduleParty(options) {
+  return postJson('/Jellio/parties/schedule', {
+    Name: options.name || null,
+    ItemId: options.itemId || null,
+    StartsAt: new Date(options.startsAt).toISOString(),
+    Private: !!options.private,
+    HostOnly: !!options.hostOnly,
+    InviteeUserIds: options.inviteeUserIds || [],
+  });
+}
+
+export function rsvpParty(scheduleId, going) {
+  return postJson('/Jellio/parties/schedule/' + scheduleId + '/rsvp', { Going: !!going });
+}
+
+export function cancelScheduledParty(scheduleId) {
+  return deleteJson('/Jellio/parties/schedule/' + scheduleId);
+}
+
+export function markScheduledPartyStarted(scheduleId, groupId) {
+  return postJson('/Jellio/parties/schedule/' + scheduleId + '/started', { GroupId: groupId });
 }
 
 // Jellio's own GroupWatchRankingController: a real single elimination

@@ -110,7 +110,9 @@ import {
   getSyncUserId,
   getLastCommand as getLastSyncCommand,
   sameId as sameSyncId,
+  leaveGroup as leaveSyncGroup,
 } from '../runtime/syncPlay.js';
+import { createPartyLayer, askCatchUp } from '../components/partyLayer.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
@@ -657,6 +659,9 @@ export async function renderPlayer(root, params) {
   // title negotiates the real stream starting from the group's own
   // position, not this reader's own unrelated resume point.
   let syncPlaylistItemId = null;
+  // The watch party layer (components/partyLayer.js), set once the
+  // player is built.
+  let partyLayer = null;
   const initialSyncTarget = getCurrentPlaylistTarget();
   let startTicks = (item.UserData && item.UserData.PlaybackPositionTicks) || 0;
   if (initialSyncTarget && sameSyncId(initialSyncTarget.itemId, itemId)) {
@@ -1055,6 +1060,9 @@ export async function renderPlayer(root, params) {
   // shared position, not this reader's own personal one, so there is
   // nothing of theirs to ask about, and Start Over's own real reset
   // would be wrong for everyone else already in the group.
+  // Watching on alone from the beginning, chosen instead of catching up
+  // with a group.
+  if (params.get('fromStart') === '1') startTicks = 0;
   const hasResumePosition = startTicks > 0 && !syncPlaylistItemId;
 
   const video = document.createElement('video');
@@ -1590,6 +1598,7 @@ export async function renderPlayer(root, params) {
 
     chatToggleButton.addEventListener('click', function () {
       chatOpen = !chatOpen;
+      if (partyLayer) partyLayer.setChatPanelOpen(chatOpen);
       chatPanel.classList.toggle('jellio-player-chat-panel-visible', chatOpen);
       chatToggleButton.setAttribute('aria-expanded', String(chatOpen));
       if (chatOpen) {
@@ -1649,6 +1658,11 @@ export async function renderPlayer(root, params) {
     // with nothing on the real queue for this title) falls straight
     // back to the plain local toggle this button always had.
     if (syncPlaylistItemId) {
+      // Host-only party: ask the host instead.
+      if (partyLayer && partyLayer.shouldAsk()) {
+        partyLayer.ask(video.paused ? 'play' : 'pause');
+        return;
+      }
       (video.paused ? requestSyncUnpause : requestSyncPause)().catch(function (err) {
         console.warn('Jellio: could not send Group Watch play/pause', err);
       });
@@ -3910,6 +3924,10 @@ export async function renderPlayer(root, params) {
       return;
     }
     if (syncPlaylistItemId) {
+      if (partyLayer && partyLayer.shouldAsk()) {
+        partyLayer.ask('seek', Math.round(targetSeconds * TICKS_PER_SECOND));
+        return;
+      }
       requestSyncSeek(Math.round(targetSeconds * TICKS_PER_SECOND)).catch(function (err) {
         console.warn('Jellio: could not send Group Watch seek', err);
       });
@@ -5817,6 +5835,30 @@ export async function renderPlayer(root, params) {
   // is nothing unsafe about wiring them before a group is confirmed.
   unsubscribeSyncCommand = onSyncCommand(applySyncCommand);
 
+  partyLayer = createPartyLayer({
+    root: root,
+    itemId: itemId,
+    getPlaylistItemId: function () {
+      return syncPlaylistItemId;
+    },
+    getPositionTicks: currentPositionTicks,
+    getUserId: getSyncUserId,
+    toast: showPlayerToast,
+  });
+
+  // Joining well into the group's title: follow the group or start alone.
+  if (isInitialGroupCatchUp && startTicks > 120 * TICKS_PER_SECOND) {
+    askCatchUp(root, startTicks / TICKS_PER_SECOND).then(function (choice) {
+      if (choice !== 'solo' || screenTornDown) return;
+      if (joinSyncGroupId) clearJoinSync(joinSyncGroupId).catch(function () {});
+      leaveSyncGroup()
+        .catch(function () {})
+        .then(function () {
+          navigateTo('#/play?id=' + encodeURIComponent(itemId) + '&fromStart=1');
+        });
+    });
+  }
+
   // In a real group: publishing this item is the same real call a
   // native client's own SyncPlay button already makes the moment it
   // starts something while in a group, the exact real bug this whole
@@ -5862,11 +5904,15 @@ export async function renderPlayer(root, params) {
         // like it does for every other member, this reader included, so
         // there is only ever one real code path that actually starts a
         // synced video anywhere in this file.
-        waitForPlayableBuffer(function () {
-          requestSyncUnpause().catch(function (err) {
-            console.warn('Jellio: could not send initial Group Watch unpause', err);
+        // A watch party first runs a ready check and a 3-2-1 countdown,
+        // then unpauses the group (components/partyLayer.js).
+        if (!(partyLayer && partyLayer.published())) {
+          waitForPlayableBuffer(function () {
+            requestSyncUnpause().catch(function (err) {
+              console.warn('Jellio: could not send initial Group Watch unpause', err);
+            });
           });
-        });
+        }
         // Real feedback, found live: SetNewQueue can return a real 204
         // here and still never actually queue anything, real
         // WaitingGroupState.cs's own real SetPlayQueue() failing a
@@ -5921,6 +5967,7 @@ export async function renderPlayer(root, params) {
     // that missed-event case without waiting on one that may not come.
     if (syncPlaylistItemId && video.readyState >= 3) {
       notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
+      if (partyLayer) partyLayer.markReady(syncPlaylistItemId);
     } else if (syncPlaylistItemId && !joinSyncActive && target && target.isPlaying) {
       // Mirror case, same real gap this whole handler's own header above
       // already covers for notifyReady: isInitialGroupCatchUp near the
@@ -5969,6 +6016,7 @@ export async function renderPlayer(root, params) {
   video.addEventListener('canplay', function () {
     if (!syncPlaylistItemId) return;
     notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
+    if (partyLayer) partyLayer.markReady(syncPlaylistItemId);
     // Only ever true for this file's own one real isInitialGroupCatchUp
     // mount time check above, cleared right after so a later real
     // 'canplay' (a source switch, a seek reload) never fires this a
@@ -6104,6 +6152,7 @@ export async function renderPlayer(root, params) {
     if (unsubscribeSyncCommand) unsubscribeSyncCommand();
     if (unsubscribeSyncGroupChange) unsubscribeSyncGroupChange();
     stopChatOnCleanup();
+    if (partyLayer) partyLayer.destroy();
     video.textTracks.removeEventListener('change', enforceSubtitleTrackModes);
     if (subtitleStyleTag) {
       subtitleStyleTag.remove();

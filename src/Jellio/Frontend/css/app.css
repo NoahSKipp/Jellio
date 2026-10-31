@@ -16539,3 +16539,446 @@
   font-size: 0.9em;
   margin: 10px 0 0;
 }
+
+/* Watch parties: components/groupWatch.js cards and forms,
+   components/partyLayer.js overlay in the player. */
+.jellio-settings-button-secondary {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--jellio-text-color);
+}
+
+.jellio-party-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em 1em;
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-party-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  cursor: pointer;
+}
+
+.jellio-party-schedule-button {
+  margin-left: auto;
+}
+
+.jellio-party-code {
+  display: flex;
+  gap: 0.5em;
+}
+
+.jellio-party-code-input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-party-section {
+  margin: 1em 0 0.5em;
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-party-card {
+  display: flex;
+  gap: 0.8em;
+  padding: 0.7em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: calc(var(--jellio-card-radius) / 1.5);
+  background: var(--jellio-card-bg);
+}
+
+.jellio-party-card-active {
+  border-color: var(--jellio-secondary-color);
+}
+
+.jellio-party-art {
+  flex: 0 0 auto;
+  width: 4.5em;
+  aspect-ratio: 2 / 3;
+  border-radius: calc(var(--jellio-card-radius) / 2.5);
+  background: var(--jellio-bg-elevated) center / cover no-repeat;
+  display: grid;
+  place-items: center;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-party-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35em;
+  min-width: 0;
+}
+
+.jellio-party-card-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-party-card-sub,
+.jellio-party-card-host {
+  font-size: 0.8em;
+  color: var(--jellio-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-party-card-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  font-size: 0.75em;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-party-card-flag .material-icons {
+  font-size: 1.1em;
+}
+
+.jellio-party-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  margin-top: auto;
+}
+
+.jellio-party-progress {
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.12);
+  overflow: hidden;
+}
+
+.jellio-party-progress-fill {
+  height: 100%;
+  background: var(--jellio-secondary-color);
+}
+
+.jellio-party-avatars {
+  display: flex;
+}
+
+.jellio-party-avatars > * {
+  width: 1.7em;
+  height: 1.7em;
+  border: 2px solid var(--jellio-card-bg);
+  border-radius: 50%;
+}
+
+.jellio-party-avatars > * + * {
+  margin-left: -0.5em;
+}
+
+.jellio-party-avatars-more {
+  display: grid;
+  place-items: center;
+  background: var(--jellio-bg-elevated);
+  font-size: 0.7em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-settings-button.jellio-party-going {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--jellio-text-color);
+}
+
+.jellio-party-host-badge {
+  margin-left: 0.4em;
+  padding: 0.05em 0.5em;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  font-size: 0.7em;
+  font-weight: 700;
+  color: var(--jellio-text-color);
+}
+
+.jellio-party-make-host {
+  border: 0;
+  background: none;
+  color: var(--jellio-text-tertiary);
+  font: inherit;
+  font-size: 0.75em;
+  cursor: pointer;
+}
+
+.jellio-party-make-host:hover {
+  color: var(--jellio-text-color);
+}
+
+.jellio-party-timestamp {
+  padding: 0 0.3em;
+  border: 0;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.12);
+  color: var(--jellio-text-color);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.jellio-party-timestamp:hover {
+  background: rgb(255 255 255 / 0.22);
+}
+
+.jellio-party-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+}
+
+.jellio-party-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.jellio-party-field-label {
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-party-title-results {
+  display: flex;
+  flex-direction: column;
+  max-height: 12em;
+  overflow-y: auto;
+}
+
+.jellio-party-title-option {
+  padding: 0.45em 0.6em;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--jellio-text-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jellio-party-title-option:hover,
+.jellio-party-title-option:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-party-title-picked {
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-party-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.jellio-party-person {
+  padding: 0.3em 0.8em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  background: none;
+  color: var(--jellio-text-secondary);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.jellio-party-person-on {
+  border-color: var(--jellio-secondary-color);
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+}
+
+/* Player overlay. Lives beside .jellio-player-shell, so chat and the
+   countdown stay up while the controls fade. */
+.jellio-party-bubbles {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  bottom: 8em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4em;
+  width: min(22em, calc(100vw - 32px));
+  pointer-events: none;
+  z-index: 3;
+}
+
+.jellio-party-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  max-width: 100%;
+  padding: 0.5em 0.8em;
+  border-radius: 14px;
+  background: rgb(var(--jellio-bg-color-rgb) / 0.82);
+  color: var(--jellio-text-color);
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+  animation: jellio-party-in 220ms var(--jellio-ease-out, ease-out);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
+.jellio-party-bubble-own {
+  background: rgb(var(--jellio-card-bg-rgb) / 0.9);
+}
+
+.jellio-party-bubble-leaving {
+  opacity: 0;
+  transform: translateY(-0.4em);
+}
+
+.jellio-party-bubble-author {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-party-bubble-reply {
+  font-size: 0.75em;
+  color: var(--jellio-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-party-reactions {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  bottom: 5.2em;
+  display: flex;
+  gap: 0.2em;
+  padding: 0.25em;
+  border-radius: 999px;
+  background: rgb(var(--jellio-bg-color-rgb) / 0.7);
+  z-index: 3;
+  transition: opacity 0.3s ease;
+}
+
+.jellio-player-shell-idle ~ .jellio-party-reactions {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.jellio-party-reaction {
+  width: 2.1em;
+  height: 2.1em;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 1.05em;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.jellio-party-reaction:hover,
+.jellio-party-reaction:focus-visible {
+  background: rgb(255 255 255 / 0.12);
+  transform: scale(1.15);
+}
+
+.jellio-party-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.6em 1.2em;
+  border-radius: 999px;
+  background: rgb(var(--jellio-bg-color-rgb) / 0.75);
+  color: var(--jellio-text-color);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.jellio-party-center-big {
+  padding: 0;
+  background: none;
+  font-size: clamp(4em, 14vw, 9em);
+  text-shadow: 0 4px 30px rgb(0 0 0 / 0.6);
+  animation: jellio-party-pop 250ms var(--jellio-ease-out, ease-out);
+}
+
+.jellio-party-prompt,
+.jellio-party-catchup {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em 0.8em;
+  max-width: calc(100vw - 32px);
+  padding: 0.8em 1.1em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  z-index: 5;
+}
+
+.jellio-party-prompt {
+  top: clamp(20px, 6vh, 56px);
+}
+
+.jellio-party-catchup {
+  top: 50%;
+  flex-direction: column;
+  transform: translate(-50%, -50%);
+  padding: 1.2em 1.5em;
+}
+
+.jellio-party-catchup-title {
+  font-size: 1.1em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.jellio-party-catchup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6em;
+}
+
+.jellio-party-catchup-actions .jellio-settings-button {
+  align-self: auto;
+  white-space: normal;
+}
+
+@keyframes jellio-party-in {
+  from { opacity: 0; transform: translateY(0.5em); }
+}
+
+@keyframes jellio-party-pop {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jellio-party-bubble,
+  .jellio-party-center-big {
+    animation: none;
+  }
+}

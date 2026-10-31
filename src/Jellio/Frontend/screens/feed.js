@@ -33,6 +33,25 @@ import { el } from '../runtime/dom.js';
 // day) arrive as one entry with EpisodeCount > 1 instead of one row
 // per episode here, real feedback specifically asked not to drown the
 // rest of this feed out under a single sitting.
+// A watch party: who hosted, what was watched together, the reactions.
+function appendPartyDescription(container, entry) {
+  const title = entry.ItemType === 'Episode' && entry.SeriesName ? entry.SeriesName : entry.ItemName;
+  container.appendChild(document.createTextNode(t('feed_party_lead') + ' '));
+  container.appendChild(el('span', 'jellio-feed-title', entry.PartyName || 'Group Watch'));
+  if (title) {
+    container.appendChild(document.createTextNode(' · '));
+    container.appendChild(el('span', 'jellio-feed-title', title));
+    if (entry.PartyTitleCount > 1) container.appendChild(document.createTextNode(' ' + t('feed_party_more', { count: entry.PartyTitleCount - 1 })));
+  }
+  const others = (entry.PartyMembers || []).filter(function (name) {
+    return name !== entry.UserName;
+  });
+  const detail = [];
+  if (others.length) detail.push(t('feed_party_with', { names: others.join(', ') }));
+  if ((entry.PartyReactions || []).length) detail.push(entry.PartyReactions.join(' '));
+  if (detail.length) container.appendChild(el('div', 'jellio-feed-badge-desc', detail.join(' · ')));
+}
+
 function appendWatchDescription(container, entry) {
   if (isReadingActivity(entry)) {
     const reading = describeReading(entry);
@@ -159,6 +178,8 @@ function buildFeedRow(entry) {
   const desc = el('div', 'jellio-feed-desc');
   if (entry.Kind === 'Badge') {
     appendBadgeDescription(desc, entry);
+  } else if (entry.Kind === 'Party') {
+    appendPartyDescription(desc, entry);
   } else {
     appendWatchDescription(desc, entry);
   }
@@ -178,12 +199,14 @@ function getFeedTypes() {
     { key: 'manga', label: 'Manga', icon: 'collections_bookmark' },
     { key: 'audiobooks', label: t('nav_audiobooks'), icon: 'headphones' },
     { key: 'badges', label: t('library_badges'), icon: 'emoji_events' },
+    { key: 'parties', label: t('feed_parties'), icon: 'groups' },
   ];
 }
 const FEED_HIDDEN_KEY = 'jellio-feed-hidden-types';
 
 function feedType(entry) {
   if (entry.Kind === 'Badge') return 'badges';
+  if (entry.Kind === 'Party') return 'parties';
   switch (entry.ItemType) {
     case 'Movie':
       return 'movies';
@@ -298,7 +321,8 @@ export async function renderFeed(root) {
   entries.forEach(function (entry) {
     const row = buildFeedRow(entry);
     const own = String(entry.UserId).replace(/-/g, '') === me;
-    if (!own && !isAdmin) {
+    // Party summaries aren't anyone's own activity to remove.
+    if ((!own && !isAdmin) || entry.Kind === 'Party') {
       row.dataset.feedType = feedType(entry);
       list.appendChild(row);
       return;

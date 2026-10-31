@@ -44,7 +44,18 @@ let knownIds = null;
 // the one field telling this file apart from a real watchlist entry:
 // Guid.Empty for its own ItemId, nothing real to fetch a poster for or
 // navigate to.
+function partyWhen(n) {
+  const date = new Date(n.Date);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+}
+
 function messageFor(n) {
+  if (n.Kind === 'party_scheduled') {
+    return t('party_notice_scheduled', { host: n.Detail || 'Someone', name: n.Name, when: partyWhen(n) });
+  }
+  if (n.Kind === 'party_starting') {
+    return t('party_notice_starting', { name: n.Name });
+  }
   if (n.Kind === 'streamlink') {
     return t('live_link_dead_notice', { name: n.Name });
   }
@@ -67,6 +78,7 @@ function messageFor(n) {
 }
 
 function subtitleFor(n) {
+  if (n.Kind === 'party_scheduled' || n.Kind === 'party_starting') return t('party_notice_sub');
   if (n.Kind === 'streamlink') return t('live_link_dead_sub');
   if (n.Kind === 'streamlink_removed') return t('live_link_section');
   if (n.Kind === 'whatsnew') return n.Detail || "What's new in Jellio";
@@ -80,6 +92,12 @@ function openItem(n) {
   hideNotificationsPanel();
   if (n.Kind === 'streamlink' || n.Kind === 'streamlink_removed') {
     navigateTo('#/livetv');
+    return;
+  }
+  if (n.Kind === 'party_scheduled' || n.Kind === 'party_starting') {
+    import('./groupWatch.js').then(function (m) {
+      m.openGroupWatch();
+    });
     return;
   }
   if (n.Kind === 'manga') {
@@ -124,6 +142,10 @@ function buildRow(n) {
     poster.appendChild(icon);
   } else if (isWhatsNew) {
     const icon = el('span', 'material-icons jellio-notifications-row-poster-icon auto_awesome');
+    icon.setAttribute('aria-hidden', 'true');
+    poster.appendChild(icon);
+  } else if (n.Kind === 'party_scheduled' || n.Kind === 'party_starting') {
+    const icon = el('span', 'material-icons jellio-notifications-row-poster-icon celebration');
     icon.setAttribute('aria-hidden', 'true');
     poster.appendChild(icon);
   } else if (n.Kind === 'streamlink' || n.Kind === 'streamlink_removed') {
