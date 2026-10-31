@@ -19,6 +19,34 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.102.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.102.0",
+    "summary": "Group Watch becomes watch parties, and groups stay in sync.",
+    "highlights": [
+      {
+        "title": "Watch Parties",
+        "description": "Group Watch now shows what each party is watching, how far in it is, who is there and who hosts it. Make a party private and share its code, or let only the host control playback; everyone else can ask the host to pause, play or jump."
+      },
+      {
+        "title": "Plan a Party",
+        "description": "Schedule a party for later with a title and the people you want. Invitees get a notification, can say they're in, and hear again when it starts."
+      },
+      {
+        "title": "Start Together",
+        "description": "A new title waits until everyone is ready, then counts down 3, 2, 1 for the whole group. Joining late? Pick between catching up with the group or starting from the beginning on your own."
+      },
+      {
+        "title": "Chat on the Screen",
+        "description": "Chat messages and reactions appear over the video, and a time like 41:40 in a message jumps the group there. After a party, the Feed shows who came and what you watched."
+      },
+      {
+        "title": "Steadier Sync",
+        "description": "Groups no longer stall in a pause loop or pull in your other devices, and the web player and Jellio TV can share a group under the same account."
+      }
+    ]
+  },
+  {
     "version": "1.101.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.101.1",
