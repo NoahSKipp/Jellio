@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.102.0] - 2026-10-31\n\n### 🚀 Features\n\n- *(parties)* Watch parties on top of Group Watch\n- *(groupwatch)* Watch parties on web\n\n### 🐛 Bug Fixes\n\n- *(groupwatch)* Only restore the group this browser joined\n- *(player)* Keep group playback from drifting into pause loops\n- *(groupwatch)* Let one person's devices watch in the same group\n\n### 📚 Documentation\n\n- *(changelog)* Watch parties in 1.102.0\n",
+        "checksum": "e89cf5dfaba70de67fa389d506a7613a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.0/jellio_1.102.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-10-31T23:34:44Z",
+        "version": "1.102.0"
+      },
+      {
         "changelog": "## [1.101.1] - 2026-10-31\n\n### 🐛 Bug Fixes\n\n- *(live)* Stop the transcode when leaving a channel; sort sports stems into Sports and recognise German stations by name\n\n### 📚 Documentation\n\n- *(changelog)* Note live TV filters and channel changes in 1.101.1\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.101.1\n",
         "checksum": "574ede990d6dd430f8c3fe530c7ce158",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.101.1/jellio_1.101.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-21T18:46:47Z",
         "version": "1.88.0"
-      },
-      {
-        "changelog": "## [1.87.13] - 2026-10-21\n\n### 🐛 Bug Fixes\n\n- *(detail)* Title pages no longer fail to load on titles with genres\n- *(library)* Repair syntax errors that stopped library screens from loading\n- Remove references to names that no longer exist\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.87.13 release notes\n\n### 🧪 Testing\n\n- *(frontend)* Check syntax as modules so errors are not missed\n",
-        "checksum": "aec97d7def7f49fd58a88753304db8a2",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.87.13/jellio_1.87.13.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-21T18:39:23Z",
-        "version": "1.87.13"
       }
     ]
   }
