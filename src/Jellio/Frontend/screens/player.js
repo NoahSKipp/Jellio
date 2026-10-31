@@ -108,6 +108,8 @@ import {
   requestPause as requestSyncPause,
   publishQueue as publishSyncQueue,
   getSyncUserId,
+  getLastCommand as getLastSyncCommand,
+  sameId as sameSyncId,
 } from '../runtime/syncPlay.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
@@ -657,7 +659,7 @@ export async function renderPlayer(root, params) {
   let syncPlaylistItemId = null;
   const initialSyncTarget = getCurrentPlaylistTarget();
   let startTicks = (item.UserData && item.UserData.PlaybackPositionTicks) || 0;
-  if (initialSyncTarget && initialSyncTarget.itemId === itemId) {
+  if (initialSyncTarget && sameSyncId(initialSyncTarget.itemId, itemId)) {
     syncPlaylistItemId = initialSyncTarget.playlistItemId;
     startTicks = initialSyncTarget.startPositionTicks || 0;
   }
@@ -5728,18 +5730,39 @@ export async function renderPlayer(root, params) {
     return Math.abs(currentPositionTicks() - targetTicks) / TICKS_PER_SECOND;
   }
 
+  // Every command bumps this; work a command left waiting (a reload, a
+  // buffer wait) checks it so a newer command always wins.
+  let syncGeneration = 0;
+  let lastAppliedSyncCommand = null;
+
+  // Catches up by seeking, telling the group it is buffering first so the
+  // server holds everyone, then reports Ready once playable. The server
+  // answers with Unpause (or Pause) for the whole group; this player never
+  // starts itself after a reload, which used to put it ahead again.
+  function syncSeekThenReady(targetSeconds, generation) {
+    const playlistItemId = syncPlaylistItemId;
+    video.pause();
+    notifyBuffering(currentPositionTicks(), false, playlistItemId).catch(function () {});
+    seekToAbsoluteSeconds(Math.max(0, targetSeconds)).then(function () {
+      waitForPlayableBuffer(function () {
+        if (generation !== syncGeneration || playlistItemId !== syncPlaylistItemId) return;
+        notifyReady(currentPositionTicks(), false, playlistItemId).catch(function () {});
+      });
+    });
+  }
+
   function applySyncCommand(command) {
     if (command.PlaylistItemId !== syncPlaylistItemId) return;
+    lastAppliedSyncCommand = command;
     clearScheduledSync();
+    const generation = ++syncGeneration;
 
     function run() {
+      if (generation !== syncGeneration) return;
       switch (command.Command) {
         case 'Unpause':
           if (syncDriftSeconds(command) > SYNC_DRIFT_THRESHOLD_SECONDS) {
-            const targetSeconds = estimateCurrentTicks(command.PositionTicks || 0, command.When) / TICKS_PER_SECOND;
-            seekToAbsoluteSeconds(Math.max(0, targetSeconds)).then(function () {
-              waitForPlayableBuffer(attemptPlay);
-            });
+            syncSeekThenReady(estimateCurrentTicks(command.PositionTicks || 0, command.When) / TICKS_PER_SECOND, generation);
           } else {
             attemptPlay();
           }
@@ -5751,7 +5774,9 @@ export async function renderPlayer(root, params) {
           }
           break;
         case 'Seek':
-          seekToAbsoluteSeconds(Math.max(0, (command.PositionTicks || 0) / TICKS_PER_SECOND));
+          // The server waits for every member's Ready after a seek; a seek
+          // inside the buffer fires no canplay, so Ready is sent here.
+          syncSeekThenReady((command.PositionTicks || 0) / TICKS_PER_SECOND, generation);
           break;
         case 'Stop':
           video.pause();
@@ -5871,7 +5896,17 @@ export async function renderPlayer(root, params) {
   // itself only resolving after mount (the race explained above).
   unsubscribeSyncGroupChange = onSyncGroupChange(function () {
     const target = getCurrentPlaylistTarget();
-    syncPlaylistItemId = target && target.itemId === itemId ? target.playlistItemId : null;
+    const previousPlaylistItemId = syncPlaylistItemId;
+    syncPlaylistItemId = target && sameSyncId(target.itemId, itemId) ? target.playlistItemId : null;
+    // A command for this queue item can arrive before this player knew it
+    // was the group's: apply the last one now instead of losing it.
+    if (syncPlaylistItemId && syncPlaylistItemId !== previousPlaylistItemId) {
+      const missed = getLastSyncCommand();
+      if (missed && missed !== lastAppliedSyncCommand && missed.PlaylistItemId === syncPlaylistItemId
+        && Date.now() - remoteToLocal(missed.When).getTime() < 60000) {
+        applySyncCommand(missed);
+      }
+    }
     // The gate below on 'waiting'/'canplay' just opened, real feedback
     // found live: this video's own 'canplay' very often already fired,
     // gate still closed, before this exact real round trip (SetNewQueue,
