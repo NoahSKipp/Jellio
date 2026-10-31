@@ -44,7 +44,12 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/feed")]
 [Authorize]
-public class FeedController(IUserManager userManager, AchievementStore achievementStore, ProfileSettingsStore profileSettingsStore) : ControllerBase
+public class FeedController(
+    IUserManager userManager,
+    AchievementStore achievementStore,
+    ProfileSettingsStore profileSettingsStore,
+    Jellio.Services.Parties.PartyService parties,
+    ILibraryManager libraryManager) : ControllerBase
 {
     private const int MaxEntries = 60;
 
@@ -71,7 +76,11 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
         int? PageCount = null,
         long? ListenedTicks = null,
         bool Finished = false,
-        bool Rewatch = false);
+        bool Rewatch = false,
+        string? PartyName = null,
+        IReadOnlyList<string>? PartyMembers = null,
+        IReadOnlyList<string>? PartyReactions = null,
+        int PartyTitleCount = 0);
 
     [HttpGet]
     public IActionResult Get()
@@ -147,6 +156,40 @@ public class FeedController(IUserManager userManager, AchievementStore achieveme
                     badge.Description,
                     badge.Rarity.ToString()));
             }
+        }
+
+        // Watch parties: one entry each, under the host.
+        foreach (var summary in parties.Summaries())
+        {
+            if (profileSettingsStore.Load(summary.HostUserId).IsPrivate)
+            {
+                continue;
+            }
+
+            var first = summary.ItemIds.Count > 0 ? libraryManager.GetItemById(summary.ItemIds[0]) : null;
+            var episode = first as MediaBrowser.Controller.Entities.TV.Episode;
+            entries.Add(new FeedEntry(
+                summary.HostUserId,
+                summary.HostName,
+                "Party",
+                summary.EndedAt,
+                first?.Id,
+                first?.Name,
+                first?.GetBaseItemKind().ToString(),
+                episode?.SeriesName,
+                episode?.SeriesId,
+                0,
+                episode?.ParentIndexNumber,
+                episode?.IndexNumber,
+                episode?.IndexNumber,
+                null,
+                null,
+                null,
+                null,
+                PartyName: summary.Name,
+                PartyMembers: summary.Members,
+                PartyReactions: summary.TopReactions,
+                PartyTitleCount: summary.ItemIds.Count));
         }
 
         var ordered = entries

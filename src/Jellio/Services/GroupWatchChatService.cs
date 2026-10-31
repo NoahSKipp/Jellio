@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Jellio.Services;
 
-public record GroupWatchChatMessage(long Id, Guid GroupId, Guid UserId, string UserName, string Text, DateTime Timestamp, Guid? ItemId);
+public record GroupWatchChatMessage(long Id, Guid GroupId, Guid UserId, string UserName, string Text, DateTime Timestamp, Guid? ItemId, long? ReplyToId = null, string? ReplyToName = null, string? ReplyToText = null);
 
 /// <summary>
 /// Chat for a real Jellyfin SyncPlay group (components/groupWatch.js's own
@@ -43,8 +43,10 @@ public class GroupWatchChatService
     private readonly ConcurrentDictionary<Guid, List<GroupWatchChatMessage>> _messagesByGroup = new();
     private long _nextId;
 
-    public GroupWatchChatMessage Add(Guid groupId, Guid userId, string userName, string text, Guid? itemId = null)
+    public GroupWatchChatMessage Add(Guid groupId, Guid userId, string userName, string text, Guid? itemId = null, long? replyToId = null)
     {
+        // A reply (a TV answering with an emoji) carries what it answers.
+        var replyTo = replyToId is { } rid ? Find(groupId, rid) : null;
         var message = new GroupWatchChatMessage(
             System.Threading.Interlocked.Increment(ref _nextId),
             groupId,
@@ -52,7 +54,10 @@ public class GroupWatchChatService
             userName,
             text,
             DateTime.UtcNow,
-            itemId
+            itemId,
+            replyTo?.Id,
+            replyTo?.UserName,
+            replyTo is null ? null : replyTo.Text.Length > 80 ? replyTo.Text[..80] + "…" : replyTo.Text
         );
 
         var list = _messagesByGroup.GetOrAdd(groupId, _ => new List<GroupWatchChatMessage>());
@@ -91,6 +96,24 @@ public class GroupWatchChatService
             }
         }
     }
+
+    public GroupWatchChatMessage? Find(Guid groupId, long id)
+    {
+        if (!_messagesByGroup.TryGetValue(groupId, out var list))
+        {
+            return null;
+        }
+
+        lock (list)
+        {
+            return list.FirstOrDefault(m => m.Id == id);
+        }
+    }
+
+    // Only emoji (and the joiners emoji use), no words: a reaction.
+    public static bool IsReaction(string text) =>
+        text.Length is > 0 and <= 16
+        && !text.Any(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c) || char.IsPunctuation(c));
 
     public IReadOnlyList<GroupWatchChatMessage> Since(Guid groupId, long afterId)
     {

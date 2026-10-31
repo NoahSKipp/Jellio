@@ -19,9 +19,9 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/groupwatch")]
 [Authorize]
-public class GroupWatchChatController(GroupWatchChatService chatService, IUserManager userManager) : ControllerBase
+public class GroupWatchChatController(GroupWatchChatService chatService, Jellio.Services.Parties.PartyService parties, IUserManager userManager) : ControllerBase
 {
-    public record SendRequest(string Text, Guid? ItemId = null);
+    public record SendRequest(string Text, Guid? ItemId = null, long? ReplyToId = null);
 
     [HttpGet("{groupId}/messages")]
     public IActionResult GetMessages([FromRoute] Guid groupId, [FromQuery] long after = 0)
@@ -34,6 +34,9 @@ public class GroupWatchChatController(GroupWatchChatService chatService, IUserMa
             m.Text,
             m.Timestamp,
             m.ItemId,
+            m.ReplyToId,
+            m.ReplyToName,
+            m.ReplyToText,
         });
 
         return Ok(messages);
@@ -60,7 +63,12 @@ public class GroupWatchChatController(GroupWatchChatService chatService, IUserMa
         }
 
         var userName = userManager.GetUserById(userId)?.Username ?? "Someone";
-        var message = chatService.Add(groupId, userId, userName, text, request.ItemId);
+        var message = chatService.Add(groupId, userId, userName, text, request.ItemId, request.ReplyToId);
+        if (request.ItemId == null && GroupWatchChatService.IsReaction(text))
+        {
+            parties.CountReaction(groupId, text);
+        }
+
         return Ok(message);
     }
 

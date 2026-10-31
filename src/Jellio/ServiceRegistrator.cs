@@ -46,6 +46,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         // itself, AddHttpClient() is idempotent by design.
         services.AddHttpClient();
         services.AddSingleton<UpcomingHiddenStore>();
+        services.AddSingleton<Jellio.Services.Parties.PartyService>();
+        services.AddSingleton<Jellio.Services.Parties.PartyMonitor>();
+        services.AddHostedService(sp => sp.GetRequiredService<Jellio.Services.Parties.PartyMonitor>());
         services.AddSingleton<CalendarService>();
 
         // Registered as itself first, same real reason SleepTimerService
