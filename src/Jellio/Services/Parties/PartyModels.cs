@@ -40,6 +40,9 @@ public sealed class PartyMeta
 
     public Dictionary<Guid, string> Attendees { get; } = new();
 
+    // Let into a private party: by its code or by an invite.
+    public HashSet<Guid> Admitted { get; } = new();
+
     public List<Guid> ItemsWatched { get; } = new();
 
     public Dictionary<string, int> Reactions { get; } = new(StringComparer.Ordinal);

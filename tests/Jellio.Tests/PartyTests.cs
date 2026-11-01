@@ -40,6 +40,20 @@ public class PartyTests : IDisposable
     }
 
     [Fact]
+    public void PrivatePartiesAdmitOnlyHostAttendeesAndThoseLetIn()
+    {
+        var group = Guid.NewGuid();
+        var meta = _parties.Ensure(group, _host, "noah", "Movie night");
+        _parties.Configure(meta, true, null, null);
+        var stranger = Guid.NewGuid();
+
+        Assert.True(_parties.IsAdmitted(meta, _host));
+        Assert.False(_parties.IsAdmitted(meta, stranger));
+        _parties.Admit(group, stranger);
+        Assert.True(_parties.IsAdmitted(meta, stranger));
+    }
+
+    [Fact]
     public void WrongCodesAreThrottledPerUser()
     {
         _parties.Ensure(Guid.NewGuid(), _host, "noah", "x");

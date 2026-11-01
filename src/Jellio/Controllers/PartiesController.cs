@@ -72,8 +72,7 @@ public class PartiesController(
             var participants = group.Participants.ToList();
             var isMember = participants.Contains(userName, StringComparer.Ordinal);
             var isHost = meta != null && meta.HostUserId == userId;
-            var invited = meta?.ScheduleId is { } sid && schedules.Any(s => s.Id == sid && (s.InviteeUserIds.Contains(userId) || s.Going.ContainsKey(userId)));
-            if (meta is { Private: true } && !isMember && !isHost && !invited)
+            if (meta is { Private: true } && !isMember && !parties.IsAdmitted(meta, userId))
             {
                 continue;
             }
@@ -241,7 +240,13 @@ public class PartiesController(
         }
 
         var groupId = parties.ResolveCode(userId, body.Code);
-        return groupId is { } id ? Ok(new { GroupId = id }) : NotFound();
+        if (groupId is not { } id)
+        {
+            return NotFound();
+        }
+
+        parties.Admit(id, userId);
+        return Ok(new { GroupId = id });
     }
 
     [HttpPost("schedule")]

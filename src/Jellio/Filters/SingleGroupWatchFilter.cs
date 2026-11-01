@@ -7,6 +7,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Controller.SyncPlay;
 using MediaBrowser.Controller.SyncPlay.Requests;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
@@ -25,10 +26,23 @@ public class SingleGroupWatchFilter(
     ISessionManager sessionManager,
     ISyncPlayManager syncPlayManager,
     IUserManager userManager,
+    Jellio.Services.Parties.PartyService parties,
     ILogger<SingleGroupWatchFilter> logger) : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        // A private party takes only people let in by its code or an invite.
+        if (context.ActionDescriptor is ControllerActionDescriptor { ActionName: "SyncPlayJoinGroup" }
+            && Guid.TryParse(context.HttpContext.User.FindFirst("Jellyfin-UserId")?.Value, out var joiningUserId)
+            && TargetGroupId(context) is { } joiningGroupId
+            && parties.Get(joiningGroupId) is { Private: true } meta
+            && !parties.IsAdmitted(meta, joiningUserId)
+            && !AlreadyInTargetGroup(context, joiningUserId, context.HttpContext.User.FindFirst("Jellyfin-DeviceId")?.Value))
+        {
+            context.Result = new StatusCodeResult(403);
+            return;
+        }
+
         if (
             context.ActionDescriptor is ControllerActionDescriptor { ActionName: "SyncPlayCreateGroup" or "SyncPlayJoinGroup" }
             && Guid.TryParse(context.HttpContext.User.FindFirst("Jellyfin-UserId")?.Value, out var userId)
@@ -62,14 +76,20 @@ public class SingleGroupWatchFilter(
         await next().ConfigureAwait(false);
     }
 
+    private static Guid? TargetGroupId(ActionExecutingContext context)
+    {
+        var id = context.ActionArguments.Values
+            .Select(value => value?.GetType().GetProperty("GroupId")?.GetValue(value))
+            .OfType<Guid>()
+            .FirstOrDefault();
+        return id == Guid.Empty ? null : id;
+    }
+
     // Whether this person is already a participant of the group being
     // joined (on another of their devices). Groups only list names.
     private bool AlreadyInTargetGroup(ActionExecutingContext context, Guid userId, string? deviceId)
     {
-        var targetId = context.ActionArguments.Values
-            .Select(value => value?.GetType().GetProperty("GroupId")?.GetValue(value))
-            .OfType<Guid>()
-            .FirstOrDefault();
+        var targetId = TargetGroupId(context) ?? Guid.Empty;
         var userName = userManager.GetUserById(userId)?.Username;
         if (targetId == Guid.Empty || string.IsNullOrEmpty(userName))
         {

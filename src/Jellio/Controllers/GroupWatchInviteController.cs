@@ -17,7 +17,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/groupwatch")]
 [Authorize]
-public class GroupWatchInviteController(GroupWatchInviteService inviteService, IUserManager userManager) : ControllerBase
+public class GroupWatchInviteController(GroupWatchInviteService inviteService, IUserManager userManager, Jellio.Services.Parties.PartyService parties) : ControllerBase
 {
     public record InviteRequest(Guid ToUserId, string GroupName);
 
@@ -68,6 +68,13 @@ public class GroupWatchInviteController(GroupWatchInviteService inviteService, I
         if (groupName.Length > MaxGroupNameLength)
         {
             groupName = groupName[..MaxGroupNameLength];
+        }
+
+        // An invite from someone in a private party lets the invitee in
+        // without its code.
+        if (parties.Get(groupId) is not { } meta || parties.IsAdmitted(meta, userId))
+        {
+            parties.Admit(groupId, request.ToUserId);
         }
 
         var invite = inviteService.Add(request.ToUserId, groupId, groupName, userId, fromUserName);

@@ -59,6 +59,32 @@ public class PartyService(IApplicationPaths applicationPaths)
 
     public bool IsHost(PartyMeta meta, Guid userId) => meta.HostUserId == userId;
 
+    public void Admit(Guid groupId, Guid userId)
+    {
+        if (Get(groupId) is { } meta)
+        {
+            lock (meta)
+            {
+                meta.Admitted.Add(userId);
+            }
+        }
+    }
+
+    // Who may join a private party: its host, anyone who has been in it,
+    // anyone let in by code or invite, and the scheduled party's invitees.
+    public bool IsAdmitted(PartyMeta meta, Guid userId)
+    {
+        lock (meta)
+        {
+            if (meta.HostUserId == userId || meta.Attendees.ContainsKey(userId) || meta.Admitted.Contains(userId))
+            {
+                return true;
+            }
+        }
+
+        return meta.ScheduleId is { } id && Schedules().Any(s => s.Id == id && (s.InviteeUserIds.Contains(userId) || s.Going.ContainsKey(userId)));
+    }
+
     public void Configure(PartyMeta meta, bool? isPrivate, bool? hostOnly, string? scheduleId)
     {
         lock (meta)
