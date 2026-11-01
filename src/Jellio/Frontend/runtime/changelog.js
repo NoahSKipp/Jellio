@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.102.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.102.1",
+    "summary": "Private parties now keep out anyone without the code or an invite.",
+    "highlights": [
+      {
+        "title": "Private Means Private",
+        "description": "Joining a private watch party now needs its code or an invite from someone in it, on every app. An invite lets you straight in without the code, and people already in the party can rejoin."
+      }
+    ]
+  },
+  {
     "version": "1.102.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.102.0",
