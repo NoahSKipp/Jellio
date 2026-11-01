@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.102.2] - 2026-11-01\n\n### 🐛 Bug Fixes\n\n- *(groupwatch)* Tidy the web panel's create and join rows\n\n### 📚 Documentation\n\n- *(changelog)* Group Watch panel tidy in 1.102.2\n",
+        "checksum": "e39ad9d1bfa844193de1df9c5144c12f",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.2/jellio_1.102.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-01T11:58:39Z",
+        "version": "1.102.2"
+      },
+      {
         "changelog": "## [1.102.1] - 2026-11-01\n\n### 🐛 Bug Fixes\n\n- *(parties)* Let only invited people or code holders into private parties\n\n### 📚 Documentation\n\n- *(changelog)* Private party admission in 1.102.1\n",
         "checksum": "86037ccffa68e2f83490c34bd753c119",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.1/jellio_1.102.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-24T20:35:29Z",
         "version": "1.89.0"
-      },
-      {
-        "changelog": "## [1.88.1] - 2026-10-21\n\n### 🐛 Bug Fixes\n\n- *(groupwatch)* Invites no longer reappear on every reload\n- *(groupwatch)* Keep each person in one Group Watch at a time\n- *(groupwatch)* Use the controller namespace for LeaveGroupRequest\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.88.1 release notes\n",
-        "checksum": "c6cd19e4c7d9c19dc86d97f415331ef0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.88.1/jellio_1.88.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-21T21:06:47Z",
-        "version": "1.88.1"
       }
     ]
   }
