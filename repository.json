@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.102.1] - 2026-11-01\n\n### 🐛 Bug Fixes\n\n- *(parties)* Let only invited people or code holders into private parties\n\n### 📚 Documentation\n\n- *(changelog)* Private party admission in 1.102.1\n",
+        "checksum": "86037ccffa68e2f83490c34bd753c119",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.1/jellio_1.102.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-01T00:34:01Z",
+        "version": "1.102.1"
+      },
+      {
         "changelog": "## [1.102.0] - 2026-10-31\n\n### 🚀 Features\n\n- *(parties)* Watch parties on top of Group Watch\n- *(groupwatch)* Watch parties on web\n\n### 🐛 Bug Fixes\n\n- *(groupwatch)* Only restore the group this browser joined\n- *(player)* Keep group playback from drifting into pause loops\n- *(groupwatch)* Let one person's devices watch in the same group\n\n### 📚 Documentation\n\n- *(changelog)* Watch parties in 1.102.0\n",
         "checksum": "e89cf5dfaba70de67fa389d506a7613a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.0/jellio_1.102.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-21T21:06:47Z",
         "version": "1.88.1"
-      },
-      {
-        "changelog": "## [1.88.0] - 2026-10-21\n\n### 🚀 Features\n\n- *(skip)* Identify Jellio to TheIntroDB with a User-Agent\n\n### 📚 Documentation\n\n- *(changelog)* Add 1.88.0 release notes\n",
-        "checksum": "94d1eaf2d0e6f078dbc5ae88bd4f92f7",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.88.0/jellio_1.88.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-21T18:46:47Z",
-        "version": "1.88.0"
       }
     ]
   }
