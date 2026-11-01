@@ -16547,29 +16547,76 @@
   color: var(--jellio-text-color);
 }
 
+/* The panel's create, options and code rows: spaced apart, every
+   action button the same width so they line up in one column. */
+.jellio-group-watch-panel {
+  background: rgb(var(--jellio-bg-elevated-rgb) / 0.97);
+}
+
+.jellio-group-watch-create .jellio-settings-button {
+  flex: 0 0 auto;
+  align-self: auto;
+  min-width: 8.5em;
+  padding-inline: 1.2em;
+}
+
 .jellio-party-options {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6em 1em;
-  font-size: 0.85em;
-  color: var(--jellio-text-secondary);
+  gap: 0.5em;
+  margin-top: 0.7em;
 }
 
 .jellio-party-option {
   display: inline-flex;
   align-items: center;
-  gap: 0.4em;
+  gap: 0.45em;
+  padding: 0.35em 0.85em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
   cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.jellio-party-schedule-button {
-  margin-left: auto;
+.jellio-party-option input {
+  margin: 0;
+  accent-color: var(--jellio-secondary-color);
+}
+
+.jellio-party-option:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+
+.jellio-party-option:has(input:checked) {
+  border-color: var(--jellio-secondary-color);
+  color: var(--jellio-text-color);
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-party-option:has(input:focus-visible) {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 2px;
+}
+
+.jellio-party-code-row {
+  margin-top: 1.1em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--jellio-border-color);
 }
 
 .jellio-party-code {
-  display: flex;
-  gap: 0.5em;
+  padding: 0.15em 0.6em;
+  border: 1px dashed var(--jellio-border-color);
+  border-radius: 6px;
+  background: none;
+  color: var(--jellio-text-color);
+  font: inherit;
+  font-size: 0.8em;
+  letter-spacing: 0.15em;
+  cursor: pointer;
 }
 
 .jellio-party-code-input {
@@ -16980,5 +17027,19 @@
   .jellio-party-bubble,
   .jellio-party-center-big {
     animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .jellio-group-watch-create {
+    flex-wrap: wrap;
+  }
+
+  .jellio-group-watch-create .jellio-group-watch-input {
+    flex-basis: 100%;
+  }
+
+  .jellio-group-watch-create .jellio-settings-button {
+    flex: 1 1 0;
   }
 }

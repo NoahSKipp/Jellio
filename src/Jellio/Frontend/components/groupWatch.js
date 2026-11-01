@@ -186,8 +186,11 @@ export async function openGroupWatch() {
   nameInput.maxLength = 100;
   const createButton = el('button', 'jellio-settings-button', t('gw_start_group'));
   createButton.type = 'button';
+  const scheduleButton = el('button', 'jellio-settings-button jellio-settings-button-secondary', t('party_schedule'));
+  scheduleButton.type = 'button';
   createRow.appendChild(nameInput);
   createRow.appendChild(createButton);
+  createRow.appendChild(scheduleButton);
   panel.appendChild(createRow);
 
   function optionToggle(label) {
@@ -203,12 +206,9 @@ export async function openGroupWatch() {
   const hostOnlyOption = optionToggle(t('party_host_only'));
   optionsRow.appendChild(privateOption.wrap);
   optionsRow.appendChild(hostOnlyOption.wrap);
-  const scheduleButton = el('button', 'jellio-settings-button jellio-party-schedule-button', t('party_schedule'));
-  scheduleButton.type = 'button';
-  optionsRow.appendChild(scheduleButton);
   panel.appendChild(optionsRow);
 
-  const codeRow = el('div', 'jellio-group-watch-create');
+  const codeRow = el('div', 'jellio-group-watch-create jellio-party-code-row');
   const codeInput = document.createElement('input');
   codeInput.type = 'text';
   codeInput.className = 'jellio-group-watch-input jellio-party-code-input';
