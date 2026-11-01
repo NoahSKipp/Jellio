@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.102.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.102.2",
+    "summary": "A tidier Group Watch panel.",
+    "highlights": [
+      {
+        "title": "Cleaner Group Watch",
+        "description": "Start a group and Schedule now sit side by side with matching buttons, Private and host-only are clear on/off chips, and joining with a code has its own section. The panel no longer shows the page behind it through."
+      }
+    ]
+  },
+  {
     "version": "1.102.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.102.1",
