@@ -374,9 +374,7 @@ export async function renderPlayer(root, params) {
   if (params.get('fromStart') === '1') startTicks = 0;
   // A buffering switch carries the position over and plays straight on.
   let lastUserSeekAt = 0;
-  const switchedAtTicks = Number(params.get('at')) || 0;
-  if (switchedAtTicks > 0 && !syncPlaylistItemId) startTicks = switchedAtTicks;
-  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId && !switchedAtTicks;
+  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId;
 
   const video = document.createElement('video');
   video.className = 'jellio-player-video';
@@ -2629,12 +2627,51 @@ export async function renderPlayer(root, params) {
     performSeek(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0) + 10);
   });
 
+  let switchCard = null;
+  let switchToken = 0;
+
+  function showSwitchCard(label, step) {
+    if (!switchCard) {
+      switchCard = el('div', 'jellio-player-switch');
+      switchCard.setAttribute('role', 'status');
+      switchCard.appendChild(el('div', 'jellio-player-switch-spinner'));
+      const text = el('div', 'jellio-player-switch-text');
+      text.appendChild(el('div', 'jellio-player-switch-title'));
+      text.appendChild(el('div', 'jellio-player-switch-step'));
+      switchCard.appendChild(text);
+      root.appendChild(switchCard);
+    }
+    switchCard.querySelector('.jellio-player-switch-title').textContent = t('player_buffer_switching', { label: label });
+    switchCard.querySelector('.jellio-player-switch-step').textContent = step;
+  }
+
+  function closeSwitchCard() {
+    if (switchCard) switchCard.remove();
+    switchCard = null;
+  }
+
+  function confirmSwitchWhenPlaying(token, label, wasPlaying) {
+    const eventName = wasPlaying ? 'playing' : 'canplay';
+    function done() {
+      video.removeEventListener(eventName, done);
+      if (token !== switchToken || screenTornDown) return;
+      closeSwitchCard();
+      showPlayerToast(t('player_switch_done', { label: label }));
+    }
+    video.addEventListener(eventName, done);
+  }
+
   async function switchSource(source) {
     if (switchingSource) return;
     switchingSource = true;
+    const token = ++switchToken;
+    const label = sourceLabel(source);
+    showSwitchCard(label, t('player_switch_connecting'));
     const resumeTicks = currentPositionTicks();
     const wasPlaying = !video.paused;
     const previousAudioLanguage = activeAudioLanguageCode();
+    const knownAudio = getAudioStreams(source).length > 1;
+    const wantedAudioIndex = previousAudioLanguage && knownAudio ? matchAudioStreamIndex(source, previousAudioLanguage) : null;
     let previousSubtitleLanguage = null;
     if (mediaSource && activeSubtitleStreamIndex != null) {
       const subStreams = (mediaSource.MediaStreams || []).filter(function (s) {
@@ -2647,9 +2684,10 @@ export async function renderPlayer(root, params) {
     }
     reportPlaybackStopped(itemId, mediaSource.Id, resumeTicks);
     try {
-      const info = await getPlaybackInfo(itemId, resumeTicks, source.Id);
+      const info = await getPlaybackInfo(itemId, resumeTicks, source.Id, wantedAudioIndex == null ? undefined : wantedAudioIndex);
       const negotiated = pickNegotiatedSource(info, source.Id);
       if (!negotiated) {
+        closeSwitchCard();
         showPlayerToast('That stream is no longer available.');
         return;
       }
@@ -2660,10 +2698,12 @@ export async function renderPlayer(root, params) {
         activeTrack = null;
       }
       hasReportedStart = false;
-      currentAudioStreamIndex = null;
+      currentAudioStreamIndex = wantedAudioIndex;
       activeSubtitleStreamIndex = null;
+      bufferStalls.length = 0;
+      bufferStallStartedAt = 0;
 
-      if (previousAudioLanguage && getAudioStreams(mediaSource).length > 1) {
+      if (!knownAudio && previousAudioLanguage && getAudioStreams(mediaSource).length > 1) {
         const matchedAudioIndex = matchAudioStreamIndex(mediaSource, previousAudioLanguage);
         if (matchedAudioIndex != null) {
           try {
@@ -2702,6 +2742,8 @@ export async function renderPlayer(root, params) {
       });
       video.load();
       showLoadingLogo();
+      showSwitchCard(label, t('player_switch_loading'));
+      confirmSwitchWhenPlaying(token, label, wasPlaying);
       if (wasPlaying) waitForPlayableBuffer(attemptPlay);
       topbarMeta.textContent = sourceLabel(mediaSource);
       rebuildSubtitleMenu();
@@ -2709,6 +2751,7 @@ export async function renderPlayer(root, params) {
       rebuildSourceMenu();
     } catch (err) {
       console.warn('Jellio: could not switch source', err);
+      closeSwitchCard();
       showPlayerToast('Could not switch streams. Check your connection and try again.');
     } finally {
       switchingSource = false;
@@ -4193,7 +4236,6 @@ export async function renderPlayer(root, params) {
   async function switchForBuffering() {
     if (bufferSwitching || screenTornDown || getCurrentGroup()) return;
     bufferSwitching = true;
-    const positionTicks = currentPositionTicks();
     const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
     const language = await streamLanguage();
     const ordered = await nextStreams(tried, language);
@@ -4205,13 +4247,9 @@ export async function renderPlayer(root, params) {
       return;
     }
     markBadSource(itemId, mediaSource, { soft: true });
-    showPlayerToast(t('player_buffer_switching', { label: sourceLabel(ordered[0]) }));
-    navigateTo(
-      playHash(itemId, ordered[0].Id) +
-        '&tried=' + encodeURIComponent(tried.join(',')) +
-        (language ? '&lang=' + encodeURIComponent(language) : '') +
-        '&at=' + positionTicks,
-    );
+    if (mediaSource && mediaSource.Id && failoverTried.indexOf(mediaSource.Id) === -1) failoverTried.push(mediaSource.Id);
+    await switchSource(ordered[0]);
+    bufferSwitching = false;
   }
 
   video.addEventListener('waiting', function () {

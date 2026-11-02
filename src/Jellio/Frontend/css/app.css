@@ -4768,6 +4768,52 @@
   transform: translate(-50%, 0);
 }
 
+.jellio-player-switch {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  max-width: calc(100vw - 2 * clamp(16px, 3vw, 40px));
+  padding: 1.1em 1.5em;
+  border-radius: var(--jellio-card-radius);
+  background: rgb(var(--jellio-bg-color-rgb) / 0.9);
+  border: 1px solid var(--jellio-border-color);
+  color: var(--jellio-text-color);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 6;
+}
+
+.jellio-player-switch-spinner {
+  width: 1.8em;
+  height: 1.8em;
+  flex-shrink: 0;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: jellio-failover-spin 0.9s linear infinite;
+}
+
+.jellio-player-switch-text {
+  min-width: 0;
+}
+
+.jellio-player-switch-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-player-switch-step {
+  margin-top: 0.2em;
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+}
+
 .jellio-player-sync-wait {
   position: absolute;
   left: 50%;
