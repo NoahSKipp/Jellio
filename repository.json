@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.104.3] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(home)* Put the night greeting's question mark after the name\n\n### 📚 Documentation\n\n- *(changelog)* Greeting fix in 1.104.3\n",
+        "checksum": "a7979f6830c84d361aa9bca84d581ccc",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.3/jellio_1.104.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-02T23:28:22Z",
+        "version": "1.104.3"
+      },
+      {
         "changelog": "## [1.104.2] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Close automatic picture in picture on return and make the way back clickable\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture fix in 1.104.2\n",
         "checksum": "5f426ec7efaf23a33462196e1b3db69b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.2/jellio_1.104.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-26T12:48:45Z",
         "version": "1.90.2"
-      },
-      {
-        "changelog": "## [1.90.1] - 2026-10-26\n\n### 🐛 Bug Fixes\n\n- *(home)* Keep watched and passed episodes out of Continue Watching\n\n### 📚 Documentation\n\n- *(changelog)* Label the rewatch entry as 1.90.0\n",
-        "checksum": "8d811f2f37b14ed00e287b07fbf5540e",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.90.1/jellio_1.90.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-26T12:32:48Z",
-        "version": "1.90.1"
       }
     ]
   }
