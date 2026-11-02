@@ -5328,15 +5328,6 @@
    error state above already fixed, not a fullscreen route like that
    one though, so this centers in the ordinary scrollable content
    area instead of claiming the whole viewport height. */
-.jellio-detail-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1em;
-  text-align: center;
-  padding: clamp(80px, 20vh, 160px) var(--jellio-safe-gutter);
-}
 
 /* components/networkState.js's own renderLoading()/renderRetry(): a
    generic version of the same shape .jellio-detail-error above already
@@ -5687,11 +5678,6 @@
 .jellio-player-pip-active {
   background: var(--jellio-secondary-color);
   color: #000;
-}
-
-.jellio-player-cast-active {
-  background: var(--jellio-secondary-color) !important;
-  color: #000 !important;
 }
 
 .jellio-player-chat-toggle[aria-expanded="true"] {
@@ -6735,9 +6721,7 @@
 }
 
 @media (max-width: 47.99em) {
-  .jellio-player-keyboard {
-    display: none !important;
-  }
+  
 
   .jellio-player-center-controls {
     gap: clamp(20px, 12vw, 40px);
@@ -6776,12 +6760,6 @@
   .jellio-player-pill-btn {
     min-width: 2.3em;
     padding: 0.5em 0.4em;
-  }
-}
-
-@media (pointer: coarse) {
-  .jellio-player-keyboard {
-    display: none !important;
   }
 }
 
@@ -7150,11 +7128,6 @@
   background: rgb(255 255 255 / 0.04);
 }
 
-.jellio-group-watch-row-active {
-  background: rgb(255 255 255 / 0.1);
-  box-shadow: inset 0 0 0 1px var(--jellio-secondary-color);
-}
-
 .jellio-group-watch-row-info {
   min-width: 0;
 }
@@ -7164,14 +7137,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.jellio-group-watch-row-meta {
-  display: flex;
-  gap: 0.6em;
-  margin-top: 0.2em;
-  color: var(--jellio-text-secondary);
-  font-size: 0.82em;
 }
 
 .jellio-group-watch-create {
@@ -9538,16 +9503,6 @@
   to { opacity: 1; }
 }
 
-.jellio-player-popover-badge {
-  margin-left: auto;
-  padding: 0.15em 0.55em;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.1);
-  color: var(--jellio-text-secondary);
-  font-size: 0.75em;
-  font-weight: 600;
-}
-
 /* Same glass card treatment as .jellio-player-upnext above, and the
    same corner - the two never show at once (see !upNextShown in
    screens/player.js's own timeupdate handler). */
@@ -10154,7 +10109,6 @@
     background-color 160ms var(--jellio-ease-out);
 }
 
-
 .jellio-coverflow-button:hover {
   transform: translateY(-1px);
 }
@@ -10737,32 +10691,6 @@
   color: var(--jellio-text-color);
 }
 
-.jellio-stream-picker-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6em;
-  max-width: 28em;
-  margin: 0 auto;
-  padding: 2em var(--jellio-safe-gutter);
-  text-align: center;
-}
-
-.jellio-stream-picker-empty-icon {
-  font-size: 3em;
-  opacity: 0.6;
-}
-
-.jellio-stream-picker-empty-title {
-  margin: 0;
-  font-size: 1.4em;
-}
-
-.jellio-stream-picker-empty-text {
-  margin: 0 0 0.8em;
-  color: var(--jellio-text-secondary, rgba(255, 255, 255, 0.7));
-}
-
 .jellio-stream-picker-back {
   position: absolute;
   top: var(--jellio-safe-gutter);
@@ -11176,13 +11104,6 @@
   will-change: transform;
   user-select: none;
   line-height: 1;
-}
-
-.jellio-season-particle-fall {
-  top: -8%;
-  animation-name: jellio-season-fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
 }
 
 .jellio-season-particle-rise {
@@ -14780,58 +14701,6 @@
   opacity: 0.6;
 }
 
-.jellio-search-manga-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 8px;
-}
-
-.jellio-search-manga {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border: 0;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.jellio-search-manga:hover,
-.jellio-search-manga:focus-visible {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.jellio-search-manga-cover {
-  flex: none;
-  width: 44px;
-  height: 62px;
-  border-radius: 5px;
-  object-fit: cover;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.jellio-search-manga-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.jellio-search-manga-title {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.jellio-search-manga-meta {
-  font-size: 0.85rem;
-  opacity: 0.65;
-}
-
 .jellio-detail-skeleton-loading {
   display: flex;
   align-items: center;
@@ -15357,7 +15226,6 @@
   margin-top: 0.4em;
 }
 
-
 /* ==========================================================================
    Jellio Onboarding Setup Wizard
    Modal walkthrough for first-run configuration (language, audio, profile,
@@ -15689,76 +15557,6 @@
   color: var(--jellio-text-secondary);
   margin-top: 3px;
   line-height: 1.4;
-}
-
-.jellio-onboarding-profile-card {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.jellio-onboarding-avatar-area {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgb(255 255 255 / 0.04);
-  border: 1px solid rgb(255 255 255 / 0.08);
-}
-
-.jellio-onboarding-avatar-preview {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--jellio-primary-color);
-}
-
-.jellio-onboarding-avatar-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 0.08);
-  border: 1px solid rgb(255 255 255 / 0.15);
-  color: var(--jellio-text);
-  font-size: 0.9em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 140ms ease;
-}
-
-.jellio-onboarding-avatar-btn:hover {
-  background: rgb(255 255 255 / 0.14);
-}
-
-.jellio-onboarding-callout {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgb(var(--jellio-primary-rgb, 100 160 255) / 0.08);
-  border: 1px solid rgb(var(--jellio-primary-rgb, 100 160 255) / 0.2);
-  margin-top: 10px;
-}
-
-.jellio-onboarding-callout-icon {
-  font-size: 22px;
-  color: var(--jellio-primary-color);
-  margin-top: 1px;
-}
-
-.jellio-onboarding-callout-title {
-  font-weight: 700;
-  font-size: 0.95em;
-  color: var(--jellio-text);
-  margin-bottom: 4px;
-}
-
-.jellio-onboarding-callout-desc {
-  font-size: 0.85em;
-  color: var(--jellio-text-secondary);
-  line-height: 1.45;
 }
 
 .jellio-onboarding-card-nested {
