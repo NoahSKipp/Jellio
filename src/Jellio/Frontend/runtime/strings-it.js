@@ -748,6 +748,8 @@ export default {
   player_start_over: "Ricomincia",
   player_replay: "Rigioca",
   player_pip: "Picture-in-picture",
+  player_pip_active: "In riproduzione picture-in-picture",
+  player_pip_return: "Riportalo qui",
   player_fullscreen: "Schermo intero",
   player_mute: "Muto",
   player_volume: "Volume",

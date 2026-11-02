@@ -788,6 +788,8 @@ const STRINGS = {
     player_start_over: "Start Over",
     player_replay: "Replay",
     player_pip: "Picture in picture",
+    player_pip_active: "Playing in picture in picture",
+    player_pip_return: "Bring it back here",
     player_fullscreen: "Fullscreen",
     player_mute: "Mute",
     player_volume: "Volume",

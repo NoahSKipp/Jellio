@@ -771,6 +771,8 @@ export default {
   player_start_over: "Empezar de nuevo",
   player_replay: "Repetir",
   player_pip: "Imagen en imagen",
+  player_pip_active: "Reproduciendo en imagen en imagen",
+  player_pip_return: "Traerlo aquí",
   player_fullscreen: "Pantalla completa",
   player_mute: "Silenciar",
   player_volume: "Volumen",

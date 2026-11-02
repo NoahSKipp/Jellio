@@ -84,8 +84,28 @@ function willUseHls(source, forceTranscode) {
   return !directPlay && supportsNativeHls();
 }
 
+let mediaSessionOwner = null;
+
+// A picture in picture window left over from a player that is gone, or
+// opened automatically while the tab was away, goes when the page is back.
+let autoPipElement = null;
+function closeStrayPictureInPicture() {
+  const current = document.pictureInPictureElement;
+  if (!current || document.visibilityState !== 'visible') return;
+  if (current === autoPipElement || !current.isConnected) {
+    autoPipElement = null;
+    document.exitPictureInPicture().catch(function () {});
+  }
+}
+document.addEventListener('visibilitychange', closeStrayPictureInPicture);
+window.addEventListener('focus', closeStrayPictureInPicture);
+window.addEventListener('pageshow', closeStrayPictureInPicture);
+window.addEventListener('hashchange', closeStrayPictureInPicture);
+
 export async function renderPlayer(root, params) {
   let screenTornDown = false;
+  const playerToken = {};
+  mediaSessionOwner = playerToken;
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-player';
 
@@ -581,6 +601,7 @@ export async function renderPlayer(root, params) {
   let syncMediaSession = function () {};
   let syncMediaPosition = function () {};
 
+  let pipPlaceholder = null;
   if (document.pictureInPictureEnabled) {
     const pipButton = el('button', 'jellio-player-back jellio-player-pip');
     pipButton.type = 'button';
@@ -602,6 +623,29 @@ export async function renderPlayer(root, params) {
     });
     video.addEventListener('leavepictureinpicture', function () {
       pipButton.classList.remove('jellio-player-pip-active');
+    });
+
+    pipPlaceholder = el('button', 'jellio-player-pip-placeholder');
+    pipPlaceholder.type = 'button';
+    pipPlaceholder.hidden = true;
+    pipPlaceholder.appendChild(el('span', 'material-icons picture_in_picture_alt'));
+    pipPlaceholder.appendChild(el('span', 'jellio-player-pip-placeholder-text', t('player_pip_active')));
+    pipPlaceholder.appendChild(el('span', 'jellio-player-pip-placeholder-action', t('player_pip_return')));
+    pipPlaceholder.addEventListener('click', function (event) {
+      event.stopPropagation();
+      autoPipElement = null;
+      document.exitPictureInPicture().catch(function () {});
+    });
+    video.addEventListener('enterpictureinpicture', function () {
+      pipPlaceholder.hidden = false;
+      // Opened after the tab was already back: close it again.
+      if (autoPipElement === video && document.visibilityState === 'visible' && document.hasFocus()) {
+        closeStrayPictureInPicture();
+      }
+    });
+    video.addEventListener('leavepictureinpicture', function () {
+      pipPlaceholder.hidden = true;
+      if (autoPipElement === video) autoPipElement = null;
     });
     topbarActions.appendChild(pipButton);
   }
@@ -632,7 +676,10 @@ export async function renderPlayer(root, params) {
   function enterPipForTabLeave() {
     if (!document.pictureInPictureEnabled || !isAutoPipEnabled()) return Promise.resolve();
     if (video.paused || video.ended || video.disablePictureInPicture || document.pictureInPictureElement) return Promise.resolve();
-    return video.requestPictureInPicture().catch(function () {});
+    autoPipElement = video;
+    return video.requestPictureInPicture().catch(function () {
+      if (autoPipElement === video) autoPipElement = null;
+    });
   }
 
   if ('mediaSession' in navigator) {
@@ -651,6 +698,7 @@ export async function renderPlayer(root, params) {
       return;
     }
     if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});
+    closeStrayPictureInPicture();
     checkForFrozenPicture();
   }
   video.addEventListener('leavepictureinpicture', checkForFrozenPicture);
@@ -3238,6 +3286,7 @@ export async function renderPlayer(root, params) {
   root.appendChild(syncWaitBanner);
   root.appendChild(skipOverlay.overlay);
   root.appendChild(shell);
+  if (pipPlaceholder) root.insertBefore(pipPlaceholder, shell);
 
   if (hasResumePosition) {
     const percent =
@@ -4369,7 +4418,8 @@ export async function renderPlayer(root, params) {
     root.removeEventListener('dblclick', onPlayerDblClick);
     root.removeEventListener('wheel', onPlayerWheel);
     exitFullscreenOnCleanup();
-    if ('mediaSession' in navigator) {
+    if ('mediaSession' in navigator && mediaSessionOwner === playerToken) {
+      mediaSessionOwner = null;
       try {
         navigator.mediaSession.metadata = null;
         ['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'stop', 'nexttrack', 'previoustrack'].forEach(function (act) {

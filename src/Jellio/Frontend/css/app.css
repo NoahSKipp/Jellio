@@ -4772,6 +4772,35 @@
   transform: translate(-50%, 0);
 }
 
+.jellio-player-pip-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  border: 0;
+  background: var(--jellio-bg-color);
+  color: var(--jellio-text-color);
+  font: inherit;
+  cursor: pointer;
+}
+
+.jellio-player-pip-placeholder .material-icons {
+  font-size: 3em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-player-pip-placeholder-action {
+  margin-top: 0.4em;
+  padding: 0.5em 1.2em;
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-weight: 600;
+}
+
 .jellio-player-switch {
   position: absolute;
   left: 50%;
