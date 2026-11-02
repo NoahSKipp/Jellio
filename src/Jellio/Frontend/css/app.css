@@ -4780,11 +4780,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.5em;
-  border: 0;
   background: var(--jellio-bg-color);
   color: var(--jellio-text-color);
-  font: inherit;
-  cursor: pointer;
+  text-align: center;
+}
+
+.jellio-player-pip-placeholder:not([hidden]) ~ .jellio-player-shell .jellio-player-center-controls {
+  visibility: hidden;
 }
 
 .jellio-player-pip-placeholder .material-icons {
@@ -4793,12 +4795,22 @@
 }
 
 .jellio-player-pip-placeholder-action {
+  position: relative;
+  z-index: 6;
   margin-top: 0.4em;
-  padding: 0.5em 1.2em;
+  padding: 0.6em 1.3em;
+  border: 0;
   border-radius: 999px;
   background: var(--jellio-secondary-color);
   color: var(--jellio-on-secondary);
+  font: inherit;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.jellio-player-pip-placeholder-action:focus-visible {
+  outline: 2px solid var(--jellio-text-color);
+  outline-offset: 3px;
 }
 
 .jellio-player-switch {

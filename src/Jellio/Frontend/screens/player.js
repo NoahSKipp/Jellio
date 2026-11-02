@@ -86,16 +86,17 @@ function willUseHls(source, forceTranscode) {
 
 let mediaSessionOwner = null;
 
-// A picture in picture window left over from a player that is gone, or
-// opened automatically while the tab was away, goes when the page is back.
-let autoPipElement = null;
-function closeStrayPictureInPicture() {
+// Only a window the viewer opened with the button stays open once the
+// page is back; one opened automatically or left over closes.
+let manualPipElement = null;
+function closeStrayPictureInPicture(attempt) {
   const current = document.pictureInPictureElement;
   if (!current || document.visibilityState !== 'visible') return;
-  if (current === autoPipElement || !current.isConnected) {
-    autoPipElement = null;
-    document.exitPictureInPicture().catch(function () {});
-  }
+  if (current === manualPipElement && current.isConnected) return;
+  const tries = typeof attempt === 'number' ? attempt : 0;
+  document.exitPictureInPicture().catch(function () {
+    if (tries < 4) window.setTimeout(function () { closeStrayPictureInPicture(tries + 1); }, 400);
+  });
 }
 document.addEventListener('visibilitychange', closeStrayPictureInPicture);
 window.addEventListener('focus', closeStrayPictureInPicture);
@@ -613,7 +614,9 @@ export async function renderPlayer(root, params) {
       if (document.pictureInPictureElement === video) {
         document.exitPictureInPicture().catch(function () {});
       } else {
+        manualPipElement = video;
         video.requestPictureInPicture().catch(function (err) {
+          if (manualPipElement === video) manualPipElement = null;
           console.warn('Jellio: could not enter picture in picture', err);
         });
       }
@@ -625,27 +628,36 @@ export async function renderPlayer(root, params) {
       pipButton.classList.remove('jellio-player-pip-active');
     });
 
-    pipPlaceholder = el('button', 'jellio-player-pip-placeholder');
-    pipPlaceholder.type = 'button';
+    pipPlaceholder = el('div', 'jellio-player-pip-placeholder');
     pipPlaceholder.hidden = true;
     pipPlaceholder.appendChild(el('span', 'material-icons picture_in_picture_alt'));
     pipPlaceholder.appendChild(el('span', 'jellio-player-pip-placeholder-text', t('player_pip_active')));
-    pipPlaceholder.appendChild(el('span', 'jellio-player-pip-placeholder-action', t('player_pip_return')));
-    pipPlaceholder.addEventListener('click', function (event) {
+    const pipReturn = el('button', 'jellio-player-pip-placeholder-action', t('player_pip_return'));
+    pipReturn.type = 'button';
+    pipPlaceholder.appendChild(pipReturn);
+    function bringBackFromPip(event) {
+      if (document.pictureInPictureElement !== video) return;
+      event.preventDefault();
       event.stopPropagation();
-      autoPipElement = null;
+      manualPipElement = null;
       document.exitPictureInPicture().catch(function () {});
-    });
+    }
+    pipReturn.addEventListener('click', bringBackFromPip);
+    // While the video is away, a click on the empty player brings it back
+    // instead of pausing.
+    root.addEventListener('click', function (event) {
+      if (document.pictureInPictureElement !== video) return;
+      if (event.target.closest('button, input, a, .jellio-player-pill, .jellio-player-sidepanel, .jellio-player-topbar')) return;
+      bringBackFromPip(event);
+    }, true);
     video.addEventListener('enterpictureinpicture', function () {
       pipPlaceholder.hidden = false;
       // Opened after the tab was already back: close it again.
-      if (autoPipElement === video && document.visibilityState === 'visible' && document.hasFocus()) {
-        closeStrayPictureInPicture();
-      }
+      if (document.visibilityState === 'visible' && document.hasFocus()) closeStrayPictureInPicture();
     });
     video.addEventListener('leavepictureinpicture', function () {
       pipPlaceholder.hidden = true;
-      if (autoPipElement === video) autoPipElement = null;
+      if (manualPipElement === video) manualPipElement = null;
     });
     topbarActions.appendChild(pipButton);
   }
@@ -676,10 +688,7 @@ export async function renderPlayer(root, params) {
   function enterPipForTabLeave() {
     if (!document.pictureInPictureEnabled || !isAutoPipEnabled()) return Promise.resolve();
     if (video.paused || video.ended || video.disablePictureInPicture || document.pictureInPictureElement) return Promise.resolve();
-    autoPipElement = video;
-    return video.requestPictureInPicture().catch(function () {
-      if (autoPipElement === video) autoPipElement = null;
-    });
+    return video.requestPictureInPicture().catch(function () {});
   }
 
   if ('mediaSession' in navigator) {
@@ -697,7 +706,6 @@ export async function renderPlayer(root, params) {
       enterPipForTabLeave();
       return;
     }
-    if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});
     closeStrayPictureInPicture();
     checkForFrozenPicture();
   }
