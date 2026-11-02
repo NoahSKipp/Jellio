@@ -1157,9 +1157,10 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       }, 550),
     };
   });
-  window.addEventListener('pointermove', function (event) {
+  function onHoldMove(event) {
     if (hold && Math.abs(event.clientX - hold.x) + Math.abs(event.clientY - hold.y) > 10) clearHold();
-  });
+  }
+  window.addEventListener('pointermove', onHoldMove);
   window.addEventListener('pointerup', clearHold);
   window.addEventListener('pointercancel', clearHold);
   stage.addEventListener('contextmenu', function (event) {
@@ -1400,6 +1401,10 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
       teardownVertical();
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointermove', onHoldMove);
+      window.removeEventListener('pointerup', clearHold);
+      window.removeEventListener('pointercancel', clearHold);
+      clearHold();
       createdUrls.forEach((url) => {
         if (url.indexOf('blob:') === 0) URL.revokeObjectURL(url);
       });
