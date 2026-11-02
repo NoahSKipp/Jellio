@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.2",
+    "summary": "Picture in picture comes back reliably.",
+    "highlights": [
+      {
+        "title": "Back From Picture in Picture",
+        "description": "Picture in picture that opened on its own now closes every time you return to the tab, and Bring it back here, or a click anywhere on the empty player, returns the video when it stays in its own window."
+      }
+    ]
+  },
+  {
     "version": "1.104.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.1",
