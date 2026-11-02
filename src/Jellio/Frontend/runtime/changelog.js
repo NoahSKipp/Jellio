@@ -15,6 +15,30 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.102.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.102.4",
+    "summary": "Jellio starts faster and fixes a few rough edges.",
+    "highlights": [
+      {
+        "title": "Faster Start",
+        "description": "Jellio now downloads only your display language instead of all seven, loads the release notes and Group Watch only when needed, and sends a lighter stylesheet, so the first page appears sooner, most of all on slower connections."
+      },
+      {
+        "title": "Badge Names",
+        "description": "Badges without a translation show their real name again instead of an internal key."
+      },
+      {
+        "title": "Smoother Reading",
+        "description": "Opening many comics in a row no longer slows the reader down over a long session."
+      },
+      {
+        "title": "Simpler Seek Bar",
+        "description": "The thumbnail preview when hovering the player's seek bar has been removed."
+      }
+    ]
+  },
+  {
     "version": "1.102.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.102.3",
