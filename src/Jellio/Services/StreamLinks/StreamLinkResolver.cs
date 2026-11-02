@@ -12,9 +12,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.StreamLinks;
 
-// Follows a link to something a player can open. Every connection is
-// checked against PublicAddressGuard at connect time, so neither a
-// redirect nor a DNS answer that changes can reach a private address.
 public class StreamLinkResolver : IDisposable
 {
     public const string BrowserUserAgent =
@@ -43,8 +40,6 @@ public class StreamLinkResolver : IDisposable
 
     public static SocketsHttpHandler CreateHandler() => new()
     {
-        // A configured outbound proxy would hide the real destination
-        // from the check below.
         UseProxy = false,
         AllowAutoRedirect = true,
         MaxAutomaticRedirections = 5,
@@ -110,17 +105,11 @@ public class StreamLinkResolver : IDisposable
             var result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token).ConfigureAwait(false);
             if (result == null)
             {
-                // Some sites only put the player on a page that was opened
-                // from the site itself, as a browser click-through does.
-                // Tried second, so links that already work send nothing new.
                 budget = new Budget();
                 var home = new Uri(url.GetLeftPart(UriPartial.Authority) + "/");
                 result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token, firstReferer: home).ConfigureAwait(false);
             }
 
-            // Pages whose player builds its address with scripts hold no
-            // stream in their HTML; a headless browser, when one is set up,
-            // opens the page and reports what the player asks for.
             result ??= await FindWithBrowserAsync(url, timeout.Token).ConfigureAwait(false);
 
             if (result == null)
@@ -152,15 +141,11 @@ public class StreamLinkResolver : IDisposable
         }
     }
 
-
     private static readonly HttpClient FinderClient = new(new SocketsHttpHandler { UseProxy = false, ConnectTimeout = TimeSpan.FromSeconds(5) })
     {
         Timeout = TimeSpan.FromSeconds(60),
     };
 
-    // Asks the stream finder (a separate service that runs a browser) what
-    // the page's player requests. Null when none is configured or it found
-    // nothing; whatever it returns is checked like any other link.
     private async Task<ResolveResult?> FindWithBrowserAsync(Uri page, CancellationToken ct)
     {
         var finder = JellioPlugin.Instance?.Configuration.StreamFinderUrl?.Trim();

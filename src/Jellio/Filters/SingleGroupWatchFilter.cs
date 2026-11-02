@@ -14,14 +14,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Filters;
 
-/// <summary>
-/// One Group Watch per person. Jellyfin keeps each session (device) in at
-/// most one SyncPlay group, but the same person's browser, TV and Mac are
-/// separate sessions and could each sit in a different group. Creating or
-/// joining a group first takes the person's other devices out of theirs,
-/// except when joining a group they are already in on another device: then
-/// both devices watch together instead of throwing each other out.
-/// </summary>
 public class SingleGroupWatchFilter(
     ISessionManager sessionManager,
     ISyncPlayManager syncPlayManager,

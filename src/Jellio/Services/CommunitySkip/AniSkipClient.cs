@@ -8,12 +8,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.CommunitySkip;
 
-// C# port of NuvioTV's own real AniSkipApi.kt/fetchFromAniSkip(), not
-// re-derived: api.aniskip.com's own real public endpoint, no client id
-// or registration of any real kind needed, keyed off a title's own real
-// MyAnimeList id plus a plain episode number. Real op/ed/recap/mixed-op/
-// mixed-ed skip types requested explicitly, the same real list NuvioTV
-// itself asks for.
 public class AniSkipClient(IHttpClientFactory httpClientFactory, ILogger<AniSkipClient> logger)
 {
     private const string BaseUrl = "https://api.aniskip.com/v2/skip-times";

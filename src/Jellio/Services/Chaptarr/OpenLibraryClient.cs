@@ -13,14 +13,6 @@ namespace Jellio.Services.Chaptarr;
 
 public record DiscoverBook(string WorkId, string Title, string? Author, int? Year, string? CoverUrl);
 
-/// <summary>
-/// Book discovery for the Books/Audiobooks shelves. Chaptarr only looks
-/// books up; it has nothing to browse. Open Library's free, keyless APIs
-/// do (trending, subjects, an author's works), and their work ids are one
-/// of Chaptarr's own provider prefixes ("ol:OL45883W"), so anything found
-/// here can be requested through Chaptarr unchanged. Results are cached,
-/// Open Library asks clients not to hammer it.
-/// </summary>
 public class OpenLibraryClient(IHttpClientFactory httpClientFactory, ILogger<OpenLibraryClient> logger)
 {
     public const int PageSize = 36;
@@ -101,9 +93,6 @@ public class OpenLibraryClient(IHttpClientFactory httpClientFactory, ILogger<Ope
         }
     }
 
-    // Trending/search results and subject results describe the same work
-    // with different field names (author_name vs authors[].name, cover_i
-    // vs cover_id).
     private static DiscoverBook? ToBook(JsonObject work)
     {
         var key = ChaptarrClient.ReadString(work["key"]);

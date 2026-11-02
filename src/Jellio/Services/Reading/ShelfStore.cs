@@ -46,9 +46,6 @@ public class SeriesPrefs
 
     public string? ComicDirection { get; set; }
 
-    // Scanlators whose chapters are hidden for this series (Mihon's
-    // excluded scanlators), kept so the same chapter from several
-    // groups doesn't show up more than once. Null or empty: all shown.
     public List<string>? ExcludedScanlators { get; set; }
 
     // Whether a chapter counts as read once the same chapter number is
@@ -99,11 +96,6 @@ public class ShelfData
     public SeriesPrefs? SeriesDefaults { get; set; }
 }
 
-/// <summary>
-/// A reader's own shelf organisation, Mihon style: categories on the
-/// Manga, Books and Audiobooks shelves, per-series settings and chapter
-/// bookmarks.
-/// </summary>
 public partial class ShelfStore(IApplicationPaths applicationPaths)
 {
     public const int MaxCategories = 50;
@@ -119,9 +111,6 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
 
     public ShelfData Update(Guid userId, Action<ShelfData> mutate) => _store.Update(userId, mutate);
 
-    // A reader's manga library. The first time, it's seeded with the
-    // series they already have settings or categories for (earlier
-    // imports), so nobody's shelf empties out.
     public HashSet<string> Library(Guid userId)
     {
         var data = _store.Load(userId);
@@ -149,9 +138,6 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
             }
         });
 
-    // Takes a book or audiobook ("i:<item id>") off a reader's shelf and
-    // out of their categories. hidden keeps it off the shelf for them until
-    // they add it back; otherwise every trace of it goes (it was deleted).
     public void ForgetItem(Guid userId, string key, bool hidden) =>
         _store.Update(userId, data =>
         {
@@ -175,9 +161,6 @@ public partial class ShelfStore(IApplicationPaths applicationPaths)
     public bool OthersHaveSeries(Guid userId, string key) =>
         _store.UserIds().Where(id => id != userId).Any(id => _store.Load(id).Library?.Contains(key) == true);
 
-    // Moves a reader's shelf entry for a series to another key (the same
-    // series from a different source can carry a different title): its
-    // settings, its place in the library and in categories.
     public void MoveSeries(Guid userId, string fromKey, string toKey)
     {
         if (fromKey == toKey)

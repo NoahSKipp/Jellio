@@ -13,12 +13,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Where reading and listening reach the Feed and achievements: the
-/// reader and the audiobook player report each session as it ends
-/// (AchievementService.CreditReadingSessionAsync). Numbers are clamped
-/// here so one bad report can't hand out a shelf of badges.
-/// </summary>
 [ApiController]
 [Route("Jellio/reading/session")]
 [Authorize]
@@ -70,10 +64,6 @@ public class ReadingActivityController(AchievementService achievementService, Ma
                     body.Finished),
                 duplicatesAsOne: streamDuplicatesAsOne).ConfigureAwait(false);
 
-            // The final chapter of a series its source marks as completed: the
-            // series is finished too. An ongoing series (or one with no
-            // status) gets no series entry, only reading its newest chapter
-            // isn't finishing it.
             var lastNumber = streamed.Series.Chapters.Where(c => c.Number >= 0).Select(c => c.Number).DefaultIfEmpty(-1).Max();
             var seriesCompleted = streamed.Series.Status?.Trim().ToUpperInvariant() is "COMPLETED" or "PUBLISHING_FINISHED";
             if (seriesCompleted && body.Finished && streamChapterNumber is { } finishedNumber && finishedNumber >= 0 && finishedNumber >= lastNumber)

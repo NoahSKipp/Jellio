@@ -10,12 +10,6 @@ using SharpCompress.Archives;
 
 namespace Jellio.Services.Reading;
 
-/// <summary>
-/// CBR (RAR) and CB7 (7z) comics repacked as CBZ, the one comic archive a
-/// browser can open (screens/reader.js reads it with JSZip). Pages are
-/// copied, not recompressed, into a cached CBZ keyed by the file and its
-/// last write time, so a volume is converted once and re-read for free.
-/// </summary>
 public class ComicArchiveService(IApplicationPaths applicationPaths, ILogger<ComicArchiveService> logger)
 {
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(14);

@@ -15,13 +15,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Book search and requests for the Books shelf, straight against Chaptarr
-/// (Services/Chaptarr/ChaptarrClient.cs). The browser only ever sends a
-/// work id and a format: the server looks that work up again itself and
-/// sends Chaptarr's own lookup result back, so a reader can't slip their
-/// own root folder, profile or monitoring mode into the add call.
-/// </summary>
 [ApiController]
 [Route("Jellio/books")]
 [Authorize]
@@ -61,9 +54,6 @@ public partial class BookRequestController(
         bool EbookDownloaded = false,
         bool AudiobookDownloaded = false);
 
-    // Title/Author are optional: a work found through discovery (an
-    // Open Library id) falls back to a title search when Chaptarr cannot
-    // resolve the id itself.
     public record RequestBookBody(string WorkId, string BookType, string? Title = null, string? Author = null);
 
     public record RequestBookResult(string Status, string? Message);
@@ -84,9 +74,6 @@ public partial class BookRequestController(
             return BadRequest("mediaType must be ebook or audiobook");
         }
 
-        // A scoped search that finds nothing is retried across formats:
-        // Chaptarr only keeps remote results already tagged with the
-        // format, and the request sets the format itself.
         var lookup = await chaptarrClient.LookupAsync(q.Trim(), string.IsNullOrEmpty(scopedType) ? null : scopedType, cancellationToken).ConfigureAwait(false);
         if (lookup is { Count: 0 } && !string.IsNullOrEmpty(scopedType))
         {
@@ -142,10 +129,6 @@ public partial class BookRequestController(
                 audiobookDownloaded);
         }
 
-        // A lookup record doesn't always reflect what was requested: the
-        // add can land under another edition's id or the other format's
-        // record, so the work kept showing as not requested. Chaptarr's own
-        // index of tracked books settles it by title.
         var tracked = await metadataService.TrackedTitlesAsync().ConfigureAwait(false);
         return Ok(order.Take(20).Select(workId =>
         {
@@ -168,11 +151,6 @@ public partial class BookRequestController(
 
     public record DiscoverResult(string WorkId, string Title, string? Author, int? Year, string? CoverUrl, bool HasEbook, bool HasAudiobook);
 
-    /// <summary>
-    /// Browse books to request: source "trending", "subject" (value is an
-    /// Open Library subject such as "fantasy") or "author" (value is a
-    /// name). Each result says whether Chaptarr already tracks it.
-    /// </summary>
     [HttpGet("discover")]
     public async Task<IActionResult> Discover([FromQuery] string source, [FromQuery] string? value, [FromQuery] int page, CancellationToken cancellationToken)
     {
@@ -219,12 +197,6 @@ public partial class BookRequestController(
         }));
     }
 
-    /// <summary>
-    /// Browse manga, manhwa and manhua to request (AniList): sort
-    /// "trending", "popular" or "top"; optional genre, country (JP, KR,
-    /// CN) or a title search. Requests then go through Chaptarr volume by
-    /// volume, from the series title.
-    /// </summary>
     [HttpGet("discover-manga")]
     public async Task<IActionResult> DiscoverManga(
         [FromQuery] string? sort,
@@ -308,11 +280,6 @@ public partial class BookRequestController(
             return BadRequest("WorkId must be a provider-prefixed id such as hc:12345");
         }
 
-        // Chaptarr's lookup drops every remote result whose format isn't the
-        // requested one, and a work looked up by id often comes back as the
-        // other format only. The add call sets the format itself
-        // (?mediaType=), so any record of the work will do: this format's
-        // first, then any.
         var lookup = await LookupEitherFormatAsync(workId, bookType, cancellationToken).ConfigureAwait(false);
         if (lookup is null)
         {
@@ -383,9 +350,6 @@ public partial class BookRequestController(
 
         PrepareForAdd(book);
 
-        // A new author needs this format's quality profile in the add call
-        // itself: Chaptarr validates that before it would fill one in from
-        // the root folder. Take them from the format's default root folder.
         if (book["author"] is JsonObject newAuthor && ChaptarrClient.ReadId(newAuthor["id"]) <= 0)
         {
             var rootFolders = await chaptarrClient.GetRootFoldersAsync(cancellationToken).ConfigureAwait(false);
@@ -434,9 +398,6 @@ public partial class BookRequestController(
         return any?.OfType<JsonObject>().ToList() ?? (scoped is null ? null : []);
     }
 
-    // A record of this format if there is one. A record of the other format
-    // that Chaptarr already stores is copied without its id, so the add
-    // creates this format's instance instead of pointing at the other one.
     private static JsonObject? PickRecord(IEnumerable<JsonObject> records, string bookType)
     {
         var list = records.ToList();
@@ -461,10 +422,6 @@ public partial class BookRequestController(
         return copy;
     }
 
-    // Monitor this one book and search for it now. Author-level folders and
-    // profiles are cleared so Chaptarr fills them from its own root folder
-    // defaults (BookController.NormalizeReadarrSingleFields), and a new
-    // author is added watching only this book - never their whole catalogue.
     private static void PrepareForAdd(JsonObject book)
     {
         book["monitored"] = true;

@@ -11,11 +11,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Mihon-style tracking on AniList: a reader links their list with a
-/// token (kept on the server, never sent back), links a series to an
-/// AniList entry, and the chapters they've read are written to it.
-/// </summary>
 [ApiController]
 [Route("Jellio/tracker/anilist")]
 [Authorize]

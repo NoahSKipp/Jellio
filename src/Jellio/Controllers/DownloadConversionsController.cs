@@ -11,12 +11,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Limits how many offline downloads are converted on the server at once
-/// (ConversionSlotService), and says whether it can encode HEVC without
-/// falling back to the CPU, so the apps ask for a smaller file only when
-/// that is quick.
-/// </summary>
 [ApiController]
 [Route("Jellio/downloads/conversions")]
 [Authorize]

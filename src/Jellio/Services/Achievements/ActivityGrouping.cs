@@ -3,18 +3,8 @@ using System.Linq;
 
 namespace Jellio.Services.Achievements;
 
-// Shared by AchievementsController's own per user feed and
-// FeedController's own server wide merge, same real grouping either
-// way: a binge (same series, same UTC day, consecutive in this user's
-// own newest-first RecentActivity) collapses into one entry instead of
-// one row per episode, real feedback specifically asked not to drown
-// the rest of a feed out under a single sitting.
 public static class ActivityGrouping
 {
-    // The last index of the group starting at start: a binge runs on
-    // while the next entry is the same series and season on the same UTC
-    // day. Removing an entry removes this whole span, so what's removed is
-    // exactly the row that was shown.
     public static int SpanEnd(List<ActivityEntry> activity, int start)
     {
         var first = activity[start];

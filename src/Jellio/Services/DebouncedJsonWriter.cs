@@ -4,9 +4,6 @@ using System.Threading;
 
 namespace Jellio.Services;
 
-// Coalesces writes of a large state file: callers change their in-memory
-// copy under their own lock and call Schedule; the file is rewritten at most
-// once per delay, atomically, from a snapshot taken under that same lock.
 public sealed class DebouncedJsonWriter : IDisposable
 {
     private readonly object _gate;

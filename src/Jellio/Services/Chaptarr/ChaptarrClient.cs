@@ -12,12 +12,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.Chaptarr;
 
-// Chaptarr (github.com/Chaptarr/chaptarr, the Readarr successor): routes,
-// params and JSON shapes read from its own src/Chaptarr.Api.V1 source.
-// Standard *arr auth (X-Api-Key), camelCase JSON. Book resources are kept
-// as raw JsonObjects rather than typed DTOs: the add call has to send a
-// lookup result back essentially as Chaptarr returned it, and a DTO would
-// silently drop every field it didn't know about.
 public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<ChaptarrClient> logger)
 {
     public record AddResult(bool Success, bool Pending, string? Message, int BookId = 0);
@@ -43,10 +37,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         return request;
     }
 
-    // GET /api/v1/book/lookup?term=&mediaType= (BookLookupController). A
-    // provider-prefixed term (hc:123, ol:OL1W, ...) is an exact work lookup;
-    // anything else is a metadata text search. mediaType narrows results to
-    // "ebook" or "audiobook" instances.
     public async Task<JsonArray?> LookupAsync(string term, string? mediaType, CancellationToken cancellationToken)
     {
         if (!TryGetConfig(out var baseUrl, out var apiKey) || string.IsNullOrWhiteSpace(term))
@@ -95,9 +85,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
     public async Task<JsonArray?> GetRootFoldersAsync(CancellationToken cancellationToken) =>
         await GetJsonAsync("/api/v1/rootfolder", cancellationToken).ConfigureAwait(false) as JsonArray;
 
-    // The root folder a new author of this format goes to, with its default
-    // profiles: Chaptarr's effective default for the format first, then any
-    // root folder with a quality profile set for it. Null when none has one.
     public static (string Path, int QualityProfileId, int? MetadataProfileId)? PickRootFolder(JsonArray rootFolders, string mediaType)
     {
         var candidates = rootFolders.OfType<JsonObject>()
@@ -172,11 +159,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         }
     }
 
-    // POST /api/v1/book?mediaType= (BookController.AddBook). 201 means added,
-    // 202 means Chaptarr queued it as a pending request (its own
-    // PendingBookRequestResource carries a message), anything else is an
-    // error whose body is either an error object or a list of validation
-    // failures.
     public async Task<AddResult> AddBookAsync(JsonObject book, string mediaType, CancellationToken cancellationToken)
     {
         if (!TryGetConfig(out var baseUrl, out var apiKey))
@@ -219,10 +201,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         }
     }
 
-    // Chaptarr hands covers it hasn't cached locally back as its own relative
-    // /MediaCoverProxy/... path, which a browser on Jellyfin's origin can't
-    // resolve. Only those cover paths are fetched here, so this never acts
-    // as a general proxy into the server's network.
     public static bool IsCoverPath(string? path) =>
         !string.IsNullOrEmpty(path)
         && path.StartsWith('/')
@@ -264,9 +242,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         }
     }
 
-    // A cover URL Chaptarr's own metadata handed back (never one from a
-    // browser): either its relative media cover path, or the metadata
-    // provider's original https image.
     public async Task<(byte[] Bytes, string ContentType)?> GetCoverImageAsync(string source, CancellationToken cancellationToken)
     {
         if (IsCoverPath(source))
@@ -307,10 +282,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
         }
     }
 
-    // Chaptarr's remoteCover (and each image's url) is usually its own
-    // relative /MediaCoverProxy/... path, not a real remote URL. Prefer the
-    // original https remoteUrl the metadata provider gave, from the given
-    // image lists in order, then Chaptarr's own cached copy.
     public static string? PickCover(IEnumerable<JsonNode?> imageLists, JsonNode? remoteCover)
     {
         var candidates = imageLists.SelectMany(images => CoverCandidates(images)).ToList();
@@ -373,11 +344,6 @@ public class ChaptarrClient(IHttpClientFactory httpClientFactory, ILogger<Chapta
     public static int ReadId(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<int>(out var id) && id > 0 ? id : 0;
 
-    // Adding one book adds its author, and Chaptarr then lists the author's
-    // whole catalogue as unmonitored entries. Only a monitored entry, or
-    // one with files, is actually wanted or owned; the rest are just
-    // metadata. Checks this record's own instance when it is the given
-    // format, and Chaptarr's list of local instances of that format.
     public static bool IsWanted(JsonObject book, string mediaType)
     {
         var audiobook = mediaType == "audiobook";

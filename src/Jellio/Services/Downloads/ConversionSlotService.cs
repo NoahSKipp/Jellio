@@ -4,12 +4,6 @@ using System.Linq;
 
 namespace Jellio.Services.Downloads;
 
-// Downloads that need a conversion (anything under Original file) run an
-// encode on the server for as long as they take. A hardware encoder only
-// takes a couple at once, and any more spill onto the CPU and slow
-// playback for everyone, so Jellio's apps ask for a slot first. A slot
-// is a lease the app keeps alive while it downloads and which lapses by
-// itself if the app goes away.
 public class ConversionSlotService
 {
     public const int MaxConcurrent = 2;

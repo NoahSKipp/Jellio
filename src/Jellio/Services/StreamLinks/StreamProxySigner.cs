@@ -5,10 +5,6 @@ using System.Text;
 
 namespace Jellio.Services.StreamLinks;
 
-// Proxy addresses carry their own permission: only addresses the server
-// handed out (or found inside a playlist it handed out) are fetched, so
-// the proxy can't be pointed anywhere else. Players that can't send an
-// auth header (Safari's own HLS, plain <video>) still work.
 public sealed class StreamProxySigner
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);

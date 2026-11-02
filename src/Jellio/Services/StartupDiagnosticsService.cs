@@ -5,13 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
 
-/// <summary>
-/// Logs which Jellio is actually running, and hashes a real embedded frontend
-/// resource rather than trusting the assembly version alone: a correctly stamped
-/// build can still carry stale frontend assets if a zip gets extracted next to an
-/// older DLL that keeps getting loaded. See the original Jellio codebase's own
-/// copy of this file for the real debugging session that made this worth having.
-/// </summary>
 public class StartupDiagnosticsService(ILogger<StartupDiagnosticsService> logger) : IHostedService
 {
     private const string FingerprintResource = "Jellio.Frontend.app.js";

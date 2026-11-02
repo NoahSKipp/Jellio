@@ -10,14 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.Manga;
 
-/// <summary>
-/// The cover of a manga series on the Manga shelf. Series there are
-/// folders of chapter files, and Jellyfin's only image for each file is
-/// that chapter's first page, so the series' real cover comes from, in
-/// order: a cover image in the series folder, Suwayomi's own cover for the
-/// series (matched by title, which is also its folder name), or AniList's
-/// by title search. Where each series' cover comes from is remembered.
-/// </summary>
 public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, ILogger<MangaCoverService> logger)
 {
     private static readonly string[] CoverNames = ["cover", "folder", "poster", "series"];
@@ -44,13 +36,6 @@ public class MangaCoverService(SuwayomiClient suwayomi, AniListClient aniList, I
         return source is null ? null : await LoadAsync(source, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// A series read from its Suwayomi source: Suwayomi's thumbnail, else
-    /// AniList's cover found by the series title (given, or looked up in
-    /// Suwayomi's library). Suwayomi fails to fetch a source's thumbnail
-    /// when the source's image host is blocked (Cloudflare), which left
-    /// those chapter cards blank.
-    /// </summary>
     public async Task<(byte[] Bytes, string ContentType)?> GetStreamCoverAsync(int mangaId, string? title, CancellationToken cancellationToken)
     {
         var image = await suwayomi.GetThumbnailAsync(mangaId, cancellationToken).ConfigureAwait(false);

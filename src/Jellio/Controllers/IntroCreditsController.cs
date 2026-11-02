@@ -11,23 +11,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Jellio's own real Skip Intro/Credits detection, two real tiers deep.
-/// screens/player.js's own getIntroSkipperSegments chain now tries this
-/// controller's own GET .../community/{itemId} first (Services/CommunitySkip,
-/// the same real community-database approach a real open source
-/// reference, NuvioTV, already ships - no stream or ffmpeg access at
-/// all, general TV/movie coverage from TheIntroDB plus anime specific
-/// coverage from AniSkip/Anime-Skip), before ever falling back to Intro
-/// Skipper's own native/legacy lookups, embedded chapter names, or this
-/// file's own GET .../{itemId} (Services/IntroCredits, this plugin's own
-/// cross-episode audio analyzer): real feedback was explicit that this
-/// plugin's own analysis should only ever be a real last resort once
-/// every other real signal has already come back empty, and should
-/// never run automatically at a real cost to a reader's own debrid
-/// quota - see POST .../scan/{itemId} below for the one real, deliberate
-/// way it still runs at all.
-/// </summary>
 [ApiController]
 [Route("Jellio/introcredits")]
 [Authorize]
@@ -41,13 +24,6 @@ public class IntroCreditsController(
 
     public record SegmentsResponse(SegmentRange? Introduction, SegmentRange? Credits);
 
-    // Tried first, screens/player.js's own real getIntroSkipperSegments
-    // chain reads this before Intro Skipper's own real lookups, the
-    // embedded chapter name fallback, or this file's own GET
-    // .../{itemId} below: a real community database lookup needs no
-    // stream, no ffmpeg, and answers the same real instant a season is
-    // opened for the very first time, unlike every other real tier this
-    // plugin has.
     [HttpGet("community/{itemId}")]
     public async Task<IActionResult> GetCommunity(Guid itemId, CancellationToken cancellationToken)
     {
@@ -74,10 +50,6 @@ public class IntroCreditsController(
         return Ok(new SegmentsResponse(introduction, credits));
     }
 
-    // The real last resort: this plugin's own cross-episode audio
-    // analyzer, only ever has something to say once an admin has
-    // explicitly run POST .../scan/{itemId} below against this item's
-    // own season/show and the community tier itself came back short.
     [HttpGet("{itemId}")]
     public IActionResult Get(Guid itemId)
     {
@@ -99,26 +71,6 @@ public class IntroCreditsController(
 
     public record ScanResponse(int EpisodesScanned, int CommunityHits, int AnalyzerHits);
 
-    // The one real explicit trigger left for this plugin's own
-    // chromaprint analyzer - components/cardOptionsMenu.js's own real
-    // admin-only "Quick Skip Search"/"Deep Skip Search" right-click
-    // actions (screens/detail.js's own episode options menu offers the
-    // same pair scoped to just an Episode or its whole Season), a Movie,
-    // Episode, Season or Series at once. useAnalyzerFallback is the one
-    // real difference between the two: false stops the instant Services/
-    // CommunitySkip's own free tier comes back short, true lets
-    // IntroCreditsBulkScanner reach for IntroCreditsAnalyzer's own real
-    // debrid-backed fallback for whatever that tier leaves uncovered.
-    // Awaited, not fired and forgotten: Gelato's own real resolution
-    // gate (IntroCreditsAnalyzer's own header explains it) only works
-    // from inside a real request this controller action already is,
-    // exiting early would hand the rest of the work a real HttpContext
-    // that no longer exists. A full series can genuinely take minutes,
-    // so runtime/api.js's own real caller fires this with a generous
-    // client side timeout and does not block on the response body, same
-    // non-blocking real shape prefetchStreams already uses - this server
-    // side keeps running to completion regardless of how long the client
-    // itself keeps listening.
     [HttpPost("scan/{itemId}")]
     [Authorize(Policy = "RequiresElevation")]
     public async Task<IActionResult> Scan(Guid itemId, [FromQuery] bool useAnalyzerFallback)
@@ -129,10 +81,6 @@ public class IntroCreditsController(
             return BadRequest("Invalid user session");
         }
 
-        // CancellationToken.None on purpose, not HttpContext.RequestAborted:
-        // see this method's own header for why a real client disconnect
-        // (or a generous but still finite client side timeout) should
-        // never cut a real still-running scan short.
         var result = await bulkScanner.ScanAsync(itemId, useAnalyzerFallback, userId, CancellationToken.None).ConfigureAwait(false);
         return Ok(new ScanResponse(result.EpisodesScanned, result.CommunityHits, result.AnalyzerHits));
     }

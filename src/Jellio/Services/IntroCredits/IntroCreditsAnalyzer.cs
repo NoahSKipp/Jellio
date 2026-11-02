@@ -11,33 +11,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.IntroCredits;
 
-// Real bug, found live, that reshaped this whole file: Gelato's own
-// IMediaSourceManager decorator (Gelato.ActionContextExtensions.
-// IsInsertableAction, confirmed from a real server's own stack trace)
-// only does its real expensive resolution (a live Stremio addon round
-// trip plus debrid lookup) when the current call is genuinely inside a
-// real ASP.NET request it recognizes - anything else, including a
-// synthetic HttpContext this file used to hand it, gets back a cheap
-// gelato://stub/... placeholder instead, not a real playable URL.
-// Almost certainly deliberate on Gelato's own part: a bulk background
-// sweep resolving real streams for a reader's entire library, unwatched
-// episodes included, is exactly the kind of load that gate reads as
-// built to stop (a real debrid account has real rate limits and real
-// quotas, and this whole library ran to 5911 real seasons). So this no
-// longer tries to fight that gate with a background job at all -
-// AnalyzeSeasonAsync is called directly, awaited, from
-// IntroCreditsBulkScanner, itself called from IntroCreditsController's
-// own POST, a real request with a real matched endpoint Gelato already
-// recognizes.
-//
-// Real feedback also moved when this ever runs at all: it used to fire
-// automatically on every single episode playback (a small forward
-// batch, resolving several other episodes nobody asked to watch just to
-// cross-reference them - a real cost against a reader's own debrid
-// quota). Now it only ever runs from a deliberate admin trigger (a
-// right-clicked "Find Skip Intro/Credits"), against a whole real season
-// at once, once Services/CommunitySkip's own free tier has already had
-// its chance to answer for cheap.
 public class IntroCreditsAnalyzer(
     ILibraryManager libraryManager,
     IUserManager userManager,
@@ -50,21 +23,9 @@ public class IntroCreditsAnalyzer(
 
     private static readonly TimeSpan MinReanalyzeGap = TimeSpan.FromDays(3);
 
-    // Per-season, not global: two readers watching two different real
-    // shows at once should never wait on each other, only a real
-    // repeat/overlapping trigger for the exact same season (a reader
-    // pausing and un-pausing, or Up Next firing this again a moment
-    // after playback start already did) serializes against itself.
     private readonly Dictionary<Guid, SemaphoreSlim> _seasonGates = new();
     private readonly object _seasonGatesLock = new();
 
-    // Real last-resort tier of Services/IntroCreditsBulkScanner's own
-    // explicit admin sweep (a right-clicked "Find Skip Intro/Credits"),
-    // never fired automatically any more - see this class's own header
-    // for why that changed. Cross-references every episode of the whole
-    // real season at once against a single anchor, since an admin
-    // explicitly asking for full coverage on a season/show is asking for
-    // exactly that, not a small forward-looking window.
     public async Task AnalyzeSeasonAsync(Guid seasonId, Guid userId, CancellationToken cancellationToken)
     {
         if (libraryManager.GetItemById(seasonId) is not Season season)
@@ -156,12 +117,6 @@ public class IntroCreditsAnalyzer(
             MediaSourceInfo? source;
             try
             {
-                // Real, unfaked ambient HttpContext: this whole method
-                // only ever runs as part of the real request
-                // IntroCreditsController's own POST is already inside,
-                // so Gelato's own decorator sees the same real endpoint
-                // that request matched and does its real resolution
-                // rather than handing back a gelato://stub/... placeholder.
                 var sources = await mediaSourceManager
                     .GetPlaybackMediaSources(episode, user, false, false, cancellationToken)
                     .ConfigureAwait(false);
@@ -256,14 +211,6 @@ public class IntroCreditsAnalyzer(
         }
     }
 
-    // Matches in both directions (a against b, then b against a): the
-    // real run FindMatch finds is only ever expressed in the first
-    // array's own real timeline, so getting both episodes' own real
-    // segment recorded from one real comparison needs it called twice,
-    // each side's own real offsetSeconds (0 for an intro window, that
-    // episode's own real creditsOffset for a credits one) added back in
-    // since FindMatch itself only ever knows about the real window it
-    // was handed, not where that window sat in the real full episode.
     private static bool MatchAndStore(
         Guid itemIdA,
         int[] fingerprintA,

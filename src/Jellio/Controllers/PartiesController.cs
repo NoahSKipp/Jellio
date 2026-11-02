@@ -14,13 +14,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Watch parties: Group Watch groups with a host, privacy, join codes, a
-/// ready check and countdown, schedules and a summary in the Feed.
-/// SyncPlay itself has no roles or privacy, so private parties and
-/// host-only controls are kept by Jellio's own apps; another Jellyfin
-/// client can still see and join any group.
-/// </summary>
 [ApiController]
 [Route("Jellio/parties")]
 [Authorize]

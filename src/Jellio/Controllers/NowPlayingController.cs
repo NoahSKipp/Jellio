@@ -11,16 +11,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Exposes active playback sessions server side, through the real
-/// ISessionManager the server already tracks, rather than the cron plus
-/// static JSON file approach community "now playing" scripts use when they
-/// have no plugin backend to lean on. Requires an authenticated Jellyfin
-/// user, any user, this is a shared "who is watching what" surface by
-/// design, not admin only. Reading (books and manga in Jellio's reader)
-/// has no Jellyfin session, so the reader checks in here instead
-/// (NowReadingService).
-/// </summary>
 [ApiController]
 [Route("Jellio/now-playing")]
 [Authorize]

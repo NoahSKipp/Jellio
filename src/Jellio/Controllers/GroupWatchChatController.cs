@@ -8,14 +8,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Chat for a real Jellyfin SyncPlay group, backed by GroupWatchChatService's
-/// own in memory room list. Same real trust model NowPlayingController's own
-/// header already states: any authenticated user, not scoped to real group
-/// membership server side, since this whole feature is a small friends-only
-/// room in practice and every real GroupId a client ever has came from its
-/// own GET /SyncPlay/List first, same as that endpoint's own real access.
-/// </summary>
 [ApiController]
 [Route("Jellio/groupwatch")]
 [Authorize]

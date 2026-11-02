@@ -13,17 +13,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.IntroCredits;
 
-// Two real explicit triggers components/cardOptionsMenu.js and
-// screens/detail.js's own episode options menu both offer (admin only,
-// Configuration/config.html's own toggle): a "Quick Skip Search"
-// (Services/CommunitySkip's own free tier only, does nothing further
-// once that comes back short) and a "Deep Skip Search" (the same free
-// tier first, only reaching for IntroCreditsAnalyzer's own real
-// debrid-backed chromaprint fallback for whatever it leaves uncovered).
-// Real feedback was explicit that a reader's own debrid quota should
-// never be spent automatically, and that even a deliberate real ask
-// should let an admin choose whether that cost is worth paying, not
-// just how big a scope to pay it across (Episode/Season/Show).
 public class IntroCreditsBulkScanner(
     ILibraryManager libraryManager,
     CommunitySkipProvider communitySkipProvider,
@@ -33,12 +22,6 @@ public class IntroCreditsBulkScanner(
 {
     public record ScanResult(int EpisodesScanned, int CommunityHits, int AnalyzerHits);
 
-    // Much shorter than the analyzer's own MinReanalyzeGap (3 days too,
-    // deliberately the same number - real coverage keeps arriving on the
-    // free community sources at a similar real pace to how often the
-    // expensive analyzer fallback is worth retrying, not a faster one):
-    // a known-empty season should still catch new community coverage
-    // within a few days, just not re-ask every single scan in between.
     private static readonly TimeSpan CommunityRecheckGap = TimeSpan.FromDays(3);
 
     public async Task<ScanResult> ScanAsync(Guid itemId, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
@@ -54,14 +37,6 @@ public class IntroCreditsBulkScanner(
         };
     }
 
-    // A movie has no sibling of its own within this library for
-    // IntroCreditsAnalyzer's own cross-episode comparison to ever anchor
-    // against, so TheIntroDB is the only real tier that can ever answer
-    // for one - same real limitation the community tier itself already
-    // has (Services/CommunitySkip/CommunitySkipProvider.cs's own header),
-    // just with no expensive fallback below it to reach for here at all.
-    // No Quick/Deep distinction on the frontend's own Movie card menu for
-    // exactly that reason, a single "Find Skip Intro/Credits" entry only.
     private async Task<ScanResult> ScanMovieAsync(Movie movie, CancellationToken cancellationToken)
     {
         if (ShouldSkipCommunityLookup(movie.Id))
@@ -77,12 +52,6 @@ public class IntroCreditsBulkScanner(
         return new ScanResult(1, found ? 1 : 0, 0);
     }
 
-    // Deep Search on a single episode still has to reach the whole real
-    // season for IntroCreditsAnalyzer's own cross-episode comparison
-    // (chromaprint needs at least one other episode to anchor against, a
-    // real limitation this file cannot avoid), but only ever pays that
-    // real cost when this one episode's own community lookup came back
-    // short - a Quick miss on a well covered season never triggers it.
     private async Task<ScanResult> ScanEpisodeAsync(Episode episode, bool useAnalyzerFallback, Guid userId, CancellationToken cancellationToken)
     {
         bool communityHit;
@@ -181,11 +150,6 @@ public class IntroCreditsBulkScanner(
             }
         }
 
-        // Quick Search stops right here - Deep Search only reaches the
-        // expensive fallback below for whatever the community tier above
-        // left uncovered, and only when there are at least two of them
-        // left in this season for IntroCreditsAnalyzer's own
-        // cross-episode comparison to have anything to anchor against.
         if (!useAnalyzerFallback || stillMissing.Count < 2)
         {
             return new ScanResult(episodesScanned, communityHits, 0);
@@ -209,12 +173,6 @@ public class IntroCreditsBulkScanner(
         return record is { CommunityAttempted: true } && DateTimeOffset.UtcNow - record.CommunityAttemptedAt < CommunityRecheckGap;
     }
 
-    // Stores whichever categories a real hit covered - MarkCommunityAttempted
-    // above (called by every caller right after this, hit or miss alike)
-    // is what actually gates the next lookup, so a miss no longer means
-    // "ask again for free on the very next scan" the way it used to: a
-    // known-empty season was re-running its whole real HTTP chain, every
-    // episode, on every future scan, forever.
     private bool StoreCommunityResult(Guid itemId, CommunitySkipResult? result)
     {
         if (result is null)

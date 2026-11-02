@@ -12,13 +12,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Screen overlays an admin sends from the dashboard: a picture or a line
-/// of text laid over the middle of a reader's screen at a chosen opacity
-/// for a chosen number of seconds, then gone. Nothing is kept in their
-/// notifications. Pending overlays live in memory and expire quickly,
-/// the same way SoundsController's sounds do.
-/// </summary>
 [ApiController]
 [Route("Jellio/overlays")]
 [Authorize]
@@ -150,9 +143,6 @@ public partial class OverlaysController(IUserManager userManager, IApplicationPa
         return PhysicalFile(path, contentType);
     }
 
-    // A GIF is kept as sent so it still animates; anything else is
-    // shrunk to fit MaxImageDimension and stored as JPEG, or PNG when
-    // it has transparency to keep.
     private (string? ImageId, string? Error) SaveImage(string data)
     {
         var comma = data.IndexOf(',', StringComparison.Ordinal);

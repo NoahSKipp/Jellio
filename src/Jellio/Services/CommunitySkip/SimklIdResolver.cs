@@ -10,18 +10,6 @@ namespace Jellio.Services.CommunitySkip;
 
 public record SimklResolvedIds(long SimklId, string Type, string? Mal, string? Anilist, string? Kitsu, string? Imdb);
 
-// C# port of NuvioTV's own real SimklIdResolver.kt, checked against its
-// real source before writing this, not guessed at: Simkl's own real
-// public /redirect endpoint maps any one of a real handful of provider
-// ids (imdb, tmdb, tvdb, mal, anilist, ...) onto Simkl's own internal
-// real id and content type via a real 302's own Location header, then a
-// second real GET against that id returns every other real provider id
-// Simkl itself already knows about for the same real title.
-// PluginConfiguration.cs's own TmdbAccessToken comment already confirmed
-// every Gelato import carries a real ProviderIds.Tmdb, never a real
-// ProviderIds.Imdb, so CommunitySkipProvider below resolves from "tmdb"
-// rather than NuvioTV's own real "imdb" starting point - this resolver
-// itself stays source-agnostic, same as NuvioTV's own real version.
 public class SimklIdResolver(IHttpClientFactory httpClientFactory, ILogger<SimklIdResolver> logger)
 {
     private const string BaseUrl = "https://api.simkl.com";
@@ -44,11 +32,6 @@ public class SimklIdResolver(IHttpClientFactory httpClientFactory, ILogger<Simkl
     {
         try
         {
-            // A real named client (registered in ServiceRegistrator.cs
-            // with AllowAutoRedirect: false) rather than the default
-            // one: the real answer here IS the 302 itself, following it
-            // would just discard the one real Location header this
-            // whole method needs.
             var redirectClient = httpClientFactory.CreateClient("SimklRedirect");
             var redirectUrl = $"{BaseUrl}/redirect?to=simkl&{source}={Uri.EscapeDataString(id)}&client_id={clientId}";
             using var redirectResponse = await redirectClient.GetAsync(redirectUrl, cancellationToken).ConfigureAwait(false);

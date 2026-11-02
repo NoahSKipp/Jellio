@@ -35,12 +35,6 @@ public class Annotation
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-/// <summary>
-/// Highlights, notes and bookmarks, per user and book, so they follow a
-/// reader across devices. One JSON file per user (item id -> list), the
-/// same lock-and-rewrite shape as ReadingProgressStore; a reader's own
-/// annotations are small enough that rewriting the file is cheap.
-/// </summary>
 public class AnnotationStore(IApplicationPaths applicationPaths)
 {
     public const int MaxPerBook = 5000;

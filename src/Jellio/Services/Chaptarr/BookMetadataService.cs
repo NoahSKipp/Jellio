@@ -15,12 +15,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.Chaptarr;
 
-/// <summary>
-/// Metadata record for one owned book, as shown on the Books shelf and
-/// the detail page. CoverSource never leaves the server: it is either a
-/// Chaptarr media cover path or the metadata provider's https image, and
-/// only BookMetadataController's cover endpoint fetches it.
-/// </summary>
 public record BookMetadata(
     string Title,
     string? Authors,
@@ -33,15 +27,6 @@ public record BookMetadata(
     string? SeriesTitle,
     string? CoverSource);
 
-/// <summary>
-/// Jellyfin's own book metadata is usually empty: Bookshelf's Google Books
-/// provider can't authenticate, and its Epub provider never applies to a
-/// PDF. Chaptarr already holds real covers and edition data, so an owned
-/// Book/AudioBook is matched to Chaptarr by title (and author when Jellyfin
-/// knows one): first against the books Chaptarr tracks, then its metadata
-/// lookup. Results are cached per item, and concurrent requests for the
-/// same book (a whole shelf of covers loading at once) share one lookup.
-/// </summary>
 public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibraryManager libraryManager, ILogger<BookMetadataService> logger)
 {
     private static readonly TimeSpan MatchTtl = TimeSpan.FromHours(12);
@@ -167,11 +152,6 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
         return new Resolution(null, lookupFailed || index is null);
     }
 
-    /// <summary>
-    /// Which formats of a title Chaptarr already tracks, by title only (its
-    /// lean index carries no author), for flagging discovery results.
-    /// Keyed by normalized title; empty when Chaptarr is unreachable.
-    /// </summary>
     public async Task<Dictionary<string, (bool Ebook, bool Audiobook)>> TrackedTitlesAsync()
     {
         var result = new Dictionary<string, (bool Ebook, bool Audiobook)>(StringComparer.Ordinal);
@@ -271,9 +251,6 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
             }
         }
 
-        // With an author known, a same-titled book by someone else is a
-        // different book; without one, the first title match is the best
-        // there is.
         return authorKey is null ? fallback : null;
     }
 
@@ -326,8 +303,6 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
             ChaptarrClient.PickCover(imageLists, edition?["remoteCover"] ?? book["remoteCover"]));
     }
 
-    // The monitored edition is the one Chaptarr actually tracks; otherwise
-    // whichever edition carries the most real detail.
     private static JsonObject? PickEdition(JsonArray? editions)
     {
         if (editions is null)
@@ -381,9 +356,6 @@ public partial class BookMetadataService(ChaptarrClient chaptarrClient, ILibrary
         return item.Name;
     }
 
-    // An audiobook's title lives on Album (one item per file); a book with
-    // no embedded metadata is named after its file, which often reads
-    // "Author - Title (2019) [Publisher]".
     private List<Query> BuildQueries(BaseItem item)
     {
         var rawTitle = item is AudioBook ? AudiobookTitle(item) : item.Name;

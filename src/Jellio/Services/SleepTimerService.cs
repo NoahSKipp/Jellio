@@ -6,24 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
 
-/// <summary>
-/// Duration sleep timers, one active per user/device pair. Real mechanism,
-/// confirmed against a real plugin doing the same thing
-/// (jellyfin-plugin-jellysleep's own Services/SleepTimerService.cs) before
-/// writing anything: a background loop plus
-/// ISessionManager.SendPlaystateCommand(Stop) is what actually stops
-/// playback server side, no client side video hooking needed, unlike the
-/// pause screen or now playing features this is not limited by
-/// playbackManager being unreachable from an injected script, the server
-/// already has a real remote control channel to any session.
-///
-/// Scoped to duration timers only for this slice, not Jellysleep's
-/// episode-count timers, which need wiring into playback stop/start
-/// events for correctness (an interrupted episode should not silently
-/// count toward the target). That is real, separate scope, not a shortcut
-/// taken here, revisit only if a duration-only timer turns out to not be
-/// enough for real use.
-/// </summary>
 public class SleepTimerService(
     ILogger<SleepTimerService> logger,
     ISessionManager sessionManager

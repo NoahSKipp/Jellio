@@ -10,13 +10,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Sounds an admin plays on a reader's device: no toast, the clip just
-/// plays, and whatever is already playing there is turned down to
-/// DuckVolume until it ends. Pending sounds live in memory only and
-/// expire after a short while, a clip from ten minutes ago is no longer
-/// funny. Clients poll /pending with the last Seq they saw.
-/// </summary>
 [ApiController]
 [Route("Jellio/sounds")]
 [Authorize]

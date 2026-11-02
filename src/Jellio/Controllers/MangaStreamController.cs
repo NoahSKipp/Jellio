@@ -14,12 +14,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// The Manga shelf's streamed series (MangaStreamService): Suwayomi's
-/// library with this reader's progress, chapters, pages as they're read,
-/// a chapter as a CBZ for reading offline, and saving a series to the
-/// server.
-/// </summary>
 [ApiController]
 [Route("Jellio/manga/stream")]
 [Authorize]
@@ -272,10 +266,6 @@ public class MangaStreamController(
         return Ok(new { Queued = queue.Count });
     }
 
-    // The counts the shelf shows, under this reader's settings for the
-    // series: chapters from excluded scanlators are left out, and (unless
-    // turned off) a chapter whose number is read from another scanlator
-    // counts as read too, the same as the series page.
     private static SeriesSummary Summarize(StreamSeries series, Dictionary<string, ReadingProgressRecord> progress, SeriesPrefs? prefs)
     {
         var excluded = prefs?.ExcludedScanlators;
@@ -367,9 +357,6 @@ public class MangaStreamController(
         return User.TryGetJellyfinUserId(out userId);
     }
 
-    // What ZipArchive writes, held until it's copied to the response
-    // asynchronously (Kestrel refuses synchronous writes). Not seekable, so
-    // ZipArchive writes straight through with data descriptors.
     private sealed class ChunkStream : Stream
     {
         private readonly MemoryStream _buffer = new();

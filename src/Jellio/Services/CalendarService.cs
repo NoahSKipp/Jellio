@@ -20,30 +20,8 @@ namespace Jellio.Services;
 
 public record CalendarEntry(DateTime Date, string Kind, string? Detail);
 
-// Real shape Controllers/CalendarController.cs's own real response
-// already carried before this method existed, moved here rather than
-// left duplicated: Controllers/NotificationsController.cs's own real
-// watchlist scan needs the exact same real per item TMDB lookup this
-// file's own GetMovieEntryAsync/GetSeriesEntryAsync already do, not a
-// second copy of the same real ProviderIds.Tmdb plus SemaphoreSlim
-// throttle logic.
 public record WatchlistCalendarItem(Guid ItemId, string Name, string Type, DateTime Date, string Kind, string? Detail);
 
-/// <summary>
-/// TMDB lookups for Controllers/CalendarController.cs's own real per user
-/// Watchlist scan: every Gelato imported Movie/Series already carries a
-/// real ProviderIds.Tmdb (confirmed live against a real sample of
-/// imports before any of this was written, ProviderIds.Imdb never once
-/// present even on mainstream titles, so this goes straight to TMDB's
-/// own id rather than the Imdb-keyed /find lookup a first pass here
-/// assumed it would need). Sent as a real Bearer token
-/// (PluginConfiguration.TmdbAccessToken, a v4 "API Read Access Token"),
-/// never a query string api_key, so it never sits in a server access
-/// log. Cached in memory only, same real ephemeral tradeoff
-/// GroupWatchChatService's own header already explains: a release date
-/// does not change minute to minute, and a plugin restart just means
-/// the next real request pays for a fresh lookup, not a lost one.
-/// </summary>
 public class CalendarService(
     IHttpClientFactory httpClientFactory,
     ILibraryManager libraryManager,
@@ -57,24 +35,12 @@ public class CalendarService(
 
     private readonly ConcurrentDictionary<string, (DateTime CachedAt, CalendarEntry? Entry)> _cache = new();
 
-    // How long after the last watched episode a show that is still airing
-    // (or has no status) keeps being checked for a next season. Gaps of two
-    // to three years are common for TV (Severance, Stranger Things, The
-    // Boys); anime sequels often take longer still (Jujutsu Kaisen, Frieren,
-    // Vinland Saga), so anime gets five. A title only reaches the calendar
-    // once TMDB has an announced air date, so a long window costs a few
-    // cached lookups, not noise.
     public static readonly TimeSpan SeriesWindow = TimeSpan.FromDays(3 * 365);
     public static readonly TimeSpan AnimeSeriesWindow = TimeSpan.FromDays(5 * 365);
 
     private static readonly TimeSpan MonitoredCacheTtl = TimeSpan.FromMinutes(30);
     private readonly ConcurrentDictionary<Guid, (DateTime At, IReadOnlyList<BaseItem> Items)> _monitoredCache = new();
 
-    /// <summary>
-    /// Whether a series the user has watched some of is checked for new
-    /// episodes. lastWatched is the newest episode the user played or
-    /// paused; null (played without a date) counts as recent.
-    /// </summary>
     public static bool ShouldMonitorSeries(SeriesStatus? status, DateTime? lastWatched, bool isAnime, DateTime now)
     {
         if (status == SeriesStatus.Ended)
@@ -90,13 +56,6 @@ public class CalendarService(
         return now - lastWatched.Value <= (isAnime ? AnimeSeriesWindow : SeriesWindow);
     }
 
-    /// <summary>
-    /// Every title checked for upcoming releases or air dates: the user's
-    /// Watchlist (IsFavorite), plus every series they have watched an
-    /// episode of that ShouldMonitorSeries keeps. Jellyfin records plays on
-    /// episodes, not on the series, so the last watched date comes from the
-    /// user's episode history.
-    /// </summary>
     public void ForgetMonitored(Guid userId) => _monitoredCache.TryRemove(userId, out _);
 
     public IReadOnlyList<BaseItem> GetMonitoredItems(User user)
@@ -187,13 +146,6 @@ public class CalendarService(
         return result;
     }
 
-    // Moved verbatim from Controllers/CalendarController.cs's own
-    // former Get(): a concurrency cap rather than a bare Task.WhenAll,
-    // TMDB's own real rate limit is generous but not unlimited, and a
-    // large watchlist should not fire every request in one real burst.
-    // A cache hit above skips the real round trip entirely regardless
-    // of how many callers (CalendarController, NotificationsController)
-    // ask for the same real item the same day.
     public async Task<List<WatchlistCalendarItem>> GetWatchlistCalendarAsync(
         IReadOnlyList<BaseItem> watchlist,
         string accessToken
@@ -203,14 +155,6 @@ public class CalendarService(
         var entryTasks = watchlist
             .Select(async item =>
             {
-                // ProviderIds is a plain Dictionary<string, string> (real
-                // shape confirmed against BaseItem.cs before writing this,
-                // no GetProviderId/MetadataProvider helper actually exists
-                // on this Jellyfin version to wrap it). "Tmdb" is the real
-                // literal key GelatoManager itself writes, confirmed live
-                // against a real sample of imported items rather than
-                // assumed: ProviderIds.Imdb never once present, even on
-                // mainstream titles.
                 if (!item.ProviderIds.TryGetValue("Tmdb", out var tmdbId) || string.IsNullOrEmpty(tmdbId))
                 {
                     return null;
@@ -321,13 +265,6 @@ public class CalendarService(
         return false;
     }
 
-    // release_dates groups by region (iso_3166_1), each with its own list
-    // of typed release events: 1 Premiere, 2 Theatrical (limited), 3
-    // Theatrical, 4 Digital, 5 Physical, 6 TV, real TMDB enum confirmed
-    // against its own real API docs before writing this. Digital is the
-    // one real date "when can I actually watch this at home" maps to;
-    // US preferred since that region carries the most complete real data
-    // on TMDB, any region's own Digital date still beats none at all.
     private static CalendarEntry? PickDigitalRelease(JsonDocument doc)
     {
         if (!doc.RootElement.TryGetProperty("results", out var results))
@@ -377,9 +314,6 @@ public class CalendarService(
         return nearest == null ? null : new CalendarEntry(nearest.Value, "digital-release", "Digital release");
     }
 
-    // next_episode_to_air is null once a show has nothing real scheduled
-    // yet (between seasons, cancelled, ended), real TMDB field confirmed
-    // against its own real /tv/{id} response shape, not guessed at.
     private static CalendarEntry? PickNextEpisode(JsonDocument doc)
     {
         if (!doc.RootElement.TryGetProperty("next_episode_to_air", out var next) || next.ValueKind != JsonValueKind.Object)

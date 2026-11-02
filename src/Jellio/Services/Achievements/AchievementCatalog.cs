@@ -2,10 +2,6 @@ using System.Collections.Generic;
 
 namespace Jellio.Services.Achievements;
 
-// A fixed, hand-picked set rather than the compound-criteria authoring
-// engines other gamification plugins build: this plugin has no admin
-// UI for badge authoring and no real need for one yet, so a static list
-// evaluated against UserAchievementStats stays the whole feature.
 public static class AchievementCatalog
 {
     private const long TicksPerHour = 36_000_000_000L;

@@ -22,11 +22,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Server wide "what others are watching" endpoint for recommendation rows.
-/// Collects active streaming sessions, in-progress items, and recently finished items
-/// across all non-private server users, collapsing multiple watchers per item/series.
-/// </summary>
 [ApiController]
 [Route("Jellio/community")]
 [Authorize]
@@ -171,9 +166,6 @@ public class CommunityController(
             }
         }
 
-        // 2 & 3: In-progress / Resumable items and recently finished items across eligible users.
-        // Uses a 5-minute historical cache so expensive SQLite database queries across all users
-        // do not run on every page visit or playback start.
         if (!cache.TryGetHistory<List<HistoricalActivity>>(out var history) || history == null)
         {
             var fourteenDaysAgo = DateTime.UtcNow.AddDays(-14);

@@ -8,14 +8,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Backs screens/player.js's own "Waiting for X to finish loading in"
-/// banner, GroupWatchJoinSyncService's own header explains why this is
-/// separate from real SyncPlay's own Buffering/Ready signal rather than
-/// reusing it. Same real trust model GroupWatchChatController's own
-/// header already states: any authenticated user, not scoped to real
-/// group membership server side.
-/// </summary>
 [ApiController]
 [Route("Jellio/groupwatch")]
 [Authorize]

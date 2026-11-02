@@ -8,12 +8,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Invites into a real Jellyfin SyncPlay group, backed by
-/// GroupWatchInviteService's own in memory per-user queue. Same real
-/// trust model GroupWatchChatController's own header already states: any
-/// authenticated user, not scoped to real group membership server side.
-/// </summary>
 [ApiController]
 [Route("Jellio/groupwatch")]
 [Authorize]
@@ -21,10 +15,6 @@ public class GroupWatchInviteController(GroupWatchInviteService inviteService, I
 {
     public record InviteRequest(Guid ToUserId, string GroupName);
 
-    // Real bug, audit-found: unlike chat text (500) and a profile bio
-    // (240), GroupName below was stored verbatim, no cap at all, an
-    // untrusted client free to send an invite carrying an arbitrarily
-    // large string into GroupWatchInviteService's own per-user queue.
     private const int MaxGroupNameLength = 100;
 
     [HttpGet("invites")]

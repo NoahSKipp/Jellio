@@ -17,17 +17,11 @@ public class ReadingProgressRecord
     // card's own progress bar read.
     public double Progress { get; set; }
 
-    // The book's length in pages (a PDF's real page count, an EPUB's
-    // location count), for "pages left"; null until the reader knows it.
     public int? TotalPages { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-// Jellyfin tracks a resume position for anything playable (audiobooks
-// included), but has no notion of "where am I in this EPUB" at all, so
-// book reading position lives here instead. Same one-JSON-file-plus-lock
-// shape as IntroCreditsStore, keyed user -> item.
 public class ReadingProgressStore(IApplicationPaths applicationPaths)
 {
     private readonly object _lock = new();
@@ -68,9 +62,6 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
-    // Many at once (a Mihon import), saved once: a save rewrites the whole
-    // file, so one per chapter grows quadratically with a big library.
-    // keepExisting leaves progress already made in Jellio alone.
     public int SetMany(Guid userId, IEnumerable<(Guid ItemId, string Locator, double Progress, int? TotalPages, DateTimeOffset? UpdatedAt)> entries, bool keepExisting)
     {
         lock (_lock)

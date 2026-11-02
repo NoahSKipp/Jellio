@@ -10,27 +10,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.CommunitySkip;
 
-// C# port of TheIntroDB's own real official Jellyfin plugin
-// (github.com/TheIntroDB/jellyfin-plugin, GPL-3.0, the same real
-// license this whole plugin already carries, TheIntroDbClient.cs read
-// directly before writing this, not guessed at): a genuinely public,
-// free, community timestamp database, general TV/movie coverage, not
-// anime only the way AniSkip/Anime-Skip below already are. Keyed
-// directly off ProviderIds.Tmdb, no Simkl id-resolution round trip
-// needed at all, and every Gelato import already carries one
-// (PluginConfiguration.cs's own existing TmdbAccessToken comment
-// already confirmed this live). On v4 TheIntroDB keys its data by
-// TVDB id, so that one is sent too whenever the item has it and the
-// API picks tvdb -> tmdb -> imdb itself.
 public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheIntroDbClient> logger)
 {
     private const string BaseUrl = "https://api.theintrodb.org/v4/media";
 
-    // Same real ceiling their own client enforces (30 requests per 10s,
-    // clamped a touch under it here): every single episode/movie this
-    // plugin's own player screen opens hits this tier first now, real
-    // responsible use of a real shared community service matters more
-    // here than it would for a one-off call.
     private static readonly TimeSpan MinDelayBetweenRequests = TimeSpan.FromMilliseconds(400);
     private static readonly SemaphoreSlim RateLimitLock = new(1, 1);
     private static DateTime _lastRequestUtc = DateTime.MinValue;
@@ -145,9 +128,6 @@ public class TheIntroDbClient(IHttpClientFactory httpClientFactory, ILogger<TheI
         }
     }
 
-    // Jellyfin's Series.DisplayOrder to v4's mapping (default, official,
-    // dvd, alternate, absolute, regional). Unset or unknown orders send
-    // nothing, which v4 treats as default.
     public static string? MappingFor(string? displayOrder)
     {
         return displayOrder?.Trim().ToLowerInvariant() switch
@@ -187,14 +167,6 @@ public record TheIntroDbIds(int? TmdbId, string? TvdbId, string? ImdbId)
     public bool Any => TmdbId is not null || !string.IsNullOrWhiteSpace(TvdbId) || !string.IsNullOrWhiteSpace(ImdbId);
 }
 
-// JSON shapes matching TheIntroDB API's own real GET /media response
-// exactly (Api/MediaResponse.cs and Api/SegmentTimestamp.cs, read
-// directly from their own real source before writing this): intro/
-// recap keep start_ms optional (defaults to the real start of the
-// episode) but require end_ms; credits/preview require start_ms but
-// leave end_ms optional (means "runs to the real end of the media").
-// v4 can also answer with a version or episode list instead; those
-// carry none of these arrays and read as no segments.
 public class MediaResponse
 {
     [JsonPropertyName("intro")]

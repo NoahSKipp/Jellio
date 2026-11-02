@@ -20,9 +20,6 @@ public sealed class LiveChannelHealthRecord
 
 public sealed record LiveChannelStatus(string Status, DateTime Since, string? LastError);
 
-// Which Live TV channels fail to start, from what Jellio clients report
-// when they open one. Nothing is probed: opening a channel takes a tuner.
-// Shared by every user of the server, one small JSON file.
 public class LiveChannelHealthStore
 {
     public const int FailuresBeforeBroken = 2;
@@ -78,9 +75,6 @@ public class LiveChannelHealthStore
         }
     }
 
-    // Channels that failed to start at least twice with no success since,
-    // the last time within a day. Older marks lapse so the channel gets
-    // tried again.
     public Dictionary<string, LiveChannelStatus> Broken()
     {
         lock (_lock)

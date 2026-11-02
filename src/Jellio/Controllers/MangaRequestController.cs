@@ -16,12 +16,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Manga, manhwa and manhua requests through Suwayomi (SuwayomiClient):
-/// find a series on the configured Suwayomi sources, then add it to
-/// Suwayomi's library and download every chapter. Its downloads folder is
-/// meant to be the Jellyfin library the Manga shelf reads.
-/// </summary>
 [ApiController]
 [Route("Jellio/manga")]
 [Authorize]
@@ -45,9 +39,6 @@ public partial class MangaRequestController(
 
     public record MangaResult(int MangaId, string Title, string? Author, string? Status, bool InLibrary, string ThumbnailUrl, double Match);
 
-    // Searched/Failed: how many sources were asked and how many errored or
-    // ran out of time; Languages and InstalledLanguages explain an empty
-    // result (no sources at all, or none in the configured languages).
     public record SearchResponse(
         int Searched,
         int Failed,
@@ -58,9 +49,6 @@ public partial class MangaRequestController(
         IReadOnlyList<SourceResult> Sources,
         IReadOnlyList<string>? Unavailable = null);
 
-    // AddToLibrary: false when the reader is only opening the series to
-    // read (Discover's Read); reading it adds it to their shelf anyway.
-    // Force: add it even though the library has a series by that title.
     public record RequestBody(int MangaId, string? Title, bool AddToLibrary = true, bool Force = false);
 
     // The same series from another source: ToMangaId replaces FromMangaId
@@ -85,13 +73,6 @@ public partial class MangaRequestController(
         });
     }
 
-    /// <summary>
-    /// Searches every configured-language source at once (MangaSearchService:
-    /// a timeout per source, sources that keep failing skipped for a while,
-    /// answers reused for a few minutes) and returns each source's closest
-    /// matches, best-matching sources first, in one response. Kept for
-    /// older clients; search/stream answers source by source.
-    /// </summary>
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken)
     {
@@ -145,13 +126,6 @@ public partial class MangaRequestController(
             unavailable));
     }
 
-    /// <summary>
-    /// The same search, answered as newline-delimited JSON while it runs: a
-    /// "start" line listing the sources (and which are skipped as
-    /// unavailable), one "source" line per source the moment it answers,
-    /// times out or fails, then a "done" line. The manga search screen
-    /// shows each source's results as its line arrives.
-    /// </summary>
     [HttpGet("search/stream")]
     public async Task SearchStream([FromQuery] string q, CancellationToken cancellationToken)
     {
@@ -255,11 +229,6 @@ public partial class MangaRequestController(
                 .Take(ResultsPerSource)
                 .ToList());
 
-    // Switch a series to another source (Mihon's migrate): the new one is
-    // added and its chapters loaded, the reader's progress is carried over
-    // by chapter number, their settings and place on the shelf move to the
-    // new series, and the old one leaves the server's library unless
-    // someone else is still reading it.
     [HttpPost("migrate")]
     public async Task<IActionResult> Migrate([FromBody] MigrateBody body, CancellationToken cancellationToken)
     {
@@ -384,12 +353,6 @@ public partial class MangaRequestController(
 
     public record ImportStatus(MangaImportJob? Job, int PendingChapters);
 
-    /// <summary>
-    /// Imports the caller's Mihon library from a backup file (.tachibk,
-    /// sent as the raw request body): series in their library are added
-    /// to Suwayomi and downloaded from where they left off, and their
-    /// progress is applied as the chapters reach Jellyfin.
-    /// </summary>
     [HttpPost("import")]
     [RequestSizeLimit(MaxBackupBytes)]
     public async Task<IActionResult> Import(CancellationToken cancellationToken)
@@ -461,8 +424,6 @@ public partial class MangaRequestController(
         }
     }
 
-    // The real cover of the series a chapter file belongs to (its folder),
-    // for the Manga shelf's series cards (MangaCoverService).
     [HttpGet("series-cover/{itemId:guid}")]
     public async Task<IActionResult> SeriesCover(Guid itemId, [FromQuery] string? title, CancellationToken cancellationToken)
     {

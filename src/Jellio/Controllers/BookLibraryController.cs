@@ -19,12 +19,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// The Books and Audiobooks Requests page (where each request stands in
-/// Chaptarr) and removing a book from a reader's library: only from their
-/// own shelf while anyone else still has it, from Chaptarr and the server
-/// once nobody does.
-/// </summary>
 [ApiController]
 [Route("Jellio/books")]
 [Authorize]
@@ -43,9 +37,6 @@ public class BookLibraryController(
     // arrived.
     private static readonly TimeSpan AvailableWindow = TimeSpan.FromDays(14);
 
-    // State: searching, queued, downloading, importing, blocked, failed,
-    // scanning (on disk, Jellyfin hasn't picked it up), available, missing
-    // (Chaptarr no longer tracks it).
     public record RequestEntry(
         int ChaptarrBookId,
         string Title,

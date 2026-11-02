@@ -6,22 +6,6 @@ using MediaBrowser.Common.Configuration;
 
 namespace Jellio.Services.IntroCredits;
 
-// Same real shape RealDurationStore already uses (one shared JSON file
-// keyed by item id, a lock around every real read-modify-write): Intro
-// Skipper's own native/legacy lookups both come back empty for a
-// .strm-backed remote library, real feedback confirmed live against
-// this server's own container logs, chromaprint fingerprinting itself
-// needing real decoded audio a scheduled task pointed at a debrid link
-// cannot reliably pull the way it can a local file. Two real writers now:
-// IntroCreditsAnalyzer's own cross-episode audio fingerprint matching,
-// run directly against the same resolved stream URL real playback
-// already uses (MediaSourceInfo.Path, IMediaSourceManager), not Intro
-// Skipper's own queue, which (real Intro Skipper source, confirmed
-// before writing this) gates its own analysis queue to a local, seekable
-// file path and skips a remote one outright rather than even attempting
-// an HTTP read; and IntroCreditsBulkScanner, caching a real hit from
-// Services/CommunitySkip's own free tier here too, so a season already
-// fully covered by it does not need to ask again on its own next scan.
 public class IntroCreditsStore(IApplicationPaths applicationPaths)
 {
     private readonly object _lock = new();
@@ -66,12 +50,6 @@ public class IntroCreditsStore(IApplicationPaths applicationPaths)
         }
     }
 
-    // Recorded even on a real miss (no fingerprint at all, or no strong
-    // enough match against the season's own anchor episode): without
-    // this, a title that genuinely has no shared intro/credits (an
-    // anthology, a one-off special) would get re-fingerprinted on every
-    // single real playback within MinReanalyzeGap, real wasted ffmpeg
-    // work for a real, already-known answer.
     public void MarkAttempted(Guid itemId)
     {
         lock (_lock)
@@ -83,10 +61,6 @@ public class IntroCreditsStore(IApplicationPaths applicationPaths)
         }
     }
 
-    // Recorded whether the community tier found anything or not, same
-    // unconditional shape MarkAttempted above already uses for the
-    // analyzer - a known miss is exactly as worth remembering as a hit,
-    // it just gets remembered for a much shorter gap.
     public void MarkCommunityAttempted(Guid itemId)
     {
         lock (_lock)

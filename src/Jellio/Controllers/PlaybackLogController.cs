@@ -7,14 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// One line in the Jellyfin log per Jellio playback: how it plays
-/// (DirectPlay, Remux, Transcode), why the video would need a re-encode,
-/// Jellyfin's own TranscodeReasons and the Video transcode policy in force.
-/// For measuring how often a server without hardware acceleration is asked
-/// to re-encode video. Sent by the web player and Jellio TV after
-/// PlaybackInfo. Also the web frontend's home load report.
-/// </summary>
 [ApiController]
 [Route("Jellio/playback")]
 [Authorize]

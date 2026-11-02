@@ -33,9 +33,6 @@ public class VocabEntry
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    // Spaced repetition (a lightweight SM-2): when the card is next due,
-    // the current gap between reviews, how easy it has proven, and how
-    // many reviews in a row it has passed.
     public DateTimeOffset DueAt { get; set; }
 
     public double IntervalDays { get; set; }
@@ -47,11 +44,6 @@ public class VocabEntry
     public int Lapses { get; set; }
 }
 
-/// <summary>
-/// Each reader's own vocabulary deck: words saved from books with their
-/// sentence, definition and translation, plus review scheduling. One JSON
-/// file per user.
-/// </summary>
 public class VocabularyStore(IApplicationPaths applicationPaths)
 {
     public const int MaxEntries = 20000;

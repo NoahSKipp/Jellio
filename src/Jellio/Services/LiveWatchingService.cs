@@ -19,13 +19,6 @@ public record LiveWatchingEntry(
     string? Client,
     DateTimeOffset SeenAt);
 
-/// <summary>
-/// Who's watching live TV right now, for Now Playing, and how long: the
-/// live players check in every half minute while a channel plays (a
-/// stream added by link has no Jellyfin session at all). Time between two
-/// check-ins counts toward the live TV badges, gathered here and written
-/// a few minutes at a time.
-/// </summary>
 public class LiveWatchingService(Func<Guid, long, Task> creditWatching)
 {
     private static readonly TimeSpan Expiry = TimeSpan.FromSeconds(90);

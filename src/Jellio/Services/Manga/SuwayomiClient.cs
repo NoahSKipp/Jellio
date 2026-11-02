@@ -16,11 +16,6 @@ namespace Jellio.Services.Manga;
 
 public record SuwayomiSource(long Id, string Name, string Lang);
 
-// Matching: installed sources in the configured languages.
-// InstalledLanguages: every language any installed source covers, so the
-// UI can say when sources exist but none match.
-// Total: every source Suwayomi reports; Nsfw: how many were skipped for
-// the NSFW flag. An empty result can then say which of the two it was.
 public record SuwayomiSourceList(IReadOnlyList<SuwayomiSource> Matching, IReadOnlyList<string> InstalledLanguages, int Total, int Nsfw);
 
 // Source is the display name ("MangaDex (EN)"), SourceName the plain one.
@@ -39,16 +34,6 @@ public record SuwayomiSettings(bool DownloadAsCbz, bool AutoDownloadNewChapters,
 
 public record SuwayomiRequestResult(bool Success, bool AlreadyInLibrary, int QueuedChapters, int TotalChapters, string? Message);
 
-/// <summary>
-/// Suwayomi-Server (the self-hosted Tachiyomi/Mihon), for manga, manhwa
-/// and manhua that exist as chapters rather than published volumes.
-/// Everything goes through its GraphQL API (/api/graphql); operation and
-/// field names are taken from its own source (SourceMutation,
-/// MangaMutation, ChapterMutation, DownloadMutation). Auth follows its
-/// modes: none, basic auth (credentials on every request) or UI login
-/// (a JWT from its login mutation, renewed when rejected). Its "simple
-/// login" cookie mode isn't supported.
-/// </summary>
 public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<SuwayomiClient> logger) : IMangaSourceSearch
 {
     private static readonly TimeSpan SourcesTtl = TimeSpan.FromMinutes(10);
@@ -175,9 +160,6 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             .ToList();
     }
 
-    // Add to Suwayomi's library (so its library updates pick up new
-    // chapters), fetch the chapter list, and queue every chapter that
-    // isn't downloaded yet.
     public async Task<SuwayomiRequestResult> AddAndDownloadAsync(int mangaId, CancellationToken cancellationToken)
     {
         if (!await AddToLibraryAsync(mangaId, cancellationToken).ConfigureAwait(false))
@@ -425,9 +407,6 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         return library;
     }
 
-    // The library with each series' source and chapter count, for picking
-    // one entry when a title is in it more than once. Falls back to titles
-    // only on a Suwayomi that doesn't answer the longer query.
     public async Task<IReadOnlyList<SuwayomiLibraryEntry>?> GetLibraryEntriesAsync(CancellationToken cancellationToken)
     {
         if (_entries is { } cached && DateTime.UtcNow - cached.At < TimeSpan.FromMinutes(1))
@@ -469,9 +448,6 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
 
     private (DateTime At, IReadOnlyList<SuwayomiLibraryEntry> Entries)? _entries;
 
-    // A series by its source and the source's own URL for it (what a
-    // Mihon backup records): Suwayomi's stored copy if it has one, else a
-    // title search on that source, matched by URL.
     public async Task<SuwayomiManga?> FindMangaAsync(long sourceId, string url, string title, CancellationToken cancellationToken)
     {
         const string Query = @"query ($condition: MangaConditionInput) {
@@ -587,9 +563,6 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
         }
     }
 
-    // Sends with whatever credentials are configured: a UI-login JWT if we
-    // have one, basic auth otherwise. A 401 with credentials configured
-    // means UI-login mode (or an expired token): log in and retry once.
     private async Task<HttpResponseMessage> SendAsync(Func<HttpRequestMessage> build, CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient(nameof(SuwayomiClient));

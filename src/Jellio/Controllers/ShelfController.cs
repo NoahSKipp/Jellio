@@ -8,11 +8,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// A reader's categories on the Manga, Books and Audiobooks shelves
-/// (Mihon style), per-series settings and chapter bookmarks
-/// (ShelfStore). Everything here is the caller's own.
-/// </summary>
 [ApiController]
 [Route("Jellio/shelf")]
 [Authorize]

@@ -47,15 +47,6 @@ public record MangaSearchOptions(
         TimeSpan.FromMinutes(5));
 }
 
-/// <summary>
-/// Manga search across Suwayomi sources, every source at once, each with
-/// its own timeout under one overall budget, yielding each source's
-/// outcome the moment it has one. A source that times out or errors
-/// three times within ten minutes is skipped (reported unavailable) for
-/// the next ten, and answers are reused for five minutes per source and
-/// query, so one dead or Cloudflare-blocked source no longer holds every
-/// search up.
-/// </summary>
 public sealed class MangaSearchService
 {
     private const int MaxCacheEntries = 1000;

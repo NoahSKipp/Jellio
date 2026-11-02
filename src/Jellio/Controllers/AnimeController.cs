@@ -6,11 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Which titles are anime (Services/AnimeCatalog.cs). Anime lives in the
-/// Movies and Shows libraries too, so Jellio and Jellio TV use this list
-/// to keep it to the Anime library and out of everything else.
-/// </summary>
 [ApiController]
 [Route("Jellio/anime")]
 [Authorize]

@@ -10,12 +10,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Backs screens/reader.js: serves a Book item's own file to the in-browser
-/// EPUB/PDF reader and stores where each reader got to (ReadingProgressStore).
-/// Audiobooks never come through here - Jellyfin's own playback reporting
-/// already tracks their resume position natively.
-/// </summary>
 [ApiController]
 [Route("Jellio/reading")]
 [Authorize]
@@ -94,9 +88,6 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         return Ok(store.Set(userId, itemId, body.Locator, body.Progress, totalPages));
     }
 
-    // Every item this reader has progress on, { itemId (no dashes):
-    // record }: the Manga shelf works out read chapters and where to
-    // resume each series from it.
     [HttpGet("progress")]
     public IActionResult GetAllProgress()
     {
@@ -109,8 +100,6 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         return Ok(store.GetAll(userId));
     }
 
-    // Item ids only, most recently read first: the frontend already knows
-    // how to fetch and render real items from ids, so this stays a thin list.
     [HttpGet("in-progress")]
     public IActionResult GetInProgress([FromQuery] int limit)
     {
@@ -130,9 +119,6 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         }));
     }
 
-    // Served here rather than through Jellyfin's own /Items/{id}/Download
-    // so reading in the browser does not hinge on the user's download
-    // permission. Range-enabled so pdf.js can fetch pages lazily.
     [HttpGet("file/{itemId}")]
     public IActionResult GetFile([FromRoute] Guid itemId)
     {

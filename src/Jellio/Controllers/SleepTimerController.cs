@@ -6,15 +6,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Starts, cancels and reports a per user/device duration sleep timer,
-/// backed by SleepTimerService's background loop. User id is read from
-/// the real "Jellyfin-UserId" claim every authenticated request already
-/// carries (confirmed against jellyfin-plugin-jellysleep's own
-/// JellysleepController.cs, which reads the same claim the same way, and
-/// against the server's own Jellyfin.Api.Constants.InternalClaimTypes.UserId,
-/// not guessed).
-/// </summary>
 [ApiController]
 [Route("Jellio/sleep-timer")]
 [Authorize]

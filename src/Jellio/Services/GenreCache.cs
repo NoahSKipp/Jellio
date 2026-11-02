@@ -18,12 +18,6 @@ namespace Jellio.Services;
 
 public record GenreCount(string Name, int Count);
 
-/// <summary>
-/// Genres for the home and library rows without the browser downloading
-/// thousands of items to find them: the genre list with item counts is
-/// worked out here, kept for six hours and refreshed in the background
-/// after one; a genre row's items are kept for five minutes.
-/// </summary>
 public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, ILogger<GenreCache> logger)
 {
     private static readonly TimeSpan CountsTtl = TimeSpan.FromHours(6);

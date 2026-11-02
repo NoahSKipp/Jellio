@@ -24,13 +24,6 @@ public record MangaSeries(
     string? Status,
     IReadOnlyList<string> Genres);
 
-/// <summary>
-/// Manga discovery for the Manga shelf, from AniList's free, keyless
-/// GraphQL API: trending and popular manga, manhwa and manhua (by country
-/// of origin), by genre, and title search. Results are cached; AniList
-/// allows 90 requests a minute. Only series, never light novels or
-/// one-shots, so the shelf's Discover shows comics only.
-/// </summary>
 public class AniListClient(IHttpClientFactory httpClientFactory, ILogger<AniListClient> logger)
 {
     public const int PageSize = 36;
@@ -128,11 +121,6 @@ public class AniListClient(IHttpClientFactory httpClientFactory, ILogger<AniList
         }
     }
 
-    /// <summary>
-    /// A cover from AniList's image CDN, fetched by the server so covers
-    /// show even when the reader's browser can't reach AniList (ad or DNS
-    /// blockers, some networks). Only AniList's own CDN host is fetched.
-    /// </summary>
     public async Task<(byte[] Bytes, string ContentType)?> GetCoverAsync(string url, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)

@@ -6,17 +6,6 @@ using MediaBrowser.Common.Configuration;
 
 namespace Jellio.Services;
 
-// Real gap this closes: item.RunTimeTicks is Jellyfin's own metadata
-// runtime (whatever TVDB/TMDB claims), not the real duration of
-// whatever Gelato actually resolved and streamed - AchievementService's
-// own header already covers why that matters for credit gating, this is
-// the same real fix for Continue Watching's own "Xm left" label and
-// progress bar, both still reading that same inflated RunTimeTicks
-// directly (reported live: a real 41 minute episode still showing 22m
-// left at 37 real minutes in, TMDB's own 60 minute broadcast slot
-// underneath). One shared JSON file keyed by item id, not per user: a
-// title's own real duration is a property of the file itself, not of
-// whoever is watching it.
 public class RealDurationStore(IApplicationPaths applicationPaths)
 {
     private readonly object _lock = new();
@@ -24,10 +13,6 @@ public class RealDurationStore(IApplicationPaths applicationPaths)
     private string StorePath =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "real-duration.json");
 
-    // exact: the length itself (a probe, a finished stream, a file's own
-    // header) replaces whatever was stored. Otherwise it's only a lower
-    // bound on the length (where Up Next appeared), which can raise a
-    // stored length but never lower one.
     public void Set(Guid itemId, long durationTicks, bool exact = false)
     {
         lock (_lock)

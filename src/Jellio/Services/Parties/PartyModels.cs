@@ -5,9 +5,6 @@ namespace Jellio.Services.Parties;
 
 public sealed record PartyRequest(long Id, Guid UserId, string UserName, string Kind, long? PositionTicks, DateTime At);
 
-// What Jellio keeps about a SyncPlay group on top of what Jellyfin knows:
-// who hosts it, whether it is private, the ready check and the countdown.
-// In memory: a party lives as long as its group.
 public sealed class PartyMeta
 {
     public Guid GroupId { get; init; }

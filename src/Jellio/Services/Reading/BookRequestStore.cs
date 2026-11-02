@@ -23,11 +23,6 @@ public class BookRequestEntry
     public DateTimeOffset RequestedAt { get; set; }
 }
 
-/// <summary>
-/// Which books each reader asked Chaptarr for, so the Requests page can say
-/// who is waiting on what, and removing a book knows whether anyone else
-/// still wants it.
-/// </summary>
 public class BookRequestStore(IApplicationPaths applicationPaths)
 {
     private readonly JsonUserStore<List<BookRequestEntry>> _store = new(applicationPaths, "book-requests", () => []);

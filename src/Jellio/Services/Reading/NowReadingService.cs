@@ -17,11 +17,6 @@ public record NowReadingEntry(
     int? PageCount,
     DateTimeOffset SeenAt);
 
-/// <summary>
-/// Who's reading what right now, for Now Playing: reading isn't a Jellyfin
-/// playback session, so the reader checks in while a book or chapter is
-/// open and an entry lapses when it stops.
-/// </summary>
 public class NowReadingService
 {
     private static readonly TimeSpan Expiry = TimeSpan.FromSeconds(90);

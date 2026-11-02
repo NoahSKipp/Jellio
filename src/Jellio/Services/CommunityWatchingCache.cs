@@ -5,12 +5,6 @@ using MediaBrowser.Controller.Session;
 
 namespace Jellio.Services;
 
-/// <summary>
-/// "What others are watching" cache:
-/// Keeps the full response for 30 seconds per reader, and caches the multi-user
-/// historical database queries (resumables and 14-day history) for 5 minutes.
-/// Active video sessions are always read fresh from memory on every request.
-/// </summary>
 public sealed class CommunityWatchingCache : IDisposable
 {
     private static readonly TimeSpan ResponseTtl = TimeSpan.FromSeconds(30);

@@ -9,13 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
 
-/// <summary>
-/// Writes the frontend bootstrap script tag into the web client's index.html so
-/// Jellio's own runtime loads without a separate injector plugin. Everything this
-/// service touches lives inside a marker comment block, so it never has to own
-/// the rest of the file. Same mechanism the original Jellio codebase uses; only
-/// what gets loaded (a bootstrap that takes over rendering, not a reskin) differs.
-/// </summary>
 public class IndexHtmlPatchService(
     IServerApplicationPaths applicationPaths,
     ILogger<IndexHtmlPatchService> logger
@@ -33,12 +26,6 @@ public class IndexHtmlPatchService(
     {
         ApplyCurrentConfiguration();
 
-        // The config page's own "Enable reskin" checkbox used to have no
-        // effect until the next full server restart: this only ran once,
-        // here, at startup. Real event, confirmed against
-        // BasePlugin<T>.UpdateConfiguration before writing this, fired the
-        // moment the config page's own save call lands server side, not
-        // guessed at.
         if (JellioPlugin.Instance is not null)
         {
             JellioPlugin.Instance.ConfigurationChanged += OnConfigurationChanged;
@@ -140,13 +127,6 @@ public class IndexHtmlPatchService(
         TryWrite(indexPath, updated);
     }
 
-    // Every module under runtime/, screens/ and components/, requested
-    // as <file>?v=<version> through an import map. Only app.js and
-    // app.css carried a version, so after an update a browser, a service
-    // worker or a CDN could keep serving the previous release's copy of
-    // any module app.js imports (a Settings page without the new card),
-    // mixing old code into new. The map is keyed by the plain URL every
-    // import resolves to, so modules keep a single identity.
     private static string BuildImportMap(string version)
     {
         const string prefix = "Jellio.Frontend.";
@@ -173,11 +153,6 @@ public class IndexHtmlPatchService(
         return JsonSerializer.Serialize(new { imports });
     }
 
-    // jellyfin-web's Material Icons font, which every Jellio icon outside
-    // the inline SVGs draws with. The browser only asks for it once the
-    // page is drawing, so those icons stayed blank for a moment on every
-    // load; a preload starts it with the page instead. Relative to
-    // index.html, so a base URL prefix still resolves.
     public static string? FindIconFont(string webPath)
     {
         try
@@ -216,13 +191,6 @@ public class IndexHtmlPatchService(
             // async: a classic script in <head> held up the whole page until
             // gstatic.com answered. cast.js waits for the SDK's own callback.
             + "<script async src=\"https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1\"></script>\n"
-            // css/app.css's own --jellio-font-family names Inter first,
-            // real feedback was that the sidebar (and everything else)
-            // never actually looked like it, every device this renders on
-            // falling straight through to its own fallback stack instead:
-            // nothing ever linked the real webfont itself. A client with
-            // no real path to fonts.googleapis.com still gets that same
-            // fallback stack it always has, no worse off than before.
             + (iconFont != null ? $"<link rel=\"preload\" href=\"{iconFont}\" as=\"font\" type=\"font/woff2\" crossorigin>\n" : string.Empty)
             + "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n"
             + "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n"
@@ -236,34 +204,8 @@ public class IndexHtmlPatchService(
             + $"{EndMarker}\n";
     }
 
-    // Captures a native login's own token the moment jellyfin-apiclient-javascript's
-    // own Credentials constructor logs it ("Stored JSON credentials: {...}",
-    // real source: credentials.js's own initialize(), called once per real
-    // ConnectionManager construction, confirmed real before writing this),
-    // so runtime/auth.js finds a session already sitting in localStorage by
-    // the time it runs. Has to be a plain, non-deferred, non-module script:
-    // main.jellyfin.bundle.js (and the one-time log this depends on) is
-    // itself a deferred script, and every deferred/module script on the
-    // page executes strictly in document order only after parsing
-    // finishes. The bootstrap script this same block also injects is a
-    // module and sits last in the document, so by the time it would run,
-    // that log line has already fired and is gone forever, real bug found
-    // on a live install: app.js loaded and ran with no errors, this
-    // runtime just never saw a session, the whole page did nothing.
-    // A plain script has none of that deferral, it runs synchronously at
-    // its own position in the markup regardless of what else is deferred
-    // around it, so it always installs before jellyfin-web's own bundle
-    // does. Deliberately not an ES module: no import/export syntax
-    // available at this point, self contained on purpose. Keeps the same
-    // localStorage shape runtime/auth.js's own setSession writes, so
-    // auth.js needs no changes to find what this captures, and dispatches
-    // a real DOM event once it does, since the async fetch to resolve the
-    // full user object can still finish after app.js's own first sync().
     private const string EarlySessionCaptureScript =
         @"(function () {
-  // The hero backdrop the home screen showed first last time, fetched
-  // now rather than after the app's code and the hero list have loaded
-  // (components/heroCarousel.js stores it).
   try {
     var hero = JSON.parse(localStorage.getItem('jellio.heroPreload') || 'null');
     if (hero && hero.url && (hero.route || '') === (location.hash || '')) {
@@ -275,10 +217,6 @@ public class IndexHtmlPatchService(
       document.head.appendChild(link);
     }
   } catch (e) {}
-  // Jellio's service worker (Frontend/sw.js, offline support) takes the
-  // place of jellyfin-web's: one worker per page scope, and Jellio's loads
-  // jellyfin-web's own inside it. Swapped here, before jellyfin-web's
-  // bundle asks for its own.
   if (navigator.serviceWorker && navigator.serviceWorker.register) {
     var originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
     navigator.serviceWorker.register = function (url, options) {

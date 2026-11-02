@@ -13,11 +13,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services;
 
-// The length of an episode whose library entry has none, or a wrong one
-// (every Gelato stream). A converted stream can't tell the player: its
-// own duration is only what has been produced so far. So the length is
-// read once from the playback source with ffprobe, remembered until the
-// server restarts, and stored as the exact length (RealDurationStore).
 public class DurationProbeService(
     IMediaSourceManager mediaSourceManager,
     IUserManager userManager,

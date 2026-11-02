@@ -10,17 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.CommunitySkip;
 
-// C# port of NuvioTV's own real AnimeSkipApi.kt/fetchFromAnimeSkip(),
-// not re-derived: anime-skip.com's own real public GraphQL endpoint,
-// the exact same two real queries NuvioTV itself sends (findShowsByExternalId
-// against a real AniList id first, findEpisodesByShowId second), a
-// real X-Client-ID header needed for either one to answer at all
-// (PluginConfiguration.AnimeSkipClientId, a free real signup separate
-// from Simkl's own). Anime-Skip's own real raw timestamps are single
-// real points, not a start/end pair the way AniSkip's own real
-// intervals already are - NuvioTV's own real fix (this file's own real
-// end = the next real timestamp's own start, or "open ended" for the
-// real last one) is carried over unchanged.
 public class AnimeSkipClient(IHttpClientFactory httpClientFactory, ILogger<AnimeSkipClient> logger)
 {
     private const string BaseUrl = "https://api.anime-skip.com/graphql";

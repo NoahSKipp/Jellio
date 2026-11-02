@@ -23,12 +23,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// "You might like" for a search that found nothing, the way Netflix answers
-/// a title it doesn't carry: the query is looked up on TMDB, and the library
-/// is searched for that title's TMDB recommendations and similar titles, its
-/// lead actors and director, and the best rated titles of its genres.
-/// </summary>
 [ApiController]
 [Route("Jellio/search/suggestions")]
 [Authorize]

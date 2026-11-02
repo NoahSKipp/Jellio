@@ -7,26 +7,6 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Master switch. Disabling this restores the stock web client on next start.</summary>
     public bool EnableReskin { get; set; } = true;
 
-    // Server wide, admin controlled, applies to every user: this whole
-    // block is Jellio's own server side config for
-    // Frontend/components/seasons.js's own reskin, the same real thing
-    // per user customization would need to layer on top of later, not
-    // something to invent a second config surface for now. Flat
-    // properties throughout, the same convention every other real
-    // Jellyfin plugin config already confirmed against in this codebase
-    // uses rather than a nested class, since BasePluginConfiguration's
-    // own real XmlSerializer has no real reason here to need one.
-    //
-    // Four real occasions, not the three dozen the first pass of this
-    // ported wholesale from CodeDevMLH/Jellyfin-Seasonals: real feedback
-    // was that flooding the page with particles read as spam rather than
-    // a themed page, so this replaces that whole catalogue rather than
-    // adding to it. Easter dropped again almost immediately: unlike the
-    // other four it has no fixed calendar date, a real yearly maintenance
-    // burden nobody asked for. Each one still keeps its own Start/End
-    // Month/Day pair, the one real mechanism admins already had for
-    // letting a theme span more than a single day (Halloween week, not
-    // just October 31st), carried forward unchanged.
     public bool SeasonalEffectsEnabled { get; set; } = true;
 
     public bool SeasonalHalloweenEnabled { get; set; } = true;
@@ -35,9 +15,6 @@ public class PluginConfiguration : BasePluginConfiguration
     public int SeasonalHalloweenEndMonth { get; set; } = 11;
     public int SeasonalHalloweenEndDay { get; set; } = 2;
 
-    // Wraps New Year's Eve into January, the one theme here that
-    // actually needs the wrap-around range comparison Frontend/
-    // components/seasons.js's own inRange() carries for exactly this.
     public bool SeasonalNewYearEnabled { get; set; } = true;
     public int SeasonalNewYearStartMonth { get; set; } = 12;
     public int SeasonalNewYearStartDay { get; set; } = 28;
@@ -56,141 +33,30 @@ public class PluginConfiguration : BasePluginConfiguration
     public int SeasonalChristmasEndMonth { get; set; } = 12;
     public int SeasonalChristmasEndDay { get; set; } = 26;
 
-    // Controllers/CalendarController.cs's own real source: a v4 TMDB
-    // "API Read Access Token" (the long JWT looking one TMDB's own
-    // dashboard issues under Settings > API, not the short v3 api_key),
-    // sent as a real Bearer token, never a query string, so it never
-    // ends up sitting in a server access log. Every Gelato imported item
-    // this whole feature depends on already carries a real
-    // ProviderIds.Tmdb (confirmed live against a real sample of
-    // imports, ProviderIds.Imdb never once present even on mainstream
-    // titles), so this is the one real external credential this whole
-    // feature needs, nothing else.
     public string TmdbAccessToken { get; set; } = string.Empty;
 
-    // Services/CommunitySkip's own real Skip Intro/Credits tier, the
-    // same real approach a real open source reference (NuvioTV's own
-    // SkipIntroRepository.kt, read before writing any of this) already
-    // ships: a community timestamp database keyed by a title's own real
-    // external ids, not this plugin's own audio analysis. Tried first,
-    // no key required at all: TheIntroDB's own real public GET /media
-    // (api.theintrodb.org, its own official Jellyfin plugin's own real
-    // TheIntroDbClient.cs read directly before writing this) already
-    // works anonymously off ProviderIds.Tmdb alone, general TV/movie
-    // coverage, not anime only. An optional Bearer key from
-    // theintrodb.org just weights a reader's own pending/accepted
-    // submissions higher and likely raises the real shared rate limit,
-    // never required for this tier to answer at all.
     public string TheIntroDbApiKey { get; set; } = string.Empty;
 
-    // SkipMe.db, tried right alongside TheIntroDB above (Services/
-    // CommunitySkip/SkipMeDbClient.cs, ported from the official
-    // intro-skipper org's own real skipme.db-plugin, GPL-3.0, its own
-    // Services/SkipMeApiClient.cs read directly before writing this):
-    // another genuinely public, free, general TV/movie database, also
-    // keyed directly off ProviderIds.Tmdb, no key of any kind needed.
-    // Independently crowdsourced from TheIntroDB, so a title one of them
-    // has nothing for is still worth asking the other - real coverage
-    // gain confirmed live against a real sparse show (TheIntroDB alone
-    // only covered 12 of 128 real episodes). Their own real NOTICE file
-    // explicitly permits local caching of this data for the one real
-    // purpose this plugin already uses it for, unlike SkipDB's own real
-    // reciprocity clause (checked before adding this, not assumed) -
-    // SkipDB itself was left out entirely: not for being too small (its
-    // own real dated GitHub Releases, not its "data-latest" alias tag
-    // which pointed at a stale snapshot, show a genuinely large and
-    // actively growing 102,347 real segments across 2,865 real titles),
-    // but because it still had zero real coverage for the one real
-    // sparse show this whole search started over, not worth its own
-    // real reciprocity cost for zero real gain there.
-    // No key needed - SkipMe.db's own real API takes none, reads or
-    // writes. Off by default though: the public db.skipme.workers.dev
-    // endpoint this plugin's own real SkipMeDbClient.cs calls rejects
-    // every request with a 403 "Client not supported" unless it carries
-    // the one exact User-Agent their own private CI build bakes in at
-    // build time, a secret that never ships in their public source and
-    // this plugin has no way to obtain (confirmed live, host and
-    // container, spoofed Chrome UA included, same 403 every time). Until
-    // there is ever a working credential, calling this tier at all is a
-    // guaranteed-failed round trip plus its own real rate-limit pacing on
-    // every single episode, for zero possible benefit - left here as an
-    // opt-in in case that ever changes, not removed outright.
     public bool EnableSkipMeDb { get; set; }
 
-    // IntroDB (Services/CommunitySkip/IntroDbClient.cs, api.introdb.app,
-    // ported from a real third party open source client's own
-    // IntroDBClient.swift/Models.swift read directly before writing
-    // this - api.introdb.app itself unreachable from this environment to
-    // read their own real docs page directly): a third independently
-    // crowdsourced TV show database, unlike TheIntroDB/SkipMe.db above
-    // keyed by IMDb id rather than TMDB id, so this tier only ever runs
-    // once Services/CommunitySkip/TmdbExternalIdResolver.cs has resolved
-    // one (needs TmdbAccessToken above configured, one real extra round
-    // trip per series, cached after that). An optional API key here
-    // mirrors TheIntroDbApiKey's own real graceful-blank behaviour;
-    // never required for this tier to answer at all.
     public string IntroDbApiKey { get; set; } = string.Empty;
 
-    // AniSkip/Anime-Skip below cover what TheIntroDB itself does not:
-    // anime specifically, submitted against MyAnimeList/AniList rather
-    // than TMDB. A free client_id from simkl.com's own developer
-    // settings, used only to map a Gelato import's own real
-    // ProviderIds.Tmdb onto the MyAnimeList/AniList id AniSkip/Anime-Skip
-    // below actually key off. Left blank, that whole tier is skipped,
-    // same real graceful-miss behaviour TmdbAccessToken above already
-    // has.
     public string SimklClientId { get; set; } = string.Empty;
 
-    // A free client_id from anime-skip.com's own developer settings
-    // (a real separate real signup from Simkl's own, confirmed against
-    // NuvioTV's own real AnimeSkipApi.kt before writing this): the one
-    // other real community database NuvioTV also queries, real fallback
-    // coverage for whatever AniSkip itself does not have. Left blank,
-    // this one tier alone is skipped, AniSkip and this plugin's own real
-    // fallbacks still apply.
     public string AnimeSkipClientId { get; set; } = string.Empty;
 
-    // components/cardOptionsMenu.js's own real admin-only "Find Skip
-    // Intro/Credits" right-click action (Controllers/IntroCreditsController.cs's
-    // own POST .../scan/{itemId}, IntroCreditsBulkScanner's own real
-    // trigger). Real feedback: an admin does not always want that extra
-    // entry sitting on every single Movie/Series card's own right click
-    // menu - off by default, only shows up once explicitly switched on
-    // here, and can be switched back off again once a real sweep is done.
     public bool SkipIntroCreditsAdminMenuEnabled { get; set; }
 
-    // How freely the web player may ask this server to re-encode video:
-    // "Allow" (a home server with hardware transcoding, the old behaviour),
-    // "Avoid" (prefer sources and stream settings that copy the video,
-    // converting only audio or the container) or "Block" (never start a
-    // video re-encode). For servers without hardware transcoding.
     public string VideoTranscodePolicy { get; set; } = "Allow";
 
-    // The web frontend keeps home row answers in the browser and shares
-    // them between tabs, refreshing them in the background, so a new tab
-    // paints at once and doesn't fire every row query together. Off: every
-    // row is asked for from the server on each load, as before.
     public bool HomeRowCache { get; set; } = true;
 
-    // Chaptarr, the Readarr successor that acquires books for the Books
-    // library: Controllers/BookRequestController.cs searches it and adds
-    // requested books through its own API. The key is Chaptarr's standard
-    // *arr API key (Settings > General). Readers never see it - it stays
-    // server side. Left blank, the Books shelf simply offers no requests.
     public string ChaptarrUrl { get; set; } = string.Empty;
 
     public string ChaptarrApiKey { get; set; } = string.Empty;
 
-    // DeepL API key for the reader's translate action
-    // (Services/Language/LanguageClient.cs). Free-tier keys end in ":fx".
-    // Stays server side; readers only ever see translations. Left blank,
-    // the reader offers dictionary definitions but no translation.
     public string DeepLApiKey { get; set; } = string.Empty;
 
-    // Suwayomi-Server (self-hosted Tachiyomi/Mihon) for manga, manhwa and
-    // manhua requests: Services/Manga/SuwayomiClient.cs. Username and
-    // password only for its basic-auth or UI-login modes. Languages are
-    // the source languages searched, comma separated.
     public string SuwayomiUrl { get; set; } = string.Empty;
 
     public string SuwayomiUsername { get; set; } = string.Empty;
@@ -203,28 +69,15 @@ public class PluginConfiguration : BasePluginConfiguration
     // carry the flag for the whole source, so with it off they're skipped.
     public bool SuwayomiIncludeNsfw { get; set; }
 
-    // Manga is read straight from Suwayomi's sources (streamed) unless
-    // this is on, in which case requested series are also downloaded
-    // into the Jellyfin library. Readers can still save single series.
     public bool SuwayomiDownloadRequests { get; set; }
 
-    // Sources to prefer, comma separated by name (for example
-    // "MangaDex, Comick"), when the same series is in Suwayomi's library
-    // from more than one: the first listed wins, then the one with the
-    // most chapters.
     public string MangaSourcePriority { get; set; } = string.Empty;
 
-    // Client id of an AniList API client (anilist.co/settings/developer),
-    // for readers to link their list from the manga series page. It is
-    // public, not a secret; each reader's own token stays on the server.
     public string AniListClientId { get; set; } = string.Empty;
 
     // A stream a user added by link that has not worked for this many days
     // is removed from their My streams, with a notification. 0 keeps them.
     public int StreamLinkAutoRemoveDays { get; set; } = 14;
 
-    // Address of a stream finder (a headless browser service) that Add
-    // Stream asks when a page holds no stream in its HTML, e.g.
-    // http://gluetun-sf:8780. Empty keeps Add Stream to its own crawl.
     public string StreamFinderUrl { get; set; } = string.Empty;
 }

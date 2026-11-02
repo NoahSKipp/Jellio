@@ -20,14 +20,6 @@ public record StreamSeries(int MangaId, string Title, string? Author, string? St
 
 public record StreamTitle(int MangaId, string Title, string Key, string? Source = null, string? SourceName = null, int ChapterCount = 0);
 
-/// <summary>
-/// Manga read straight from Suwayomi's sources, the way Mihon reads:
-/// Suwayomi's library holds the series, each reader's shelf shows their
-/// own, and pages come from the source (via Suwayomi) as they're read.
-/// Chapters load per series, when a series is shown or opened, and are
-/// cached. Nothing is kept on the server unless a reader saves a series
-/// (SuwayomiClient.EnqueueDownloadsAsync).
-/// </summary>
 public class MangaStreamService(SuwayomiClient suwayomi)
 {
     private const int ParallelSeries = 6;
@@ -75,9 +67,6 @@ public class MangaStreamService(SuwayomiClient suwayomi)
         return titles;
     }
 
-    // Several library entries for one title (the same series added from
-    // two sources): the preferred source first, then the most chapters,
-    // then the oldest entry, so every lookup by title picks the same one.
     public static List<StreamTitle> OrderForPick(IEnumerable<StreamTitle> titles, IReadOnlyList<string> sourcePriority)
     {
         int Rank(StreamTitle title)

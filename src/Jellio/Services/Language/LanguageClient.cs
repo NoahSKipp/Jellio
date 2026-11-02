@@ -17,13 +17,6 @@ public record TranslationResult(string? Text, string? DetectedSourceLang, string
 
 public record DictionarySense(string PartOfSpeech, string Language, IReadOnlyList<string> Definitions, IReadOnlyList<string> Examples);
 
-/// <summary>
-/// The reader's language tools. Translation goes to DeepL with the
-/// admin's key (never sent to the browser; ":fx" keys are DeepL's free
-/// tier, which has its own host). Definitions come from Wiktionary's
-/// REST API, which covers most languages with English glosses and needs
-/// no key. Both are cached in memory so rereading a word costs nothing.
-/// </summary>
 public partial class LanguageClient(IHttpClientFactory httpClientFactory, ILogger<LanguageClient> logger)
 {
     private const int MaxCacheEntries = 4000;
@@ -108,10 +101,6 @@ public partial class LanguageClient(IHttpClientFactory httpClientFactory, ILogge
         }
     }
 
-    // GET https://en.wiktionary.org/api/rest_v1/page/definition/{word}:
-    // senses grouped by language code, definitions as HTML. Filtered to
-    // the book's language when known; a capitalised word that has no
-    // entry retries lowercase (sentence-initial words).
     public async Task<IReadOnlyList<DictionarySense>?> DefineAsync(string word, string? lang, CancellationToken cancellationToken)
     {
         var language = string.IsNullOrWhiteSpace(lang) || lang == "auto" ? null : lang.Split('-')[0].ToLowerInvariant();

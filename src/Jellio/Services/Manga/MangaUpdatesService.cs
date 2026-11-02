@@ -22,9 +22,6 @@ public class SeenChapter
 
 public class UpdatesData
 {
-    // Chapter ids already known for each series. A series is only
-    // baselined on its first refresh, so a newly added series' whole
-    // back catalogue doesn't flood the feed.
     public Dictionary<int, List<int>> Known { get; set; } = [];
 
     public List<SeenChapter> Recent { get; set; } = [];
@@ -32,11 +29,6 @@ public class UpdatesData
     public long LastRefreshAt { get; set; }
 }
 
-/// <summary>
-/// Mihon's library updates: every so often (and on demand) asks each
-/// series' source for its chapter list through Suwayomi and notes the
-/// chapters it hasn't seen before, for the Updates feed.
-/// </summary>
 public class MangaUpdatesService(
     SuwayomiClient suwayomi,
     MangaStreamService stream,

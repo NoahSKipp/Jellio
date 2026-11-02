@@ -16,19 +16,6 @@ using Jellio.Services.Reading;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Real per user watchlist release notifications: the same real
-/// watchlist scan Controllers/CalendarController.cs already does
-/// (CalendarService.GetWatchlistCalendarAsync, shared rather than a
-/// second copy), generating one persisted notification the first real
-/// day an entry's own release date actually arrives (Date.Date equals
-/// today), not again on every later request the same day. Backed by
-/// NotificationStore's own real per user JSON file.
-/// Computed on request rather than a background loop, same real reason
-/// CalendarController's own header already gives: a reader's own
-/// client already polls this on a real interval (frontend/components/
-/// notifications.js), nothing here needs to be warm ahead of that.
-/// </summary>
 [ApiController]
 [Route("Jellio/notifications")]
 [Authorize]
@@ -64,12 +51,6 @@ public partial class NotificationsController(
             return BadRequest("Invalid user session");
         }
 
-        // The watchlist scan itself (an outbound TMDB call) stays outside
-        // the store's own atomic Update below, same real reason the disk
-        // stores elsewhere in this plugin never hold their own lock
-        // across a real network call: only the real Load-mutate-Save
-        // around notifications itself needs to be atomic, not whatever
-        // produced the entries going into it.
         var accessToken = JellioPlugin.Instance?.Configuration.TmdbAccessToken;
         var user = string.IsNullOrWhiteSpace(accessToken) ? null : userManager.GetUserById(userId);
         List<WatchlistCalendarItem>? entries = null;
@@ -94,12 +75,6 @@ public partial class NotificationsController(
 
             foreach (var entry in entries)
             {
-                // Only the real day an entry's own date actually arrives,
-                // never before (this reader has not missed anything yet)
-                // and never after (CalendarService's own real PickDigitalRelease/
-                // PickNextEpisode already drop anything already in the
-                // past, so entries here are never anything but today or
-                // still ahead).
                 if (entry.Date.Date != today)
                 {
                     continue;
@@ -146,22 +121,6 @@ public partial class NotificationsController(
         return Ok(notifications);
     }
 
-    // Real feedback asked for a way to announce restarts/maintenance to
-    // every real user, delivered through this exact same real per user
-    // store rather than a second one: Configuration/config.html's own
-    // dashboard page is where this actually gets sent from (only an
-    // admin can reach that real Jellyfin dashboard route at all), and
-    // RequiresElevation below is the same real server side check every
-    // other admin only endpoint across real Jellyfin/its plugins uses,
-    // confirmed against real source before writing this, not trusting
-    // the dashboard's own routing alone. ItemId is Guid.Empty (nothing
-    // real to link to), Kind "announcement" is what frontend/components/
-    // notifications.js's own messageFor/subtitleFor/openItem/buildRow
-    // key off of to skip the poster art and the click-through a real
-    // watchlist entry gets. No real time push of its own: this rides
-    // that same file's own existing 5 minute poll, same real trade off
-    // every other notification here already accepts rather than a new
-    // timer just for this.
     [HttpPost("broadcast")]
     [Authorize(Policy = "RequiresElevation")]
     public IActionResult Broadcast([FromBody] BroadcastRequest request)

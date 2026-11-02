@@ -6,17 +6,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// GetSettings/SetPrivacy/SetBio are self only, same real "Jellyfin-
-/// UserId" claim every other per-user controller in this plugin already
-/// reads its own user id from: nobody edits another real user's own
-/// profile but that user, and this plugin has no admin surface for it.
-/// GetForUser is the one public route, real Steam-style split: bio
-/// (like the profile picture and future banner) stays visible either
-/// way, only IsPrivate itself needs exposing so the profile page can
-/// grey out the badge/activity section AchievementsController's own
-/// {userId} route already goes dark for.
-/// </summary>
 [ApiController]
 [Route("Jellio/profile")]
 [Authorize]

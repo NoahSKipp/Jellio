@@ -7,14 +7,6 @@ namespace Jellio.Services;
 
 public record GroupWatchInvite(long Id, Guid ToUserId, Guid GroupId, string GroupName, Guid FromUserId, string FromUserName, DateTime Timestamp);
 
-/// <summary>
-/// Invites into a real Jellyfin SyncPlay group, in memory only, same real
-/// tradeoff GroupWatchChatService's own header already explains: a small
-/// friends-only feature, polled every few seconds reads as instant at
-/// that scale, no real WebSocket push worth standing up just for this.
-/// Keyed by the invited user rather than by group, since a poll here is
-/// always "what is waiting for me", never "what happened in group X".
-/// </summary>
 public class GroupWatchInviteService
 {
     private const int MaxPendingPerUser = 20;

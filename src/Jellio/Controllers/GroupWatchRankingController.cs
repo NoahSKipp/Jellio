@@ -9,45 +9,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// A real single elimination bracket (GroupWatchRankingService.cs's own
-/// header explains the format and why round resolution is a flat timer)
-/// over every current Group Watch member's own pooled Grouplist. Same
-/// real trust model GroupWatchChatController/GroupWatchInviteController
-/// already document for this whole feature area: participant user ids
-/// come from the caller (components/groupWatch.js's own real
-/// publicUsersByName lookup, the one real place a group's own
-/// Participants array, plain display names, ever resolves to a real
-/// user id at all), not re-derived here, no server side SyncPlay
-/// membership check this plugin has never needed before either.
-///
-/// Audit-flagged, Low severity, re-examined rather than left unread: a
-/// caller can name a real user's own id here who never actually joined
-/// this real groupId at all, pooling their own private Grouplist into a
-/// bracket they have no part in. No cheap real fix closes this without
-/// either a false-negative risk or no real protection at all, both
-/// checked directly before writing this rather than assumed. Real
-/// SyncPlay group membership is not something this plugin can see
-/// server side at all (GroupWatchRankingService.cs's own header already
-/// found this, checked again here rather than trusted secondhand).
-/// GroupWatchInviteService's own real invite records looked like a real
-/// fit, an actual signal that two real users share a real groupId, but
-/// that store is keyed by recipient only, caps at MaxPendingPerUser (20)
-/// total invites ever sent to one real user with the oldest evicted
-/// first, and carries no real index by groupId at all: a real, long
-/// since accepted invite for exactly this pick would silently fail that
-/// check the moment 20 newer ones from anywhere else arrived, blocking
-/// a genuinely legitimate participant's own real pooled Grouplist,
-/// worse than the real gap this would be closing. ProfileSettings'
-/// own real GrouplistEnabled flag gates nothing here either: it is a
-/// pure "show me this feature" UI toggle (its own header explains why),
-/// never a real consent signal, and a reader who actually has real
-/// Grouplist items worth leaking is exactly the reader who already has
-/// it turned on, the one real case a check against it would fail to
-/// protect. Left as the same real trust model the rest of this feature
-/// area already accepts, real friends-only scale this plugin has never
-/// needed to defend against a hostile participant at.
-/// </summary>
 [ApiController]
 [Route("Jellio/groupwatch")]
 [Authorize]
@@ -57,14 +18,6 @@ public class GroupWatchRankingController(GroupWatchRankingService rankingService
 
     public record VoteRequest(Guid ItemId);
 
-    // Real bug, audit-found: ParticipantUserIds came straight from the
-    // caller with no cap at all, one real Grouplist file read per id
-    // below, so a real caller submitting an arbitrarily large list could
-    // force an arbitrarily large amount of synchronous disk I/O in one
-    // real request. This plugin's own real friends-only scale never
-    // needs a group anywhere near this big; picked well above any real
-    // SyncPlay group this plugin has ever actually seen, not tuned down
-    // to the bone.
     private const int MaxParticipants = 32;
 
     [HttpPost("{groupId}/ranking/start")]

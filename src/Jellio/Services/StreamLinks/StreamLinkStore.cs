@@ -114,9 +114,6 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
         return removed;
     }
 
-    // Two failed checks in a row before a link counts as failing, so one
-    // bad moment on the site doesn't flag it. True when it has just
-    // started failing.
     public bool RecordCheck(Guid userId, string id, string? error, int failuresBeforeFailing)
     {
         var turnedFailing = false;

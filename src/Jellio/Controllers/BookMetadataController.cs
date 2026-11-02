@@ -19,12 +19,6 @@ using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
-/// <summary>
-/// Chaptarr-sourced metadata and covers for books already in the library
-/// (Services/Chaptarr/BookMetadataService.cs), used wherever Jellyfin's own
-/// fields for a Book/AudioBook are empty. The cover endpoint only ever
-/// fetches the source Chaptarr's own data named for that item.
-/// </summary>
 [ApiController]
 [Route("Jellio/books/item")]
 [Authorize]
@@ -44,16 +38,8 @@ public class BookMetadataController(BookMetadataService metadataService, Chaptar
 
     public record ShelfInfo(string? Authors, IReadOnlyList<string> Genres, int? Year, string? SeriesTitle);
 
-    // The first shelf load of a big library can't wait on every
-    // unmatched book's Chaptarr lookup; whatever resolves in time is
-    // returned and the rest fills in on a later load, from the cache.
     private static readonly TimeSpan ShelfInfoBudget = TimeSpan.FromSeconds(10);
 
-    /// <summary>
-    /// Author, genres, year and series for every book and audiobook in one
-    /// library, keyed by item id, for the Books/Audiobooks shelf's author
-    /// and series rows. Jellyfin's own fields win; Chaptarr fills gaps.
-    /// </summary>
     [HttpGet("~/Jellio/books/shelf-info")]
     public async Task<IActionResult> GetShelfInfo([FromQuery] Guid parentId)
     {
@@ -143,12 +129,6 @@ public class BookMetadataController(BookMetadataService metadataService, Chaptar
     private static readonly ConcurrentDictionary<Guid, (DateTime CachedAt, List<CachedAudiobookGroup> Groups)> AudiobookGroupsCache = new();
     private static readonly TimeSpan AudiobookCacheTtl = TimeSpan.FromMinutes(5);
 
-    /// <summary>
-    /// Searches audiobooks by book title (Album tag or folder name), author (AlbumArtists/Artists),
-    /// series name, track title, or path. Jellyfin's native /Items?searchTerm only checks Name/Artists
-    /// on AudioBook items, leaving book titles sitting on Album unsearchable.
-    /// Uses an in-memory cached grouping per user to keep typing in search fast.
-    /// </summary>
     [HttpGet("~/Jellio/audiobooks/search")]
     public IActionResult SearchAudiobooks([FromQuery] string searchTerm, [FromQuery] int limit = 50)
     {

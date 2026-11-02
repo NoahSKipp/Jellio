@@ -7,12 +7,6 @@ using MediaBrowser.Common.Configuration;
 
 namespace Jellio.Services.Parties;
 
-/// <summary>
-/// Watch parties on top of Jellyfin's SyncPlay groups: SyncPlay keeps
-/// playback in step, this keeps the social side (host, privacy, ready check,
-/// countdown, schedules and the summary afterwards). Schedules and summaries
-/// survive a restart; a live party's details live as long as its group.
-/// </summary>
 public class PartyService(IApplicationPaths applicationPaths)
 {
     private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";

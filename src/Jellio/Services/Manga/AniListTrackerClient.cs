@@ -11,12 +11,6 @@ namespace Jellio.Services.Manga;
 
 public record TrackEntry(string? Status, int Progress, int ScoreRaw, int? Total);
 
-/// <summary>
-/// A reader's AniList list (Mihon's tracker): who the token belongs to,
-/// where a series stands on their list, and saving status, score and the
-/// chapters read. The token is the reader's own and never leaves the
-/// server.
-/// </summary>
 public class AniListTrackerClient(IHttpClientFactory httpClientFactory, ILogger<AniListTrackerClient> logger)
 {
     public static readonly string[] Statuses = ["CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"];

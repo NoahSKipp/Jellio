@@ -125,9 +125,6 @@ public class VocabularyController(VocabularyStore store) : ControllerBase
         return store.Remove(userId, id) ? NoContent() : NotFound();
     }
 
-    // csv: one row per word for spreadsheets. anki: a tab-separated text
-    // file Anki imports directly (File > Import), with its header lines
-    // naming the separator, HTML fields and a tags column.
     [HttpGet("export")]
     public IActionResult Export([FromQuery] string? format)
     {

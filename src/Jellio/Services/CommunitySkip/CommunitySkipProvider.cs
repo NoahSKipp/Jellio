@@ -12,53 +12,6 @@ namespace Jellio.Services.CommunitySkip;
 
 public record CommunitySkipResult(double? IntroductionStart, double? IntroductionEnd, double? CreditsStart, double? CreditsEnd);
 
-// Orchestrates the whole real NuvioTV-style community lookup, four real
-// independent sources merged by priority (the same real "first
-// provider to have a category wins" shape NuvioTV's own
-// mergeByPriority already uses), each one only ever asked once the
-// tiers above it have not already answered both categories:
-//
-// 1. TheIntroDB (api.theintrodb.org, its own official real Jellyfin
-//    plugin's own TheIntroDbClient.cs read directly before writing
-//    this): general TV/movie coverage, works anonymously straight off
-//    ProviderIds.Tmdb, no id resolution round trip needed at all.
-// 2. SkipMe.db (db.skipme.workers.dev, the official intro-skipper org's
-//    own real skipme.db-plugin read directly before writing this):
-//    another independently crowdsourced general TV/movie database, also
-//    keyed straight off ProviderIds.Tmdb - real coverage gain confirmed
-//    live against a real sparse show TheIntroDB alone barely covered.
-//    Off by default (PluginConfiguration.EnableSkipMeDb): their own
-//    public endpoint rejects every request with a 403 unless it carries
-//    a private CI-only User-Agent this plugin has no way to obtain,
-//    confirmed live - calling it unconditionally would be a guaranteed
-//    failed round trip on every episode of every scan for no benefit.
-// 3. IntroDB (api.introdb.app): a third independently crowdsourced TV
-//    show database, this one keyed by IMDb id, so it only ever runs
-//    once TmdbExternalIdResolver has resolved one.
-// 4. AniSkip/Anime-Skip, resolved through Simkl: anime specific
-//    coverage none of the three general tiers above have, the exact
-//    same real NuvioTV stack this file started out porting.
-//
-// SkipDB, a fourth general database found alongside SkipMe.db/IntroDB,
-// is deliberately left out: its own real data license carries a
-// "service provider reciprocity" clause that would obligate this
-// plugin to publish its own local IntroCreditsStore cache back out
-// publicly the moment it ever cached one of SkipDB's own results (read
-// straight from their own real DATA-LICENSE before deciding this, not
-// assumed). Its own real public data dump (github.com/SkipDB-TV/skipdb's
-// own real dated GitHub Releases, not the "data-latest" alias tag,
-// which turned out to point at a stale, months-old snapshot) is
-// genuinely large and actively growing - 102,347 real segments across
-// 2,865 real titles as of the 2026-09-21 dump - so this is not a "too
-// small to bother with" call, but it still had zero real coverage for
-// the one real sparse show this whole search started over, so the real
-// reciprocity cost above was not worth paying for zero real gain there.
-//
-// NuvioTV's own third real source, a different IntroDB, is a separate,
-// deliberately-not-ported project: confirmed against its own real
-// source that its own INTRODB_API_URL is a private, self-hosted build
-// config value, no public URL this plugin could call - unrelated to
-// api.introdb.app above, which is its own real public service.
 public class CommunitySkipProvider(
     TheIntroDbClient theIntroDbClient,
     SkipMeDbClient skipMeDbClient,
@@ -86,13 +39,6 @@ public class CommunitySkipProvider(
             cancellationToken);
     }
 
-    // Movies get the exact same real TheIntroDB/SkipMe.db tiers
-    // (isMovie: true skips the season/episode query parameters both
-    // clients already guard on), just no IntroDB or Simkl/AniSkip/
-    // Anime-Skip fallback below them: IntroDB is TV-only by its own
-    // real design, and the anime chain is keyed on MyAnimeList/AniList's
-    // own real per-episode numbering, which a standalone movie has none
-    // of.
     public Task<CommunitySkipResult?> GetSkipIntervalsForMovieAsync(BaseItem movie, CancellationToken cancellationToken)
     {
         var tmdbIdString = movie.ProviderIds.TryGetValue("Tmdb", out var id) && !string.IsNullOrWhiteSpace(id) ? id : null;
@@ -158,14 +104,6 @@ public class CommunitySkipProvider(
         var merged = MergeByPriority(tiers.ToArray());
         if (merged.Count == 0)
         {
-            // Real gap, found live: returning here with no log line at
-            // all made every single one of this episode's own real
-            // tiers indistinguishable from "never ran" in the logs -
-            // exactly the ambiguity that made a real, separate
-            // IntroDB/TmdbExternalIdResolver bug (silent on a 404 or a
-            // missing IMDb id) impossible to diagnose from logs alone.
-            // This one line now fires regardless of outcome, same as
-            // the real hit case below already does.
             logger.LogInformation("Jellio: community skip data for {ItemName} - no tier found anything", itemName);
             return null;
         }
@@ -209,11 +147,6 @@ public class CommunitySkipProvider(
         }
     }
 
-    // TheIntroDB's own real segment validation (Api/SegmentTimestamp.cs,
-    // its own real HasValidRange): intro/recap leave start_ms optional
-    // (defaults to the real start of the episode) but require end_ms;
-    // credits/preview require start_ms but leave end_ms optional (means
-    // "runs to the real end of the media"), carried over unchanged here.
     private static List<CommunitySkipInterval> ConvertTheIntroDb(MediaResponse? response, double durationSeconds)
     {
         var result = new List<CommunitySkipInterval>();
@@ -271,11 +204,6 @@ public class CommunitySkipProvider(
         }
     }
 
-    // Their own real open-ended semantics (Models/MediaTimestamp.cs's
-    // own real end_ms: "null if open-ended"): an intro needs a real end
-    // to ever be worth a skip button, a credits segment with no end
-    // means "runs to the real end of the episode" instead, same real
-    // convention TheIntroDB's own ConvertTheIntroDb above already uses.
     private static List<CommunitySkipInterval> ConvertSkipMeDb(SkipMeMediaResponse? response, double durationSeconds)
     {
         var result = new List<CommunitySkipInterval>();
@@ -321,9 +249,6 @@ public class CommunitySkipProvider(
             var imdbId = await tmdbExternalIdResolver.ResolveTvImdbIdAsync(tmdbId, cancellationToken).ConfigureAwait(false);
             if (imdbId is null)
             {
-                // Real gap, found live: this used to return here with no
-                // log line at all, indistinguishable in the logs from
-                // this whole tier never having run in the first place.
                 logger.LogInformation(
                     "Jellio: IntroDB skipped for {ItemName} - no IMDb id resolved for TMDB id {TmdbId} (TmdbAccessToken unset, or TMDB genuinely has none on file)",
                     itemName,
@@ -362,9 +287,6 @@ public class CommunitySkipProvider(
             result.Add(new CommunitySkipInterval(intro.StartMs / 1000.0, intro.EndMs / 1000.0, CommunitySkipCategory.Opening, "introdb"));
         }
 
-        // "outro" is IntroDB's own real name for what every other tier
-        // here calls "credits" - Services/CommunitySkip/IntroDbClient.cs's
-        // own header explains why that field name is kept as-is.
         if (response.Outro is { } outro && outro.EndMs > outro.StartMs)
         {
             result.Add(new CommunitySkipInterval(outro.StartMs / 1000.0, outro.EndMs / 1000.0, CommunitySkipCategory.Ending, "introdb"));
@@ -373,10 +295,6 @@ public class CommunitySkipProvider(
         return result;
     }
 
-    // Whether every tier tried so far, combined, already covers both a
-    // real opening and a real ending - the one real check that decides
-    // whether the next, more expensive tier in priority order is even
-    // worth asking at all.
     private static bool HasBothCategories(List<List<CommunitySkipInterval>> tiers)
     {
         var hasOpening = tiers.Any(tier => tier.Any(i => i.Category == CommunitySkipCategory.Opening));
@@ -422,10 +340,6 @@ public class CommunitySkipProvider(
         }
     }
 
-    // First provider in priority order to have a given category wins:
-    // a partial real result from TheIntroDB (opening only, say) never
-    // gets its own missing ending shadowed by AniSkip simply because
-    // AniSkip's own real response happened to include both.
     private static Dictionary<CommunitySkipCategory, CommunitySkipInterval> MergeByPriority(
         params IEnumerable<CommunitySkipInterval>[] providerResults)
     {

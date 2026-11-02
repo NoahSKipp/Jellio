@@ -8,17 +8,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellio.Services.CommunitySkip;
 
-// C# port of IntroDB's own real public API (api.introdb.app), a third
-// independently crowdsourced TV show timestamp database - read from a
-// real third party open source client's own IntroDBClient.swift/
-// Models.swift (github.com/fetchbot/introstamp) directly before
-// writing this, not guessed at, since api.introdb.app's own real docs
-// page is unreachable from this environment. Unlike TheIntroDB and
-// SkipMe.db above, this one is keyed by IMDb id rather than TMDB id
-// (their own real client throws if season/episode/imdbId are missing,
-// TV shows only, no movie support at all), so this tier only ever runs
-// once TmdbExternalIdResolver has resolved one - the one real extra
-// round trip per series this tier alone needs.
 public class IntroDbClient(IHttpClientFactory httpClientFactory, ILogger<IntroDbClient> logger)
 {
     private const string BaseUrl = "https://api.introdb.app/segments";
@@ -64,9 +53,6 @@ public class IntroDbClient(IHttpClientFactory httpClientFactory, ILogger<IntroDb
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                // Real gap, found live: this used to return here with no
-                // log line at all, indistinguishable from this whole
-                // tier never having run in the first place.
                 logger.LogInformation("Jellio: IntroDB has no data for {Uri}", requestUri);
                 return null;
             }
@@ -112,13 +98,6 @@ public class IntroDbClient(IHttpClientFactory httpClientFactory, ILogger<IntroDb
     }
 }
 
-// JSON shapes matching IntroDB's own real GET /segments response
-// exactly (App/Models.swift's own real IntroDBMediaResponse/
-// IntroDBSegmentAggregate, read directly from a real third party open
-// source client before writing this): "outro" is their own real name
-// for what TheIntroDB/SkipMe.db both call "credits", carried through
-// unchanged here rather than renamed to keep this file an honest match
-// against their own real response.
 public class IntroDbMediaResponse
 {
     [JsonPropertyName("intro")]

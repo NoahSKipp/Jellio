@@ -53,16 +53,6 @@ public class MangaImportJob
     public DateTimeOffset? FinishedAt { get; set; }
 }
 
-/// <summary>
-/// Imports a reader's Mihon library (MihonBackupReader): each series is
-/// found on the same source in Suwayomi, added to its library, and
-/// downloaded from the chapter the reader left off at onwards. What they
-/// had read is kept per reader and applied to Jellio's own reading
-/// progress once Jellyfin has the chapter (now, or when a later library
-/// scan adds it), matched by series folder and chapter file name - the
-/// way Suwayomi names its downloads. Categories, per-series settings and
-/// bookmarks go to the reader's shelf (ShelfStore).
-/// </summary>
 public class MangaImportService(
     SuwayomiClient suwayomi,
     ReadingProgressStore progressStore,
@@ -149,10 +139,6 @@ public class MangaImportService(
         {
             var categoryIds = ImportCategories(userId, categories);
 
-            // A source that keeps timing out (one needing a WebView Suwayomi
-            // can't start, or a site that's down) would hold every series
-            // on it: after two in a row it isn't asked again, and its series
-            // go straight to the other installed sources.
             var failures = new Dictionary<long, int>();
             foreach (var manga in library)
             {
@@ -204,9 +190,6 @@ public class MangaImportService(
         }
     }
 
-    // The series on the source Mihon read it from; when that source doesn't
-    // answer or doesn't have it, the same title on another installed
-    // source. originalFailed: Mihon's source timed out or errored.
     private async Task<(MangaImportSeriesResult Result, bool OriginalFailed)> ImportSeriesAsync(
         Guid userId,
         MihonManga manga,
@@ -333,9 +316,6 @@ public class MangaImportService(
         return stored is { Count: > 0 } ? stored : await suwayomi.FetchChaptersAsync(manga.Id, cancellationToken).ConfigureAwait(false);
     }
 
-    // The same title on the reader's other installed sources, searched a
-    // few at a time; only an exact title match counts, so a different
-    // series with a similar name is never picked.
     private async Task<(SuwayomiManga Manga, string SourceName)?> FindElsewhereAsync(MihonManga manga, HashSet<long> downSources, CancellationToken cancellationToken)
     {
         var sources = await suwayomi.GetSourcesAsync(cancellationToken).ConfigureAwait(false);

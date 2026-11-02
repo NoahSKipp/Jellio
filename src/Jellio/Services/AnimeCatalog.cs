@@ -8,15 +8,6 @@ using MediaBrowser.Controller.Library;
 
 namespace Jellio.Services;
 
-/// <summary>
-/// Which titles are anime: everything Gelato tagged "anime" (an anime
-/// database id, an Anime genre, or animation made in Japan), plus
-/// everything in an anime catalog collection (Gelato writes
-/// ProviderIds.Stremio as "anime.{catalogId}"; older or hand-made
-/// collections are matched by name, as runtime/api.js's
-/// isAnimeCollection does). Shared by AnimeController and the calendar,
-/// cached for a few minutes.
-/// </summary>
 public static partial class AnimeCatalog
 {
     // GelatoManager.AnimeTag.
