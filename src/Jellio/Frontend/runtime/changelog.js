@@ -15,6 +15,22 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.0",
+    "summary": "Clearer, quicker stream switching.",
+    "highlights": [
+      {
+        "title": "See the Switch Happen",
+        "description": "Changing streams mid-playback now shows a card saying whether Jellio is connecting to or loading the new stream, and confirms by name once it plays."
+      },
+      {
+        "title": "Quicker Switching",
+        "description": "Your audio language is matched in a single request to the server, and switching away from a buffering stream swaps it in place instead of reopening the player."
+      }
+    ]
+  },
+  {
     "version": "1.103.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.103.0",
