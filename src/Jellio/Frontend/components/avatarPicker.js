@@ -1,10 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Preset avatar picker, opened from the sidebar's own profile button.
-// Lists whatever an admin has dropped into Jellio's own avatars folder
-// (runtime/api.js's own getAvatarPresets, Controllers/AvatarsController.cs)
-// and sets the chosen one as the signed in user's real avatar via the
-// same POST /Users/{id}/Images/Primary flow the stock profile page's own
-// file upload already uses.
 import { getAvatarPresets, getAvatarPresetUrl, setUserAvatar, setUserAvatarFromFile } from '../runtime/api.js';
 
 const OVERLAY_ID = 'jellioAvatarPicker';
@@ -35,12 +29,6 @@ export async function openAvatarPicker(onChanged) {
   title.textContent = t('avatar_choose');
   panel.appendChild(title);
 
-  // The upload tile and any loose (ungrouped) presets share this one
-  // flat grid, same shape this picker always had. A grouped preset
-  // (dropped into its own real subfolder server side, see
-  // AvatarsController.cs's own header) gets its own <details> section
-  // instead, appended after this grid: a plain native disclosure
-  // widget, no real JS state of its own needed to track open/closed.
   const grid = document.createElement('div');
   grid.className = 'jellio-avatar-picker-grid';
   panel.appendChild(grid);
@@ -56,14 +44,6 @@ export async function openAvatarPicker(onChanged) {
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
 
-  // Real Jellyfin already accepts an uploaded user image natively (a
-  // picture or an animated gif, the same real POST /Users/{id}/Images/
-  // Primary preset picking already goes through), real feedback asked
-  // directly for a way to reach it rather than presets only. A plain
-  // hidden file input rather than a second real overlay: this same
-  // tile shape (a button wrapping an img) already reads as "pick this
-  // option" for every preset in this grid, the upload tile just opens
-  // a native file picker instead of setting a preset id directly.
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
   fileInput.accept = 'image/*';
@@ -105,10 +85,6 @@ export async function openAvatarPicker(onChanged) {
         uploadOption.disabled = false;
       });
   });
-  // Appended unconditionally, ahead of the real preset fetch below:
-  // uploading a real device file has no real dependency on that fetch
-  // ever succeeding at all, a server error loading presets should not
-  // also take the one option that never needed them down with it.
   grid.appendChild(uploadOption);
 
   function buildOption(preset) {
@@ -139,9 +115,6 @@ export async function openAvatarPicker(onChanged) {
     return option;
   }
 
-  // One real <details> per Category, created the first time a preset in
-  // it is seen rather than up front: an admin with no real grouped
-  // folders at all should never see an empty section.
   const categoryGrids = new Map();
   function gridForCategory(category) {
     if (categoryGrids.has(category)) return categoryGrids.get(category);

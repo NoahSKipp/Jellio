@@ -1,11 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// The Books and Audiobooks shelves (components/navShared.js gives one
-// Jellyfin Books library a sidebar entry per format, told apart by
-// &bookKind=). Built around how people browse books rather than films:
-// what they're in the middle of, who wrote it, which series it belongs
-// to, then the whole shelf as a filterable grid. Authors, genres and
-// series come from Controllers/BookMetadataController.cs's shelf-info,
-// which fills Jellyfin's usually-empty book fields from Chaptarr.
 import {
   getBookshelfItems,
   getBookShelfInfo,
@@ -180,9 +173,6 @@ function mangaStatusLabel(status) {
   return { ONGOING: 'Ongoing', COMPLETED: 'Completed', PUBLISHING_FINISHED: 'Finished', ON_HIATUS: 'On hiatus', CANCELLED: 'Cancelled' }[status] || '';
 }
 
-// One card's worth of what the shelf knows about a book, Jellyfin's own
-// fields first (an audiobook's album artist is its author), then
-// Chaptarr's via shelf-info.
 function lastReadOf(item, progress) {
   const record = progress && progress[idKey(item.Id).toLowerCase()];
   const read = record ? Date.parse(record.UpdatedAt) || 0 : 0;
@@ -242,9 +232,6 @@ function compareBy(sort, desc) {
   return (a, b) => (desc ? compare(b, a) : compare(a, b)) || byTitle(a, b);
 }
 
-// Cards carry the author under the title; books are told apart by who
-// wrote them far more often than by year.
-// The shelf's filter and display choices (components/libraryView.js).
 let libraryViewState = loadLibraryView();
 
 function bookCard(entry, cardOptions) {
@@ -279,9 +266,6 @@ function bookRow(title, entries, cardOptions) {
   return row;
 }
 
-// A manga series: the first chapter's card, relabelled, opening the
-// series (screens/mangaSeries.js) instead of one chapter. Cloned to drop
-// the chapter card's own click handling.
 function seriesCard(entry, cardOptions) {
   const card = buildCard(entry.item, { reading: true }).cloneNode(true);
   card.classList.add('jellio-card-manga-series');
@@ -364,10 +348,6 @@ function groupBy(entries, keyOf, labelOf) {
   );
 }
 
-// The Manga shelf shows series, not chapter files: one entry per series
-// (cover from its first chapter), files that belong to no series on
-// their own. Continue reading is worked out per series from reading
-// progress, so finishing a chapter moves the series on to the next one.
 function mangaEntries(items, info, progress, shelf, stream) {
   const grouped = groupMangaSeries(items);
   const streamByKey = new Map((stream || []).map((series) => [series.Key, series]));
@@ -462,9 +442,6 @@ function mangaEntries(items, info, progress, shelf, stream) {
   });
   grouped.singles.forEach((item) => entries.push(describe(item, info, progress)));
   continueEntries.sort((a, b) => b.lastRead - a.lastRead);
-  // The reader's own library (Mihon style): series they added or have
-  // read, minus any they removed. Streamed series already come filtered
-  // from the server.
   const mine = new Set(shelf.Library || []);
   const removed = new Set(shelf.LibraryRemoved || []);
   const kept = entries.filter(
@@ -935,9 +912,6 @@ export function renderBookshelf(root, params, parentId) {
   function renderRows(continueItems, authorGroups) {
     rows.textContent = '';
 
-    // Only what's on this shelf: the Books shelf doesn't show manga in
-    // progress, and vice versa. Audiobooks match by book (folder and
-    // album), since the track in progress needn't be the shelf's card.
     const byId = new Map(entries.map((entry) => [idKey(entry.item.Id), entry]));
     const byBook = new Map(entries.map((entry) => [audiobookGroupKey(entry.item), entry]));
     const continueEntries = kind === 'manga' ? continueItems : continueItems
@@ -1065,9 +1039,6 @@ export function renderBookshelf(root, params, parentId) {
     }
   }
 
-  // Groups go in best match first as they arrive; the status line says
-  // how many sources are still being searched and which are skipped for
-  // now because they kept failing (the server tries them again later).
   function startMangaSources(query) {
     sourcesResults.textContent = '';
     sourcesStatus.textContent = t('bookshelf_searching_manga_sources');
@@ -1281,9 +1252,6 @@ export function renderBookshelf(root, params, parentId) {
     const requested = isAudiobook ? result.HasAudiobook : result.HasEbook;
     const downloaded = isAudiobook ? result.AudiobookDownloaded : result.EbookDownloaded;
 
-    // Requesting only asks Chaptarr to find and download the book; it
-    // reaches this shelf once Chaptarr has imported it and Jellyfin has
-    // scanned it. Only a real library item gets Listen/Read.
     function statusButton(icon, label, message) {
       const button = el('button', 'jellio-book-request-action jellio-book-request-action-done');
       button.type = 'button';

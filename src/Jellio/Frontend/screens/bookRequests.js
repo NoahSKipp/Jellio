@@ -1,9 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// The Books and Audiobooks Requests page (&requests=1 on the shelf): every
-// book asked of Chaptarr and where it stands, from searching through
-// downloading to waiting for Jellyfin's scan, refreshed while it's open.
-// Each one can be searched for again or removed
-// (Controllers/BookLibraryController.cs).
 import { getBookRequests, searchBookAgain, removeBookFromLibrary } from '../runtime/api.js';
 import { formatRelativeTime } from '../runtime/format.js';
 import { showToast } from '../components/toast.js';

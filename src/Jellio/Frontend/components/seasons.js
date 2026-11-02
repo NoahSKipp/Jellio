@@ -1,26 +1,10 @@
 import { t } from '../runtime/i18n.js';
-// Four real occasions (Halloween, New Year's, Valentine's, Christmas),
-// replacing the old catalogue of three dozen themes ported
-// wholesale from CodeDevMLH/Jellyfin-Seasonals: real feedback was that
-// flooding the page with falling emoji read as spam rather than a themed
-// page, and asked specifically for a reskin (colours, background) rather
-// than more particles. Every theme here does two real things: it sets
-// css/app.css's own --jellio-season-* tokens (via a data-jellio-season
-// attribute on #jellioRoot itself, so every descendant's var() lookup
-// picks the new values up for free, --jellio-trending-color and
-// --jellio-focus-color-rgb included, no other file needs to know a
-// season is active), and it mounts a themed ambient layer positioned
-// behind the real page rather than over it: css/app.css's own header on
-// .jellio-seasons explains the z-index: -1 trick that makes that true.
 import { getJellioConfig } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
 import { getMotionLevel, onMotionChange } from '../runtime/motionSettings.js';
 
 const THEME_ORDER = ['halloween', 'newyear', 'valentine', 'christmas'];
 
-// A day-of-year range comparison that wraps New Year's: a plain
-// start <= now <= end fails the moment a range (December into January,
-// New Year's own default) crosses into a new calendar year.
 function inRange(month, day, range) {
   if (!range) return false;
   const now = month * 100 + day;
@@ -30,11 +14,6 @@ function inRange(month, day, range) {
   return now >= start || now <= end;
 }
 
-// Real, singular "what's active right now" against ConfigController.cs's
-// own real response shape ({ SeasonalEffectsEnabled, SeasonalEffects:
-// { <key>: { Enabled, Range } } }). First match in THEME_ORDER wins, so
-// an admin who sets overlapping custom ranges still only ever sees one
-// theme at a time rather than two stacked on top of each other.
 export function activeSeasonalTheme(date, config) {
   if (!config || !config.SeasonalEffectsEnabled) return null;
   const effects = config.SeasonalEffects || {};
@@ -57,15 +36,6 @@ function buildWash(container) {
   container.appendChild(el('div', 'jellio-seasons-wash'));
 }
 
-// Halloween: the wash, fog, a breathing vignette and eyes in the dark,
-// then hand drawn creatures (SVG, so they look the same on every device)
-// all behind the page: bats that really flap, ghosts rising, spiders
-// dropping on silk, flickering jack-o'-lanterns, cobwebs, a blood moon and
-// embers. Lightning
-// is the one layer above the page: a flash that lights the whole screen
-// and a forked bolt, every so often. Counts drop on a phone. Reduced
-// keeps a handful of creatures and no lightning; Still keeps the moon,
-// fog, pumpkins and cobwebs without any of them moving.
 const HALLOWEEN_ART = {
   bat: '<svg viewBox="0 0 64 34" aria-hidden="true"><g class="jellio-season-wing-r"><path d="M33 16C38 7 49 3 63 8C59 10 58 14 59 20C55 16 51 17 49 23C46 18 42 19 39 25C37 21 35 20 33 22Z" fill="#050308"/></g><g class="jellio-season-wing-l"><path d="M31 16C26 7 15 3 1 8C5 10 6 14 5 20C9 16 13 17 15 23C18 18 22 19 25 25C27 21 29 20 31 22Z" fill="#050308"/></g><path d="M27.5 9L26 1.5L30.5 6L32 4.5L33.5 6L38 1.5L36.5 9C37.5 12 37.5 17 35.5 22C34.5 26 33.2 29 32 33C30.8 29 29.5 26 28.5 22C26.5 17 26.5 12 27.5 9Z" fill="#050308"/><circle cx="30" cy="10.5" r="1" fill="#ff7518"/><circle cx="34" cy="10.5" r="1" fill="#ff7518"/></svg>',
   ghost: '<svg viewBox="0 0 60 72" aria-hidden="true"><defs><linearGradient id="jellio-season-ghost-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f0ff"/><stop offset="1" stop-color="#b9a8ff" stop-opacity=".25"/></linearGradient></defs><path d="M30 2C14 2 5 15 5 32V68L13 59L21 69L30 59L39 69L47 59L55 68V32C55 15 46 2 30 2Z" fill="url(#jellio-season-ghost-fill)"/><path d="M5 40C-3 44-5 52 1 58C6 55 7 50 5 46Z M55 40C63 44 65 52 59 58C54 55 53 50 55 46Z" fill="#d8ccff" opacity=".6"/><ellipse cx="22" cy="28" rx="4" ry="6" fill="#1b1230"/><ellipse cx="38" cy="28" rx="4" ry="6" fill="#1b1230"/><ellipse cx="30" cy="43" rx="5" ry="7.5" fill="#1b1230"/></svg>',
@@ -307,11 +277,6 @@ function mountHalloween(container, level) {
   return still || reduced ? undefined : mountHalloweenSky();
 }
 
-// Shared by the Christmas and New Year canvases: a requestAnimationFrame
-// loop that stops while the tab is hidden, and a canvas kept at the size
-// of the window (and its pixel ratio) behind everything else.
-// With an fps cap, frames in between are skipped and step gets how many
-// 60 fps frames passed, so things still move at the same speed.
 function startLoop(step, fps) {
   let frameId = 0;
   let running = true;
@@ -369,11 +334,6 @@ function svgNode(tag, attrs) {
   return node;
 }
 
-// New Year: rockets that climb on a trail and burst as peonies, drooping
-// willows, rings or a double burst, each lighting the page around it for
-// a moment; gold and white confetti, streamers, champagne bubbles and a
-// starry sky. At midnight on 1 January, once a year, a "Happy New Year"
-// finale. Everything sits behind the page except that title.
 const NY_MIX = ['#d4af37', '#eef0f5', '#ffe08a', '#ff7a59', '#7fb2ff'];
 const NY_CONFETTI = ['#d4af37', '#eef0f5', '#ffe08a', '#c9a227', '#f6e7b4'];
 const NY_MIDNIGHT_KEY = 'jellioNewYearMidnight';
@@ -621,9 +581,6 @@ function mountNewYear(container, level) {
   };
 }
 
-// Hearts drift up across the whole page now, not confined to one corner,
-// plus a few larger blurred "bokeh" hearts for depth; still slow and low
-// opacity, just a lot more of them than a single accent corner needs.
 function mountValentine(container, level) {
   buildWash(container);
   const still = level === 'still';
@@ -646,12 +603,6 @@ function mountValentine(container, level) {
   }
 }
 
-// Christmas: a draped string of bulbs along the top, pine garland and
-// swinging baubles in the corners, snow in three depths with wind that
-// gusts now and then, a snow drift along the bottom, frost in the bottom
-// corners, a warm hearth glow, and a shooting star with a few sparkles.
-// All of it behind the page. Reduced has a third of the snow at a lower
-// frame rate; Still keeps the lights, garlands, frost and drift unmoving.
 const XMAS_BULBS = ['#ff4d4d', '#ffd36b', '#4dff88', '#5aa8ff', '#ff8fd6'];
 
 function buildStringLights(container) {
@@ -908,11 +859,6 @@ function applyTheme(theme) {
   activeCleanup = MOUNTERS[shown](mountedContainer, level) || null;
 }
 
-// runtime/api.js's own getJellioConfig() caches this for a few minutes
-// (SHORT_CACHE_TTL_MS), so a periodic real refetch here is cheap and
-// picks up whatever an admin just changed in the plugin's own
-// dashboard within a few minutes, no reload required, without this
-// file polling the network on every single one of these ticks.
 async function refresh() {
   if (!mountedContainer) return;
   let config;
@@ -925,14 +871,6 @@ async function refresh() {
   applyTheme(activeSeasonalTheme(new Date(), config));
 }
 
-// Called once from app.js, right where it already sets up the real root
-// shell (idempotent the same way components/sidebar.js's own dataset
-// marker keeps its own real one-time build from repeating on every
-// ordinary navigation), appended as a real child of #jellioRoot itself
-// rather than document.body: css/app.css's own .jellio-root-fullscreen
-// rule already hides this the same way the sidebar and mobile nav
-// mounts do, no separate hashchange listener or any other real coupling
-// to this runtime's own router needed.
 export function mountSeasons(root) {
   if (mountedContainer) return;
   rootEl = root;
@@ -943,9 +881,5 @@ export function mountSeasons(root) {
   onMotionChange(function () {
     applyTheme(lastTheme);
   });
-  // A reader who leaves this tab open across midnight (New Year's own
-  // real edge case, or any other theme's own boundary), or across
-  // whatever an admin just changed server side, still gets the right
-  // real theme without a full reload.
   window.setInterval(refresh, 5 * 60 * 1000);
 }

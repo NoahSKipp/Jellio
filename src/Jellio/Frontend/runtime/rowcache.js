@@ -1,10 +1,3 @@
-// Persistent stale-while-revalidate cache for the home screen's row
-// requests, shared by every open Jellio tab. A new tab paints rows from
-// what an earlier tab (or visit) stored, then refreshes them in the
-// background: one tab fetches a given request at a time, at most a few
-// at once, and only one while a video plays anywhere. Pure apart from
-// what createRowCache is given, so tests/frontend/rowcache.test.mjs can
-// run it with fake storage, timers, channels and locks.
 
 const MINUTE = 60000;
 
@@ -119,9 +112,6 @@ function ttlFor(cls) {
   return Object.prototype.hasOwnProperty.call(TTL_MS, cls) ? TTL_MS[cls] : 10 * MINUTE;
 }
 
-// Past this an answer isn't shown at all, not even while it refreshes:
-// after a long break the screen loads rows fresh, the way streaming apps
-// do, instead of showing days-old Continue Watching for a moment.
 const HOUR = 60 * MINUTE;
 const MAX_AGE_MS = {
   personal: 12 * HOUR,
@@ -139,10 +129,6 @@ export function isExpired(entry, nowMs) {
 export function isStale(entry, nowMs) {
   return nowMs - entry.storedAt >= Math.max(ttlFor(entry.cls), MIN_REVALIDATE_MS);
 }
-
-// ---- Storage ---------------------------------------------------------------
-// Every adapter: load() -> entries, get(key), put(entry), remove(keys),
-// clear(). All async, none throw past a rejected promise.
 
 export function createMemoryStorage(sharedMap) {
   const map = sharedMap || new Map();
@@ -342,7 +328,6 @@ export function pickStorage(env) {
     if (scope.indexedDB) {
       return openIndexedDbStorage(scope.indexedDB, 1500)
         .then(function (storage) {
-          // A first real read: some browsers open fine and then fail here.
           return storage.get('__probe').then(function () {
             return storage;
           });
@@ -794,11 +779,6 @@ export function createRowCache(options) {
     return fetchAndStore(key, cls, fetcher, o.priority, false);
   }
 
-  // Back from a break (tab in front again, laptop awake, network back):
-  // every row this tab has shown that is past its refresh age is fetched
-  // again in the background, Continue Watching and Up Next always. Only
-  // answers that actually differ are announced, so rows that didn't
-  // change stay put. Returns how many refreshes started.
   function revalidateStale() {
     let started = 0;
     known.forEach(function (request, key) {
@@ -986,9 +966,6 @@ export function createRowCache(options) {
   };
 }
 
-// Logout from a tab with no cache instance at hand: every open tab drops
-// its rows now, and storage is cleared on the next start (and right away
-// when the browser lets it finish before the reload).
 export function requestRowCacheWipe(env) {
   const scope = env || {};
   try {
@@ -1013,10 +990,6 @@ export function requestRowCacheWipe(env) {
   } catch (err) {}
 }
 
-// Calls onReturn({ awayMs, reason }) when the page comes back after at
-// least minAwayMs: the tab in front again, the machine awake (timers
-// stalled while the tab was visible), a page restored from the
-// back/forward cache, or the network back. At most once per cooldown.
 export function createReturnWatcher(env, onReturn, options) {
   const o = options || {};
   const doc = env.document;

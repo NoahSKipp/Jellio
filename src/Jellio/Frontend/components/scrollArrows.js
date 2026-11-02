@@ -1,12 +1,3 @@
-// Hover revealed prev/next scroll arrows for any horizontally
-// scrolling track, factored out of components/row.js's own original
-// version (real duplication otherwise: screens/detail.js's own season
-// tabs and episode track had no way to reach anything scrolled past
-// the visible edge either, real feedback live, the exact same real gap
-// row.js already solved once). Harbor's own arrowed-scroll-row.tsx
-// idea (hover reveals a control that pages the track), reimplemented
-// here in vanilla JS against this project's own markup rather than
-// copied.
 
 import { el } from '../runtime/dom.js';
 
@@ -22,33 +13,16 @@ function buildArrow(direction, label) {
   return button;
 }
 
-// A page at a time, not the whole track: 0.9 of the visible width
-// keeps one item's worth of overlap so the track reads as continuing
-// rather than jumping to a spot the reader has not seen the lead-in to.
 function scrollByPage(track, direction) {
   track.scrollBy({ left: direction * track.clientWidth * 0.9, behavior: 'smooth' });
 }
 
-// Arrows only show when there is somewhere left to scroll in that
-// direction, checked on every real scroll (native drag/swipe/wheel
-// included, not only a click on the arrow itself) rather than only
-// right after a click, so the track is honest about its own ends.
 function updateArrowVisibility(track, prevArrow, nextArrow) {
   const maxScroll = track.scrollWidth - track.clientWidth;
   prevArrow.classList.toggle('jellio-row-arrow-visible', track.scrollLeft > 4);
   nextArrow.classList.toggle('jellio-row-arrow-visible', track.scrollLeft < maxScroll - 4);
 }
 
-// trackWrap must already be position: relative (css/app.css's own
-// .jellio-row-track-wrap rule) for these arrows to anchor against it
-// correctly; track is the direct scrolling child inside it.
-//
-// Returns a refresh() callers can invoke again after replacing track's
-// own content wholesale (screens/detail.js's own real need: switching
-// seasons swaps the episode track's own children for a different
-// season's own, real episode count that can cross the "does this even
-// need arrows" line either way, well after this function's own one
-// time initial check already ran).
 export function attachScrollArrows(trackWrap, track) {
   const prevArrow = buildArrow('prev', 'Scroll left');
   const nextArrow = buildArrow('next', 'Scroll right');
@@ -61,10 +35,6 @@ export function attachScrollArrows(trackWrap, track) {
   trackWrap.appendChild(prevArrow);
   trackWrap.appendChild(nextArrow);
 
-  // Desktop mouse wheel translation: on mice without a tilt wheel,
-  // scrolling vertically over a horizontal track translates deltaY into
-  // horizontal scroll whenever the track has room to scroll in that direction,
-  // without blocking vertical page scroll once an edge is reached.
   track.addEventListener(
     'wheel',
     function (event) {
@@ -82,11 +52,6 @@ export function attachScrollArrows(trackWrap, track) {
 
   let scrollListenerAttached = false;
 
-  // Only worth wiring the scroll listener up at all once there is
-  // something to scroll to: a track shorter than its own wrap never
-  // needs an arrow, and a scroll listener on a track that can never
-  // scroll would just be dead weight. Safe to call more than once,
-  // the listener itself only ever attaches the one real time.
   function refresh() {
     if (track.scrollWidth > track.clientWidth + 4) {
       updateArrowVisibility(track, prevArrow, nextArrow);
@@ -104,27 +69,6 @@ export function attachScrollArrows(trackWrap, track) {
 
   window.requestAnimationFrame(refresh);
 
-  // Real bug, found live: this used to only ever check once, at
-  // mount. A reader who shrinks the browser window afterward (real
-  // feedback's own explicit case, "on smaller monitors") never got a
-  // second check - a row that genuinely fit at the original width and
-  // correctly showed no arrows then had no real way to discover it now
-  // overflows at the new one, short of a full reload rebuilding this
-  // row from scratch. ResizeObserver on trackWrap itself rather than a
-  // window resize listener on purpose: a real window-level listener
-  // never gets removed once this row's own content is gone (window
-  // itself never is), silently keeping every row this whole app has
-  // ever built, and everything each one closes over, alive forever.
-  // Browsers do not extend an observed element's own real lifetime
-  // just for being observed, so this dies with trackWrap the same
-  // ordinary way its own scroll listener above already does, no
-  // explicit disconnect() needed. Also catches real width changes this
-  // whole class of bug was never really only about - the sidebar
-  // expanding over content, a page zoom, a font-size change - not just
-  // a literal window resize event. Debounced for the same reason a
-  // window resize listener would have needed it too: a real drag
-  // fires dozens of these a second, each one a real layout read this
-  // has no reason to repeat that often.
   if (typeof ResizeObserver !== 'undefined') {
     let resizeTimer = null;
     const observer = new ResizeObserver(function () {

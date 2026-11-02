@@ -1,8 +1,3 @@
-// Title info without streams. Asking Jellyfin for one item by id
-// (/Users/{id}/Items/{itemId}) makes Gelato resolve every stream before it
-// answers, 2.5-4 s cold, even when only the description is needed. The
-// same info through /Items?ids= comes back in well under a second, so the
-// detail page renders from that and looks for streams separately.
 const INFO_FIELDS = ['Overview', 'Genres', 'People', 'Studios', 'ProductionYear', 'RunTimeTicks', 'PremiereDate', 'RemoteTrailers'];
 const PLAYBACK_FIELDS = ['Chapters'];
 

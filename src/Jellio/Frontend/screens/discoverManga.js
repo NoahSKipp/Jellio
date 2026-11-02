@@ -1,10 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Discover for the Manga shelf (#/discover?kind=manga): manga, manhwa and
-// manhua series from AniList through Controllers/BookRequestController.cs's
-// discover-manga, never prose books. A card's Read opens the series (read
-// straight from a Suwayomi source, like Mihon's Browse), picking the
-// source first if Suwayomi doesn't have it yet; Chaptarr volumes are
-// still requested from the same sheet.
 import { discoverManga, getBookshelfItems, getJellioConfig, getMangaCoverUrl, findStreamSeries } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';

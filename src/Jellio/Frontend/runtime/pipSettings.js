@@ -1,6 +1,3 @@
-// Whether playback moves into picture in picture by itself when the tab
-// is left. On unless turned off; client only, like the other playback
-// display preferences.
 const KEY = 'jellioAutoPictureInPicture';
 
 export function isAutoPipEnabled() {

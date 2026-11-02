@@ -1,13 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Watchlist release notifications: Jellio's own NotificationsController,
-// one real notification the first day a Watchlist entry's own release
-// date actually arrives (a movie's digital release, an episode's own air
-// date), persisted per user server side the same way components/
-// nowPlaying.js's own sessions are polled rather than pushed. Self
-// starting, module level singleton (an ES module only ever runs once),
-// same real reason that file's own header already gives for its own poll
-// loop and panel existing for the life of the page rather than being
-// rebuilt on every sidebar render.
 import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl, getStreamCoverUrl } from '../runtime/api.js';
 import { isAuthenticated, getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
@@ -27,14 +18,7 @@ function markLatestChangelogSeen() {
   });
 }
 
-// A release date changes once a day at most, real reason this polls far
-// less often than components/nowPlaying.js's own 10s (a live session can
-// genuinely change every few seconds, this cannot).
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
-// Same real value and same real reason as components/nowPlaying.js's own
-// HOVER_CLOSE_DELAY_MS: long enough to cross the gap between the
-// sidebar's own rail and this panel's own fixed position without the
-// panel already closing under the reader's own cursor.
 const HOVER_CLOSE_DELAY_MS = 200;
 
 let panel = null;
@@ -42,19 +26,8 @@ let started = false;
 let lastUnreadCount = 0;
 let currentItems = [];
 let hoverCloseTimer = null;
-// null until the first real poll resolves: every notification already
-// sitting there on a fresh page load is not "new" the reader has not
-// seen, it is history, and toasting the reader's own entire backlog the
-// instant the app opens would read as broken, not helpful.
 let knownIds = null;
 
-// Real feedback: an admin's own broadcast (Controllers/
-// NotificationsController.cs's own POST broadcast, RequiresElevation
-// gated, sent from Configuration/config.html's own dashboard page) rides
-// this exact same real per user store and poll loop, Kind "announcement"
-// the one field telling this file apart from a real watchlist entry:
-// Guid.Empty for its own ItemId, nothing real to fetch a poster for or
-// navigate to.
 function partyWhen(n) {
   const date = new Date(n.Date);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
@@ -200,9 +173,6 @@ function buildRow(n) {
   const deleteIcon = el('span', 'material-icons close');
   deleteIcon.setAttribute('aria-hidden', 'true');
   deleteButton.appendChild(deleteIcon);
-  // stopPropagation rather than a separate real element outside the
-  // row: the row's own click already navigates, and a reader dismissing
-  // one notification almost never also means "and take me to that title".
   deleteButton.addEventListener('click', function (event) {
     event.stopPropagation();
     removeOne(n.Id);
@@ -241,12 +211,6 @@ function scheduleHoverClose() {
   hoverCloseTimer = window.setTimeout(hideNotificationsPanel, HOVER_CLOSE_DELAY_MS);
 }
 
-// Real feedback: this panel used to only ever open on click and had to
-// be clicked again to close, unlike components/nowPlaying.js's own hover
-// sensitive panel right next to it in the same sidebar. Mirrors that
-// file's own showNowPlayingPanel(): marking unread notifications read
-// stays a toggleNotificationsPanel()-only side effect, a reader just
-// hovering through has not actually looked at anything yet.
 function showNotificationsPanel() {
   if (!panel) return;
   cancelHoverClose();
@@ -264,13 +228,6 @@ function render(items) {
 
   if (!panel) return;
 
-  // Real feedback, same real gap components/nowPlaying.js's own render()
-  // header already explains: startNotifications() runs before
-  // renderSidebar() on this same page's very first sync(), so the
-  // trigger button does not exist yet the first time this fires. This
-  // same render() re-queries it on every poll tick regardless, so the
-  // dataset marker just keeps a stable button from ever getting a
-  // second real listener stacked on top of the first.
   const trigger = document.querySelector('.jellio-sidebar-notifications');
   if (trigger && !trigger.dataset.jellioNotificationsHoverBound) {
     trigger.dataset.jellioNotificationsHoverBound = '1';
@@ -300,10 +257,6 @@ function render(items) {
   });
 }
 
-// Removed from the list on click, same optimistic-then-reconcile shape
-// components/cardOptionsMenu.js's own watchlist/watched toggles already
-// use, rather than waiting on the real round trip to update anything a
-// reader can see.
 function removeOne(id) {
   if (id.startsWith('changelog:')) {
     markLatestChangelogSeen();
@@ -350,11 +303,6 @@ function poll() {
         }
         merged.forEach(function (n) {
           if (!knownIds.has(n.Id)) {
-            // Nothing real to open for an announcement or changelog, so this toast
-            // gets no onClick at all rather than one that would just
-            // silently do nothing on click (showToast's own
-            // jellio-toast-clickable styling would otherwise still
-            // suggest it does something).
             showToast(
               messageFor(n),
               n.Kind === 'announcement' || n.Kind === 'whatsnew'
@@ -375,9 +323,6 @@ function poll() {
       render(merged);
     })
     .catch(function () {
-      // Leave whatever was last shown, same real tolerance
-      // components/nowPlaying.js's own poll() already has for a failed
-      // request: it will try again on the next tick.
     })
     .then(function () {
       window.setTimeout(poll, POLL_INTERVAL_MS);
@@ -401,11 +346,6 @@ function createPanel() {
   });
 }
 
-// Real feedback's own explicit ask: the unread marker disappears the
-// instant this panel opens, not once a round trip to actually persist
-// that confirms it. markNotificationsRead() still fires so the next
-// poll (and the next real session on another device) agrees, but
-// nothing here waits on it.
 export function toggleNotificationsPanel() {
   if (!panel) return;
   cancelHoverClose();
@@ -429,9 +369,6 @@ function hideNotificationsPanel() {
   if (button) button.setAttribute('aria-expanded', 'false');
 }
 
-// Called from app.js's own sync() once a session is confirmed
-// authenticated, not at module load, same real reason components/
-// nowPlaying.js's own startNowPlaying() already waits for that too.
 export function startNotifications() {
   if (started || !isAuthenticated()) return;
   started = true;

@@ -1,6 +1,3 @@
-// Streams a user added by link (see Controllers/StreamLinksController.cs),
-// shaped like Live TV channels so the same list, filters and player work
-// for both.
 import { classifyChannel } from './liveTv.js';
 
 const LINK_PREFIX = 'link:';

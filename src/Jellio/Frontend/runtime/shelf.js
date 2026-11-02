@@ -1,7 +1,3 @@
-// The reader's own shelf organisation (Controllers/ShelfController.cs):
-// categories on the Manga, Books and Audiobooks shelves, per-series
-// settings and chapter bookmarks. Kept in memory per shelf kind; every
-// change fires jellio:shelf-changed so open screens can repaint.
 import { getServerAddress, getAuthHeaders } from './auth.js';
 import { idKey } from './util.js';
 

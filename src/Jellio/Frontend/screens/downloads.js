@@ -1,7 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// #/downloads: everything kept on this device (runtime/offline.js), by
-// kind, with progress for what's still downloading. Also the screen
-// Jellio opens on when the server can't be reached.
 import {
   listDownloads,
   removeDownload,

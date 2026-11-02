@@ -1,16 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Now playing panel: shows every active session on the server, usernames
-// included, real endpoint backed by Jellio's own ISessionManager reader
-// (Controllers/NowPlayingController.cs, ported verbatim from the original
-// Jellio codebase), no cron job or static file needed the way community
-// scripts without a plugin backend have to do it. Self starting, module
-// level singleton (an ES module only ever runs once), so this file's own
-// poll loop and panel element exist for the lifetime of the page rather
-// than being recreated on every sidebar render the way the original
-// reskin's own IIFE version had to coordinate over a DOM CustomEvent
-// between two independently loaded classic scripts, not needed here
-// since sidebar.js can just import and call this module's own exports
-// directly.
 import {
   getNowPlayingSessions,
   getImageUrl,
@@ -25,11 +13,6 @@ import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
 const POLL_INTERVAL_MS = 10000;
-// Long enough to cross the real gap between the sidebar's own rail and
-// this panel's own fixed position without the panel already closing
-// under the reader's own cursor, short enough that leaving for
-// somewhere else on the page still reads as an intentional close
-// rather than a stuck-open panel.
 const HOVER_CLOSE_DELAY_MS = 200;
 
 let panel = null;
@@ -97,15 +80,6 @@ function posterUrls(item, imageId) {
   return [getImageUrl(imageId, 'Primary', { maxWidth: 200 })];
 }
 
-// Real feedback: a reader could see who was watching what, real names
-// and titles both, but had no way to actually reach the title itself
-// from here, the one real thing this whole panel is already about.
-// imageId already picks the series over an individual episode
-// (SeriesId), same real title displayTitle() shows above the poster,
-// so the row navigates to that same real item, not the episode's own
-// id nothing here otherwise refers to.
-// A Material icon for the device a session plays on, from what its client
-// reports about itself (Jellyfin has no device type of its own).
 function deviceIcon(session) {
   const text = ((session.Client || '') + ' ' + (session.DeviceName || '')).toLowerCase();
   if (!text.trim()) return null;
@@ -211,15 +185,6 @@ function render(sessions) {
   if (badge) badge.textContent = String(sessions.length);
   if (button) button.classList.toggle('jellio-sidebar-now-playing-active', sessions.length > 0);
 
-  // Real feedback: this used to only ever open on click. Bound here
-  // rather than in startNowPlaying(), the one real place this button
-  // is guaranteed to already exist: startNowPlaying() itself runs
-  // before renderSidebar() on this same page's very first sync(), so
-  // the button does not exist yet the first time it would try. This
-  // same render() already re-queries the button on every poll tick
-  // regardless, so the dataset marker below just keeps a stable button
-  // from ever getting a second real listener stacked on top of the
-  // first.
   if (button && !button.dataset.jellioNowPlayingHoverBound) {
     button.dataset.jellioNowPlayingHoverBound = '1';
     button.addEventListener('mouseenter', showNowPlayingPanel);
@@ -283,10 +248,6 @@ function hideNowPlayingPanel() {
   if (button) button.setAttribute('aria-expanded', 'false');
 }
 
-// Called from app.js's own sync() once a session is confirmed
-// authenticated, not at module load: this runtime's own session may not
-// exist yet on first page load, and there is no point polling a real
-// endpoint before there is a real token to send it.
 export function startNowPlaying() {
   if (started || !isAuthenticated()) return;
   started = true;

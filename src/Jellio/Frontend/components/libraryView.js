@@ -1,8 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Mihon's library filter and display options for the Manga shelf: which
-// series show (unread, started, completed, downloaded; each off, only,
-// or hidden), how the covers are laid out, and the unread badge. Kept on
-// this device.
 import { el } from '../runtime/dom.js';
 
 const KEY = 'jellio-manga-library-view';

@@ -1,12 +1,4 @@
 import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
-// The general activity feed, from the reference table: "a dedicated Feed
-// tab... showcasing [everyone's] recent actions." Server wide rather than
-// a real friends graph this plugin has no concept of at all, backed by
-// Controllers/FeedController.cs's own real merge of every non-private
-// user's own RecentActivity and badge unlocks (screens/profile.js's own
-// per user version of the same real watch data). A private user's own
-// entries, watch or badge, are already gone by the time this file sees
-// them, server side, nothing to filter here.
 import {
   getActivityFeed,
   getUserImageUrl,
@@ -25,15 +17,6 @@ import { openActivity } from '../components/activityLink.js';
 import { formatRelativeTime, isReadingActivity, describeReading } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
 
-// AniList's own real activity card shape (screenshot checked before
-// writing this): cover art leading the row, a "Watched episode 1-4 of
-// [Title]" line with the title itself the one coloured/clickable part,
-// not the whole sentence. FeedController.cs's own real
-// ActivityGrouping.Group is what makes a binge (same series, same UTC
-// day) arrive as one entry with EpisodeCount > 1 instead of one row
-// per episode here, real feedback specifically asked not to drown the
-// rest of this feed out under a single sitting.
-// A watch party: who hosted, what was watched together, the reactions.
 function appendPartyDescription(container, entry) {
   const title = entry.ItemType === 'Episode' && entry.SeriesName ? entry.SeriesName : entry.ItemName;
   container.appendChild(document.createTextNode(t('feed_party_lead') + ' '));
@@ -87,10 +70,6 @@ function appendWatchDescription(container, entry) {
   if (verbLast) container.appendChild(document.createTextNode(' ' + verb.toLowerCase()));
 }
 
-// Badge unlocks ride the same feed rather than their own section:
-// FeedController.cs's own header explains why one merged, re-sorted
-// list beats two separate ones. Same real Privacy gate as watch rows,
-// applied server side before either kind ever reaches this file.
 function appendBadgeDescription(container, entry) {
   container.appendChild(document.createTextNode(t('feed_unlocked') + ' '));
   const badgeName = getBadgeName(entry.BadgeId, entry.BadgeName);
@@ -104,9 +83,6 @@ function appendBadgeDescription(container, entry) {
   }
 }
 
-// What an entry opens: the show (not the season or episode), the manga
-// series (not the chapter), else the item itself. Badges, and anything
-// without an item, open the person's profile.
 async function openEntry(entry) {
   if (!(await openActivity(entry))) navigateTo('#/profile?id=' + entry.UserId);
 }

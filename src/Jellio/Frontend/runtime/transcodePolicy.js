@@ -1,6 +1,3 @@
-// The server's "Video transcode policy" (plugin settings) and what this
-// browser can decode, for runtime/transcodeClassifier.js. Allow is the old
-// behaviour; Avoid and Block keep the server from re-encoding video.
 import { classifyVideo, playMethodFor } from './transcodeClassifier.js';
 
 let policy = 'Allow';
@@ -65,9 +62,6 @@ const SHORT_REASON = {
   'burn-in': 'image subtitles',
 };
 
-// What a viewer cares about: will this play smoothly here? tone is good,
-// warn (Avoid) or block (Block). Guesses from a stream's name are worded
-// less certainly than probed details.
 export function playbackOutlook(classification, policy) {
   const current = policy || getVideoTranscodePolicy();
   const guessed = !!classification.guessed;

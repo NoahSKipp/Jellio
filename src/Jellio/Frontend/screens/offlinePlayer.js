@@ -1,9 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Plays a downloaded film or episode from this device (components/
-// downloads.js saved it): the browser's own video controls, the
-// downloaded subtitles, and the position kept locally and sent to the
-// server as the item's user data, now or once it's reachable again.
-// screens/player.js hands over here when offline, or for #/play?local=1.
 import { findDownload, getOfflineObjectUrl, getLocalProgress, setLocalProgress } from '../runtime/offline.js';
 import { saveUserItemPosition } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';

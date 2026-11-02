@@ -1,15 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Quick actions on a poster card without leaving the row it lives in,
-// ported in spirit from NuvioWeb's own posterOptionsMenu.js (its own
-// screens open it on a held remote button, real Jellyfin.PlayedItems and
-// FavoriteItems endpoints doing the actual state change either way,
-// reimplemented for a mouse/keyboard/touch web target as a right click
-// or a held pointer rather than a held focus key). Real feedback, two
-// real Nuvio mobile screenshots: the menu's own real content is not one
-// fixed set, a Continue Watching card offers Go to details/Play
-// manually/Start from beginning/Remove, every other card offers
-// Watchlist/Mark watched/Remove from Library, matched here rather than
-// one generic list either context has to squint past.
 import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { openStreamPicker } from './streamPicker.js';
@@ -65,18 +54,6 @@ function positionMenu(menu, anchorRect) {
   menu.style.top = top + 'px';
 }
 
-// Jellyfin itself has no endpoint that clears a saved resume position
-// on its own (confirmed against jellyfin-web's and the server's own
-// real source before writing this): PlaystateController's own
-// UpdatePlayedStatus is the only place PlaybackPositionTicks ever gets
-// reset, and it is the exact same POST/DELETE PlayedItems call every
-// ordinary Mark as watched/unwatched toggle already wraps. A Continue
-// Watching card asking to leave that row is really asking for this
-// same real call, just under whatever label/behaviour the caller
-// actually wants there, not a second, invented endpoint. Shared by the
-// dropdown's own Remove entry and components/card.js's own inline Mark
-// Watched button, so both real call sites behave identically rather
-// than drifting apart over time.
 export function toggleWatched(item, options, onChanged) {
   const opts = options || {};
   const isPlayed = !!(item.UserData && item.UserData.Played);
@@ -90,13 +67,6 @@ export function toggleWatched(item, options, onChanged) {
   const willBePlayed = !isPlayed;
   return setPlayed(item.Id, willBePlayed).then(function (updated) {
     item.UserData = updated;
-    // An Up Next card is real Jellyfin NextUp state (the next real
-    // unwatched episode of a show), not a badge to repaint in place:
-    // marking that exact episode watched means it is real, immediately
-    // no longer next up (whichever episode actually is now only shows
-    // up on this row's own next real refetch), so leaving the card
-    // sitting there under a checkmark instead of actually leaving the
-    // row read live as marking watched not doing anything.
     if (opts.upNext && willBePlayed && opts.onRemoved) {
       opts.onRemoved();
     } else if (onChanged) {
@@ -115,12 +85,6 @@ export function toggleWatchlist(item, onChanged) {
   });
 }
 
-// Tapping the thumb already showing sets it back to real neither
-// (real Jellyfin's own UserData.Likes has three states, true/false/
-// absent, not just the two either thumb alone can reach on its own),
-// tapping the other one flips straight to it instead. screens/detail.js's
-// own thumbs pair both call this, likes true from the up one, false
-// from the down one.
 export function toggleRating(item, likes, onChanged) {
   const current = item.UserData && item.UserData.Likes;
   const next = current === likes ? null : likes;
@@ -131,12 +95,6 @@ export function toggleRating(item, likes, onChanged) {
   });
 }
 
-// Same real gap toggleWatched's own header above already documents:
-// no endpoint clears PlaybackPositionTicks on its own, only ever a
-// side effect of UpdatePlayedStatus. Marking played and immediately
-// unplayed again resets that same real position back to 0 without
-// leaving the title stuck flagged watched, the only two real calls
-// this can be done with.
 function restartFromBeginning(item) {
   return setPlayed(item.Id, true)
     .then(function () {
@@ -149,23 +107,6 @@ function restartFromBeginning(item) {
     });
 }
 
-// Admin only, and only once the server side toggle itself is on
-// (callers gate this entirely on isAdminSync() and
-// isSkipIntroCreditsMenuEnabled() - Configuration/config.html's own
-// "Show Find Skip Intro/Credits..." checkbox, off by default so these
-// entries do not sit on every single card's own right click menu):
-// kicks off Controllers/IntroCreditsController.cs's own POST
-// .../scan/{itemId}, a Movie, Episode, Season or whole Series at once -
-// Services/CommunitySkip's own free tier first, this plugin's own
-// debrid-backed chromaprint fallback only ever reached when
-// useAnalyzerFallback is true and that tier leaves something uncovered.
-// Exported so screens/detail.js's own episode options menu can offer
-// the exact same pair scoped to just an Episode or its whole Season,
-// rather than a second copy of this same toast/error handling. Can
-// genuinely take minutes for a big show, so this only ever toasts a
-// start/finish summary, same non-blocking real shape everything else in
-// this file already uses rather than a spinner the admin has to sit and
-// watch.
 export function findSkipTimestamps(itemId, itemName, useAnalyzerFallback) {
   showToast(t('skip_looking', { title: itemName || t('account_this_user') }));
   scanIntroCreditsForItem(itemId, useAnalyzerFallback)
@@ -250,11 +191,6 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         navigateTo('#/item?id=' + item.Id);
       }),
     );
-    // Real gap, documented above on toggleWatched itself: Jellyfin has
-    // no endpoint that just hides one title from NextUp on its own,
-    // marking the episode played is the only real call that also drops
-    // it off this row, same mechanism Continue Watching's own Remove
-    // already leans on above.
     menu.appendChild(
       buildOption(
         t('menu_remove_up_next'),
@@ -268,12 +204,6 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         true,
       ),
     );
-    // Real feedback live: "Remove from Up Next" above only ever marks
-    // this one episode played, which just advances the same series to
-    // its own next episode on the row's very next fetch, not actually
-    // leaving it. This one hides the whole series server side instead
-    // (Controllers/NextUpHiddenController.cs), a real series stays gone
-    // across a reload rather than resurfacing under its next episode.
     if (item.SeriesId) {
       menu.appendChild(
         buildOption(
@@ -342,10 +272,6 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       );
     }
     if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && item.Type === 'Movie') {
-      // No Quick/Deep split here: ScanMovieAsync (Services/IntroCredits/
-      // IntroCreditsBulkScanner.cs) never has a real fallback to reach
-      // for regardless, a standalone movie has no sibling of its own to
-      // cross-reference against.
       menu.appendChild(
         buildOption(t('menu_find_skip'), 'search', function () {
           findSkipTimestamps(item.Id, item.Name, false);
@@ -367,9 +293,6 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
 
   document.body.appendChild(menu);
   document.addEventListener('keydown', handleKeydown);
-  // Registered as capturing rather than bubbling, and one tick late,
-  // so the same pointerdown/contextmenu that just opened this menu does
-  // not immediately close it again on its way through document.
   window.setTimeout(function () {
     document.addEventListener('pointerdown', handleOutsideClick, true);
   }, 0);
@@ -378,10 +301,6 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
   if (first) first.focus();
 }
 
-// A plain fade/shrink/blur, the one real fallback for a card with no
-// decoded poster image to shatter (animateCardRemoval below needs a
-// real <img> to slice into shards): still reads as "this left", real
-// removal underneath either way.
 function plainRemoval(card) {
   card.classList.add('jellio-card-removing');
   function finish() {
@@ -396,16 +315,6 @@ const SNAP_COLUMNS = 7;
 const SNAP_ROWS = 10;
 const SNAP_SHARD_MS = 550;
 
-// Real feedback: Nuvio's own Continue Watching removal is a spring
-// collapse plus a haptic tick on a real touch device, neither one
-// reachable on the web (no haptic channel, and a plain height collapse
-// already looked too much like an ordinary list reflow to read as a
-// deliberate real removal). Asked for directly instead: a real Thanos
-// snap, the poster's own decoded image sliced into a real grid of
-// shards, each one fading, drifting and rotating away with a staggered
-// left to right delay, not a uniform wave (a touch of real per-shard
-// randomness inside each column reads far closer to the reference than
-// a mechanical column by column sweep did in testing).
 export function animateCardRemoval(card) {
   const image = card.querySelector('.jellio-card-image');
   const canShatter = image && image.tagName === 'IMG' && image.currentSrc;
@@ -459,10 +368,6 @@ export function animateCardRemoval(card) {
   );
 }
 
-// Right click opens the menu directly; a held pointer (touch, or a
-// mouse without a right button) mirrors that same held-remote-button
-// gesture the original screens key off. A drag or a real click before
-// HOLD_MS elapses cancels it, same as a normal press-and-release.
 export function attachCardOptionsTrigger(card, item, onChanged, options) {
   const opts = options || {};
 

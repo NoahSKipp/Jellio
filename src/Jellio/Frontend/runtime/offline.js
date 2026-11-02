@@ -1,15 +1,3 @@
-// Offline: downloads kept on this device, whether the server can be
-// reached, and changes made while it couldn't, sent once it can.
-//
-// Storage: each download is a record in IndexedDB (what it is, its item
-// data for showing it offline, its files and their state), and its files
-// sit in Cache Storage under /__jellio_offline__/<id>/<name>. Cache
-// Storage writes a fetched response straight to disk as it streams in,
-// so even a film never has to fit in memory. sw.js serves the Jellio
-// interface itself from its own cache, so the page opens offline.
-//
-// Deliberately free of runtime/api.js (which builds on this): it talks
-// to the server with its own fetch calls.
 import { getServerAddress, getAuthHeaders, getCurrentUserId } from './auth.js';
 import { idKey } from './util.js';
 
@@ -59,12 +47,6 @@ async function ping(timeoutMs) {
   }
 }
 
-// Whether the server answers: GET /System/Ping, anonymous and tiny. A
-// phone that just woke the tab can take a moment to get its connection
-// back, so a failed ping is tried once more before calling it offline,
-// and a tab in the background never decides it's offline at all (its
-// requests are being cut off by the browser, not the network); it checks
-// again when it's back in view.
 export function checkServer() {
   if (inFlight) return inFlight;
   inFlight = (async function () {
@@ -100,9 +82,6 @@ function checkWhenVisible() {
   checkServer();
 }
 
-// Offline but asked for something: worth a fresh look first if the last
-// check is more than a few seconds old, so the app recovers by itself the
-// moment the connection is back instead of waiting for the next retry.
 export async function stillOffline() {
   if (!offline) return false;
   if (Date.now() - lastCheckAt > 5000) await checkServer();
@@ -223,9 +202,6 @@ function sampleRate(record) {
   while (samples.length > 2 && now - samples[0].at > RATE_WINDOW_MS) samples.shift();
 }
 
-// Seconds left, or null until there is a steady rate and a size to
-// measure against (a converted video's size is an estimate, so this
-// stops at "finishing up" instead of going negative).
 export function timeLeftSeconds(record) {
   if (!record || record.Status !== 'downloading') return null;
   const samples = rateSamples.get(record.Id);
@@ -271,9 +247,6 @@ export async function listDownloads() {
     .sort((a, b) => b.AddedAt - a.AddedAt);
 }
 
-// The download running now counts its bytes in memory (stored only when
-// it starts and ends), so readers get that live copy in place of the
-// stored one.
 function live(record) {
   return activeDownload && activeDownload.record && activeDownload.id === record.Id ? activeDownload.record : record;
 }
@@ -330,10 +303,6 @@ export async function getOfflineObjectUrl(id, name) {
   return blob ? URL.createObjectURL(blob) : null;
 }
 
-// record: { Id, Kind: 'book' | 'manga' | 'audiobook' | 'video', Title,
-// Subtitle?, Group?, GroupKey?, Item, Files: [{ Name, Url, Optional? }],
-// ...kind-specific data }. Url is server-relative; downloads run one at a
-// time while Jellio is open and pick up again on its next start.
 export async function queueDownload(record) {
   const existing = await getDownload(record.Id);
   if (existing && existing.Status !== 'error') return existing;
@@ -414,10 +383,6 @@ const MAX_ATTEMPTS = 4;
 const STALL_MS = 60000;
 const STALL_VIDEO_MS = 120000;
 
-// A large file the server can send in ranges comes in as several parts
-// at once (many stream sources limit each connection, not the total),
-// each retried on its own, then joined into one file. Anything else, or
-// a server that won't send ranges, streams in one piece.
 const PARTS = 4;
 const MIN_PARALLEL_BYTES = 32 * 1024 * 1024;
 
@@ -537,9 +502,6 @@ async function downloadParallel(record, file, cache, controller) {
 // One file of a download, streamed into Cache Storage with progress.
 async function downloadFile(record, file, cache, controller) {
   if (file.Parallel && (await downloadParallel(record, file, cache, controller))) return;
-  // A stream that sends nothing for too long (a conversion that stalled
-  // or died server side while the connection stays open) is given up on
-  // and retried, instead of waiting forever.
   const attempt = new AbortController();
   const stopAttempt = () => attempt.abort();
   controller.signal.addEventListener('abort', stopAttempt);
@@ -602,13 +564,6 @@ async function streamFile(record, file, cache, attempt, watch) {
   await cache.put(fileUrl(record.Id, file.Name), new Response(response.body.pipeThrough(counter), { headers: headers }));
 }
 
-// --- conversion slots ------------------------------------------------------
-// A download that needs the server to convert it (Controllers/
-// DownloadConversionsController.cs) holds a slot while it runs, so only a
-// couple encode at once. Anything unexpected about the slot (an older
-// plugin, a network hiccup) never blocks a download; only a plain "all
-// taken" does.
-
 const SLOT_PATH = '/Jellio/downloads/conversions';
 const SLOT_HEARTBEAT_MS = 20000;
 const SLOT_RETRY_MS = 30000;
@@ -668,9 +623,6 @@ async function download(record) {
   if (slotId) releaseSlot = keepConversionSlot(slotId);
   try {
     for (const file of record.Files) {
-      // A stream cut off part way (a proxy timeout, the server ending a
-      // slow conversion, the phone pausing the app) is retried from the
-      // start of that file a few times before the download fails.
       const startBytes = record.DoneBytes;
       const startTotal = record.TotalBytes;
       for (let attempt = 1; ; attempt += 1) {
@@ -769,9 +721,6 @@ export async function setLocalProgress(itemId, progress) {
 
 // --- changes made offline -----------------------------------------------------
 
-// A request to send once the server is back: { Method, Path, Body }.
-// Replayed in order; one the server rejects is dropped, one that can't
-// reach it waits for the next try.
 export async function queueSync(method, path, body) {
   if (!('indexedDB' in window)) return;
   await withStore('queue', 'readwrite', (store) =>

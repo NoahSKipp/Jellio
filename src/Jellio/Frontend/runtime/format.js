@@ -1,10 +1,5 @@
 import { t } from './i18n.js';
 
-// Small display formatters shared across screens/components, previously
-// copy pasted byte for byte in each caller (components/heroCarousel.js and
-// screens/detail.js both carried their own formatRuntime, screens/feed.js
-// and screens/profile.js both carried their own formatRelativeTime).
-
 export function formatRuntime(ticks) {
   if (!ticks) return '';
   const minutes = Math.round(ticks / 600000000);
@@ -15,9 +10,6 @@ export function formatRuntime(ticks) {
   return hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
 }
 
-// Reading/listening activity lines for the Feed and profile (Controllers/
-// ReadingActivityController.cs): "Read 40 pages of", "Listened to 1h 5m
-// of", "Finished reading", plus "Page 120 of 330" where known.
 const READING_TYPES = { Book: 'book', Manga: 'manga', AudioBook: 'audiobook' };
 
 export function isReadingActivity(entry) {

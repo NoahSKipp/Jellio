@@ -1,7 +1,3 @@
-// What an activity entry (Feed, profile Recent activity) opens: the show
-// rather than the season or episode, the manga series rather than the
-// chapter, else the item itself. Returns false when there's nothing to
-// open (a badge, or an entry without an item).
 import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { mangaSeriesKey } from './mangaSeries.js';

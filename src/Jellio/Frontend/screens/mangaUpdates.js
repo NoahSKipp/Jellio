@@ -1,8 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Mihon's Updates, reached from the Manga shelf (&updates=1): the
-// chapters that turned up in the latest library refreshes, newest first,
-// grouped by day. The server checks the sources on its own every few
-// hours; opening this page asks again if the last check is an hour old.
 import { getMangaUpdates, refreshMangaUpdates, getStreamCoverUrl, markReadingItems } from '../runtime/api.js';
 import { formatRelativeTime } from '../runtime/format.js';
 import { showToast } from '../components/toast.js';

@@ -1,8 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Mihon's tracking, for AniList: connect the reader's account (the token
-// goes to the server and stays there), link this series to an AniList
-// entry, and set its status and score. Chapters read are written to
-// AniList as they're finished (runtime/api.js syncTracker).
 import {
   getTrackerStatus,
   connectTracker,

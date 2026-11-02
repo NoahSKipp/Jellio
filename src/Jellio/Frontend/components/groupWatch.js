@@ -1,25 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Group Watch, opened from the sidebar's own rail. Used to just forward
-// a click at native jellyfin-web's own hidden .headerSyncButton (that
-// header sits under display: none once this shell takes over, so its
-// own real SyncPlay menu rendered small and pinned to a corner nothing
-// visible actually anchors it to anymore, real feedback live). This is
-// a real styled panel instead, driving the same real Jellyfin SyncPlay
-// endpoints that menu already did (runtime/api.js's own
-// getSyncPlayGroups/createSyncPlayGroup, runtime/syncPlay.js's own
-// joinGroup/leaveGroup), same real backend underneath either way.
-//
-// Real scope, stated plainly rather than left to look finished: this
-// covers real group membership, creating, joining, leaving, seeing who
-// else is in one, a real chat per group (Jellio's own
-// GroupWatchChatController, polled rather than pushed, see
-// runtime/api.js's own header on getGroupWatchMessages), and inviting
-// any other online user (Jellio's own GroupWatchInviteController, same
-// real polling tradeoff, delivered as a toast by
-// components/groupWatchInvites.js). Keeping actual playback position and
-// state in lockstep once a reader is in a group is runtime/syncPlay.js's
-// own job, a real WebSocket backed client screens/player.js drives
-// directly; this panel only owns membership, chat and invites.
 import {
   getCurrentUser,
   getSyncPlayGroups,
@@ -68,11 +47,6 @@ import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioGroupWatch';
 const CHAT_POLL_MS = 3000;
-// Real bug, found live: the group list only ever rendered once, at
-// open, and again after this reader's own create/join/leave, real
-// feedback was member counts and status sitting stale until the whole
-// panel was closed and reopened. Someone else joining or a group
-// starting something never updates it on its own without this.
 const LIST_POLL_MS = 5000;
 
 function handleKeydown(event) {
@@ -81,13 +55,6 @@ function handleKeydown(event) {
 
 let chatPollTimer = null;
 let listPollTimer = null;
-// Set by openChatView() the moment it builds its own rankingContainer,
-// the one real reference stopChatPoll() (called from both Back and a
-// full close, groupWatch.js's own header on the identical real reason
-// already covers why) needs to actually stop that container's own
-// countdown interval alongside the chat poll timer right here, rather
-// than leaving it running orphaned. groupWatchRanking.js's own header
-// on stopRankingCountdown() explains the real bug this closes off.
 let activeRankingContainer = null;
 
 function stopChatPoll() {
@@ -228,23 +195,7 @@ export async function openGroupWatch() {
 
   let currentUserName = '';
   let currentUserId = '';
-  // Real bug, live-reported: refresh() below did a real full rebuild
-  // (list.textContent = '', every row and action button rebuilt from
-  // scratch) on every single call, quiet poll ticks included,
-  // LIST_POLL_MS meaning a fresh Leave/Join/Chat/Invite button every 5s
-  // the panel sat open. A click landing anywhere near that rebuild hit a
-  // node already torn down and replaced under it, reading back as the
-  // click having done nothing ("can't leave group"). Tracked here so a
-  // quiet tick whose own snapshot matches what is already on screen can
-  // skip the rebuild outright; a real membership or status change still
-  // rebuilds exactly as before.
   let lastGroupsSignature = null;
-  // Real bug, found live: this used to be awaited right here, so
-  // refresh() below (its own real getSyncPlayGroups() call, neither
-  // fetch depending on the other) never even started until this one
-  // had fully round tripped. Started here instead, refresh() itself
-  // awaits it once it actually needs currentUserName for membership
-  // highlighting, by which point it is very likely already resolved.
   const currentUserPromise = getCurrentUser()
     .then(function (user) {
       if (user && user.Name) currentUserName = user.Name;
@@ -255,16 +206,6 @@ export async function openGroupWatch() {
       // fatal to the rest of this panel.
     });
 
-  // Same real /Users/Public list components/accountSwitcher.js already
-  // reads for its own switcher grid, reused here for three things: a
-  // real avatar next to each chat message's own author (chat messages
-  // only ever carry a UserId, no image tag of their own), the member
-  // list openChatView() renders (Participants is a list of real display
-  // names, not ids, confirmed against GroupInfoDto's own real source, so
-  // that view needs the name keyed map below rather than the id keyed
-  // one everything else here uses), and the online user picker
-  // openInviteView() builds. Keyed both ways up front so none of the
-  // three has to scan the array itself.
   let publicUsersById = {};
   let publicUsersByName = {};
   const publicUsersPromise = getPublicUsers()
@@ -339,9 +280,6 @@ export async function openGroupWatch() {
     chatView.appendChild(rankingContainer);
     chatView.appendChild(chatStatus);
 
-    // Grouplist gated the same way everywhere else this feature shows
-    // up: off, chat looks exactly as it always has, no trigger, no
-    // real ranking poll below either.
     if (isGrouplistEnabled()) {
       const pickTrigger = buildPickTrigger(function () {
         const participantIds = (group.Participants || [])
@@ -423,11 +361,6 @@ export async function openGroupWatch() {
       return node;
     }
 
-    // Refreshed alongside the chat poll below rather than a second real
-    // timer of its own: real feedback found live this same panel's own
-    // member count sat stale until the whole thing was closed and
-    // reopened, GET /SyncPlay/List is the one real place membership for
-    // a group this reader is not the only one in actually lives.
     async function refreshMembers() {
       try {
         const groups = await getSyncPlayGroups();
@@ -440,13 +373,6 @@ export async function openGroupWatch() {
       }
     }
 
-    // Real bug, audit-found: this panel can sit open for a whole real
-    // session, CHAT_POLL_MS appending a fresh DOM row on every tick with
-    // nothing ever removed, an unbounded real node count for a long
-    // enough watch. Same real cap the backend's own
-    // GroupWatchChatService.MaxMessagesPerGroup already enforces, so
-    // trimming here never drops anything the server has not already
-    // dropped on its own next poll response anyway.
     const MAX_CHAT_DOM_MESSAGES = 200;
 
     let lastMessageId = 0;
@@ -455,13 +381,6 @@ export async function openGroupWatch() {
       atBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight < 40;
     });
 
-    // A message carrying a real ItemId (screens/player.js's own send,
-    // right alongside the same real toast components/groupWatchInvites.js
-    // already shows the moment someone actually starts playback) renders
-    // as a real clickable watch card instead of a plain bubble: a reader
-    // who was not looking at the exact moment that toast appeared still
-    // has a real, permanent way to reach it from chat, same real
-    // navigateTo('#/play?...') that toast's own onClick already uses.
     function appendWatchCard(message, isOwn) {
       const row = el('div', 'jellio-group-watch-chat-message' + (isOwn ? ' jellio-group-watch-chat-message-own' : ''));
       if (!isOwn) row.appendChild(avatarNode(message.UserId, message.UserName));
@@ -489,7 +408,6 @@ export async function openGroupWatch() {
           card.insertBefore(img, card.firstChild);
         })
         .catch(function () {
-          // No art, still a real clickable card either way.
         });
     }
 
@@ -522,18 +440,6 @@ export async function openGroupWatch() {
       }
     }
 
-    // Real bug, live-reported: renderRankingSession rebuilt this whole
-    // container from scratch on every single poll tick regardless of
-    // whether the session had actually changed, CHAT_POLL_MS meaning a
-    // fresh set of option buttons (and a fresh poster fetch/redraw for
-    // each) every 3s the panel sat open. A click landing anywhere near
-    // that rebuild hit a node already torn down and replaced under it,
-    // reading back as "clicking an item does nothing", and the
-    // redundant poster churn was the real "images load slow" a reader
-    // actually saw. lastRankingSignature below is the fix: skip the
-    // rebuild entirely when this tick's session is identical to what is
-    // already on screen, real change (a new vote landing, a round
-    // advancing) is still exactly one rebuild, same as before.
     let lastRankingSignature = null;
 
     function onVote(itemId) {
@@ -673,16 +579,6 @@ export async function openGroupWatch() {
 
   backButton.addEventListener('click', showGroupList);
 
-  // quiet, when true, skips the "Loading groups…" flash and swallows a
-  // failed fetch rather than replacing the list with an error: real
-  // feedback found live a plain refresh() on a real interval (see
-  // startListPoll() below, the actual real fix for member counts and
-  // status sitting stale until the whole panel was closed and reopened)
-  // made the whole list flicker back to a loading state every real tick,
-  // reading as broken rather than live. lastGroupsSignature above is
-  // what actually stops the real rebuild itself from running every tick
-  // regardless of a quiet flag.
-  // Party cards: what each group is watching, how far in, who's there.
   function partyMembersNode(party) {
     const stack = el('div', 'jellio-party-avatars');
     (party.Participants || []).slice(0, 5).forEach(function (person) {

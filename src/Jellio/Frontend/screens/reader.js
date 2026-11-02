@@ -1,13 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// In-browser EPUB/PDF reader for a Jellyfin Book item. epub.js (with
-// JSZip) and pdf.js are vendored under Frontend/vendor and only loaded
-// when a book is actually opened. The file itself comes through
-// Controllers/ReadingController.cs as an ArrayBuffer, and where the reader
-// got to is saved back there (an EPUB CFI, or "page:N" for a PDF).
-//
-// Both formats sit behind one small reader interface (next/prev/goTo/
-// seek/search/toc/applySettings/resize/destroy) so the chrome around them
-// (panels, scrubber, keyboard, tap zones, immersive mode) is shared.
 import {
   getItem,
   getReadingProgress,
@@ -52,8 +43,6 @@ const SCRUB_STEPS = 1000;
 
 const THEMES = ['dark', 'sepia', 'light'];
 const THEME_LABELS = { dark: 'Dark', sepia: 'Sepia', light: 'Light' };
-// Colours applied inside the EPUB's own iframe, which the page's own CSS
-// cannot reach.
 const EPUB_THEMES = {
   dark: { body: { background: '#121212', color: '#e6e6e6' }, a: { color: '#8ab4f8' } },
   sepia: { body: { background: '#f4ecd8', color: '#433422' }, a: { color: '#7a4b12' } },
@@ -696,12 +685,6 @@ async function cropPageBorders(src, sidesOnly) {
   return blob ? URL.createObjectURL(blob) : src;
 }
 
-// Comic/manga volumes (CBZ): a zip of page images, opened with the same
-// vendored JSZip epub.js uses. Pages are the images in natural filename
-// order; ComicInfo.xml's <Manga> tag decides right-to-left when the
-// reader hasn't chosen a direction for this volume themselves.
-// source: the archive's bytes, or { chapterId, count } for a chapter
-// read straight from its source, page images loaded as they're needed.
 async function openComic(stage, source, savedLocator, settings, handlers, itemId) {
   const streamed = source && source.chapterId ? source : null;
   let zip = null;
@@ -964,9 +947,6 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     }
   }
 
-  // Long strip: every page stacked (with or without gaps), images loaded
-  // as they near the viewport; the page crossing the middle of the
-  // screen is "current".
   function renderVertical() {
     teardownVertical();
     renderToken++;
@@ -1442,9 +1422,6 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
   let allHighlights = [];
   let highlightBoxes = [];
 
-  // PDF locators are "pdf:<page>:<start>:<end>", character offsets into
-  // the page's text layer (its text nodes in order), which pdf.js lays
-  // out the same way every time a page renders.
   function parsePdfLocator(locator) {
     const match = /^pdf:(\d+):(\d+):(\d+)$/.exec(locator || '');
     if (match) return { page: Number(match[1]), start: Number(match[2]), end: Number(match[3]) };
@@ -1504,9 +1481,6 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
     });
   }
 
-  // The text layer's text nodes run lines together ("…is" + "thought"),
-  // so sentences and excerpts use a copy with a space wherever a span or
-  // line ends without one. offset maps a raw text-node offset into it.
   function spacedPageText(offset) {
     const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
     let spaced = '';
@@ -1615,8 +1589,6 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
     }
     if (token !== renderToken) return;
 
-    // A real text layer over the page image makes PDF text selectable
-    // and searchable, same as an EPUB's.
     textLayer.textContent = '';
     textLayer.style.setProperty('--scale-factor', String(cssScale));
     try {
@@ -1674,10 +1646,6 @@ async function openPdf(stage, buffer, savedLocator, settings, handlers) {
     return text;
   }
 
-  // Taps on the page image turn pages like an EPUB's; the text layer sits
-  // on top, so a tap that ends in a selection is left alone.
-  // Pinch to zoom the page (shown live, applied when the fingers lift),
-  // and a double tap to zoom in or back out.
   watchPinch(
     stage,
     function (ratio) {
@@ -2308,17 +2276,11 @@ export async function renderReader(root, params) {
   let reader = null;
   let totalPages = saved && saved.TotalPages ? saved.TotalPages : null;
 
-  // This sitting, for the Feed and reading achievements: the page it
-  // started on and the furthest page reached, sent when the reader
-  // leaves (or hides the tab), then carried on from there.
   let sessionStartPage = null;
   let sessionMaxPage = 0;
   let currentPageNumber = null;
   let finishedReported = false;
 
-  // Time actually spent reading: counted while the tab is visible and
-  // there was some input (a page turn, scroll, tap or key) in the last
-  // two minutes, so a reader left open overnight doesn't count.
   const READ_IDLE_MS = 120000;
   const READ_TICK_MS = 5000;
   let lastReadInput = Date.now();
@@ -2461,12 +2423,6 @@ export async function renderReader(root, params) {
     }
   }
 
-  // Left and right thirds turn the page, the middle hides the chrome
-  // (Apple Books/Audiobookshelf style). Scrolling layouts only take the
-  // middle tap; turning is the scroll itself.
-  //
-  // A tap is held back briefly: a double-click (or a drag) selecting a
-  // word must never also turn the page or hide the chrome.
   let tapTimer = null;
   function onTap(clientX, scrollingOnly, clickCount, hasSelection, clientY) {
     if (!reader) return;
@@ -2839,9 +2795,6 @@ export async function renderReader(root, params) {
 
   document.addEventListener('keydown', handleKey);
 
-  // Swipe to turn pages on touch screens; the EPUB's own iframe swallows
-  // its own touches, so this only fires on the chrome around it and on
-  // PDF pages.
   let touchStartX = null;
   body.addEventListener(
     'touchstart',
@@ -2880,9 +2833,6 @@ export async function renderReader(root, params) {
   }
   window.addEventListener('resize', handleResize);
 
-  // Full screen hides the toolbars too (a tap in the middle brings them
-  // back). Where the browser can't go full screen (iPhone Safari), the
-  // button just hides the toolbars.
   function syncFullscreenIcon() {
     const icon = fullscreenButton.querySelector('.material-icons');
     const on = !!document.fullscreenElement;
@@ -3421,9 +3371,6 @@ export async function renderReader(root, params) {
       );
     }
 
-    // Per book: which language it's written in (dictionary lookups filter
-    // to it; "Detect" learns it from the first translation). Global: the
-    // language translations come out in.
     const languageRow = el('div', 'jellio-reader-language');
     const bookLanguage = languageSelect(
       [{ value: 'auto', label: 'Detect' }].concat(LANGUAGES.map((code) => ({ value: code, label: languageLabel(code) }))),

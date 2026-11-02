@@ -1,13 +1,3 @@
-// Time-of-day copy table for the Shows library's own coverflow header.
-// Ported faithfully from Harbor's own src/views/shows/hero-curation.ts
-// (dayBucket(), the real BUCKET_VARIANTS copy table, and bucketCopy()'s
-// own day-of-year rotation formula), not a single-variant-per-bucket
-// simplification: Harbor rotates through 7 real copy variants per
-// bucket, picking one by day of year rather than holding one line
-// fixed all bucket long. The library's own real content pool never
-// changes because of any of this, matching Harbor's own real
-// buildShowHero(): bucketCopy() and the item pool are two separate
-// concerns over there, this file only ever ports the first.
 const BUCKET_ICONS = {
   morning: 'wb_sunny',
   afternoon: 'wb_cloudy',
@@ -190,11 +180,6 @@ export function showsEditorial(hour) {
   return { icon: BUCKET_ICONS[bucket], label: copy.kicker, tagline: copy.title, description: copy.subtitle };
 }
 
-// Harbor's own real mulberry32 PRNG, ported verbatim from
-// hero-curation.ts: seeds a Fisher-Yates shuffle deterministically, the
-// same seed producing the same order for everyone reading it in that
-// same bucket on that same day, rather than a plain Math.random() that
-// would reshuffle on every reload.
 function mulberry32(seed) {
   let s = seed >>> 0;
   return function () {
@@ -206,10 +191,6 @@ function mulberry32(seed) {
   };
 }
 
-// Harbor's own real seededShuffle(): reorders a pool without touching
-// which items are in it, the same real split its own buildShowHero()
-// keeps between "what's in the pool" (untouched here) and "what order
-// it renders in" (this).
 export function seededShuffle(items, seed) {
   const out = items.slice();
   const rand = mulberry32(seed);
@@ -222,10 +203,6 @@ export function seededShuffle(items, seed) {
   return out;
 }
 
-// Harbor's own real rotationSeed(): dayOfYear*4 plus the current
-// bucket's own index, a distinct seed for every (day, bucket) pair so
-// the shuffle above rolls over as the reader's own local time crosses
-// into a new bucket, not just once a day at midnight.
 export function rotationSeed() {
   const now = new Date();
   const bucket = dayBucket(now.getHours());

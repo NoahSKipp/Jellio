@@ -1,8 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Mihon's chapter settings for one series: filters (each off, only, or
-// without), the sort, and how a chapter is named. Changes apply as they
-// are made and are remembered per series (screens/mangaSeries.js saves
-// them); Set as default makes them the starting point for other series.
 import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioChapterSettings';

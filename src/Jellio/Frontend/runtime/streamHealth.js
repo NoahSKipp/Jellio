@@ -1,6 +1,3 @@
-// Streams that failed to play (an error, a placeholder clip, no picture),
-// remembered per title for a couple of days so the stream picker can flag
-// them and automatic retries skip them. Kept per browser.
 const KEY = 'jellio_bad_streams_v2';
 // Marks recorded on 2026-10-17, when a stalled stream cache made every stream
 // time out, flagged working releases bad for two days. The key bump drops them.
@@ -52,10 +49,6 @@ function save(map) {
   } catch (err) {}
 }
 
-// Key strictly by unique source.Id, and for multi-line scraper names
-// (which contain the exact release filename, size, indexer, and age on line 2+),
-// also key by the full trimmed release name so stale or duplicate sync rows of
-// the same dead release are all marked bad together.
 function keysFor(source) {
   const keys = [];
   if (!source) return keys;
@@ -66,7 +59,6 @@ function keysFor(source) {
   }
   return keys;
 }
-
 
 export function markBadSource(itemId, source, options) {
   const soft = !!(options && options.soft);
@@ -116,9 +108,6 @@ export function isBadSource(itemId, source) {
   });
 }
 
-// A clip far shorter than the title it stands in for: AIOStreams' "download
-// failed" video and similar placeholders run under three minutes against a
-// runtime of ten minutes or more.
 export function looksLikePlaceholder(actualSeconds, expectedSeconds) {
   if (!actualSeconds || !isFinite(actualSeconds) || actualSeconds <= 0 || !expectedSeconds) return false;
   if (actualSeconds > MAX_PLACEHOLDER_SECONDS) return false;

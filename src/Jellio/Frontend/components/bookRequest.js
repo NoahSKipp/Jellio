@@ -1,8 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// "Request a book" on the Books shelf: searches Chaptarr's metadata through
-// Controllers/BookRequestController.cs and adds the ebook or audiobook to
-// Chaptarr, which then searches for it. Collapsed behind one button until
-// opened, so it never crowds the shelf for readers who are just browsing.
 import { searchBooksToRequest, requestBook } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
 import { coverSrc } from '../runtime/util.js';
@@ -86,15 +82,6 @@ function buildResult(result, bookType, ebookLabel) {
   return card;
 }
 
-// bookType 'ebook' or 'audiobook' scopes the search and the request
-// buttons to that one format (the Books and Audiobooks shelves); omitted,
-// both are offered.
-//
-// options (all optional): label and placeholder override the wording
-// (the Manga shelf requests volumes as ebooks); initialQuery opens the
-// panel and searches straight away (Discover's "Request volumes");
-// ebookLabel renames the request button (a manga volume is just
-// "Request").
 export function buildBookRequestPanel(bookType, options) {
   const opts = options || {};
   const section = el('section', 'jellio-book-request');

@@ -53,22 +53,8 @@ const LIBRARY_ROUTES = {
   musicvideos: 'musicvideos',
 };
 
-// Real bug, found live: this used to point at native jellyfin-web's
-// own preferences route, never a real path app.js's own SCREENS table
-// recognizes, so Emby.Page.show() either landed on a native page this
-// runtime never reskinned or, on a build where that route no longer
-// exists at all, fell back to native's own home. screens/settings.js
-// is this runtime's own real settings screen, mounted at #/account
-// (app.js's own SCREENS.account), the one real hash that actually
-// reaches it.
 export const SETTINGS_LINK = { icon: 'settings', get label() { return t('nav_settings'); }, hash: '#/account' };
 
-// Every session always has these four, no real fetch behind any of
-// them: exported on its own so components/sidebar.js and components/
-// mobileNav.js can both paint them the instant either rail mounts,
-// same real getPrimaryNavLinks() output either surface already used
-// before, just no longer needing to wait on it first for the one part
-// of that output that was never actually conditional on anything.
 export const FIXED_NAV_LINKS = [
   { icon: 'home', get label() { return t('nav_home'); }, hash: '#/home' },
   { icon: 'search', get label() { return t('nav_search'); }, hash: '#/search' },
@@ -86,12 +72,6 @@ function libraryHash(view) {
   return '#/list?parentId=' + view.Id;
 }
 
-// Anime's own link is Shows' own hash with '&jellioKind=anime' appended
-// (libraryHash() + that marker), so Shows' hash is a literal string
-// prefix of Anime's. A plain prefix check lit up both buttons the
-// moment Anime was the active route, reported live. Requiring the same
-// jellioKind presence on both sides before trusting a prefix keeps the
-// two apart without needing every caller to change what it passes in.
 export function isActive(hash) {
   const current = currentHash();
   if (hash === '#/home') return current === '#/home' || current === '#/' || current === '';
@@ -113,28 +93,9 @@ export async function getMangaShelfHash() {
   return source ? libraryHash(source) + '&bookKind=manga' + (mangaView ? '&mangaLibrary=1' : '') : null;
 }
 
-// The primary link set both surfaces share: Home/Search/Watchlist/Feed,
-// the reader's own real libraries (Movies/Shows/Anime called out first,
-// same real constraint components/sidebar.js's own header already
-// documents for Anime specifically), then everything else they have.
-// Group Watch, Now Playing, and the profile/settings pair are each
-// surface's own job to add on top of this, not part of the shared set:
-// the mobile pill bar drops the first two entirely (real feedback,
-// screen space a phone does not have to spare on two rarely used
-// buttons), and profile needs its own async avatar paint neither
-// surface should duplicate a second copy of.
 export async function getPrimaryNavLinks() {
   const links = FIXED_NAV_LINKS.slice();
 
-  // Fired here, not awaited: real feedback was that Anime specifically
-  // took visibly longer to appear than Movies/Shows just below, this
-  // whole function's own return blocked on the exact real catalog
-  // check now removed from it (see the Anime block's own header).
-  // Still worth starting this early rather than not at all, cached
-  // (the same one preloadInitialData()'s own "Streaming services" task
-  // already fires) so screens/library.js's own renderAnime(), the real
-  // place that check now lives, likely finds it already warm the
-  // instant a reader actually clicks through.
   getCollections().catch(function () {
     return [];
   });
@@ -159,25 +120,6 @@ export async function getPrimaryNavLinks() {
   if (moviesView) links.push({ icon: 'movies', label: t('nav_movies'), hash: libraryHash(moviesView) });
   if (tvView) links.push({ icon: 'shows', label: t('nav_shows'), hash: libraryHash(tvView) });
 
-  // Anime has no real Jellyfin library of its own: Gelato resolves one
-  // global SeriesPath for every series import (GelatoManager.TryGetSeriesFolder),
-  // so AniList titles physically live in the TV library. A real Anime
-  // view wins if one was made by hand; otherwise fall back to the TV
-  // library tagged with &jellioKind=anime, the same marker
-  // screens/library.js reads. Ported from the original codebase's own
-  // persistentSidebar.js, not re-derived.
-  //
-  // Real feedback: this used to wait on a real getCollections() round
-  // trip first, only ever pushing the fallback link once that had
-  // confirmed a real anime/anilist catalog actually existed, so Anime
-  // sat conspicuously slower to appear than Movies/Shows just above,
-  // sometimes long enough to read as broken rather than loading.
-  // Pushed now the same instant Shows is, the same real bet every
-  // other library link here already makes that its own destination
-  // has something behind it: a server with no real anime catalogs
-  // still gets a real link, screens/library.js's own renderAnime() is
-  // the one place that check, and its own real empty state, actually
-  // lives now, behind a real loading skeleton rather than nothing.
   if (realAnimeView) {
     links.push({ icon: 'anime', label: t('nav_anime'), hash: libraryHash(realAnimeView) });
   } else if (tvView) {
@@ -209,20 +151,11 @@ export async function getPrimaryNavLinks() {
   views.forEach(function (view) {
     if (view === moviesView || view === tvView || view === realAnimeView) return;
     if (!view.CollectionType) return;
-    // The boxsets library ("Collections" in the native library list) has
-    // no real screen behind it here, streamingHub.js's own collections
-    // work covers the same real content already, so it earns no nav
-    // link at all rather than one that goes nowhere useful, real
-    // feedback asked for it gone outright, not just deprioritised.
     if (view.CollectionType === 'boxsets') return;
     if (view.CollectionType === 'livetv') {
       links.push({ icon: 'live_tv', label: t('nav_live_tv'), hash: '#/livetv' });
       return;
     }
-    // One Jellyfin Books library holds both ebooks and audiobooks; they
-    // get a shelf each. A Books library named for manga or comics is its
-    // own Manga shelf instead. group: 'reading' puts these after the
-    // video libraries, below their own divider.
     if (view.CollectionType === 'books') {
       if (view === mangaView) return;
       links.push({ icon: 'auto_stories', label: t('nav_books'), hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
@@ -241,11 +174,6 @@ export async function getPrimaryNavLinks() {
   return links;
 }
 
-// Real icon if one is drawn (SVG_ICONS above), a Material Icons font
-// ligature otherwise (home/bookmark_add/settings/account_circle, none of
-// which have their own vector drawable here): the one place either
-// surface needs to resolve an icon name to a real element, so both
-// stay visually identical for the same name.
 export function buildIconElement(icon) {
   const svgDef = SVG_ICONS[icon];
   let iconEl;
@@ -287,21 +215,12 @@ async function paintAvatar(iconMount) {
   }
 }
 
-// Every mount either surface has built so far, painted the moment a
-// real avatar changes: components/avatarPicker.js's own onChanged
-// callback calls this directly (screens/settings.js wires it up), the
-// same live requery pattern components/nowPlaying.js already uses for
-// its own badge rather than something that waits on a rebuild that no
-// longer routinely happens on either rail.
 export function refreshProfileAvatar() {
   document.querySelectorAll('.jellio-nav-avatar-mount').forEach(function (mount) {
     paintAvatar(mount);
   });
 }
 
-// A profile button both surfaces can drop straight into their own
-// link row: same avatar mount class every paint (this file's own,
-// initial or refreshed) can find later.
 export async function buildAvatarIconMount() {
   const iconMount = document.createElement('span');
   iconMount.className = 'jellio-nav-avatar-mount';

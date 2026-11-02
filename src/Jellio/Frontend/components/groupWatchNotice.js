@@ -1,13 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// A bigger, harder to miss real notification for the two Group Watch
-// events that actually need a reader's attention (an invite, or the
-// group just starting something), components/toast.js's own plain
-// single line undersells either: real feedback found live both read as
-// background noise, easy to miss or dismiss before actually reading
-// what it said. Same real self starting singleton lifecycle toast.js
-// already has, one instance for the whole page, module level so
-// components/groupWatchInvites.js's own poll and watch-target listener
-// both share it without either needing to hold a reference.
 
 import { el } from '../runtime/dom.js';
 
@@ -36,12 +27,6 @@ function hideGroupWatchNotice() {
   }
 }
 
-// options: { icon, header, text, imageUrl, onClick }. icon is a
-// material-icons glyph name, used when imageUrl is not given (an
-// invite has no real poster of its own to show, the watching notice
-// does). onClick, when given, makes the whole card itself the real
-// shortcut this exists for in the first place, same real convention
-// toast.js's own showToast() already uses.
 export function showGroupWatchNotice(options) {
   const node = ensureNotice();
   node.textContent = '';

@@ -1,7 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Persistent audiobook session controller and mini-player dock component.
-// Manages singleton audio playback, Jellyfin progress reporting, MediaSession API,
-// and floating mini-player dock across navigation.
 import {
   reportPlaybackStart,
   reportPlaybackProgress,
@@ -45,10 +42,6 @@ function saveAudiobookVolume(volume, muted) {
   } catch (err) {}
 }
 
-// Spotify style: hovering a progress bar shows the time (and chapter) a
-// click there jumps to, and lights the bar up to that point when a
-// hoverFill is given. The readout sits on the page itself, so a player
-// that clips its own edges doesn't cut it off.
 export function attachScrubPreview(track, hoverFill) {
   let tip = null;
   function hide() {
@@ -78,9 +71,6 @@ export function attachScrubPreview(track, hoverFill) {
   track.addEventListener('click', hide);
 }
 
-// Volume: a mute button and a slider, for the mini player and the full
-// player alike. Saved for next time, and every control on screen (and
-// the keyboard shortcuts) stays in step through jellio:audiobook-volume.
 export function setAudiobookVolume(volume, muted) {
   const v = Math.min(1, Math.max(0, volume));
   if (activeSession && activeSession.audio) {

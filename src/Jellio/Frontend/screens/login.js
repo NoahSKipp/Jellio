@@ -1,18 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// This runtime's own login screen, a real replacement for native
-// jellyfin-web's login page rather than an overlay injected on top of
-// it. The original codebase's own version (js/loginProfiles.js, now
-// removed there) had to inject into native's #loginPage DOM and finish
-// with a full page reload so native's own ApiClient/ConnectionRequired
-// boot cycle picked the new session up, and that reload is exactly what
-// broke it: reload re-ran jellyfin-apiclient-javascript's own
-// validateAuthentication(), which sends a bare legacy header a real
-// deployment rejected, wiping the token and bouncing back to the very
-// screen quick sign-in was meant to skip. This runtime has no such
-// dependency: auth.js keeps its own session, independent of native
-// ApiClient, so a successful sign in here only ever needs to call
-// setSession and let app.js's own sync() pick it up, real endpoints
-// only, no reload anywhere in the path.
 import {
   authenticateByName,
   getRememberedUsers,
@@ -28,14 +14,6 @@ import { getUserImageUrl, updateUserPassword, getOnlineUserIds } from '../runtim
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
-// The one real completion signal this screen can give: navigate to
-// #/home (a real route, so its own hashchange fires app.js's sync()),
-// and also poke the same jellio:session-captured event app.js already
-// listens for, in case the hash was already #/home and never changed
-// (the common case on first load, before any route has a real value
-// yet, when a bare hash assignment of the same string is a no-op).
-// A shared link opened while signed out: remembered here so signing in
-// lands on that title instead of Home.
 const landingHash = /^#\/(item|books|read|listen)\b/.test(window.location.hash) ? window.location.hash : null;
 
 function completeSignIn() {
@@ -43,12 +21,6 @@ function completeSignIn() {
   document.dispatchEvent(new CustomEvent('jellio:session-captured'));
 }
 
-// Quick Connect is still a real native login page feature this screen
-// does not reimplement (the public user grid and forgot password
-// below both are, real feedback asked for each directly), so this
-// stays reachable everywhere on the screen rather than only from the
-// manual form: a remembered or public profile's own owner may still
-// need it, not only someone with no profile visible at all.
 function buildBypassLink() {
   const link = el('button', 'jellio-login-cancel', t('auth_classic_signin'));
   link.type = 'button';
@@ -129,16 +101,6 @@ function buildManualForm(options) {
   return form;
 }
 
-// Step 1 of 2: a real username, POSTed to /Users/ForgotPassword
-// (runtime/auth.js's own requestPasswordReset, real endpoint, not
-// guessed at). The server's own real response is deliberately the
-// same regardless of whether that username exists at all (that
-// file's own header explains why, straight from Jellyfin's own real
-// source), so the message here has to stay exactly as generic, or it
-// would hand back out the one thing the server itself stopped
-// leaking. jfa-go (already configured server side by whoever runs
-// this server, not something this runtime talks to directly) is what
-// actually turns a real reset into a real email from here.
 function buildForgotUsernameForm(prefillUsername, onRequested, onCancel) {
   const form = document.createElement('form');
   form.className = 'jellio-login-form';
@@ -190,16 +152,6 @@ function buildForgotUsernameForm(prefillUsername, onRequested, onCancel) {
   return form;
 }
 
-// Step 2 of 2: the code the reader's own inbox just received, plus
-// the real new password to end on. A real successful redeem clears
-// the account's own password server side rather than setting the one
-// asked for here, real Jellyfin behaviour (PinRedeemResult, real
-// source, only a bare Success boolean, nothing about a chosen
-// password at all), so this signs back in with a blank one the
-// moment that succeeds and immediately calls updateUserPassword with
-// the real new one, the same two real calls the stock profile page's
-// own equivalent flow already makes for the same reason, before
-// finally completing sign in.
 function buildForgotPinForm(username, onCancel) {
   const form = document.createElement('form');
   form.className = 'jellio-login-form';
@@ -299,16 +251,6 @@ function renderForgotPassword(container, prefillUsername, onCancel) {
   );
 }
 
-// Real feedback asked for the profile tiles to enter one after another
-// rather than all at once, "like in the Nuvio app". Nuvio's own real
-// source was not reachable to confirm the exact timing (checked
-// NuvioWeb, the project's own primary reference per the project's architecture; its
-// "who's watching" screen, js/core/profile/profileSelectionScreen.js,
-// carries no such per tile stagger to port), so this is a standard
-// staggered grid entrance built directly rather than a port, index
-// order matching left to right, top to bottom reading order, capped
-// (STAGGER_STEP_MS * STAGGER_MAX below) so a long remembered list does
-// not leave the last tile waiting a full second to appear.
 const STAGGER_STEP_MS = 55;
 const STAGGER_MAX = 10;
 
@@ -362,20 +304,10 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   avatarWrap.appendChild(avatar);
   avatarWrap.appendChild(remove);
 
-  // Same real badge components/accountSwitcher.js's own switch-profile
-  // panel already shows for exactly this case (a real remembered token,
-  // no password needed), real feedback asked for this screen to carry
-  // the same tell rather than every tile here looking identical
-  // regardless of whether tapping it signs in immediately or still
-  // needs a password first (components/accountSwitcher.js's own header
-  // explains why "quick" is worth marking at all).
   const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
   badge.setAttribute('aria-hidden', 'true');
   avatarWrap.appendChild(badge);
 
-  // Real ISessionManager session for this user right now (runtime/api.js's
-  // own getOnlineUserIds), same real source and same real dot
-  // components/accountSwitcher.js's own panel already shows.
   if (online) {
     const dot = el('span', 'jellio-account-switcher-online-dot');
     dot.setAttribute('aria-hidden', 'true');
@@ -390,19 +322,6 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   return wrap;
 }
 
-// A user visible here has never necessarily signed in on this device
-// before (getPublicUsers() in runtime/auth.js only mirrors a real
-// admin's own "Display this user on the login screen" toggle, server
-// side), so there is no remembered AccessToken to reuse the way
-// quickSignIn() does for a tile in the other list. HasPassword is a
-// real, if formally obsolete, UserDto field jellyfin-web's own login
-// page still checks the same way before deciding whether a password
-// is even worth asking for; AuthenticateByName with an empty Pw is
-// the same real request a passwordless account's own native sign in
-// already sends. Either path ends by calling setSession, which
-// rememberUser()s this same profile on the way, so the very next
-// visit finds it in the other list instead, with a real quick sign-in
-// token this time.
 function buildPublicUserTile(user, index, onNeedsPassword, online) {
   const wrap = el('div', 'jellio-login-profile');
   applyStagger(wrap, index);
@@ -443,12 +362,6 @@ function buildPublicUserTile(user, index, onNeedsPassword, online) {
 
   avatarWrap.appendChild(avatar);
 
-  // Same real badge/dot buildProfileTile() above now carries, mirroring
-  // components/accountSwitcher.js's own switch-profile panel: a
-  // passwordless public user signs in here exactly as instantly as a
-  // remembered one does (the branch above), so it earns the same real
-  // "quick" tell instead of looking identical to a tile that still
-  // needs a password typed first.
   if (!hasPassword) {
     const badge = el('span', 'jellio-account-switcher-quick-badge material-icons bolt');
     badge.setAttribute('aria-hidden', 'true');
@@ -489,10 +402,6 @@ function buildAddTile(index, onClick) {
   return wrap;
 }
 
-// Remembered wins on overlap: that entry carries a real AccessToken
-// (quickSignIn, one click, no password redone), where a public-only
-// listing for the same real user has never signed in on this device
-// and could only ever offer the slower authenticateByName path below.
 function publicOnlyUsers(remembered, publicUsers) {
   return publicUsers.filter(function (user) {
     return user && user.Id && !remembered[user.Id];
@@ -581,19 +490,11 @@ export async function renderLogin(root) {
   const screen = el('div', 'jellio-login-screen');
   root.appendChild(screen);
 
-  // Neither real fetch depends on the other's result. allSettled rather
-  // than Promise.all, same real reason components/accountSwitcher.js's
-  // own header already gives: a missing/failed online-ids fetch below
-  // is only ever a missing dot, not worth losing the whole picker over.
   const [publicUsersResult, onlineIdsResult] = await Promise.allSettled([getPublicUsers(), getOnlineUserIds()]);
 
   let publicUsers = [];
   if (publicUsersResult.status === 'fulfilled') {
     publicUsers = publicUsersResult.value;
-    // Real fix: drops a remembered tile for a user later hidden or
-    // deleted server side, see this function's own header in
-    // runtime/auth.js. Only reached once the fetch above actually
-    // succeeded, same real guard that file's own header explains.
     pruneHiddenRememberedUsers(publicUsers);
   }
 

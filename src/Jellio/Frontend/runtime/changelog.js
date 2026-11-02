@@ -1,7 +1,3 @@
-// What's New changelog definitions and tracking for Jellio Web.
-// Updated on releases so users can inspect release notes in Settings -> About,
-// while notifications are restricted strictly to big releases (1.4X.0) so users
-// are not alerted on small patch releases.
 import { getCurrentUserId } from './auth.js';
 
 function isBigRelease(version) {

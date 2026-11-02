@@ -1,11 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Discover (#/discover?kind=ebook|audiobook&parent=<library id>): browse
-// books to request instead of having to know what to search for. Rows
-// built from the reader's own shelf (more by the authors they read, the
-// genres they read) and what's trending, plus genre chips and an author
-// search that open a full grid. Everything comes from Open Library via
-// Controllers/BookRequestController.cs's discover endpoint, and every card
-// requests through Chaptarr exactly like a search result.
 import {
   discoverBooks,
   requestBook,

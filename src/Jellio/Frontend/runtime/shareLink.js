@@ -1,6 +1,3 @@
-// A link to a title that anyone with an account on this server can open:
-// this app's own address plus the title's page. Someone not signed in is
-// asked to sign in first and then lands on it (screens/login.js).
 function buildShareUrl(item) {
   const base = window.location.origin + window.location.pathname;
   return base + '#/item?id=' + encodeURIComponent(item.Id);

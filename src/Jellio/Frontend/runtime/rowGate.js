@@ -1,7 +1,3 @@
-// Catalog and genre rows load at most two at a time, top of the page
-// first, until the recommendation rows are in, so those requests always
-// find a free slot in runtime/api.js's limiter instead of queueing behind
-// twenty row loads; then the gate opens.
 export function createRowGate(width) {
   const waiting = [];
   let running = 0;

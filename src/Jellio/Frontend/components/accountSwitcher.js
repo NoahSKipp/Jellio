@@ -1,13 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Quick profile switcher, opened from the sidebar/mobile nav's own Profile
-// button. Real feedback: Profile and Settings both just navigated to the
-// same #/account screen, no real second job of its own. Real reference,
-// per the project's architecture: JMSFusion/MonWUI's own account switcher.
-// screens/login.js already builds this exact "who's watching" grid (remembered
-// users, public users, add tile) for the signed-out case; this overlay reuses
-// its same real CSS (.jellio-login-profile*) rather than a second visual
-// language, laid out as a small floating panel instead of a full screen since
-// switching mid-browse should not need leaving the page first.
 import {
   getCurrentUser as getSessionUser,
   getRememberedUsers,
@@ -38,33 +29,6 @@ function closeAccountSwitcher() {
   document.removeEventListener('keydown', handleKeydown);
 }
 
-// Real bug, found live: this used to call window.location.reload()
-// here, on the real assumption a full reload was the simplest way to
-// get every screen's own already-fetched state onto the newly signed
-// in user. Real feedback (a real repro): that reload landed straight
-// back on a real sign-in screen instead, every time. runtime/auth.js's
-// own header already documents exactly why: a full reload re-runs
-// native jellyfin-web's own boot sequence, ConnectionManager
-// construction included, and that is the one real path this whole
-// architecture was built to stay off (that file's own words: "the
-// exact mechanism that later got pulled", a bare legacy header a real
-// deployment rejected, wiping the token and bouncing back to the very
-// screen quick sign-in was meant to skip). setSession's own real
-// syncNativeApiClientState call already keeps native's own in-memory
-// ApiClient state correct with no reload at all, screens/login.js's
-// own completeSignIn() already proves that path out live for a fresh
-// sign in, and this now does exactly what that function does instead:
-// a soft real navigation plus the same jellio:session-captured event
-// app.js's own sync() already listens for, no reload anywhere.
-// clearCache() covers the one real gap that path does not: several of
-// runtime/api.js's own cache keys (a plain item lookup chief among
-// them) carry no userId at all, real data that is still fresh, just
-// for the wrong real reader the instant this switches accounts.
-// Rebuilding the sidebar/mobile nav from scratch is the other real
-// gap, both rails' own "build once" real fast path (components/
-// sidebar.js's own header explains why it exists) has no live update
-// path for an entirely different signed in user, only for that same
-// user's own avatar or active link changing.
 function switchToUser(button, promiseFactory, status) {
   button.disabled = true;
   promiseFactory()
@@ -93,13 +57,6 @@ function applyStagger(wrap, index) {
   }
 }
 
-// quick marks a tile whose own onClick actually completes the switch
-// right here (a remembered token, or a real passwordless public user):
-// real feedback asked for a way to tell those apart from a tile that
-// only looks the same but actually just signs the reader out to a
-// full real sign-in screen underneath (a public user Jellyfin itself
-// says needs a real password, this file's own openAccountSwitcher()
-// already treats differently, just invisibly until now).
 function buildProfileTile(userId, name, imageTag, onClick, quick, online, index) {
   const wrap = el('div', 'jellio-login-profile');
   applyStagger(wrap, index);
@@ -122,13 +79,6 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online, index)
 
   avatarWrap.appendChild(avatar);
 
-  // Top left, real feedback: no way to look at another user's own
-  // profile (badges, activity) without actually switching into their
-  // own session first. A plain button here instead, stopping
-  // propagation so it never also fires avatar's own click above,
-  // closes this overlay and hands off to #/profile?id=X, the same
-  // real profile page Settings' own "View profile" row already opens
-  // for the signed in reader's own id.
   const viewProfile = document.createElement('button');
   viewProfile.type = 'button';
   viewProfile.className = 'jellio-account-switcher-view-profile';
@@ -149,12 +99,6 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online, index)
     avatarWrap.appendChild(badge);
   }
 
-  // Top right, the quick sign-in badge's own bottom right mirrored: a
-  // real active ISessionManager session for this user right now
-  // (runtime/api.js's own getOnlineUserIds), not anything this device
-  // remembers, so it stays correct switching between two remembered
-  // profiles that are not actually the reader currently signed in
-  // somewhere else.
   if (online) {
     const dot = el('span', 'jellio-account-switcher-online-dot');
     dot.setAttribute('aria-hidden', 'true');
@@ -179,11 +123,6 @@ function buildAddTile(index) {
   const icon = el('span', 'material-icons add');
   icon.setAttribute('aria-hidden', 'true');
   avatar.appendChild(icon);
-  // No manual credential form lives in this overlay: screens/login.js's
-  // own picker already has one, and reaching it needs signing the
-  // current profile out first regardless (the login screen only ever
-  // renders while unauthenticated, app.js's own real route guard), same
-  // as picking "add account" on most every other real client.
   avatar.addEventListener('click', function () {
     closeAccountSwitcher();
     logout();
@@ -228,13 +167,6 @@ export async function openAccountSwitcher() {
   const info = el('div', 'jellio-account-switcher-current-info');
   info.appendChild(el('div', 'jellio-account-switcher-current-name', (current && current.Name) || t('status_signed_in')));
   const actions = el('div', 'jellio-account-switcher-current-actions');
-  // Real feedback: reaching one's own profile used to live only in
-  // Settings, one real click most readers never make on the way there.
-  // Same real destination buildProfileTile's own viewProfile button
-  // already opens for every OTHER tile in this exact panel, just for
-  // the signed in reader's own id instead, sitting here above the
-  // grid rather than inside it since there is no tile of its own to
-  // anchor to.
   const viewProfile = el('button', 'jellio-settings-button', t('settings_view_profile'));
   viewProfile.type = 'button';
   viewProfile.addEventListener('click', function () {
@@ -283,30 +215,17 @@ export async function openAccountSwitcher() {
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
 
-  // Neither real fetch depends on the other's result, but used to be
-  // awaited one after the other regardless, the whole grid waiting on
-  // the sum of both round trips instead of just the slower one.
-  // allSettled rather than Promise.all: each already tolerates its own
-  // failure independently below, the same non-fatal shape neither
-  // should lose just because it now starts alongside the other.
   const [publicUsersResult, onlineIdsResult] = await Promise.allSettled([getPublicUsers(), getOnlineUserIds()]);
 
   let publicUsers = [];
   if (publicUsersResult.status === 'fulfilled') {
     publicUsers = publicUsersResult.value;
-    // Real fix: drops a remembered tile for a user later hidden or
-    // deleted server side, see this function's own header in
-    // runtime/auth.js. Only reached once the fetch above actually
-    // succeeded, same real guard that file's own header explains.
     pruneHiddenRememberedUsers(publicUsers);
   }
   // Read fresh rather than earlier: the call above can have just
   // pruned it.
   const remembered = getRememberedUsers();
 
-  // A missing/failed fetch just means no tile shows an online dot this
-  // open, same non-fatal shape as publicUsers above, not worth blocking
-  // the rest of this overlay over.
   const onlineIds = new Set(onlineIdsResult.status === 'fulfilled' ? onlineIdsResult.value : []);
 
   let tileIndex = 0;

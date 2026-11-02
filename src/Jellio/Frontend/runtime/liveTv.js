@@ -1,6 +1,3 @@
-// Live TV data shaping, kept free of DOM and network so it can be tested
-// on its own. Channel ids are stable (tvg id); channel numbers are not, so
-// nothing here keys or remembers anything by number.
 
 const HOUR_MS = 60 * 60 * 1000;
 export const GUIDE_HOURS = 24;
@@ -28,9 +25,6 @@ function mapProgramme(dto, nowMs) {
   };
 }
 
-// Channel names are the only signal for type and language (the M3U carries
-// no groups through Jellyfin), e.g. "Sky Sports F1 UK", "RTL Germany",
-// "ESPN Deportes". Unknown stays unknown rather than guessed.
 const SPORTS = /\b(sports?|deportes?|desporto|esporte|espn|bein|dazn|eurosport|f1|formula ?1|nba|nfl|nhl|mlb|golf|tennis|cricket|rugby|boxing|ufc|wwe|racing|motogp|supersport|tsn|sportsnet|premier league|laliga|ligue ?1|bundesliga|serie a|eleven|setanta|willow|polsat sport|movistar|match!?|nova sport|digi sport|sportklub|viaplay|ziggo|arena|sky sport|tnt sport|fox sport|cbs sports|nbc sports|astro|ptv sports|stars? sports|sportv|claro sports|tudn|nfl network|redzone|racing tv|sky racing)\b|sport|espn|\btsn\d|laliga|soccer|\bfoot\b|fight network|canal\+ extra|premier brasil/i;
 
 const LANGUAGES = [
@@ -215,9 +209,6 @@ export function neighbourChannel(list, currentId, delta) {
   return list[next];
 }
 
-// One live stream at a time: opening a channel closes the one before it,
-// and stop() always closes whatever is open, once. open(channelId) must
-// resolve to { liveStreamId, ... }; close(liveStreamId) may fail quietly.
 export function createLiveLifecycle(open, close) {
   let current = null;
   let generation = 0;

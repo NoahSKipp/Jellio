@@ -1,46 +1,10 @@
 import { t } from '../runtime/i18n.js';
-// Only ever opens once runtime/grouplistSettings.js's own
-// isGrouplistEnabled() is on: components/card.js's own watchlist
-// button and screens/detail.js's own version of it both call this
-// instead of toggling Watchlist directly the instant that setting is
-// on, real feedback's own explicit ask for a way to add to either or
-// both without two separate real actions. Off, both buttons keep
-// their own plain instant toggle, unchanged, real feedback's own
-// explicit ask too: a reader who never turns Grouplist on should see
-// nothing different at all.
 import { toggleWatchlist } from './cardOptionsMenu.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
 import { el } from '../runtime/dom.js';
 
 const MENU_ID = 'jellioListMembershipMenu';
 
-// Real bug, found live: screens/detail.js's own expanded-actions row
-// has its own separate real "click outside collapses it" listener,
-// checking only whether a click landed inside that row's own real DOM
-// subtree. This menu is appended straight to document.body instead (the
-// same real clamp-to-viewport positioning components/cardOptionsMenu.js's
-// own menu already needs), a real sibling of that row rather than a
-// descendant of it, so a genuine click on Watchlist/Grouplist inside
-// this menu read as "outside" the actions row that opened it, collapsing
-// that row (and, with its own real anchor button now gone from the
-// layout, this menu along with it) the instant a reader tried to check
-// either box. Exported so any caller with its own competing outside-
-// click guard can recognize this menu as part of the same real
-// interaction rather than something foreign to it.
-//
-// Real bug, round two, found live: fixing detail.js's own guard to skip
-// event.target when it lands inside this menu stopped the menu itself
-// closing, but its own actions row still collapsed - real evidence that
-// whatever real event this specific TV/remote platform actually
-// dispatches for a D-pad Select on a focused checkbox does not carry
-// the real target this file's own code assumed (some platforms
-// synthesize it at a stale or unrelated coordinate rather than
-// dispatching it through the real focused element the way a genuine
-// pointer/touch interaction would). document.activeElement has no such
-// platform-dependent ambiguity: paint()/the click handler below never
-// blurs these checkbox buttons mid-toggle, so whichever one the reader
-// just activated is still the real focused element regardless of what
-// event.target claims, and this second check catches it either way.
 export function isInsideListMembershipMenu(target) {
   const menu = document.getElementById(MENU_ID);
   if (!menu) return false;
@@ -65,9 +29,6 @@ function handleOutsideClick(event) {
   closeMenu();
 }
 
-// Same real clamp-to-viewport shape components/cardOptionsMenu.js's
-// own positionMenu already uses, short enough not to share rather than
-// import a private helper across files for eight lines.
 function positionMenu(menu, anchorRect) {
   const menuWidth = 220;
   let left = anchorRect.left;
@@ -79,10 +40,6 @@ function positionMenu(menu, anchorRect) {
   menu.style.top = top + 'px';
 }
 
-// Stays open after a click, real reason a menu of one-shot actions
-// (components/cardOptionsMenu.js's own) closes on click and this does
-// not: checking Watchlist should not need reopening this to also
-// check Grouplist.
 function buildToggleOption(label, checked, onToggle) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -121,8 +78,6 @@ export function openListMembershipMenu(item, anchorRect, onChanged) {
 
   const menu = document.createElement('div');
   menu.id = MENU_ID;
-  // Same real floating card shell components/cardOptionsMenu.js's own
-  // menu already uses, css/app.css has no reason to draw it twice.
   menu.className = 'jellio-card-options-menu';
   menu.setAttribute('role', 'menu');
   positionMenu(menu, anchorRect);
@@ -139,10 +94,6 @@ export function openListMembershipMenu(item, anchorRect, onChanged) {
     ),
   );
 
-  // Painted false until ensureGrouplistIdsLoaded() below actually
-  // resolves (a reader opening this for the very first time this
-  // session), repainted the moment it does rather than making every
-  // click wait on that real round trip first.
   const grouplistRow = buildToggleOption(
     'Grouplist',
     isOnGrouplistSync(item.Id),

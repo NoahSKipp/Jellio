@@ -1,12 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// The reader's study layer: select text to highlight it, add a note,
-// look a word up (Wiktionary), translate it (DeepL, when the server has a
-// key), or save it to the vocabulary deck (screens/vocab.js). Also owns
-// bookmarks, the Notes panel and the per-book language. Format-specific
-// work (turning a selection into a locator, drawing highlights) stays in
-// screens/reader.js's EPUB/PDF adapters; this file only talks to them
-// through onSelect/setHighlights/onHighlightClick/positionOf/goToLocator/
-// currentLocator/isBookmarkHere.
 import {
   getAnnotations,
   addAnnotation,
@@ -53,9 +45,6 @@ function bookLangKey(itemId) {
   return 'jellio-reader-lang:' + itemId;
 }
 
-// A book's own language when the reader set one (or translation learned
-// it), else the default from Settings, Reading: "auto" lets DeepL detect
-// it from the text.
 function readBookLanguage(itemId) {
   try {
     const saved = localStorage.getItem(bookLangKey(itemId));
@@ -85,9 +74,6 @@ export function writeDefaultBookLanguage(lang) {
   }
 }
 
-// The language translations go into: the reader's own setting
-// (screens/reader.js keeps it in its settings under this key), so
-// Settings, Reading and the reader's panel change the same thing.
 const READER_SETTINGS_KEY = 'jellio-reader-settings';
 
 export function readTargetLanguage() {

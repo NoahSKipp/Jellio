@@ -1,7 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Mihon-style categories on the book shelves (runtime/shelf.js): a
-// checklist for putting series or books into categories, and a dialog
-// for adding, renaming, reordering and deleting them.
 import {
   loadShelf,
   createCategory,

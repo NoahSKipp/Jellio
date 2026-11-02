@@ -1,9 +1,3 @@
-// Cast & Smart TV Streaming Manager:
-// Provides discovery and control for:
-// 1. Jellyfin Smart TV clients (Android TV, Google TV, LG webOS, Samsung Tizen, Roku, Fire TV, Apple TV)
-// 2. Google Cast (Chromecast / Android TV / Google TV / Cast-enabled Smart TVs) via Cast SDK
-// 3. W3C Remote Playback API (video.remote) for wireless display streaming
-// 4. Apple AirPlay for Apple TV and AirPlay 2 compatible Smart TVs
 import { getDeviceId } from './auth.js';
 import {
   getRemoteSessions,

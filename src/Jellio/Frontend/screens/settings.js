@@ -1,29 +1,3 @@
-// Settings, this runtime's own screen, the sidebar's Settings link's
-// own real destination (components/navShared.js's own SETTINGS_LINK,
-// #/account). A category sidebar (Account/Playback/Reading/Sessions/
-// Display/About)
-// switches which of this file's own section builders below render into
-// the content pane, one category at a time, real feedback that this
-// page belonged in real defined groups on its own screen rather than
-// one long flat column of every section stacked in a row (see
-// buildAccountCategory's own header for why these four rather than a
-// blind copy of some other real reference's own category names).
-// Covers only what has a real, confirmed endpoint and a clear place in
-// one of them, the same discipline every other screen in this codebase
-// already follows. Remember my stream choice is the one real exception
-// to "a confirmed endpoint": components/streamPicker.js's own
-// preference has no server side concept at all, client only, same as
-// screens/player.js's own subtitle style.
-//
-// Real feedback pass, second round: the original flat "label above a
-// full width input, every section its own plain stack" layout read as
-// a bare form, not a settings screen. Every card/row builder below
-// (buildCard/buildRow/buildActionRow/buildToggleRow/buildSelectRow)
-// exists so each real section becomes one grouped list card (Nuvio's
-// own Settings reference, the same shape iOS/Android's own system
-// settings already use) instead: an icon'd header naming the card,
-// then one divided row per real control inside it. No behaviour here
-// changed from the previous pass, only how it renders.
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel } from '../runtime/bufferSettings.js';
 import {
   getCurrentUser,
@@ -93,11 +67,6 @@ import { el } from '../runtime/dom.js';
 import { openOnboardingModal } from '../components/onboardingModal.js';
 import { jellioVersion } from '../runtime/util.js';
 
-// One grouped list card: an icon'd header (skipped entirely when
-// no title is given, RemoveShow/Sign out's own bare single-row card)
-// naming what the rows underneath it are, real .jellio-settings-row
-// children appended by the caller onto the returned body rather than
-// this helper guessing how many there will be or what kind.
 function buildCard(iconName, title, description) {
   const card = el('div', 'jellio-settings-card');
   if (title) {
@@ -156,10 +125,6 @@ function buildExpandableCard(iconName, title, description, initialExpanded) {
   return { card: card, body: body, headerBtn: headerBtn };
 }
 
-// The three real row shapes every card below is built from: a plain
-// info/control row, a whole-row button (Change avatar, Open admin
-// dashboard, real chevron trailing it), and a leading icon + title/
-// description column every one of them shares.
 function buildRowShell(iconName, title, description) {
   const row = el('div', 'jellio-settings-row');
   if (iconName) row.appendChild(el('span', 'jellio-settings-row-icon material-icons ' + iconName));
@@ -180,12 +145,6 @@ function buildRow(iconName, title, description, control) {
   return row;
 }
 
-// Change avatar/Open admin dashboard/Sign out: the entire row is the
-// real button rather than a small button floating at a label's own
-// end, same real "whole row is the hit target" convention every
-// mobile/TV settings list already uses. danger flags Sign out's own
-// real destructive colour (see .jellio-settings-row-danger's own CSS
-// header for why that colour specifically).
 function buildActionRow(iconName, title, description, onClick, danger) {
   const row = el('div', 'jellio-settings-row jellio-settings-row-action' + (danger ? ' jellio-settings-row-danger' : ''));
   const button = document.createElement('button');
@@ -202,11 +161,6 @@ function buildActionRow(iconName, title, description, onClick, danger) {
   return row;
 }
 
-// Remember my stream choice: this codebase's own toggle switch, a
-// plain hidden checkbox driving a styled sibling track/thumb (the
-// standard accessible pattern for one rather than a div with a click
-// handler pretending to be one), now the trailing control on a real
-// settings row instead of its own top level section.
 function buildToggleRow(iconName, title, description, checked, onChange) {
   const label = document.createElement('label');
   label.className = 'jellio-settings-toggle';
@@ -233,12 +187,6 @@ function buildSelectRow(iconName, title, description, options, value, onChange) 
   });
   select.value = value;
   const row = buildRow(iconName, title, description, select);
-  // A real status line (Saving…, Saved…) belongs directly under this
-  // row, full card width, not squeezed in as one more flex child of
-  // the row itself: returned as a fragment so it lands as this row's
-  // own next real sibling in the card body instead, the same real
-  // adjacency .jellio-settings-card-body's own CSS keys its divider
-  // borders off.
   const status = el('p', 'jellio-settings-row-status');
   select.addEventListener('change', function () {
     onChange(select.value, select, status);
@@ -311,15 +259,6 @@ function buildPasswordCard() {
   return card;
 }
 
-// Real Steam-style ask: on, a reader's own profile picture and banner
-// stay visible to other users, only Controllers/AchievementsController.
-// cs's own badge/stats answer for this user goes dark for anyone but
-// them (server side, GetForUser's own header explains the split).
-// Fetched alongside sleepTimerCard/quickConnectCard in renderSettings
-// below rather than inside buildAccountCategory itself, same real
-// reason those two already are: this card owns its own network round
-// trip, no reason to block the rest of the screen's own first render
-// on it.
 async function buildPrivacyCard() {
   let isPrivate = false;
   try {
@@ -346,13 +285,6 @@ async function buildPrivacyCard() {
   return card;
 }
 
-// Off by default, real feedback's own explicit ask: a reader who never
-// turns this on should see nothing different at all, no watchlist
-// button suddenly asking Watchlist or Grouplist on every click. On,
-// components/card.js's own watchlist button and screens/detail.js's
-// own version of it both gain a list picker, screens/home.js's own
-// Watchlist tab gains a Grouplist toggle alongside it, and Group Watch
-// chat gains a ranking session that draws from it.
 async function buildGrouplistCard() {
   let grouplistEnabled = false;
   try {
@@ -381,24 +313,6 @@ async function buildGrouplistCard() {
   return card;
 }
 
-// components/streamPicker.js's own real gate: on, a picker with a
-// remembered choice for that title skips straight to it instead of
-// asking again; off, every title with real more than one source asks
-// every time, same as before this setting existed. screens/detail.js's
-// own Change Stream button is the way back in either case, real
-// feedback asked for both together rather than only one.
-// Real feedback, live: this used to also carry an admin only "Analyze
-// library" row (IntroCreditsController's own now-removed analyze-library
-// route) queuing a whole-library background sweep. Dropped once a real
-// server's own stack trace showed why that could never actually work:
-// Gelato's own resolution only runs a real Stremio/debrid lookup from
-// inside a real ASP.NET request it recognizes, a detached background
-// job gets a cheap gelato://stub/... placeholder back instead, so that
-// button could queue work but never actually resolve a real stream for
-// any of it. IntroCreditsController.cs's own real POST /analyze/{itemId}
-// (screens/player.js's own real playback-start trigger) is the one
-// real path left, a small forward looking batch analyzed inside that
-// same real request every time a reader starts a new episode.
 function buildPlaybackCard() {
   const { card, body } = buildCard('play_circle', t('settings_playback_title'));
   body.appendChild(
@@ -468,13 +382,6 @@ function buildPlaybackCard() {
   return card;
 }
 
-// Real fields, UserDto.Configuration.AudioLanguagePreference/
-// SubtitleLanguagePreference (confirmed against UserConfiguration.cs
-// before writing this): Jellyfin's own PlaybackInfo negotiation
-// already reads these server side to pick a MediaSource's own real
-// DefaultAudioStreamIndex/DefaultSubtitleStreamIndex, so saving a
-// choice here is the whole fix, nothing else in this codebase needs to
-// change for it to take effect on the next real stream negotiated.
 function buildLanguageCard(user) {
   const { card, body } = buildCard(
     'translate',
@@ -498,11 +405,6 @@ function buildLanguageCard(user) {
     }),
   );
 
-  // A saved code might be the alternate ISO form this canonical
-  // option list does not itself carry (deu rather than ger, for a
-  // preference set from some other real Jellyfin client): matched by
-  // real name, the one thing both forms actually agree on, rather
-  // than left looking unset.
   function resolveValue(currentCode) {
     const matched = LANGUAGE_OPTIONS.find(function (option) {
       return option.code === (currentCode || '').toLowerCase() || option.name === languageName(currentCode);
@@ -549,11 +451,6 @@ function buildLanguageCard(user) {
   return card;
 }
 
-// Real endpoint pair, GET /QuickConnect/Enabled + POST /QuickConnect/
-// Authorize: no card at all when the server admin has turned the
-// whole real feature off, same reasoning every other self hiding
-// card in this screen already uses (buildSleepTimerCard above
-// included).
 async function buildQuickConnectCard() {
   let enabled = false;
   try {
@@ -643,19 +540,6 @@ async function buildSleepTimerCard() {
   return card;
 }
 
-// Real feedback: this whole screen used to be one flat column, every
-// section (Profile, Playback, Language, Change password, Sleep timer,
-// Quick Connect, Sign out) stacked in a row a reader had to scroll
-// past everything else to reach. Nuvio's own real Settings screen
-// (screenshot checked before writing this) groups the same kind of
-// content behind a category sidebar instead, one category's own
-// section(s) visible at a time. Categories below are this app's own
-// real equivalent grouping, not a blind copy of Nuvio's own four
-// (Account/General/About/Advanced): Nuvio's Content & Discovery,
-// Downloads and Integrations categories describe real settings this
-// app has no equivalent of at all (no addon management, no offline
-// downloads here), nothing to port for those without inventing a
-// feature to go with it.
 function buildAccountCategory(user, privacyCard, grouplistCard) {
   const wrap = el('div', 'jellio-settings-category');
 
@@ -666,11 +550,6 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
   );
   profileBody.appendChild(
     buildActionRow('photo_camera', t('onboarding_change_avatar'), null, function () {
-      // The sidebar's own avatar used to pick this up for free on the
-      // next navigation's own full rebuild; it no longer rebuilds at
-      // all past its first real render (components/sidebar.js's own
-      // renderSidebar), so a changed avatar needs this live nudge or
-      // it never appears until the next reload.
       openAvatarPicker(refreshProfileAvatar);
     }),
   );
@@ -679,14 +558,6 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
       navigateTo('#/profile');
     }),
   );
-  // Real Jellyfin's own UserDto.Policy.IsAdministrator (populated for
-  // the signed in user's own real record, confirmed against
-  // BaseItemDto before writing this) is the one real gate every
-  // native admin link already uses, matched here rather than showing
-  // this to every reader. #/dashboard has no entry in app.js's own
-  // SCREENS table, so navigating there leaves native jellyfin-web
-  // showing through unreskinned, the same real fallback discipline
-  // every other unmigrated route already gets.
   if (user && user.Policy && user.Policy.IsAdministrator) {
     profileBody.appendChild(
       buildActionRow('admin_panel_settings', t('settings_admin_dashboard'), null, function () {
@@ -717,9 +588,6 @@ function buildAccountCategory(user, privacyCard, grouplistCard) {
   return wrap;
 }
 
-// Import from Mihon: a reader's backup file brings their manga library
-// over through Suwayomi (Services/Manga/MangaImportService.cs). Only
-// offered when the server has Suwayomi set up.
 const IMPORT_OUTCOMES = { imported: 'Imported', 'not-found': 'Not found', error: 'Failed', skipped: 'Skipped' };
 
 function buildMihonImportCard() {
@@ -812,9 +680,6 @@ function buildMihonImportCard() {
   return card;
 }
 
-// Translation and dictionary defaults for the reader's study tools
-// (components/readerStudy.js). Kept on this device, like the rest of the
-// reader's settings; each book can still override its own language.
 function buildTranslationCard(translationEnabled) {
   const { card, body } = buildCard(
     'translate',
@@ -1461,10 +1326,6 @@ export async function renderSettings(root) {
   header.appendChild(el('h1', 'jellio-settings-title', t('settings_title')));
   root.appendChild(header);
 
-  // buildSleepTimerCard/buildQuickConnectCard each own real network
-  // round trip and neither one depends on the signed in user's own
-  // data at all, so all three fire together here instead of those two
-  // cards each waiting on the user fetch to even start.
   const [userResult, sleepTimerCard, quickConnectCard, privacyCard, grouplistCard, config] = await Promise.all([
     getCurrentUser().catch(function (err) {
       console.warn('Jellio: could not load current user', err);

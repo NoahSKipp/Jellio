@@ -1,23 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Ported in spirit from Harbor's own real home row customization
-// (harborstremio/harbor, src/views/home/customizable-rows.tsx,
-// row-controls.tsx, home-customize-bar.tsx and lib/home-customization.ts,
-// confirmed against that real source before writing this): reorder,
-// hide and reset a row's own position on the home screen, entirely
-// client side the same way every other personal-to-this-browser
-// preference in this runtime already is (components/streamPicker.js's
-// own remembered stream choice, screens/player.js's own subtitle
-// style). Harbor's own real editor uses move up/down buttons rather
-// than real drag and drop, confirmed against that source rather than
-// assumed, the one real reason this whole feature also works identically
-// on a phone with nothing further to design for that case: a button
-// tap needs no pointer-drag gesture at all.
-//
-// Scoped to what was actually asked (reorder, hide, reset) rather than
-// porting Harbor's own full real feature set: no per-row rename, no Top
-// 10 numerals toggle, no hero-source picking, no custom addon sources
-// or list rows, none of which this runtime has an equivalent concept
-// of to attach them to.
 
 import { el } from '../runtime/dom.js';
 
@@ -54,15 +35,6 @@ export function resetHomeCustomization() {
   saveHomeCustomization(defaultCustomization());
 }
 
-// Ported from Harbor's own real effectiveOrder(): whatever this
-// session's own rows actually are right now (a catalog row, a "Because
-// you watched X" row, a discovered genre row, any of which can
-// legitimately be a different real set from one visit to the next)
-// filtered through whatever order this reader saved last time, any
-// stored key no longer live today silently dropped, any live key never
-// seen before appended after it in its own natural order rather than
-// lost. Nothing here ever needs a stored key list to exactly match
-// today's real rows for the whole feature to keep working.
 function effectiveOrder(liveKeys, customization) {
   const liveSet = new Set(liveKeys);
   const ordered = customization.order.filter(function (key) {
@@ -99,31 +71,8 @@ function toggleRowHiddenKey(customization, key) {
   return updated;
 }
 
-// Real bug, found live in a headless test before this ever shipped:
-// effectiveOrder()'s own fallback ("no stored order, so whatever's
-// live right now") used to read live order straight off the current
-// DOM, which applyHomeCustomization() below itself reorders via
-// appendChild. A real reorder followed by Reset restored nothing,
-// since by then the DOM itself, the only place "default order" was
-// ever read from, already was the reordered one. A monotonic counter
-// stamped once here, at the moment each row is first built (screens/
-// home.js's own progressive section building always pushes rows in
-// the same real relative sequence every render regardless of which
-// phase's own network call happens to resolve first, confirmed
-// against that file's own header before relying on it), gives
-// effectiveOrder() a real, stable baseline no later reorder can ever
-// overwrite.
 let naturalOrderCounter = 0;
 
-// Wraps a real row element (whatever buildRow()/buildHubStrip() etc.
-// already built) so its own eventual control bar and hidden state have
-// somewhere to live without moving or cloning the row element itself.
-// Called once, at the moment each row is first built, well before this
-// reader's own saved order/hidden state is even known yet (screens/
-// home.js's own progressive section building fires this from several
-// real, independent async phases); applyHomeCustomization() below is
-// what actually fills the bar in and reacts to that saved state, once
-// the real, current set of rows is fully known.
 export function wrapRowForCustomization(rowElement, key) {
   const wrapper = el('div', 'jellio-row-editor');
   wrapper.dataset.jellioRowKey = key;
@@ -199,15 +148,6 @@ function buildRowBar(wrapper, key, hidden, canMoveUp, canMoveDown, onChange) {
   bar.appendChild(actions);
 }
 
-// The one real place order/hidden state actually becomes DOM: reads
-// whatever real .jellio-row-editor wrappers currently sit inside
-// rowsContainer (screens/home.js's own progressive rendering means this
-// runs more than once as more of them arrive), reorders them via
-// appendChild the same way screens/home.js's own final section replay
-// already relies on that moving rather than duplicating an already
-// attached node, and rebuilds every row's own control bar against the
-// currently live key set so up/down buttons are never left enabled
-// past either end of it.
 export function applyHomeCustomization(rowsContainer, editMode) {
   rowsContainer.classList.toggle('jellio-home-editing', editMode);
 
@@ -216,14 +156,6 @@ export function applyHomeCustomization(rowsContainer, editMode) {
   );
   if (!wrappers.length) return;
 
-  // Natural order, not current DOM order: this same call is what
-  // moves wrappers around the DOM a moment from now, so reading live
-  // order back off the DOM here would let today's reorder quietly
-  // become tomorrow's new "default" the instant a reader hit Reset.
-  // Uses screens/home.js's authoritative dataset.jellioHomeOrder (personal
-  // rows 0..999, catalog/genre/rec rows 1000+) so invalidating and
-  // re-fetching personal rows across playback/reader sessions never causes
-  // naturalOrderCounter drift to push personal rows below recommendation rows.
   const liveKeys = wrappers
     .slice()
     .sort(function (a, b) {
@@ -243,16 +175,10 @@ export function applyHomeCustomization(rowsContainer, editMode) {
   const customization = getHomeCustomization();
   const order = effectiveOrder(liveKeys, customization);
 
-  // Only rows out of place are moved: re-inserting a row that is already
-  // where it belongs still detaches it, which snaps its scroll back to the
-  // start, and this runs every time another row arrives.
   const skeleton = rowsContainer.querySelector(':scope > .jellio-home-skeleton');
   const ordered = order.map(function (key) {
     return byKey.get(key);
   }).filter(Boolean);
-  // Same arrangement as before (other sections, then the rows in the
-  // reader's order, then the skeleton), walked with a cursor so a node
-  // already in its place stays attached.
   const desired = Array.from(rowsContainer.children)
     .filter(function (child) {
       return child !== skeleton && !child.classList.contains('jellio-row-editor');

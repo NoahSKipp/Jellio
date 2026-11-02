@@ -1,7 +1,3 @@
-// First-run Onboarding Setup Wizard for Jellio Web.
-// Welcomes new users and guides them through Display Language, Audio &
-// Subtitle Track preferences, Profile & Feed Privacy, and Reading/Manga setup.
-// Follows Jellio and Nuvio glassmorphic styling.
 
 import { el } from '../runtime/dom.js';
 import { t, getDisplayLanguage, setDisplayLanguage, DISPLAY_LANGUAGES, loadDisplayLanguage } from '../runtime/i18n.js';
@@ -31,9 +27,6 @@ export function shouldShowOnboarding(userId) {
       return false;
     }
 
-    // Onboarding setup wizard is strictly for initial open / clean installs.
-    // If the user has already configured settings, has previous changelog history,
-    // or has established account playback preferences, treat onboarding as done.
     const hasExistingUsage = Boolean(
       window.localStorage.getItem('jellio_last_seen_changelog_' + uid) ||
       window.localStorage.getItem('jellio_last_seen_changelog_global') ||
@@ -642,7 +635,6 @@ export async function openOnboardingModal(options) {
         : t('onboarding_summary_subtitles_off'),
       hasSharedAccountSettings ? t('onboarding_synced_badge') : null,
     );
-
 
     if (readingEnabled) {
       addSummaryItem('auto_stories', t('onboarding_summary_reading_setup'), t('onboarding_summary_reading_enabled', { lang: targetStudyLang.toUpperCase() }));

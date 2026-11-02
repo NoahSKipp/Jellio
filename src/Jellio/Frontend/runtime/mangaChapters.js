@@ -1,9 +1,6 @@
 // Pure chapter-list logic for the manga series page, without the DOM or
 // the API, so it can be tested on its own.
 
-// "Prologue N" gets a range of its own below 0.01 (0.0001 per prologue),
-// the same as the server's ChapterNumbers, so it never takes the number of
-// "Chapter N". A bare "Prologue" is the first.
 const PROLOGUE = /^\s*(?:vol(?:ume)?\.?\s*\d+\s*[-:]?\s*)?prologue\b\s*(?:#?(\d+))?/i;
 const PROLOGUE_STEP = 0.0001;
 
@@ -18,9 +15,6 @@ function prologueNumber(name) {
   return Math.min(Math.max(n, 1), 99) * PROLOGUE_STEP;
 }
 
-// The last number in a chapter's name, e.g. "Chapter 0.06" -> 0.06,
-// "Vol. 3 Ch. 21.5" -> 21.5. Compared as numbers so 0.06 sorts before
-// 0.1 and 9 before 10.
 function chapterNumber(item) {
   const prologue = prologueNumber(item.Name);
   if (!isNaN(prologue)) return prologue;
@@ -62,9 +56,6 @@ export function chapterNameKey(name) {
     .trim();
 }
 
-// Where a saved chapter file came from: Suwayomi saves downloads under
-// .../mangas/<Source>/<Series>/<chapter>, so the folder after "mangas" is
-// the source. '' when the file isn't laid out that way.
 export function chapterSource(item) {
   if (item && item.MangaSource) return item.MangaSource;
   const parts = String((item && item.Path) || '').split(/[\\/]/).filter(Boolean);
@@ -90,10 +81,6 @@ export function sourceMatches(folder, source) {
   return a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ');
 }
 
-// Saved files split by whether they come from the streamed entry's source.
-// Only those are merged into the chapter list; the rest go under "Other
-// sources". Without a stream, or a stream whose source isn't known, every
-// file belongs to the list as before.
 export function splitBySource(libraryChapters, streamSeries) {
   const known = streamSeries && (streamSeries.Source || streamSeries.SourceName);
   if (!known) return { matching: libraryChapters.slice(), others: [] };
@@ -107,9 +94,6 @@ export function splitBySource(libraryChapters, streamSeries) {
   return { matching: matching, others: others.sort(compareChapters) };
 }
 
-// A series' chapters from both places: the library's files (saved to the
-// server) win, carrying the streamed chapter's id for its progress;
-// everything else streams.
 export function mergeStreamChapters(libraryChapters, streamSeries) {
   if (!streamSeries) return libraryChapters.slice().sort(compareChapters);
   const byName = new Map();

@@ -1,13 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// The Manga shelf's "find a series" sheet, shared by the shelf and
-// Discover. Two ways to get a series, whichever the server has set up:
-// - Chapters, from Suwayomi (Controllers/MangaRequestController.cs): its
-//   sources are searched in parallel, results grouped by source, and Read
-//   opens the series, read straight from the source like Mihon's Browse
-//   (downloaded too if the admin keeps requests on the server). Covers
-//   manhwa and manhua, which rarely exist as published volumes.
-// - Volumes, from Chaptarr: the book request panel, a real request for
-//   the series' published volumes.
 import {
   invalidateStreamLibrary,
   getMangaRequestStatus,
@@ -54,10 +45,6 @@ function statusLabel(status) {
   return { ONGOING: 'Ongoing', COMPLETED: 'Completed', PUBLISHING_FINISHED: 'Finished', ON_HIATUS: 'On hiatus', CANCELLED: 'Cancelled' }[status] || '';
 }
 
-// options: query (series title), altQuery (another title to try when the
-// first finds nothing), heading, suwayomi and chaptarr (which backends are
-// set up), openSeries(key) (opens a series page; Read calls it). Returns a
-// function that closes the sheet.
 export function openMangaRequestSheet(root, options) {
   const opts = options || {};
   const sheet = el('div', 'jellio-manga-sheet');
@@ -270,11 +257,6 @@ export function openMangaRequestSheet(root, options) {
     button.appendChild(el('span', 'material-icons menu_book'));
     const text = el('span', null, t('action_read'));
     button.appendChild(text);
-    // Like opening a series in Mihon's Browse: Suwayomi loads its chapters
-    // and the series page opens. It joins the reader's shelf when they
-    // read it (or tap the heart), not before.
-    // The library has this title from another source: open that one,
-    // switch to this source keeping progress, or add this one as well.
     function askDuplicate(existing) {
       button.hidden = true;
       const choice = el('div', 'jellio-book-request-duplicate');

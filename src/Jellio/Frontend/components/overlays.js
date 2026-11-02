@@ -1,7 +1,3 @@
-// Screen overlays an admin sends from the dashboard
-// (Controllers/OverlaysController.cs): a picture or a line of text in the
-// middle of the screen at the chosen opacity for the chosen seconds,
-// over everything and never in the way of a click.
 import { isAuthenticated, getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { getPendingOverlays } from '../runtime/api.js';
 

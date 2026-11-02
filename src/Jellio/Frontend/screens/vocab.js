@@ -1,8 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// The vocabulary deck (#/vocab): words saved from the reader's selection
-// popup (components/readerStudy.js), reviewed as flashcards on a spaced
-// repetition schedule kept by Controllers/VocabularyController.cs, and
-// exportable to CSV or Anki.
 import {
   getVocabulary,
   reviewVocabulary,

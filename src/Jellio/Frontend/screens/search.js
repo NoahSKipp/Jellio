@@ -1,26 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Own search, not a reskin of native SearchFields.tsx: a plain text input
-// against the same real /Items?searchTerm= query every other screen's own
-// grid already uses. Debounced locally, does not push a route on every
-// keystroke, native jellyfin-web's own hash history has no reason to grow
-// one entry per character typed.
-//
-// Real bug, live-reported: a card clicked from a result grid had no way
-// back to that same search once landed on its own detail page, only a
-// different nav item or typing the whole query again, every other
-// screen's own back navigation (a real history pop, this runtime never
-// renders a back button of its own) having nothing here to pop back to
-// in the first place, query text and results alike living only in this
-// function's own local variables. reflectStateInAddressBar() below
-// mirrors the current term into the address bar as this runs, without
-// pushing a real history entry for it (the exact per-keystroke growth
-// this file's own header above already avoids) and without re-running
-// this runtime's own sync() on every keystroke either (that function's
-// own header explains why a plain navigateTo()/replaceState() call
-// would). A real back landing on #/search?q=... then reruns that exact
-// same query fresh, same real "screens fetch their own state" shape
-// every other screen here already uses rather than caching the actual
-// result set.
 import { getSearchSuggestions, searchItems, searchLibrary, searchMovies, searchSeries } from '../runtime/api.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
@@ -95,7 +73,6 @@ function clearRecentSearches() {
   }
 }
 
-
 export async function renderSearch(root, params) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-search';
@@ -151,13 +128,6 @@ export async function renderSearch(root, params) {
     recentSection.appendChild(chips);
   }
 
-  // No feedback at all between "typed something" and "cards appeared"
-  // used to make a slow or failed request (Gelato resolving a remote
-  // catalog is not instant, and a real server error left the grid
-  // exactly as empty as it started) look identical to search doing
-  // nothing whatsoever, reported live as exactly that. This one line
-  // is the whole fix: every branch below now leaves it saying
-  // something a reader can tell apart from silence.
   const FILTER_CATEGORIES = [
     { id: 'all', label: t('search_filter_all') },
     { id: 'movies', label: t('search_filter_movies') },
@@ -215,13 +185,6 @@ export async function renderSearch(root, params) {
   let timer = null;
   let saveTimer = null;
   let requestId = 0;
-  // Gelato's own search proxies straight through to AIOStreams live, one
-  // real round trip per addon per request, nothing cached: a reader who
-  // edits their query mid-search used to leave the old one running to its
-  // own full 30s timeout in the background regardless, stacking up
-  // concurrent AIOStreams round trips for a result nothing still wants.
-  // Aborting it outright the moment a newer query fires frees that
-  // connection and backend load immediately instead of waiting it out.
   let inFlight = [];
 
   function abortInFlight() {
@@ -231,22 +194,6 @@ export async function renderSearch(root, params) {
     inFlight = [];
   }
 
-  // Real bottleneck runtime/api.js's own searchMovies/searchSeries header
-  // documents: the old single combined searchItems() call waited on
-  // Gelato's own Task.WhenAll(movie search, series search) server side,
-  // so a reader saw nothing at all until whichever half was slower also
-  // finished. Firing the two halves as separate requests and painting
-  // each into its own reserved slot the moment it resolves, regardless
-  // of which one lands first, means Movies (or Series) shows up as soon
-  // as its own real addon round trip is done rather than both waiting on
-  // the slower one. moviesSlot/seriesSlot below are fixed DOM anchors so
-  // a late-arriving Movies section still renders above Series, not
-  // wherever insertion order happened to land it.
-  // Each type fills in as answers arrive: titles already in the library
-  // (searchLibrary, near instant) first, then the addon search's results
-  // appended after them, nothing shown twice and nothing reordered under
-  // the pointer. Placeholder cards sit at the end while a type is still
-  // loading.
   const SEARCH_SKELETON_CARDS = 4;
 
   function identityKeys(item) {
@@ -393,10 +340,6 @@ export async function renderSearch(root, params) {
       return fetcher(term, controller.signal);
     }
 
-    // Real servers without Gelato installed (or on an older build
-    // without these two routes yet) 404 on the per-type search, and the
-    // "local:" library search matches nothing there: the plain combined
-    // search answers for both types instead.
     function fallBackToCombined(err) {
       if (!current() || fellBack) return;
       fellBack = true;
@@ -530,12 +473,6 @@ export async function renderSearch(root, params) {
     commitCurrentSearch();
   });
 
-  // A real back navigation landing back on #/search?q=... (a card's own
-  // click handler pushed a real new history entry on top of whatever
-  // runSearch() last reflected here) remounts this whole screen fresh,
-  // same as any other route change; params carries that same term back
-  // in, so the query and its results reappear immediately rather than a
-  // reader having to type the whole thing again.
   const restoredTerm = (params && params.get('q')) || '';
   if (restoredTerm) {
     input.value = restoredTerm;

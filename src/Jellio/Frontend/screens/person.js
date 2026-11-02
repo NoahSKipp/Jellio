@@ -1,11 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Actors Plus, from the reference table: an actor's own page, photo,
-// bio and real filmography, reached by clicking a cast card on the
-// detail screen. Own route (#/person?id=X), not a native page this
-// runtime could reskin (jellyfin-web's own person page lives behind
-// playbackManager-adjacent internals like everything else this codebase
-// cannot reach), built the same way every other screen here is: real
-// endpoints, own markup.
 import { getPerson, getPersonFilmography, getImageUrl } from '../runtime/api.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
@@ -23,10 +16,6 @@ export async function renderPerson(root, params) {
 
   renderLoading(root);
 
-  // Started alongside getPerson below rather than only once it
-  // resolves: both only ever need personId, no real dependency on
-  // each other, but the grid used to not even start fetching until
-  // the header's own request had fully round tripped first.
   const filmographyPromise = getPersonFilmography(personId);
 
   let person;

@@ -1,6 +1,3 @@
-// Sounds an admin sends from the dashboard (Controllers/SoundsController.cs):
-// no toast, the clip just plays, and any video or audiobook on the page is
-// turned down to the sound's DuckVolume until it ends.
 import { isAuthenticated, getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { getPendingSounds } from '../runtime/api.js';
 import { beginDuck, endDuck } from '../runtime/duck.js';
@@ -37,9 +34,6 @@ function restoreMedia(ducked) {
   });
 }
 
-// Left, right or the rear surround pair, through Web Audio. Resolves to
-// the AudioContext, or null when the sound plays as is (both sides, no
-// Web Audio, or a context the browser won't start without a click).
 function routeDirection(audio, direction, volume) {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx || !direction || direction === 'both') return Promise.resolve(null);

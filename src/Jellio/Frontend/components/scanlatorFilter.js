@@ -1,7 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Mihon's per-manga scanlator filter: which groups' chapters this series
-// shows, so the same chapter from several of them isn't listed more than
-// once. Remembered per series (screens/mangaSeries.js saves it).
 import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioScanlatorFilter';

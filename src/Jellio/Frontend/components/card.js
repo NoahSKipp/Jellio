@@ -1,7 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Shared item card, used by every screen that renders a poster grid or row
-// (home's own rows, the library grid). One definition so a later visual
-// change (a hover state, a progress bar) only has one place to happen.
 import {
   getImageUrl,
   getUserImageUrl,
@@ -26,10 +23,6 @@ import { showToast } from './toast.js';
 import { buildRatingBadge } from './ratingBadge.js';
 import { el } from '../runtime/dom.js';
 
-// Rebuilds just the watched badge/progress bar over the poster image,
-// its own function so the options menu's mark watched/unwatched action
-// can refresh a card already on screen instead of needing a full row
-// re-render for something this small.
 function paintCardState(imageWrap, item) {
   const existingBadge = imageWrap.querySelector('.jellio-card-watched');
   if (existingBadge) existingBadge.remove();
@@ -53,15 +46,6 @@ function paintCardState(imageWrap, item) {
   }
 }
 
-// Up Next/Continue Watching hand this the same Episode item Jellyfin
-// itself uses for the row: item.Name is only ever the episode's own
-// title ("Chapter One"), the series it belongs to and where in it
-// this episode sits are separate real fields on the same object
-// (SeriesName, ParentIndexNumber, IndexNumber), already present on
-// every real /Shows/NextUp and .../Items/Resume response without
-// asking for extra Fields, real feedback was that a bare episode
-// title with no series name gave no way to tell rows of unrelated
-// shows apart at a glance.
 function episodeSubtitle(item) {
   const hasSeason = typeof item.ParentIndexNumber === 'number';
   const hasEpisode = typeof item.IndexNumber === 'number';
@@ -114,44 +98,6 @@ function buildWatchersBadge(watchers) {
   return wrap;
 }
 
-// Real feedback: Play showing up on every card in a grid/row was one
-// tap too many, the card itself already navigates straight to
-// screens/detail.js's own Play button (this file's own click handler
-// below). Watchlist and Mark Watched fade in on hover/focus, the two
-// real actions worth reaching without leaving the grid at all; a fixed
-// More (three dot) button used to sit beside them, real feedback found
-// it redundant with the exact same menu a right click or a held press
-// already opens (attachCardOptionsTrigger below), one real way to reach
-// it being enough.
-// Real feedback: the watchlist/watched glyph swap alone was easy to
-// miss at this size. Restarting the same keyframe (remove then
-// re-add next frame, a plain re-add on an already-present class is a
-// no-op) reads as a confirmation pop rather than a state change
-// nobody actually saw happen.
-// Fires Gelato's own speculative stream sync (runtime/api.js's own
-// prefetchStreams, its header documents the real bottleneck this is
-// chasing) the moment a card is actually noticed, mouse hover or D-pad/
-// keyboard focus arriving on it, well before a real click/Enter commits
-// to opening it. Season/Person/etc never carry a real Gelato stream sync
-// or a real Gelato insert at all, so skip firing a request nothing on
-// the server side is ever going to use. Series is included alongside
-// Movie/Episode now too: a still-unopened search result (movie or
-// series alike) isn't a real library item yet at all, and Gelato's own
-// prefetch endpoint now warms that insert as well as the stream sync -
-// a real, already-inserted Series card simply gets a harmless no-op
-// response back (it has no streams of its own, only its episodes do),
-// same silent best-effort failure this already tolerates everywhere else.
-// Real gap found live right after this shipped: every focus/hover fired
-// immediately, so holding D-pad-right scrolling through a long row fired
-// one real request per card passed over, not just the one the reader
-// actually stopped on - wasted round trips against the reader's own
-// addon/debrid/TMDb rate limits for titles nobody was ever about to
-// open. PREFETCH_DEBOUNCE_MS below only fires once focus/hover actually
-// lingers past it; mouseleave/blur cancels a still-pending timer outright
-// rather than letting it fire for a card already left behind. No "fired
-// once" latch needed here anymore - prefetchStreams()'s own
-// prefetchedItemIds already dedupes a real repeat fire for the same
-// item, and still allows a genuine retry if an earlier attempt failed.
 const PREFETCH_DEBOUNCE_MS = 200;
 
 function attachStreamPrefetch(card, item) {
@@ -265,21 +211,6 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
   return bar;
 }
 
-// Real Harbor/Nuvio reference (screenshots checked before writing
-// this): Up Next and Continue Watching read as a landscape strip,
-// title and episode burned directly onto the bottom of a 16:9 still
-// with a remaining-time badge and a real progress bar under it, not
-// this file's own plain 2:3 poster shape every other row already
-// uses. Backdrop art fits that box far better than a poster
-// (portrait key art cropped into a wide box loses most of it), so a
-// real Backdrop tag wins here first when there is one; an Episode
-// never carries one at all (confirmed against a real server before
-// writing this, same real constraint screens/detail.js's own
-// heroBackdropUrl() already documents), so its own real still
-// (Primary) is next, then the season/series' own real Thumb, the
-// same real ParentThumbItemId/ParentThumbImageTag fallback that
-// file's own buildEpisodeCard() already fixed the same real id/type
-// mismatch bug for.
 function landscapeImageCandidates(item) {
   if (!item || !item.Id) return [];
   const urls = [];
@@ -335,13 +266,6 @@ function hasImageInfo(item) {
   return !!(item && (item.ImageTags || item.BackdropImageTags));
 }
 
-// Real RunTimeTicks/PlaybackPositionTicks, both already real fields on
-// a real Resume/NextUp response (runtime/api.js's own getResumeItems
-// now asks for RunTimeTicks explicitly alongside the fields it already
-// requested; getNextUp already did). Blank rather than "0m left" for
-// an Up Next item, which never carries a real PlaybackPositionTicks at
-// all, matching real Harbor/Nuvio reference: only a title actually mid
-// playback shows a real remaining time at all.
 function remainingLabel(item) {
   const userData = item.UserData || {};
   const runTicks = item.RunTimeTicks;
@@ -452,14 +376,6 @@ function buildLandscapeCard(item, options) {
   return card;
 }
 
-// Candidates in priority order for a card's image:
-// - Episodes/Movies/Series use their primary tag, then untagged primary,
-//   series primary, thumb, and backdrop
-// - Audiobooks try track primary art, album cover, then book cover
-// - Manga chapters try chapter primary art (if any), then overall manga series cover
-//   (stream cover, series primary tag, parent primary tag, /Jellio/manga/series-cover/{id}),
-//   and fall back to book cover
-// - Standard books try item primary art, Chaptarr book cover, then folder/series cover
 function cardImageCandidates(item) {
   if (!item || !item.Id) return [];
   const urls = [];
@@ -619,12 +535,6 @@ export function buildCard(item, options) {
     imageWrap.appendChild(el('div', 'jellio-card-landscape-remaining', item.JellioPagesLeft + 'p left'));
   }
 
-  // Top-left, .jellio-card-watched's own real check badge already owns
-  // top-right. Movie/Series only in practice (isEpisode above already
-  // covers the one real case, Up Next/Continue Watching, that would
-  // otherwise clash with this exact same corner - those go through
-  // buildLandscapeCard instead, a separate real box with no rating
-  // badge of its own asked for yet).
   if (item.CommunityRating) {
     imageWrap.appendChild(buildRatingBadge(item.CommunityRating, 'jellio-card-rating'));
   }
@@ -655,14 +565,6 @@ export function buildCard(item, options) {
     card.appendChild(subtitle);
   }
 
-  // #/item rather than native's own #/details: screens/detail.js's own
-  // Play button hands off to the real #/details route for actual
-  // playback (playbackManager.play() is a plain ES module export, never
-  // reachable from here, see that file's own header), so this runtime's
-  // own detail screen has to live at a route native does not already
-  // own, or the two would collide on the same hash.
-  // Continue Reading/Listening cards skip the detail page and reopen the
-  // book right where the reader left off.
   const itemId = item.Id || item.id;
   if (!item.Id && itemId) item.Id = itemId;
   const targetHash =

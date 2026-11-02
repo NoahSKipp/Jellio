@@ -1,6 +1,3 @@
-// Continue Watching without what is already done: titles marked watched that
-// still carry an old resume position, and half-watched episodes of a show
-// whose Next Up has already moved past them.
 function episodeOrder(item) {
   return (item.ParentIndexNumber || 0) * 10000 + (item.IndexNumber || 0);
 }

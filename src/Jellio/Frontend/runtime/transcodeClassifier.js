@@ -1,14 +1,3 @@
-// Whether playing a MediaSource here would make the server re-encode its
-// video, the expensive part of a transcode on a server without hardware
-// acceleration. Converting audio or remuxing the container is cheap and
-// doesn't count. Pure: everything about this browser comes in through
-// `caps`, so tests can run it with any combination
-// (tests/frontend/transcodeClassifier.test.mjs).
-//
-// caps = {
-//   canPlayVideo(codecString) -> boolean  e.g. 'hvc1.2.4.L153.B0'
-//   hdrDisplay: boolean                   matchMedia('(dynamic-range: high)')
-// }
 
 const H264_PROFILE_IDS = {
   baseline: '42',
@@ -32,10 +21,6 @@ function videoStreamOf(mediaSource) {
   return streams.filter((stream) => stream.Type === 'Video')[0] || null;
 }
 
-// Gelato probes a stream only when it's played, so most sources come with
-// no MediaStreams. AIOStreams names still say what's inside ("4K HEVC DV
-// HDR10"); read a stand-in video stream from them, or null when they say
-// nothing about the video.
 export function videoHintFromName(name) {
   const text = ' ' + String(name || '').replace(/[|·•,()[\]{}/_\n\r\t-]+/g, ' ') + ' ';
   let codec = null;
@@ -54,7 +39,6 @@ export function videoHintFromName(name) {
   return { Type: 'Video', Codec: codec, BitDepth: tenBit ? 10 : 8, VideoRangeType: range || 'SDR' };
 }
 
-// The real video stream, else one read from the source's name.
 export function videoInfoOf(mediaSource) {
   const real = videoStreamOf(mediaSource);
   if (real) return { stream: real, guessed: false };
@@ -88,10 +72,6 @@ function isDolbyVisionOnly(stream) {
   return Number(stream.DvProfile) === 5;
 }
 
-// Returns { needsVideoTranscode, reasons: [...] }. Reasons are short ids:
-// 'codec' (can't decode here), 'hdr-on-sdr' (needs tone mapping),
-// 'dolby-vision-5', 'interlaced', 'burn-in'. guessed: the video details
-// came from the stream's name, not a probe.
 export function classifyVideo(mediaSource, caps, options) {
   const opts = options || {};
   const reasons = [];
@@ -124,9 +104,6 @@ export function playMethodFor(classification, directPlayable) {
   return directPlayable ? 'DirectPlay' : 'Remux';
 }
 
-// Video codecs a stream request can name so the server copies instead of
-// re-encoding: h264 first (what it encodes to when it has to), then the
-// others this browser plays.
 export function copyableVideoCodecs(caps) {
   const list = ['h264'];
   if (caps.canPlayVideo('hvc1.1.6.L153.B0') || caps.canPlayVideo('hvc1.2.4.L153.B0')) list.push('hevc');

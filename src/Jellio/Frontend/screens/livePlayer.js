@@ -1,9 +1,3 @@
-// The live channel player. Unlike screens/player.js it has no resume
-// point, watch history, stream picker, intro skip or next episode: it
-// opens the channel (which holds a tuner slot), plays the HLS that
-// Jellyfin remuxes from the source's MPEG-TS, and always closes the live
-// stream again when left. The source drops a few seconds of video now and
-// then, so a short stall is waited out rather than treated as a failure.
 import { t } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';

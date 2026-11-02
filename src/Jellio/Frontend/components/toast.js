@@ -1,10 +1,3 @@
-// App wide toast, one real instance for the whole page: screens/player.js's
-// own showPlayerToast already does the identical job scoped to that one
-// screen's own root, this is the same real idea for anything that can
-// fire from outside a screen entirely (components/notifications.js's own
-// "new release" message, the one real caller today). Self starting,
-// module level singleton, same real reason components/nowPlaying.js's
-// own panel exists for the life of the page rather than being rebuilt.
 const HIDE_MS = 6000;
 
 let toast = null;
@@ -21,12 +14,6 @@ function ensureToast() {
   return toast;
 }
 
-// onClick, when given, makes the toast itself a real shortcut to
-// whatever it is telling the reader about (components/notifications.js's
-// own release toast, straight to the title) rather than just an
-// announcement with no way to act on it before it fades.
-// options.imageUrl adds a picture above the text (an announcement's
-// image), and keeps the toast up a little longer to look at it.
 export function showToast(message, onClick, options) {
   const opts = options || {};
   const node = ensureToast();

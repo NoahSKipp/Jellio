@@ -9,9 +9,6 @@ export function el(tag, className, text) {
   return node;
 }
 
-// Sets an element's background image, fading it in over what is already
-// there once it has loaded instead of letting it pop in. An image already
-// in the cache, or reduced motion, just sets it.
 export function fadeInBackdrop(target, url) {
   if (!url) return;
   const css = 'url(' + url + ')';

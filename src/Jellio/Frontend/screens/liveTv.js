@@ -1,7 +1,3 @@
-// Live TV: every channel with what is on now, favourites first, a search
-// box, and a 24 hour guide per channel. Streams the user added by link sit
-// on top as My streams. Picking a channel opens the live player
-// (screens/livePlayer.js).
 import { t, getDisplayLanguage } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';

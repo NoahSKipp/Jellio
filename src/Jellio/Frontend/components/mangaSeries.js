@@ -11,11 +11,6 @@ export {
   streamChapterItem,
 } from '../runtime/mangaChapters.js';
 
-// Manga arrives as one file per chapter or volume (Suwayomi saves each
-// chapter as its own CBZ), so the Manga shelf groups files into series:
-// Jellyfin's SeriesName when it has one, otherwise the folder the files
-// sit in, which is how Suwayomi and most manga libraries are laid out.
-
 function folderName(path) {
   const parts = String(path || '').split(/[\\/]/).filter(Boolean);
   return parts.length >= 2 ? parts[parts.length - 2] : '';
@@ -67,9 +62,6 @@ export function chapterState(item, progress) {
   return { read: record.Progress >= FINISHED, started: record.Progress < FINISHED, record: record };
 }
 
-// Where to pick a series back up: a chapter left part way through after
-// the furthest one finished, else the first unread chapter after it.
-// lastRead is the latest progress time in the series (0 if never read).
 export function resumePoint(chapters, progress, duplicatesAsOne) {
   let furthestRead = -1;
   let lastRead = 0;
@@ -108,8 +100,6 @@ export function resumePoint(chapters, progress, duplicatesAsOne) {
   };
 }
 
-// Shows the series' real cover (a cover image in its folder, Suwayomi's,
-// or AniList's) on an <img>, falling back to the chapter image it had.
 export function useSeriesCover(img, chapter, onMissing, streamMangaId) {
   const fallback = img.getAttribute('src');
   img.addEventListener('error', function onError() {
@@ -120,9 +110,6 @@ export function useSeriesCover(img, chapter, onMissing, streamMangaId) {
   img.src = chapter && !chapter.Stream ? getMangaSeriesCoverUrl(chapter.Id) : getStreamCoverUrl(streamMangaId || chapter.Stream.MangaId, chapter && chapter.SeriesName);
 }
 
-// A series' chapter settings (Mihon's): its own where it has set them,
-// else the reader's defaults. An older single filter (unread or
-// bookmarked) still counts until the new ones are set.
 export function chapterSettings(own, defaults) {
   const mine = own || {};
   const base = defaults || {};
@@ -146,9 +133,6 @@ export function passesChapterFilters(item, settings, read, bookmarked) {
   return test(settings.unread, !read) && test(settings.bookmarked, bookmarked) && test(settings.downloaded, downloaded);
 }
 
-// The chapters oldest first by the chosen sort (then reversed for newest
-// first). Source order is the order the source lists them in, oldest
-// first as Suwayomi numbers it.
 export function sortChapters(chapters, settings) {
   const indexed = chapters.map((chapter, index) => ({ chapter: chapter, index: index }));
   const number = (item) => (chapterNumberOf(item) < 0 ? Number.MAX_SAFE_INTEGER : chapterNumberOf(item));
@@ -186,9 +170,6 @@ export function listScanlators(chapters) {
   );
 }
 
-// Mihon's excluded scanlators: the chapters left once those groups are
-// hidden. Hiding every group would leave nothing to read, so then none
-// are hidden.
 export function applyScanlatorFilter(chapters, excluded) {
   if (!excluded || !excluded.length) return chapters;
   const hidden = new Set(excluded.map((name) => name.toLowerCase()));
@@ -196,11 +177,6 @@ export function applyScanlatorFilter(chapters, excluded) {
   return shown.length ? shown : chapters;
 }
 
-// The chapters either side of the one being read, Mihon's way: the
-// series' scanlator filter applies, and the same chapter number from
-// several groups counts once, taking the one being read, else the same
-// group's copy, else the first. current: { id, name } of the open
-// chapter; chapters are the streamed series' own, in reading order.
 export function chapterNeighbors(chapters, current, excluded, skipRead) {
   const nameKey = chapterNameKey(current.name);
   const here =
@@ -238,10 +214,6 @@ export function chapterNeighbors(chapters, current, excluded, skipRead) {
   };
 }
 
-// The same chapter number from several groups is one chapter: once any
-// copy is read, the others count as read (Mihon's mark duplicate chapters
-// read). Returns progress with those extra reads added, stored progress
-// untouched.
 export function withDuplicateReads(chapters, progress) {
   const finished = new Map();
   chapters.forEach(function (chapter) {

@@ -1,7 +1,3 @@
-// The watch party layer over the player: chat bubbles and reactions, the
-// ready check and 3-2-1 countdown, host-only controls and the catch-up
-// choice for someone joining late. SyncPlay (runtime/syncPlay.js) still
-// moves playback; this is the party around it.
 import { t } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
 import {
@@ -306,9 +302,6 @@ export function createPartyLayer(options) {
   };
 }
 
-// Joining a group already well into its title: follow the group, or
-// start from the beginning alone. Resolves 'group' or 'solo'; picks
-// 'group' by itself after a few seconds so the group isn't held up.
 export function askCatchUp(root, positionSeconds) {
   return new Promise(function (resolve) {
     const box = el('div', 'jellio-party-catchup');

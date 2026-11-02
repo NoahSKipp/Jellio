@@ -1,13 +1,4 @@
 import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
-// The profile page, from the reference table: AniList-style banner,
-// bio, badge showcase, activity feed. Own route (#/profile?id=X, own
-// signed in user's own id when the query is bare), reached from
-// Settings' own "View profile" row for now. Badges/activity come off
-// Controllers/AchievementsController.cs's own {userId} route, which
-// already carries the Privacy toggle's own gate baked in
-// (getForUserId's own header explains why) so this file only ever
-// needs to check the one IsPrivate field that answer comes back with,
-// never re-derive who is allowed to see what itself.
 import {
   getUserById,
   getUserImageUrl,
@@ -41,12 +32,6 @@ function formatMinutes(minutes) {
   return hours.toLocaleString() + 'h' + (total % 60 ? ' ' + (total % 60) + 'm' : '');
 }
 
-// AchievementsController.cs's own real ActivityGrouping.Group: a binge
-// (same series, same UTC day) comes back as one entry with
-// EpisodeCount > 1 instead of one row per episode, same real grouping
-// screens/feed.js's own describeActivity already applies.
-// The entry as text with its show, manga series or title as a link to it
-// (components/activityLink.js).
 function describeActivity(entry) {
   const container = el('span', 'jellio-profile-activity-text');
   function link(text) {
@@ -98,13 +83,6 @@ function buildBanner(userId, isOwner, onChanged) {
   const img = document.createElement('img');
   img.className = 'jellio-profile-banner-img';
   img.alt = '';
-  // Real feedback, live: "scrolling is painfully slow" traced back to
-  // an oversized banner. ProfileBannerController.cs now resizes one
-  // down server side on upload, but this reader's own browser still
-  // has to decode whatever is already stored (an upload from before
-  // that real fix shipped, most of all). async keeps this file's own
-  // real decode off the main thread rather than blocking a scroll on
-  // it, cheap and safe regardless, not a substitute for that real fix.
   img.decoding = 'async';
   img.src = getBannerUrl(userId) + '&t=' + Date.now();
   img.addEventListener('error', function () {
@@ -157,17 +135,6 @@ function buildBanner(userId, isOwner, onChanged) {
   return banner;
 }
 
-// Real feedback: changing a profile picture only ever lived behind
-// Settings' own "Change avatar" row, a real extra hop away from the one
-// real page that already shows it full size. Same real picker
-// components/avatarPicker.js already opens from there (a real full
-// overlay of its own, upload or pick from presets), just triggered from
-// here too now - onChanged refreshes both the sidebar/nav's own real
-// avatar mounts (refreshProfileAvatar, the same real live nudge
-// Settings' own row already needed since neither rail rebuilds on its
-// own past its first real render) and this whole screen, so the new
-// real picture actually shows here immediately rather than only after
-// a real reload.
 function buildAvatar(userId, imageTag, isOwner, onChanged) {
   const wrap = el('div', 'jellio-profile-avatar-wrap');
   const avatar = document.createElement('img');
@@ -251,13 +218,6 @@ function buildLockedPanel() {
   return panel;
 }
 
-// isAdmin/userId/onChanged only ever passed for someone else's own
-// profile (renderProfile below gates that): an admin correcting a
-// mistaken credit needs a way to relock a badge that already unlocked,
-// same real Steam-moderation shape "reset the progress" was asked for
-// alongside. Controllers/AchievementsController.cs's own LockBadge
-// keeps it locked afterward (SuppressedBadgeIds), not just hidden
-// until the next real completed movie or episode quietly re-adds it.
 function buildBadgesSection(badges, isAdmin, userId, onChanged) {
   const section = el('section', 'jellio-profile-section');
   const unlockedCount = badges.filter(function (b) { return b.Unlocked; }).length;
@@ -648,13 +608,6 @@ function buildMonthlyStats(achievements, selectedDate, onDateChange) {
   return container;
 }
 
-// The one whole-user "start over" hammer, deliberately separate from
-// (and more prominent than) the two per row/per badge actions above:
-// AchievementsController.cs's own ResetProgress header covers why a
-// single badge's own progress can't be rolled back in isolation when
-// several badges share one counter, so this is the only real way
-// "reset the progress" (real feedback's own words) can safely mean
-// anything at all.
 function buildAdminDangerZone(userId, onChanged) {
   const section = el('section', 'jellio-profile-section jellio-profile-danger-zone');
   section.appendChild(el('h2', 'jellio-row-title', t('profile_admin_role')));

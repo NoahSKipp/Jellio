@@ -1,15 +1,3 @@
-// Nuvio's own real HomeSkeletonHero/HomeSkeletonRow (features/home/
-// components/HomeSkeletonLoading.kt, confirmed against its real source
-// before writing this): a 1200ms diagonal shimmer sweep over
-// placeholder blocks shaped like the real thing underneath (a title
-// bar, a row of poster-ratio cards), not a single generic spinner
-// sitting alone on an otherwise blank page. Shown the instant
-// screens/home.js's own renderHome() starts building its real rows,
-// removed the moment the first real row actually arrives through that
-// screen's own progressive render path (preloadHomeSectionsWithProgress()),
-// same reasoning components/networkState.js's own renderLoading()
-// documents for every other screen, sized for this one instead of the
-// generic single-spinner shape those use.
 import { el } from '../runtime/dom.js';
 
 const SKELETON_ROW_CARDS = 6;

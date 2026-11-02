@@ -27,10 +27,6 @@ export function labelQuality(source) {
   return matchName(String((source && source.Name) || '').split('\n')[0]);
 }
 
-// The addon's label first: it's parsed from the actual file, while the
-// probe details Gelato attaches can belong to another version of the
-// title. Then probed dimensions (width matters for cropped widescreen, a
-// 3840x1600 file is still 4K), then anything in the release name.
 export function sourceQuality(source) {
   const labelled = labelQuality(source);
   if (labelled) return labelled;
@@ -70,11 +66,6 @@ function isRealValue(val) {
   return clean !== '' && clean !== 'unknown' && clean !== 'und';
 }
 
-// True if a MediaSource carries any discernible quality, video, audio, or
-// real size (>= 1 MB) info. Note that Jellyfin C# serializes VideoRange and
-// VideoRangeType as "Unknown" on unprobed stubs, and placeholder .strm files
-// can have a few bytes of Size (< 1 MB), so neither of those counts as real
-// stream info.
 export function hasStreamInfo(source) {
   if (!source) return false;
   if (sourceQuality(source)) return true;
@@ -100,20 +91,12 @@ export function hasStreamInfo(source) {
   return false;
 }
 
-// Only treat a MediaSources list as empty ("No streams available") when it
-// contains a single entry and that entry carries no quality, audio, video, or
-// size info at all.
 export function filterPlayableSources(sources) {
   const list = Array.isArray(sources) ? sources.filter(Boolean) : [];
   if (list.length === 1 && !hasStreamInfo(list[0])) {
     return [];
   }
 
-  // Deduplicate repeated sync clones of the exact same scraper release.
-  // When Gelato runs SyncStreams, it saves new rows into SQLite without deleting
-  // stale rows from earlier syncs. Within each unique multi-line Name (header +
-  // release info), keep the last (newest synced) row so its proxy URL is fresh,
-  // but retain any probed MediaStreams, RunTimeTicks, or Size from an earlier clone.
   const seenMultiLine = new Map();
   const result = [];
   for (let i = 0; i < list.length; i++) {

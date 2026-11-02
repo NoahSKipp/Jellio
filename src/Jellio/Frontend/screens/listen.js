@@ -1,10 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// Audiobook player for Jellyfin AudioBook items. Jellyfin keeps one item
-// per file and tracks resume position natively per file, so this screen
-// stitches the book's files into one timeline (or uses the optional
-// AudiobookLibrary plugin's own timeline when installed), plays them in
-// sequence through one persistent audio session, and reports playback per file
-// the normal Jellyfin way so resume and played state stay native.
 import {
   getItemDetails,
   getAudiobookTracks,

@@ -21,9 +21,6 @@ export function canReportProgress(itemId, mediaSourceId) {
   return !stoppedKeys.has(key(itemId, mediaSourceId));
 }
 
-// Decides what one progress tick should do: 'progress' while playing, a
-// single 'progress' when a pause begins, 'skip' while it lasts, and 'stop'
-// once it has lasted idleMs.
 export function createPauseGate(idleMs) {
   const limit = idleMs || PAUSE_IDLE_STOP_MS;
   let pausedSince = null;

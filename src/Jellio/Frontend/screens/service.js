@@ -1,9 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// The page a streaming hub tile opens: every real catalog collection
-// matched to that service, one row per collection, with type/genre
-// filter chips. Own route (#/service?name=X), not borrowed off a
-// library page the way the original codebase's own streamingHub.js had
-// to (this runtime owns real routing, no native page to borrow).
 import { getCollections, getCollectionItems, collectionKind, getImageUrl } from '../runtime/api.js';
 import { groupByService, logoUrl, rowTitle, serviceColor } from '../components/services.js';
 import { buildCard } from '../components/card.js';
@@ -16,20 +11,7 @@ import { makeRowTitleClickable } from '../components/rowListModal.js';
 import { el, fadeInBackdrop } from '../runtime/dom.js';
 
 const ROW_LIMIT = 24;
-// components/rowListModal.js's own "browse everything": a real full
-// depth request for whichever studio hub row a reader actually opened,
-// not the same ROW_LIMIT-capped array the row itself already rendered
-// from. No real Stremio catalog collection this runtime has ever seen
-// comes close to this, generous on purpose rather than tuned to a real
-// observed maximum.
 
-// The hero's own real backdrop: whichever item this service's real
-// catalogs actually turned up rates highest, the same "let the real
-// data pick it" spirit components/heroCarousel.js's own real candidate
-// list already follows, rather than always just row zero's own first
-// card. No backdrop of its own anywhere in the whole catalog (a bare
-// service with nothing but posters) falls back to a flat elevated
-// panel, same real fallback screens/detail.js's own hero already uses.
 function pickHeroItem(rows) {
   let best = null;
   rows.forEach(function (row) {
@@ -144,12 +126,6 @@ function buildRowSection(row, index) {
   });
   trackWrap.appendChild(track);
   section.appendChild(trackWrap);
-  // Stashed on the section itself rather than a separate map keyed by
-  // it: applyFilter() below already has this exact section in hand
-  // every time it needs to re-check whether either arrow still has
-  // anywhere left to go, a genre/type filter hiding enough cards to
-  // change that real answer without ever touching scrollLeft itself
-  // (attachScrollArrows()'s own scroll listener never fires for that).
   section._jellioRefreshArrows = attachScrollArrows(trackWrap, track);
   return section;
 }
@@ -215,11 +191,6 @@ export async function renderService(root, params) {
   rowsMount.appendChild(skeleton);
   root.appendChild(rowsMount);
 
-  // Not awaited, so a slow catalog never keeps the reader on this page,
-  // and guarded by tornDown so a late answer never writes into the next
-  // screen. Each row goes up as soon as its own catalog answers, in a
-  // slot that keeps the catalogs' order; the hero and genre chips follow
-  // once they have all answered.
   let tornDown = false;
   const slots = matching.map(function () {
     const slot = el('div');
@@ -246,11 +217,6 @@ export async function renderService(root, params) {
   ).then(function () {
     if (tornDown) return;
 
-    // Every catalog for this service came back empty. Jellyfin's
-    // CleanupCollectionAndPlaylistPathsTask empties every Gelato collection
-    // on each restart, since their items are virtual and carry no path for
-    // it to find, so this is a real state a server sits in, not a bug to
-    // paper over with a blank page.
     if (!filled.length) {
       root.textContent = '';
       root.appendChild(buildHeader(service, null));

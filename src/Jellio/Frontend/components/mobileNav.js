@@ -1,33 +1,10 @@
 import { t } from '../runtime/i18n.js';
-// Floating pill nav for a real phone width (css/app.css's own
-// breakpoint hides this in favour of components/sidebar.js's own rail
-// above it; a tablet keeps the rail, real feedback asked for the pill
-// specifically on "mobile", not just any narrow window). Link set,
-// icons and the profile avatar all come from components/navShared.js,
-// the one real source components/sidebar.js also builds from. Group
-// Watch and Now Playing are deliberately not here: real feedback asked
-// for both gone on a phone specifically, screen space neither buys
-// enough use to spend here. The sidebar rail still carries both.
 import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, SETTINGS_LINK, FIXED_NAV_LINKS } from './navShared.js';
 import { getCurrentUser } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { openAccountSwitcher } from './accountSwitcher.js';
 import { openLibraryPicker } from './libraryPicker.js';
 
-// Hysteresis rather than one shared threshold: a single cutoff flickers
-// compact/expanded back and forth for a scroll position sitting right
-// on it. Real feedback, twice over: every earlier real fix here
-// touched how the transition itself renders (backdrop-filter, which
-// layout property animates), never why it read as delayed in the
-// first place. The actual real cause was these two numbers: 48px/12px
-// is real scroll distance a reader has to travel before either state
-// change fires at all, the code reacts instantly the moment it does,
-// but that same real gap in between reads as "a noticeable delay
-// before the label appears/disappears" regardless of how fast
-// whatever finally plays after it is. Small enough now that either
-// direction fires almost as soon as real scrolling starts, the
-// hysteresis gap between them kept just wide enough to still stop a
-// scroll position sitting right on the line from flickering.
 const COMPACT_SCROLL_TOP = 16;
 const EXPAND_SCROLL_TOP = 4;
 
@@ -56,15 +33,6 @@ function buildLink(link) {
   return button;
 }
 
-// Real feedback: a phone's own pill bar has no real room for Movies/
-// Shows/Anime/every other real library as separate buttons the way
-// components/sidebar.js's own rail still shows them. One consolidated
-// Library button stands in for all of them, opening components/
-// libraryPicker.js's own real popover on tap rather than navigating
-// straight there; its own real active state is "true for any of the
-// real hashes it stands in for", stored as JSON on its own dataset
-// rather than the single data-jellio-hash every other link uses,
-// since no one real hash speaks for all of them.
 function buildLibraryButton(links) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -119,12 +87,6 @@ function updateActiveLinks(container) {
   });
 }
 
-// Real feedback: labelled "Profile" regardless of who was actually
-// signed in, same real fix components/sidebar.js's own buildProfileButton
-// already carries. cached('user:'+userId, ...) in runtime/api.js means
-// this real fetch is a cache hit almost every time, the same one
-// buildAvatarIconMount() below already triggers, not a second real
-// network round trip.
 async function buildProfileButton() {
   const button = document.createElement('button');
   button.type = 'button';
@@ -149,22 +111,12 @@ async function buildProfileButton() {
   labelEl.textContent = name;
   button.appendChild(labelEl);
 
-  // Same real switch components/sidebar.js's own Profile button now
-  // opens rather than #/account, that file's own header explains why:
-  // Settings right beside this already reaches the account screen.
   button.addEventListener('click', function () {
     openAccountSwitcher();
   });
   return button;
 }
 
-// .jellio-content is the real scroll container this whole app scrolls
-// inside (its own overflow-y: auto, not the window), so that is what a
-// scroll driven compact state has to listen on. That element is a
-// long lived node reused across navigations (only a real self-heal
-// rebuild in app.js's own getRoot() ever replaces it), so this only
-// needs to run again when it actually has: the identity check below
-// skips every ordinary call.
 let scrollTarget = null;
 let scrollHandler = null;
 let scrollTicking = false;
@@ -194,16 +146,6 @@ function attachScrollCompact(nav) {
   content.addEventListener('scroll', scrollHandler, { passive: true });
 }
 
-// Built once per real container and left alone after that, the same
-// real reasoning components/sidebar.js's own header documents: a
-// dataset marker tells a real rebuild (the mount was genuinely
-// missing) apart from the ordinary case (the same container coming
-// back on ever navigation), and everything that can change after the
-// first build (which link is active, the profile avatar) already has
-// its own live update path. Reset to expanded on every real call
-// rather than only the first: a fresh screen starts scrolled to its
-// own top, so the pill should too, rather than staying compact from
-// wherever the reader scrolled to on the last one.
 export async function renderMobileNav(container) {
   if (container.dataset.jellioBuilt === '1') {
     container.classList.remove('jellio-mobile-nav-compact');
@@ -213,28 +155,12 @@ export async function renderMobileNav(container) {
   }
   container.dataset.jellioBuilt = '1';
   container.textContent = '';
-  // Keeps 'jellio-mobile-nav-mount' alongside the visual class rather
-  // than overwriting className outright: components/sidebar.js's own
-  // real bug (see its header) was exactly this, on the sidebar mount
-  // instead of this one, and it defeated the same "build once" fast
-  // path above by making app.js's own getRoot() self-heal check stop
-  // finding this real mount the instant this ran once, rebuilding the
-  // whole shell fresh on every navigation after that.
   container.className = 'jellio-mobile-nav-mount jellio-mobile-nav';
 
   const scroller = document.createElement('div');
   scroller.className = 'jellio-mobile-nav-scroll';
   container.appendChild(scroller);
 
-  // Real feedback: this whole pill bar used to paint nothing at all
-  // until both Profile's own getCurrentUser() and getPrimaryNavLinks()'s
-  // own /Views call had resolved. FIXED_NAV_LINKS and Settings need
-  // neither (components/sidebar.js's own header on the identical real
-  // fix explains why), so both paint synchronously now; the Library
-  // button (if this reader has any real libraries at all) and Profile
-  // each still slot into their own real final position (Library right
-  // before Settings, Profile last) the instant their own promise
-  // actually resolves, whichever of the two that happens to be first.
   FIXED_NAV_LINKS.forEach(function (link) {
     scroller.appendChild(buildLink(link));
   });

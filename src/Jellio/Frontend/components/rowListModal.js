@@ -1,13 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// A row's own title, made clickable: real feedback was that scrolling
-// all the way across a long row (a studio hub's own "Series on
-// Netflix", easily 20+ deep) by drag or arrow-click alone is tedious,
-// and the horizontal track itself gives no sense of how much further
-// there is to go. Reuses components/groupWatch.js's own real modal
-// shell (.jellio-avatar-picker-overlay/-panel/-title, the same
-// close/Escape/click-outside behaviour) rather than a second dialog
-// language, with a plain vertical list inside: every item in the row,
-// at a glance, one click through to it.
 import { getImageUrl, getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
@@ -18,13 +9,6 @@ function handleKeydown(event) {
   if (event.key === 'Escape') closeRowListModal();
 }
 
-// Bumped every real open/close so a fetchAll() still resolving after
-// the reader has already closed this modal, or opened it again for a
-// different row, has a real way to know its own answer is stale rather
-// than overwriting whatever is on screen by then. Real bug this
-// otherwise invites: a slow full fetch for row A landing after a quick
-// click reopened this same modal for row B would silently replace B's
-// own list with A's.
 let openToken = 0;
 
 function closeRowListModal() {
@@ -95,18 +79,6 @@ function buildListItem(item, select) {
   return row;
 }
 
-// items: real Jellyfin item objects (the same shape every row already
-// renders cards from), shown immediately, no waiting on a real network
-// round trip just to open this at all. options.fetchAll, when given, is
-// a real second, unbounded request for this exact same row: real
-// feedback was that this modal only ever showed whichever handful of
-// items the row itself had already loaded (its own real ROW_LIMIT,
-// 24 on most rows), never the studio hub's own real full depth a
-// "browse everything" click actually implies. Swaps the list over to
-// that real full answer once it lands, silently keeping the already
-// shown short list if it fails or if this row genuinely has no more
-// than that to begin with. options.onSelect defaults to this runtime's
-// own real item navigation; most callers just take that default.
 const PAGE_SIZE = 60;
 
 function openRowListModal(title, items, options) {
@@ -217,11 +189,6 @@ function openRowListModal(title, items, options) {
   document.body.appendChild(overlay);
 }
 
-// Wires a row's own <h2 class="jellio-row-title"> up to open the list
-// above: a chevron appended after the existing title text (el()'s own
-// textContent assignment elsewhere leaves room for this, never wipes
-// it back out), the whole heading made a real button rather than only
-// the small chevron being clickable.
 export function makeRowTitleClickable(titleEl, title, items, options) {
   if (!items || !items.length) return;
   titleEl.classList.add('jellio-row-title-clickable');

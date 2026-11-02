@@ -1,9 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// One manga series from the Manga shelf (screens/bookshelf.js, reached
-// with &series=<key>): its cover, how far the reader is, a button that
-// picks up where they left off, and every chapter in reading order with
-// its read state. Chapters stream from the source (MangaStreamController)
-// unless they've been saved to the server.
 import {
   getBookshelfItems,
   getAllReadingProgress,
@@ -141,9 +136,6 @@ export function renderMangaSeries(root, params, parentId) {
   }
 
   function render(group, rawProgress) {
-    // This reader's saved scanlator filter for the series: chapters from
-    // hidden groups are left out everywhere below, and (unless turned
-    // off) a chapter number read from one group counts as read for all.
     const prefs = Object.assign({}, shelf.Series[shelfKey]);
     const allChapters = group.chapters;
     const chapters = applyScanlatorFilter(allChapters, prefs.ExcludedScanlators);

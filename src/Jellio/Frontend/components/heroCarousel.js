@@ -1,15 +1,5 @@
 import { translateGenre } from '../runtime/i18n.js';
 import { t } from '../runtime/i18n.js';
-// Home hero carousel: backdrop, logo art, metadata line, action row, auto
-// advance. Ported from the original Jellio codebase's own heroCarousel.js,
-// itself a jellyfin-featured/NuvioWeb reference implementation (NuvioWeb's
-// own heroCarousel.js is a nine line stub, nothing to port from there),
-// adapted to this runtime's own module system and real routing.
-// Real feedback: a real Play button here skipped straight into playback
-// with no chance to see anything about the title first, not the real
-// Nuvio reference (checked directly against screenshots), which only
-// ever offers View Details from its own hero. screens/detail.js's own
-// Play button is one tap further in, not gone.
 import { getHeroCandidates, getImageUrl } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { formatRuntime } from '../runtime/format.js';
@@ -84,11 +74,6 @@ function metaLine(item) {
   return parts.join(' • ');
 }
 
-// A browser has nothing to interpolate between two url() values, so
-// swapping background-image on one element cannot animate: a new layer
-// crossfades in over whatever is already there instead, removed once the
-// CSS transition finishes. Preloads before mounting the layer so missing
-// or slow images never flash a blank screen, and guards against race conditions.
 function crossfadeBackdrop(container, url, isCurrent) {
   if (!url) return;
   const img = new Image();

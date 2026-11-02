@@ -1,6 +1,3 @@
-// How much the seasonal effects move, per browser: Full, Reduced (fewer
-// pieces, lower frame rate), Still (the scenery without animation) or Off.
-// Auto follows the system's reduced motion setting.
 const KEY = 'jellioSeasonalMotion';
 const EVENT = 'jellio-motion-change';
 

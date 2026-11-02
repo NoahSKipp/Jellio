@@ -1,9 +1,4 @@
 import { t } from '../runtime/i18n.js';
-// What gets downloaded for each kind of item, and the Download button
-// that sits on its page. The files and bookkeeping are runtime/offline.js's;
-// this file decides which files make up a book, a manga chapter, an
-// audiobook or a video, and snapshots what's needed to show and resume
-// them offline.
 import {
   getItemDetails,
   getAudiobookTracks,
@@ -52,9 +47,6 @@ function warmReaderScripts() {
   });
 }
 
-// Like the streaming apps: Low is small and quick to fetch, Higher keeps
-// 1080p. Anything above these caps is re-encoded on the server; a file
-// already under one is kept as it is. Low is the default.
 const DOWNLOAD_AUDIO_BITRATE = 128000;
 const VIDEO_QUALITIES = [
   { value: 'low', name: 'Low', detail: '480p', height: 480, bitrate: 1000000 },
@@ -200,20 +192,12 @@ async function preferredAudioLanguage() {
   return (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
 }
 
-// Of an item's sources (Gelato lists one per release), the first whose
-// audio is in the wanted language, going by its tracks or the flag
-// emoji in its name (components/streamPicker.js's detection).
 function sourceInLanguage(sources, language) {
   if (!language) return null;
   const wanted = languageName(language);
   return sources.find((source) => sourceAudioLanguages(source).some((code) => languageName(code) === wanted)) || null;
 }
 
-// A film or episode: the source in the user's audio language when there
-// is one (else the default), opened through Jellyfin's playback
-// negotiation, then converted to an MP4 every browser plays at the
-// chosen quality (or the original file), with its text subtitles as
-// WebVTT.
 async function downloadVideo(item, quality) {
   const option = VIDEO_QUALITIES.find((entry) => entry.value === quality) || VIDEO_QUALITIES[0];
   const [details, sources, language] = await Promise.all([
@@ -272,10 +256,6 @@ async function downloadVideo(item, quality) {
   const subtitles = (source.MediaStreams || []).filter(
     (stream) => stream.Type === 'Subtitle' && (stream.IsTextSubtitleStream || stream.IsExternal) && stream.Codec !== 'pgssub',
   );
-  // The file itself (not a conversion) can be fetched in parts at once,
-  // when the server supports it (runtime/offline.js).
-  // Anything but the file as stored is converted by the server, which
-  // only does a couple at a time (runtime/offline.js holds a slot for it).
   const convert = videoUrl !== staticUrl;
   if (convert) {
     const status = await getConversionStatus().catch(() => null);
@@ -580,9 +560,6 @@ export function canDownload(item) {
   );
 }
 
-// Download from a card's options menu (components/cardOptionsMenu.js),
-// anchored where that menu was: episodes ask which and at what quality,
-// a film or episode the quality, anything else starts straight away.
 export function promptDownload(item, anchorRect) {
   if (item.Type === 'Series' || item.Type === 'Season') {
     openEpisodesMenu(item, anchorRect, null);

@@ -1,6 +1,3 @@
-// How much the web player loads before it starts, and after it runs dry
-// mid-playback, kept per browser. Standard is the old behaviour; More and
-// Maximum trade a longer wait for fewer hiccups on big (4K) files.
 const KEY = 'jellio_prebuffer';
 
 const PREBUFFER_LEVELS = {

@@ -1,6 +1,3 @@
-// Per-user recommendation settings for Home screen:
-// - "What Others Are Watching" community row toggle and excluded user IDs
-// - Preferred genre rows selection (empty = automatic discovery)
 import { getCurrentUserId } from './auth.js';
 
 function storageKey() {

@@ -1,13 +1,3 @@
-// Jellio's service worker (runtime/offline.js has the rest of offline).
-// Registered for the web client's own pages, in place of jellyfin-web's
-// serviceworker.js, which it loads so notifications keep working.
-//
-// - The page and its scripts and styles (jellyfin-web's and Jellio's)
-//   come from the network when it answers, and are cached as they pass
-//   through, so the app opens from the cache when the server can't be
-//   reached.
-// - Item images and book covers fall back to a downloaded copy.
-// - Everything else (the API) goes straight to the network.
 const SHELL_CACHE = 'jellio-shell-v2';
 const FILES_CACHE = 'jellio-offline-files';
 const FILE_PREFIX = '/__jellio_offline__/';
@@ -80,10 +70,6 @@ function networkFirst(event, cacheKey) {
     });
     return new Promise(function (resolve, reject) {
       let settled = false;
-      // Only the page itself falls back on a slow answer (so a server that
-      // hangs rather than refusing still opens the app). Scripts and
-      // styles wait for the network while it answers at all: a cached copy
-      // there could be an older release, mixing old code into new.
       const timer =
         request.mode === 'navigate'
           ? setTimeout(function () {
@@ -109,9 +95,6 @@ function networkFirst(event, cacheKey) {
           cache
             .match(cacheKey)
             .then(function (cached) {
-              // A script or style cached under another version's
-              // ?v= still beats nothing (e.g. offline right after an
-              // update).
               return cached || (request.mode === 'navigate' ? null : cache.match(request, { ignoreSearch: true }));
             })
             .then(function (cached) {
