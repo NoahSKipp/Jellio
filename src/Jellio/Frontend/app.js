@@ -137,7 +137,9 @@ const connectivityReady = checkServer();
 
 document.addEventListener('jellio:connectivity', function (event) {
   const offline = event.detail && event.detail.offline;
-  showToast(offline ? t('toast_offline') : t('toast_online'));
+  languageReady.then(function () {
+    showToast(offline ? t('toast_offline') : t('toast_online'));
+  });
   if (!offline) {
     lastNavLinksSignature = null;
     scheduleNavRecheck(2, 0);
