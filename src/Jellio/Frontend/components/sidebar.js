@@ -10,7 +10,6 @@ import { navigateTo } from '../runtime/router.js';
 import { toggleNowPlayingPanel, nowPlayingCount } from './nowPlaying.js';
 import { toggleNotificationsPanel, notificationsUnreadCount } from './notifications.js';
 import { openAccountSwitcher } from './accountSwitcher.js';
-import { openGroupWatch } from './groupWatch.js';
 import { getCurrentUser } from '../runtime/api.js';
 
 const DOWNLOADS_LINK = { icon: 'download_for_offline', get label() { return t('nav_downloads'); }, hash: '#/downloads' };
@@ -87,7 +86,9 @@ function buildGroupWatchButton() {
 
   button.addEventListener('click', function () {
     button.blur();
-    openGroupWatch();
+    import('./groupWatch.js').then(function (module) {
+      module.openGroupWatch();
+    });
   });
 
   return button;

@@ -14,7 +14,18 @@ import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
-import { hasSeenLatestChangelog, markLatestChangelogSeen, getChangelogNotification, shouldShowChangelogNotification, LATEST_BIG_CHANGELOG } from '../runtime/changelog.js';
+// The release history is large; it loads after startup, not with it.
+let changelogModule = null;
+function loadChangelog() {
+  if (!changelogModule) changelogModule = import('../runtime/changelog.js');
+  return changelogModule;
+}
+
+function markLatestChangelogSeen() {
+  loadChangelog().then(function (changelog) {
+    changelog.markLatestChangelogSeen();
+  });
+}
 
 // A release date changes once a day at most, real reason this polls far
 // less often than components/nowPlaying.js's own 10s (a live session can
@@ -316,22 +327,24 @@ function clearAll() {
 }
 
 function poll() {
-  getNotifications()
-    .then(function (items) {
+  Promise.all([getNotifications(), loadChangelog()])
+    .then(function (results) {
+      const items = results[0];
+      const changelog = results[1];
       // Clear out any previous or stale changelog notifications from the list
       let merged = items
         ? items.filter(function (n) {
             return !n.Id || !n.Id.startsWith('changelog:');
           })
         : [];
-      if (shouldShowChangelogNotification()) {
-        merged.unshift(getChangelogNotification());
+      if (changelog.shouldShowChangelogNotification()) {
+        merged.unshift(changelog.getChangelogNotification());
       }
       if (knownIds) {
         // Clear any previous changelog IDs from knownIds so that an update with a new big release
         // changelog triggers a toast cleanly instead of being masked.
         for (const id of Array.from(knownIds)) {
-          if (id.startsWith('changelog:') && id !== ('changelog:' + LATEST_BIG_CHANGELOG.version)) {
+          if (id.startsWith('changelog:') && id !== ('changelog:' + changelog.LATEST_BIG_CHANGELOG.version)) {
             knownIds.delete(id);
           }
         }
