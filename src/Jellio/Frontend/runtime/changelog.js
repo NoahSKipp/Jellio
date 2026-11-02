@@ -15,6 +15,22 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.1",
+    "summary": "Player fixes for watch party controls and picture in picture.",
+    "highlights": [
+      {
+        "title": "Cleaner Player",
+        "description": "The reaction bar and an empty bubble no longer show in the player outside Group Watch, and in a group the reactions sit above the seek bar instead of over it."
+      },
+      {
+        "title": "Picture in Picture",
+        "description": "Automatic picture in picture keeps working after moving to the next title, closes when you come back to the tab, and the player shows a button to bring the video back if it stays in its own window."
+      }
+    ]
+  },
+  {
     "version": "1.104.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.0",
