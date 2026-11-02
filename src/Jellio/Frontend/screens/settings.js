@@ -1,4 +1,4 @@
-import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel } from '../runtime/bufferSettings.js';
+import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
 import { getCurrentUser, saveServerDisplayLanguage, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl } from '../runtime/api.js';
 import { getProfileSettings, setProfilePrivacy, setGrouplistEnabled, getCommunityUsers } from '../runtime/apiSocial.js';
 import { startMangaImport, getMangaImportStatus } from '../runtime/apiBooks.js';
@@ -307,6 +307,23 @@ function buildPlaybackCard() {
         setPrebufferLevel(value);
         saveServerDisplayPreferences({ prebuffer: value });
         status.textContent = t('settings_saved_next_video') + ' (' + t('settings_saved_profile') + ')';
+      },
+    ),
+  );
+  body.appendChild(
+    buildSelectRow(
+      null,
+      t('settings_buffer_switch_label'),
+      t('settings_buffer_switch_desc'),
+      [
+        { value: 'ask', label: t('settings_buffer_switch_ask') },
+        { value: 'auto', label: t('settings_buffer_switch_auto') },
+        { value: 'off', label: t('settings_buffer_switch_off') },
+      ],
+      getBufferSwitchMode(),
+      function (value, select, status) {
+        setBufferSwitchMode(value);
+        status.textContent = t('action_saved');
       },
     ),
   );

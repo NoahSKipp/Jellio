@@ -1,4 +1,5 @@
-import { t } from '../runtime/i18n.js';
+import { t, getDisplayLanguage } from '../runtime/i18n.js';
+import { preferredStreamLanguage, orderByLanguage } from '../runtime/streamLanguage.js';
 import { createPauseGate, startProgressTimer, stopProgressTimer, PAUSE_IDLE_STOP_MS } from '../runtime/playbackGuard.js';
 import { isAutoPipEnabled } from '../runtime/pipSettings.js';
 import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled } from '../runtime/offline.js';
@@ -55,7 +56,7 @@ import { createPartyLayer, askCatchUp } from '../components/partyLayer.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
-import { prebufferSettings } from '../runtime/bufferSettings.js';
+import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
 import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
 
@@ -226,14 +227,27 @@ export async function renderPlayer(root, params) {
         sources = await getMediaSources(itemId, { forceFresh: true });
       } catch (e) {}
       if (screenTornDown) return undefined;
-      const candidates = sources.filter(function (s) {
-        return tried.indexOf(s.Id) === -1 && !isBadSource(itemId, s);
-      });
+      let language = params.get('lang') || '';
+      if (!language) {
+        let audioPreference = '';
+        try {
+          const user = await currentUserPromise;
+          audioPreference = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
+        } catch (e) {}
+        language = preferredStreamLanguage(audioPreference, getDisplayLanguage());
+      }
+      const candidates = orderByLanguage(
+        sources.filter(function (s) {
+          return tried.indexOf(s.Id) === -1 && !isBadSource(itemId, s);
+        }),
+        language,
+        sourceAudioLanguages,
+      );
       if (candidates.length > 0) {
         navigateTo(
           playHash(itemId, candidates[0].Id) +
             '&tried=' + encodeURIComponent(tried.join(',')) +
-            (params.get('lang') ? '&lang=' + encodeURIComponent(params.get('lang')) : ''),
+            (language ? '&lang=' + encodeURIComponent(language) : ''),
         );
         return undefined;
       }
@@ -358,7 +372,11 @@ export async function renderPlayer(root, params) {
   }
 
   if (params.get('fromStart') === '1') startTicks = 0;
-  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId;
+  // A buffering switch carries the position over and plays straight on.
+  let lastUserSeekAt = 0;
+  const switchedAtTicks = Number(params.get('at')) || 0;
+  if (switchedAtTicks > 0 && !syncPlaylistItemId) startTicks = switchedAtTicks;
+  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId && !switchedAtTicks;
 
   const video = document.createElement('video');
   video.className = 'jellio-player-video';
@@ -2582,6 +2600,7 @@ export async function renderPlayer(root, params) {
   }
 
   function performSeek(targetSeconds) {
+    lastUserSeekAt = Date.now();
     if (getActiveCast()) {
       sendRemoteSeek(Math.round(targetSeconds * TICKS_PER_SECOND)).catch(function (err) {
         console.warn('Jellio: could not send Cast seek', err);
@@ -3489,46 +3508,27 @@ export async function renderPlayer(root, params) {
   let startTimer = null;
   const expectedRuntimeSeconds = item && item.RunTimeTicks ? item.RunTimeTicks / TICKS_PER_SECOND : 0;
 
-  function currentSourceLanguage() {
+  async function streamLanguage() {
     if (failoverLanguage) return failoverLanguage;
-    const languages = sourceAudioLanguages(mediaSource);
-    return languages.length ? languages[0] : '';
+    let audioPreference = '';
+    try {
+      const user = await currentUserPromise;
+      audioPreference = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
+    } catch (err) {}
+    return preferredStreamLanguage(audioPreference, getDisplayLanguage());
   }
 
-  async function failoverToNextStream(reason) {
-    if (failoverStarted || screenTornDown || getCurrentGroup()) return false;
-    failoverStarted = true;
-    if (startTimer) window.clearTimeout(startTimer);
-    console.warn('Jellio: stream failed (' + reason + '), trying the next one', mediaSource && mediaSource.Id);
-    markBadSource(itemId, mediaSource, { soft: /^no picture after/.test(reason) });
-    const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
-    let language = currentSourceLanguage();
-    if (!language) {
-      try {
-        const user = await currentUserPromise;
-        language = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
-      } catch (err) {}
-    }
+  // The streams left to try, in the order to try them.
+  async function nextStreams(tried, language) {
     let sources = [];
     try {
       sources = await getMediaSources(itemId, { forceFresh: true });
     } catch (err) {}
-    if (screenTornDown) return true;
     const candidates = sources.filter(function (source) {
       return tried.indexOf(source.Id) === -1 && !isBadSource(itemId, source);
     });
-    // Same language as this attempt first.
-    const languageCode = String(language || '').toLowerCase().slice(0, 2);
     function byLanguage(list) {
-      if (!languageCode) return list;
-      const matches = function (source) {
-        return sourceAudioLanguages(source).some(function (code) {
-          return String(code).toLowerCase().slice(0, 2) === languageCode;
-        });
-      };
-      return list.filter(matches).concat(list.filter(function (source) {
-        return !matches(source);
-      }));
+      return orderByLanguage(list, language, sourceAudioLanguages);
     }
     let ordered = byLanguage(candidates);
     if (avoidingVideoTranscodes()) {
@@ -3541,6 +3541,19 @@ export async function renderPlayer(root, params) {
       const reencode = getVideoTranscodePolicy() === 'Block' ? [] : candidates.filter(needsReencode);
       ordered = byLanguage(copyable).concat(byLanguage(reencode));
     }
+    return ordered;
+  }
+
+  async function failoverToNextStream(reason) {
+    if (failoverStarted || screenTornDown || getCurrentGroup()) return false;
+    failoverStarted = true;
+    if (startTimer) window.clearTimeout(startTimer);
+    console.warn('Jellio: stream failed (' + reason + '), trying the next one', mediaSource && mediaSource.Id);
+    markBadSource(itemId, mediaSource, { soft: /^no picture after/.test(reason) });
+    const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
+    const language = await streamLanguage();
+    const ordered = await nextStreams(tried, language);
+    if (screenTornDown) return true;
     if (!ordered.length) {
       cleanup();
       renderPlaybackError(
@@ -4106,6 +4119,123 @@ export async function renderPlayer(root, params) {
     if (!syncPlaylistItemId) return;
     notifyBuffering(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
   });
+
+  // A stream that keeps stopping to buffer: offer the next one (or switch
+  // straight away when that's the setting), resuming at the same spot.
+  const BUFFER_WINDOW_MS = 120000;
+  const BUFFER_STALL_TOTAL_MS = 12000;
+  const BUFFER_STALL_COUNT = 4;
+  const BUFFER_PROMPT_SNOOZE_MS = 10 * 60000;
+  const bufferStalls = [];
+  let bufferStallStartedAt = 0;
+  let bufferStallTimer = null;
+  let bufferPromptSnoozedUntil = 0;
+  let bufferPrompt = null;
+  let bufferSwitching = false;
+
+  function recentStalls(now) {
+    while (bufferStalls.length && now - bufferStalls[0].at > BUFFER_WINDOW_MS) bufferStalls.shift();
+    return bufferStalls;
+  }
+
+  function checkBuffering() {
+    const now = Date.now();
+    const stalls = recentStalls(now);
+    const ongoing = bufferStallStartedAt ? now - bufferStallStartedAt : 0;
+    const total = stalls.reduce(function (sum, stall) {
+      return sum + stall.ms;
+    }, ongoing);
+    const count = stalls.length + (bufferStallStartedAt ? 1 : 0);
+    if (total < BUFFER_STALL_TOTAL_MS && count < BUFFER_STALL_COUNT) return;
+    if (bufferPrompt || bufferSwitching || now < bufferPromptSnoozedUntil) return;
+    const mode = getBufferSwitchMode();
+    if (mode === 'off') return;
+    if (mode === 'auto') switchForBuffering();
+    else showBufferPrompt();
+  }
+
+  function closeBufferPrompt() {
+    if (bufferPrompt) bufferPrompt.remove();
+    bufferPrompt = null;
+  }
+
+  function showBufferPrompt() {
+    bufferPrompt = el('div', 'jellio-player-buffer-prompt');
+    bufferPrompt.appendChild(el('div', 'jellio-player-buffer-prompt-text', t('player_buffer_prompt')));
+    const actions = el('div', 'jellio-player-buffer-prompt-actions');
+    const switchButton = el('button', 'jellio-settings-button', t('player_buffer_switch'));
+    switchButton.type = 'button';
+    switchButton.addEventListener('click', function () {
+      closeBufferPrompt();
+      switchForBuffering();
+    });
+    const keep = el('button', 'jellio-settings-button jellio-settings-button-secondary', t('player_buffer_keep'));
+    keep.type = 'button';
+    keep.addEventListener('click', function () {
+      closeBufferPrompt();
+      bufferPromptSnoozedUntil = Date.now() + BUFFER_PROMPT_SNOOZE_MS;
+    });
+    const always = el('button', 'jellio-player-buffer-prompt-always', t('player_buffer_always'));
+    always.type = 'button';
+    always.addEventListener('click', function () {
+      setBufferSwitchMode('auto');
+      closeBufferPrompt();
+      switchForBuffering();
+    });
+    actions.appendChild(switchButton);
+    actions.appendChild(keep);
+    actions.appendChild(always);
+    bufferPrompt.appendChild(actions);
+    root.appendChild(bufferPrompt);
+    switchButton.focus();
+  }
+
+  async function switchForBuffering() {
+    if (bufferSwitching || screenTornDown || getCurrentGroup()) return;
+    bufferSwitching = true;
+    const positionTicks = currentPositionTicks();
+    const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
+    const language = await streamLanguage();
+    const ordered = await nextStreams(tried, language);
+    if (screenTornDown) return;
+    if (!ordered.length) {
+      bufferSwitching = false;
+      bufferPromptSnoozedUntil = Date.now() + BUFFER_PROMPT_SNOOZE_MS;
+      showPlayerToast(t('player_buffer_no_other'));
+      return;
+    }
+    markBadSource(itemId, mediaSource, { soft: true });
+    showPlayerToast(t('player_buffer_switching', { label: sourceLabel(ordered[0]) }));
+    navigateTo(
+      playHash(itemId, ordered[0].Id) +
+        '&tried=' + encodeURIComponent(tried.join(',')) +
+        (language ? '&lang=' + encodeURIComponent(language) : '') +
+        '&at=' + positionTicks,
+    );
+  }
+
+  video.addEventListener('waiting', function () {
+    if (!hasReportedStart || video.paused || syncPlaylistItemId || bufferStallStartedAt) return;
+    if (Date.now() - lastUserSeekAt < 4000) return;
+    bufferStallStartedAt = Date.now();
+    if (bufferStallTimer) window.clearInterval(bufferStallTimer);
+    bufferStallTimer = window.setInterval(function () {
+      if (screenTornDown || !bufferStallStartedAt) {
+        window.clearInterval(bufferStallTimer);
+        bufferStallTimer = null;
+        return;
+      }
+      checkBuffering();
+    }, 1000);
+  });
+  video.addEventListener('playing', function () {
+    if (!bufferStallStartedAt) return;
+    bufferStalls.push({ at: Date.now(), ms: Date.now() - bufferStallStartedAt });
+    bufferStallStartedAt = 0;
+    if (bufferStallTimer) window.clearInterval(bufferStallTimer);
+    bufferStallTimer = null;
+    checkBuffering();
+  });
   video.addEventListener('canplay', function () {
     if (!syncPlaylistItemId) return;
     notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
@@ -4156,6 +4286,8 @@ export async function renderPlayer(root, params) {
   pollSyncWait();
 
   async function cleanup() {
+    if (bufferStallTimer) window.clearInterval(bufferStallTimer);
+    closeBufferPrompt();
     setPlaybackActive(false);
     holdAwake(false);
     document.removeEventListener('visibilitychange', onWakeVisibility);

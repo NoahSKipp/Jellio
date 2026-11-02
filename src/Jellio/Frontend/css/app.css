@@ -15654,3 +15654,43 @@
     flex: 1 1 0;
   }
 }
+
+.jellio-player-buffer-prompt {
+  position: absolute;
+  top: clamp(20px, 6vh, 56px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8em;
+  max-width: calc(100vw - 32px);
+  padding: 1em 1.3em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: var(--jellio-card-radius);
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  text-align: center;
+  z-index: 6;
+}
+
+.jellio-player-buffer-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6em;
+}
+
+.jellio-player-buffer-prompt-actions .jellio-settings-button {
+  align-self: auto;
+}
+
+.jellio-player-buffer-prompt-always {
+  border: 0;
+  background: none;
+  color: var(--jellio-text-secondary);
+  font: inherit;
+  font-size: 0.85em;
+  text-decoration: underline;
+  cursor: pointer;
+}
