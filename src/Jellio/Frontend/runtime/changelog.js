@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.102.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.102.5",
+    "summary": "Live TV badges show their names.",
+    "highlights": [
+      {
+        "title": "Live TV Badge Names",
+        "description": "Tuned In, Live Regular, Front Row Seat and Always On Air now show their names and descriptions, in every language, instead of an internal key."
+      }
+    ]
+  },
+  {
     "version": "1.102.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.102.4",
