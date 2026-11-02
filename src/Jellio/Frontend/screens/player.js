@@ -1,7 +1,7 @@
 import { t, getDisplayLanguage } from '../runtime/i18n.js';
 import { preferredStreamLanguage, orderByLanguage } from '../runtime/streamLanguage.js';
 import { createPauseGate, startProgressTimer, stopProgressTimer, PAUSE_IDLE_STOP_MS } from '../runtime/playbackGuard.js';
-import { isAutoPipEnabled } from '../runtime/pipSettings.js';
+import { attachPictureInPicture } from '../components/pictureInPicture.js';
 import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled } from '../runtime/offline.js';
 import { renderOfflinePlayer } from './offlinePlayer.js';
 import {
@@ -85,23 +85,6 @@ function willUseHls(source, forceTranscode) {
 }
 
 let mediaSessionOwner = null;
-
-// Only a window the viewer opened with the button stays open once the
-// page is back; one opened automatically or left over closes.
-let manualPipElement = null;
-function closeStrayPictureInPicture(attempt) {
-  const current = document.pictureInPictureElement;
-  if (!current || document.visibilityState !== 'visible') return;
-  if (current === manualPipElement && current.isConnected) return;
-  const tries = typeof attempt === 'number' ? attempt : 0;
-  document.exitPictureInPicture().catch(function () {
-    if (tries < 4) window.setTimeout(function () { closeStrayPictureInPicture(tries + 1); }, 400);
-  });
-}
-document.addEventListener('visibilitychange', closeStrayPictureInPicture);
-window.addEventListener('focus', closeStrayPictureInPicture);
-window.addEventListener('pageshow', closeStrayPictureInPicture);
-window.addEventListener('hashchange', closeStrayPictureInPicture);
 
 export async function renderPlayer(root, params) {
   let screenTornDown = false;
@@ -602,64 +585,16 @@ export async function renderPlayer(root, params) {
   let syncMediaSession = function () {};
   let syncMediaPosition = function () {};
 
-  let pipPlaceholder = null;
+  let pip = null;
   if (document.pictureInPictureEnabled) {
-    const pipButton = el('button', 'jellio-player-back jellio-player-pip');
-    pipButton.type = 'button';
-    pipButton.setAttribute('aria-label', t('player_pip'));
-    const pipIcon = el('span', 'material-icons picture_in_picture_alt');
-    pipIcon.setAttribute('aria-hidden', 'true');
-    pipButton.appendChild(pipIcon);
-    pipButton.addEventListener('click', function () {
-      if (document.pictureInPictureElement === video) {
-        document.exitPictureInPicture().catch(function () {});
-      } else {
-        manualPipElement = video;
-        video.requestPictureInPicture().catch(function (err) {
-          if (manualPipElement === video) manualPipElement = null;
-          console.warn('Jellio: could not enter picture in picture', err);
-        });
-      }
+    pip = attachPictureInPicture({
+      video: video,
+      root: root,
+      onReturn: function () {
+        checkForFrozenPicture();
+      },
     });
-    video.addEventListener('enterpictureinpicture', function () {
-      pipButton.classList.add('jellio-player-pip-active');
-    });
-    video.addEventListener('leavepictureinpicture', function () {
-      pipButton.classList.remove('jellio-player-pip-active');
-    });
-
-    pipPlaceholder = el('div', 'jellio-player-pip-placeholder');
-    pipPlaceholder.hidden = true;
-    pipPlaceholder.appendChild(el('span', 'material-icons picture_in_picture_alt'));
-    pipPlaceholder.appendChild(el('span', 'jellio-player-pip-placeholder-text', t('player_pip_active')));
-    const pipReturn = el('button', 'jellio-player-pip-placeholder-action', t('player_pip_return'));
-    pipReturn.type = 'button';
-    pipPlaceholder.appendChild(pipReturn);
-    function bringBackFromPip(event) {
-      if (document.pictureInPictureElement !== video) return;
-      event.preventDefault();
-      event.stopPropagation();
-      manualPipElement = null;
-      document.exitPictureInPicture().catch(function () {});
-    }
-    pipReturn.addEventListener('click', bringBackFromPip);
-    // While the video is away, a click on the empty player brings it back
-    // instead of pausing.
-    root.addEventListener('click', function (event) {
-      if (document.pictureInPictureElement !== video) return;
-      if (event.target.closest('button, input, a, .jellio-player-pill, .jellio-player-sidepanel, .jellio-player-topbar')) return;
-      bringBackFromPip(event);
-    }, true);
-    video.addEventListener('enterpictureinpicture', function () {
-      pipPlaceholder.hidden = false;
-      // Opened after the tab was already back: close it again.
-      if (document.visibilityState === 'visible' && document.hasFocus()) closeStrayPictureInPicture();
-    });
-    video.addEventListener('leavepictureinpicture', function () {
-      pipPlaceholder.hidden = true;
-      if (manualPipElement === video) manualPipElement = null;
-    });
-    topbarActions.appendChild(pipButton);
+    topbarActions.appendChild(pip.button);
   }
 
   let frozenCheck = null;
@@ -685,16 +620,10 @@ export async function renderPlayer(root, params) {
     }, 900);
   }
 
-  function enterPipForTabLeave() {
-    if (!document.pictureInPictureEnabled || !isAutoPipEnabled()) return Promise.resolve();
-    if (video.paused || video.ended || video.disablePictureInPicture || document.pictureInPictureElement) return Promise.resolve();
-    return video.requestPictureInPicture().catch(function () {});
-  }
-
   if ('mediaSession' in navigator) {
     try {
       navigator.mediaSession.setActionHandler('enterpictureinpicture', function () {
-        enterPipForTabLeave();
+        if (pip) pip.enterForTabLeave();
       });
     } catch (err) {
       // Not every browser knows this action.
@@ -702,14 +631,8 @@ export async function renderPlayer(root, params) {
   }
   document.addEventListener('visibilitychange', onTabVisibility);
   function onTabVisibility() {
-    if (document.visibilityState === 'hidden') {
-      enterPipForTabLeave();
-      return;
-    }
-    closeStrayPictureInPicture();
-    checkForFrozenPicture();
+    if (document.visibilityState === 'visible') checkForFrozenPicture();
   }
-  video.addEventListener('leavepictureinpicture', checkForFrozenPicture);
 
   let exitFullscreenOnCleanup = function () {};
   let fullscreenButton = null;
@@ -3294,7 +3217,7 @@ export async function renderPlayer(root, params) {
   root.appendChild(syncWaitBanner);
   root.appendChild(skipOverlay.overlay);
   root.appendChild(shell);
-  if (pipPlaceholder) root.insertBefore(pipPlaceholder, shell);
+  if (pip) root.insertBefore(pip.placeholder, shell);
 
   if (hasResumePosition) {
     const percent =
@@ -4404,7 +4327,7 @@ export async function renderPlayer(root, params) {
     if (getActiveCast()) disconnectCast().catch(function () {});
     document.removeEventListener('visibilitychange', onTabVisibility);
     window.clearTimeout(frozenCheck);
-    if (document.pictureInPictureElement === video) document.exitPictureInPicture().catch(function () {});
+    if (pip) pip.destroy();
     if (screenTornDown) return;
     screenTornDown = true;
     if (preloadedNextVideoEl) {
