@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.104.0] - 2026-11-02\n\n### 🚀 Features\n\n- *(player)* Show stream switch progress and switch in place\n\n### 📚 Documentation\n\n- *(changelog)* Stream switch progress in 1.104.0\n",
+        "checksum": "479182122546502afb81fbe3491f4a06",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.0/jellio_1.104.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-02T21:39:08Z",
+        "version": "1.104.0"
+      },
+      {
         "changelog": "## [1.103.0] - 2026-11-02\n\n### 🚀 Features\n\n- *(player)* Add stream language preference and ordering helpers\n- *(player)* Language-aware failover and a switch offer when buffering\n\n### 📚 Documentation\n\n- *(changelog)* Stream switching in 1.103.0\n",
         "checksum": "a223c72b8477422a0b718ce89f39830d",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.103.0/jellio_1.103.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-26T00:28:54Z",
         "version": "1.89.5"
-      },
-      {
-        "changelog": "## [1.89.4] - 2026-10-25\n\n### 🐛 Bug Fixes\n\n- *(detail)* Try every header art candidate and move on when one fails\n",
-        "checksum": "7d0d8387ec8144e56c3e2cc57b629634",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.4/jellio_1.89.4.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-25T17:08:21Z",
-        "version": "1.89.4"
       }
     ]
   }
