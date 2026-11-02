@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.103.0] - 2026-11-02\n\n### 🚀 Features\n\n- *(player)* Add stream language preference and ordering helpers\n- *(player)* Language-aware failover and a switch offer when buffering\n\n### 📚 Documentation\n\n- *(changelog)* Stream switching in 1.103.0\n",
+        "checksum": "a223c72b8477422a0b718ce89f39830d",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.103.0/jellio_1.103.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-02T21:13:58Z",
+        "version": "1.103.0"
+      },
+      {
         "changelog": "## [1.102.5] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(i18n)* Name the Live TV badges in every language\n\n### 📚 Documentation\n\n- *(changelog)* Live TV badge names in 1.102.5\n",
         "checksum": "67fdf0815d058251415efcc68d6f63ca",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.5/jellio_1.102.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-25T17:08:21Z",
         "version": "1.89.4"
-      },
-      {
-        "changelog": "## [1.89.3] - 2026-10-25\n\n### 🐛 Bug Fixes\n\n- *(detail)* Fall back to the thumb, then a blurred poster, for header art\n",
-        "checksum": "4b6863bca569ae6168e5867da20a517f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.3/jellio_1.89.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-25T03:33:17Z",
-        "version": "1.89.3"
       }
     ]
   }
