@@ -27,7 +27,7 @@ function handleKeydown(event) {
 // own list with A's.
 let openToken = 0;
 
-export function closeRowListModal() {
+function closeRowListModal() {
   openToken++;
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) existing.remove();
@@ -109,7 +109,7 @@ function buildListItem(item, select) {
 // own real item navigation; most callers just take that default.
 const PAGE_SIZE = 60;
 
-export function openRowListModal(title, items, options) {
+function openRowListModal(title, items, options) {
   closeRowListModal();
   const token = ++openToken;
 

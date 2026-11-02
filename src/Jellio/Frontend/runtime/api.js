@@ -540,7 +540,6 @@ function rowCacheScope() {
   return { serverId: (user && user.ServerId) || getServerAddress(), userId: getCurrentUserId(), language: getDisplayLanguage() };
 }
 
-
 // Invalidate caches and refresh row cache scope when display language changes
 if (typeof window !== 'undefined') {
   window.addEventListener('jellio-display-language-change', function () {
@@ -839,7 +838,7 @@ export function getContinueListening(limit) {
 // Real items for a list of ids, in the order given (the /Items endpoint
 // itself returns them in its own sort order, not the caller's).
 // rowClass: cache it with the row asking (getContinueReading).
-export function getItemsByIds(ids, rowClass) {
+function getItemsByIds(ids, rowClass) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!ids || !ids.length) return Promise.resolve([]);
@@ -1028,7 +1027,7 @@ export function buildAudioStreamUrl(itemId, transcode) {
 // Comic archives: these belong on the Manga shelf, not the Books one.
 const COMIC_FILE = /\.(cbz|cbr|cb7|cbt)$/i;
 
-export function isComicItem(item) {
+function isComicItem(item) {
   return !!(item && item.Path && COMIC_FILE.test(item.Path));
 }
 
@@ -1221,12 +1220,6 @@ export function getStreamCoverUrl(mangaId, title) {
   );
 }
 
-// Downloads a streamed series (or some chapters) into the library.
-export function saveStreamSeries(mangaId, chapterIds) {
-  invalidateStreamLibrary();
-  return postJson('/Jellio/manga/stream/series/' + mangaId + '/save', { ChapterIds: chapterIds || null });
-}
-
 export function getBookCoverUrl(itemId) {
   return (
     getServerAddress() +
@@ -1320,7 +1313,7 @@ export function getMangaRequestStatus() {
 
 // Resolves to { Searched, Failed, Languages, InstalledLanguages,
 // TotalSources, NsfwSources, Sources }.
-export function searchMangaSources(query) {
+function searchMangaSources(query) {
   return getJson('/Jellio/manga/search?q=' + encodeURIComponent(query), 45000).then(function (response) {
     const result = response || {};
     return {
@@ -1618,12 +1611,6 @@ export function getVocabulary() {
   });
 }
 
-export function getDueVocabulary(limit) {
-  return getJson('/Jellio/vocab/due?limit=' + (limit || 50)).then(function (list) {
-    return list || [];
-  });
-}
-
 export function addVocabulary(entry) {
   return sendOrQueue('POST', '/Jellio/vocab', entry).then(function (created) {
     return created || Object.assign({ Id: 'offline-' + Date.now() }, entry);
@@ -1879,7 +1866,7 @@ function shuffleInPlace(items) {
 // real appearance count across the reader's whole watch history rather
 // than one seed at a time, so it needs this by itself, not tied to a
 // single seed's own candidate pool.
-export function getPersonItems(personId, limit) {
+function getPersonItems(personId, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -1928,7 +1915,7 @@ export function audiobookTitle(item, trackCount) {
   return item.Name;
 }
 
-export function collapseAudiobookTracks(items) {
+function collapseAudiobookTracks(items) {
   const counts = new Map();
   (items || []).forEach(function (item) {
     if (item && item.Type === 'AudioBook') {
@@ -2096,46 +2083,6 @@ export function searchMovies(term, signal) {
 
 export function searchSeries(term, signal) {
   return searchByType(term, 'series', signal);
-}
-
-export function searchBooks(term, signal) {
-  const userId = getCurrentUserId();
-  if (!userId) return Promise.reject(new Error('Not signed in'));
-  if (!term) return Promise.resolve([]);
-  const params = new URLSearchParams({
-    searchTerm: term,
-    Recursive: 'true',
-    IncludeItemTypes: 'Book',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
-    Limit: '50',
-  });
-  return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (result) {
-    const items = (result && result.Items) || [];
-    return items.filter((item) => !isComicItem(item));
-  });
-}
-
-export function searchAudiobooks(term, signal) {
-  const userId = getCurrentUserId();
-  if (!userId) return Promise.reject(new Error('Not signed in'));
-  if (!term) return Promise.resolve([]);
-  return getJson('/Jellio/audiobooks/search?searchTerm=' + encodeURIComponent(term), SEARCH_TIMEOUT_MS, signal)
-    .then(function (result) {
-      return (result && result.Items) || [];
-    })
-    .catch(function (err) {
-      console.warn('Jellio: dedicated audiobook search unavailable, falling back to native items search', err);
-      const params = new URLSearchParams({
-        searchTerm: term,
-        Recursive: 'true',
-        IncludeItemTypes: 'AudioBook',
-        Fields: 'PrimaryImageAspectRatio,ProductionYear,DateCreated,Genres,RunTimeTicks,Path',
-        Limit: '50',
-      });
-      return getJson('/Users/' + userId + '/Items?' + params.toString(), SEARCH_TIMEOUT_MS, signal).then(function (res) {
-        return collapseAudiobookTracks((res && res.Items) || []);
-      });
-    });
 }
 
 // Every watchlisted item, real endpoint (GET /Users/{id}/Items with
@@ -2437,14 +2384,6 @@ const mediaSourcesCache = new Map();
 const mediaSourcesInFlight = new Map();
 const MEDIA_SOURCES_TTL_MS = 5 * 60 * 1000;
 
-export function invalidateMediaSourcesCache(itemId) {
-  if (itemId) {
-    mediaSourcesCache.delete(String(itemId));
-  } else {
-    mediaSourcesCache.clear();
-  }
-}
-
 export { filterPlayableSources };
 
 // With no releases found, Gelato lists a single placeholder source with no
@@ -2637,7 +2576,6 @@ const CONTAINER_MIME = {
   webm: 'video/webm',
 };
 
-
 const H264_PROFILES = {
   baseline: '42',
   'constrained baseline': '42',
@@ -2738,7 +2676,7 @@ export function canBrowserDirectPlay(mediaSource) {
 // What this engine reports it can play, for checking a machine: each
 // container with each codec. Run from the console as
 // (await import('/Jellio/frontend/runtime/api.js')).directPlayReport().
-export function directPlayReport() {
+function directPlayReport() {
   const video = {
     h264: 'avc1.640028',
     'h264 high10': 'avc1.6e0028',
@@ -3639,7 +3577,7 @@ export function getAnimeIds() {
   });
 }
 
-export function isAnimeItem(item, animeIds) {
+function isAnimeItem(item, animeIds) {
   if (!item || !animeIds || !animeIds.size) return false;
   return animeIds.has(normalizedId(item.Id)) || (!!item.SeriesId && animeIds.has(normalizedId(item.SeriesId)));
 }
@@ -3925,7 +3863,7 @@ function scanGenres(parentId, itemType) {
 // Every genre with how many items carry it, worked out and cached on the
 // server (Controllers/GenresController.cs) instead of downloading thousands
 // of items here. Falls back to the scan below if that endpoint fails.
-export function getGenreCounts(parentId, itemType) {
+function getGenreCounts(parentId, itemType) {
   const params = new URLSearchParams({ types: itemType });
   if (parentId) params.set('parentId', parentId);
   const path = '/Jellio/genres?' + params.toString();
@@ -4156,7 +4094,6 @@ export function getSeasonalItems(genres, searchTerms, limit) {
     return collapseAudiobookTracks(combined);
   });
 }
-
 
 // Real feedback, live: a real episode with a real, working native skip
 // button came back Start: 0, End: 0 from this file's own legacy
@@ -4736,8 +4673,6 @@ export function getCommunityUsers() {
   });
 }
 
-
-
 let cachedDisplayPreferences = null;
 
 export function getCachedServerDisplayPreferences() {
@@ -5002,10 +4937,6 @@ export function removeStreamLink(id) {
 // One channel out of a playlist; it stays out after a refresh.
 export function removeStreamLinkEntry(id, index) {
   return streamLinkRequest('DELETE', '/' + encodeURIComponent(id) + '/entries/' + index, undefined, 15000);
-}
-
-export function renameStreamLink(id, name) {
-  return streamLinkRequest('POST', '/' + encodeURIComponent(id) + '/rename', { Name: name }, 15000);
 }
 
 export function refreshStreamLink(id) {

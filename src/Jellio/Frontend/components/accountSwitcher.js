@@ -32,7 +32,7 @@ function handleOutsideClick(event) {
   if (overlay && event.target === overlay) closeAccountSwitcher();
 }
 
-export function closeAccountSwitcher() {
+function closeAccountSwitcher() {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) existing.remove();
   document.removeEventListener('keydown', handleKeydown);

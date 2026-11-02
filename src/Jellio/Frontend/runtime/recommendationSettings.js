@@ -41,7 +41,7 @@ export function getCommunityExcludedUsers() {
   return Array.isArray(settings.communityExcludedUsers) ? settings.communityExcludedUsers : [];
 }
 
-export function setCommunityExcludedUsers(userIds) {
+function setCommunityExcludedUsers(userIds) {
   const settings = loadSettings();
   settings.communityExcludedUsers = Array.isArray(userIds) ? userIds : [];
   saveSettings(settings);

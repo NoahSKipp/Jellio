@@ -10,7 +10,7 @@ function time(value) {
   return Number.isNaN(ms) ? null : ms;
 }
 
-export function programmeProgress(start, end, nowMs) {
+function programmeProgress(start, end, nowMs) {
   if (start == null || end == null || end <= start) return 0;
   return Math.min(1, Math.max(0, (nowMs - start) / (end - start)));
 }
@@ -61,7 +61,7 @@ export function classifyChannel(name) {
   return { kind: SPORTS.test(text) ? 'sports' : 'tv', language: label };
 }
 
-export function mapChannel(dto, nowMs) {
+function mapChannel(dto, nowMs) {
   const now = mapProgramme(dto.CurrentProgram, nowMs);
   const kind = classifyChannel(dto.Name);
   return {

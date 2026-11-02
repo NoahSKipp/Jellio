@@ -335,11 +335,6 @@ function hasImageInfo(item) {
   return !!(item && (item.ImageTags || item.BackdropImageTags));
 }
 
-function landscapeImageUrl(item) {
-  const candidates = landscapeImageCandidates(item);
-  return candidates.length > 0 ? candidates[0] : null;
-}
-
 // Real RunTimeTicks/PlaybackPositionTicks, both already real fields on
 // a real Resume/NextUp response (runtime/api.js's own getResumeItems
 // now asks for RunTimeTicks explicitly alongside the fields it already

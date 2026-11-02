@@ -22,7 +22,7 @@ function jellioVersion() {
   }
 }
 
-export function tmdbBadgeUrl() {
+function tmdbBadgeUrl() {
   const version = jellioVersion();
   return '/Jellio/frontend/img/ratings/tmdb.svg' + (version ? '?v=' + version : '');
 }

@@ -59,7 +59,7 @@ function idKey(id) {
 // 1080p. Anything above these caps is re-encoded on the server; a file
 // already under one is kept as it is. Low is the default.
 const DOWNLOAD_AUDIO_BITRATE = 128000;
-export const VIDEO_QUALITIES = [
+const VIDEO_QUALITIES = [
   { value: 'low', name: 'Low', detail: '480p', height: 480, bitrate: 1000000 },
   { value: 'high', name: 'High', detail: '720p', height: 720, bitrate: 2500000 },
   { value: 'higher', name: 'Higher', detail: '1080p', height: 1080, bitrate: 5000000 },
@@ -73,7 +73,7 @@ let hevcPromise = null;
 
 // Whether this device asks for HEVC: the Mac app, when it can play it
 // and the server encodes it in hardware (a CPU encode would be slow).
-export function wantsHevc() {
+function wantsHevc() {
   if (hevcPromise) return hevcPromise;
   hevcPromise = (async function () {
     if (!(window.jellioNative && window.jellioNative.platform === 'macos')) return false;
@@ -96,7 +96,7 @@ function effectiveBitrate(option, hevc) {
 }
 
 // "High · 720p · ~1.1 GB" for a title of known length, else per hour.
-export function qualityLabel(option, runtimeTicks) {
+function qualityLabel(option, runtimeTicks) {
   if (!option.bitrate) return option.name + ' · ' + option.detail;
   const perSecond = (effectiveBitrate(option, hevcResolved) + DOWNLOAD_AUDIO_BITRATE) / 8;
   const size = runtimeTicks ? formatBytes(perSecond * (runtimeTicks / 1e7)) : '~' + formatBytes(perSecond * 3600) + ' per hour';
@@ -173,7 +173,7 @@ export async function downloadBook(item, kind) {
 
 // Every track of an audiobook, with its cover under each track's id too,
 // since the player asks for covers by track.
-export async function downloadAudiobook(item) {
+async function downloadAudiobook(item) {
   const existing = await findAnyDownload(item.Id);
   if (existing && existing.Status !== 'error') return existing;
   const tracks = await getAudiobookTracks(item);
@@ -217,7 +217,7 @@ function sourceInLanguage(sources, language) {
 // negotiation, then converted to an MP4 every browser plays at the
 // chosen quality (or the original file), with its text subtitles as
 // WebVTT.
-export async function downloadVideo(item, quality) {
+async function downloadVideo(item, quality) {
   const option = VIDEO_QUALITIES.find((entry) => entry.value === quality) || VIDEO_QUALITIES[0];
   const [details, sources, language] = await Promise.all([
     getItemDetails(item.Id),
@@ -338,7 +338,7 @@ export async function downloadVideo(item, quality) {
   });
 }
 
-export function downloadKindFor(item, bookKind) {
+function downloadKindFor(item, bookKind) {
   if (item.Type === 'AudioBook') return 'audiobook';
   if (item.Type === 'Book') return bookKind === 'manga' || /\.(cbz|cbr|cb7|cbt)$/i.test(item.Path || '') ? 'manga' : 'book';
   if (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Video' || item.Type === 'MusicVideo') return 'video';

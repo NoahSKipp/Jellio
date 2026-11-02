@@ -53,14 +53,8 @@ function rand(min, max) {
   return min + Math.random() * (max - min);
 }
 
-
 function buildWash(container) {
   container.appendChild(el('div', 'jellio-seasons-wash'));
-}
-
-function cssVar(container, name, fallback) {
-  const value = getComputedStyle(container).getPropertyValue(name).trim();
-  return value || fallback;
 }
 
 // Halloween: the wash, fog, a breathing vignette and eyes in the dark,

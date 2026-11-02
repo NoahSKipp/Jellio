@@ -850,7 +850,7 @@ function startExpensiveSections() {
   return expensiveSectionsPromise;
 }
 
-export function preloadExpensiveHomeSections() {
+function preloadExpensiveHomeSections() {
   return startExpensiveSections().then(function (expensive) {
     return cheapBuilt.concat(expensive);
   });

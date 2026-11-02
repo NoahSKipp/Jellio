@@ -8,7 +8,7 @@ import { el } from '../runtime/dom.js';
 const KEY = 'jellio-manga-library-view';
 const OVERLAY_ID = 'jellioLibraryView';
 
-export const FILTERS = [
+const FILTERS = [
   { key: 'unread', label: 'Unread' },
   { key: 'started', label: 'Started' },
   { key: 'completed', label: 'Completed' },
@@ -36,7 +36,7 @@ export function loadLibraryView(kind) {
   }
 }
 
-export function saveLibraryView(view, kind) {
+function saveLibraryView(view, kind) {
   const key = 'jellio-' + (kind || 'manga') + '-library-view';
   try {
     localStorage.setItem(key, JSON.stringify(view));

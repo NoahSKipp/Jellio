@@ -408,7 +408,7 @@ export function toggleNotificationsPanel() {
   }
 }
 
-export function hideNotificationsPanel() {
+function hideNotificationsPanel() {
   cancelHoverClose();
   if (!panel) return;
   panel.classList.remove('jellio-notifications-panel-visible');

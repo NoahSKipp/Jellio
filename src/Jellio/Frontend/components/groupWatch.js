@@ -106,27 +106,12 @@ function stopListPoll() {
   }
 }
 
-export function closeGroupWatch() {
+function closeGroupWatch() {
   stopChatPoll();
   stopListPoll();
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) existing.remove();
   document.removeEventListener('keydown', handleKeydown);
-}
-
-// Real bug, found live: GroupInfoDto has no PlayingItemName field at
-// all (confirmed against real jellyfin/jellyfin source), so this always
-// read as undefined and every group showed "Idle" here regardless of
-// its own real state. State is the one real field this endpoint
-// actually carries for that; the item's own real name is only ever
-// known from a real pushed PlayQueue update (runtime/syncPlay.js's own
-// currentQueue), not exposed by GET /SyncPlay/List at all, so a group
-// this reader is not a member of can only ever show a coarse status
-// here, never a title.
-function groupSubtitle(group) {
-  if (group.State === 'Playing') return 'Playing';
-  if (group.State === 'Paused' || group.State === 'Waiting') return 'Paused';
-  return 'Idle';
 }
 
 function formatChatTime(isoTimestamp) {

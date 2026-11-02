@@ -27,7 +27,7 @@ function hex2(value) {
   return Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
 }
 
-export function videoStreamOf(mediaSource) {
+function videoStreamOf(mediaSource) {
   const streams = (mediaSource && mediaSource.MediaStreams) || [];
   return streams.filter((stream) => stream.Type === 'Video')[0] || null;
 }

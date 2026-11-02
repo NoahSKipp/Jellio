@@ -133,7 +133,7 @@ function handleKeydown(event) {
   }
 }
 
-export function closeStreamPicker() {
+function closeStreamPicker() {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) existing.remove();
   document.removeEventListener('keydown', handleKeydown);
@@ -275,7 +275,7 @@ function flagLanguages(text) {
 // still deserves its own real filter chip, a reader choosing between a
 // German dub and an undubbed original release being a real choice too,
 // not just a tag with nothing behind it to filter by.
-export const ORIGINAL_AUDIO_CODE = '__original__';
+const ORIGINAL_AUDIO_CODE = '__original__';
 
 // Also not a real ISO code: runtime/languages.js's own entry for it
 // explains the real gap this closes. Scene-release convention, not
@@ -283,7 +283,7 @@ export const ORIGINAL_AUDIO_CODE = '__original__';
 // "...MULTi AAC2.0 H.264-VARYG" in its own Name with no MediaStreams
 // data yet and no flag emoji either, and showed up as plain Original
 // Audio here despite the release itself claiming otherwise.
-export const MULTI_AUDIO_CODE = '__multi__';
+const MULTI_AUDIO_CODE = '__multi__';
 
 const MULTI_AUDIO_PATTERN = /\b(multi|dual)([-.\s]?audio)?\b/i;
 

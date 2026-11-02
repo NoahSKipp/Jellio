@@ -3,7 +3,7 @@
 // for both.
 import { classifyChannel } from './liveTv.js';
 
-export const LINK_PREFIX = 'link:';
+const LINK_PREFIX = 'link:';
 // A big channel list renders this many tiles until a search narrows it.
 export const PLAYLIST_PREVIEW = 120;
 

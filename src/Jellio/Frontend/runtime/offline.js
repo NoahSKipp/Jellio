@@ -729,7 +729,7 @@ async function download(record) {
 }
 
 // Asks the browser not to clear downloads when space runs low.
-export async function requestPersistence() {
+async function requestPersistence() {
   try {
     if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) {
       await navigator.storage.persist();
@@ -784,7 +784,7 @@ export async function queueSync(method, path, body) {
 
 let flushing = false;
 
-export async function flushSyncQueue() {
+async function flushSyncQueue() {
   if (flushing || offline || !('indexedDB' in window)) return;
   flushing = true;
   try {

@@ -96,7 +96,7 @@ export function normalizePath(path) {
   );
 }
 
-export function scopePrefix(scope) {
+function scopePrefix(scope) {
   const lang = (scope && scope.language) || '';
   return String((scope && scope.serverId) || '') + '|' + String((scope && scope.userId) || '') + '|' + (lang ? lang + '|' : '');
 }
@@ -106,7 +106,7 @@ export function buildKey(scope, path) {
 }
 
 // FNV-1a over the stored JSON: equal digests mean nothing to re-render.
-export function digest(json) {
+function digest(json) {
   let hash = 0x811c9dc5;
   for (let i = 0; i < json.length; i++) {
     hash ^= json.charCodeAt(i);
@@ -115,7 +115,7 @@ export function digest(json) {
   return hash.toString(16).padStart(8, '0') + ':' + json.length;
 }
 
-export function ttlFor(cls) {
+function ttlFor(cls) {
   return Object.prototype.hasOwnProperty.call(TTL_MS, cls) ? TTL_MS[cls] : 10 * MINUTE;
 }
 
@@ -123,7 +123,7 @@ export function ttlFor(cls) {
 // after a long break the screen loads rows fresh, the way streaming apps
 // do, instead of showing days-old Continue Watching for a moment.
 const HOUR = 60 * MINUTE;
-export const MAX_AGE_MS = {
+const MAX_AGE_MS = {
   personal: 12 * HOUR,
   user: 12 * HOUR,
   latest: 12 * HOUR,
@@ -185,7 +185,7 @@ function copyEntry(entry) {
   };
 }
 
-export function createLocalStorageStorage(ls) {
+function createLocalStorageStorage(ls) {
   function readEntry(storageKey) {
     try {
       const raw = ls.getItem(storageKey);
@@ -252,7 +252,7 @@ function idbRequest(request) {
   });
 }
 
-export function openIndexedDbStorage(idb, timeoutMs) {
+function openIndexedDbStorage(idb, timeoutMs) {
   return new Promise(function (resolve, reject) {
     let settled = false;
     const timer = setTimeout(function () {

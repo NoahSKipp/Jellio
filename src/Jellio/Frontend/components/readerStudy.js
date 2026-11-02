@@ -19,7 +19,7 @@ import {
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 
-export const HIGHLIGHT_COLORS = [
+const HIGHLIGHT_COLORS = [
   { value: 'yellow', label: 'Yellow', hex: '#ffd400' },
   { value: 'green', label: 'Green', hex: '#5fd35f' },
   { value: 'blue', label: 'Blue', hex: '#4aa3ff' },
@@ -56,7 +56,7 @@ function bookLangKey(itemId) {
 // A book's own language when the reader set one (or translation learned
 // it), else the default from Settings, Reading: "auto" lets DeepL detect
 // it from the text.
-export function readBookLanguage(itemId) {
+function readBookLanguage(itemId) {
   try {
     const saved = localStorage.getItem(bookLangKey(itemId));
     return saved && (saved === 'auto' || LANGUAGES.indexOf(saved) !== -1) ? saved : readDefaultBookLanguage();
@@ -109,7 +109,7 @@ export function writeTargetLanguage(lang) {
   }
 }
 
-export function writeBookLanguage(itemId, lang) {
+function writeBookLanguage(itemId, lang) {
   try {
     localStorage.setItem(bookLangKey(itemId), lang);
   } catch (err) {

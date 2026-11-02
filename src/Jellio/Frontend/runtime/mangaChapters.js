@@ -5,7 +5,7 @@
 // the same as the server's ChapterNumbers, so it never takes the number of
 // "Chapter N". A bare "Prologue" is the first.
 const PROLOGUE = /^\s*(?:vol(?:ume)?\.?\s*\d+\s*[-:]?\s*)?prologue\b\s*(?:#?(\d+))?/i;
-export const PROLOGUE_STEP = 0.0001;
+const PROLOGUE_STEP = 0.0001;
 
 export function isPrologue(name) {
   return PROLOGUE.test(String(name || ''));

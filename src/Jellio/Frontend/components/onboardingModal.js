@@ -84,7 +84,7 @@ export function shouldShowOnboarding(userId) {
   }
 }
 
-export function markOnboardingComplete(userId) {
+function markOnboardingComplete(userId) {
   const uid = userId || getCurrentUserId();
   if (!uid) return;
   try {
@@ -93,7 +93,7 @@ export function markOnboardingComplete(userId) {
   saveServerDisplayPreferences({ onboarding_done: 'true' }).catch(function () {});
 }
 
-export function closeOnboardingModal() {
+function closeOnboardingModal() {
   openToken++;
   const existing = document.getElementById(MODAL_ID);
   if (existing) existing.remove();

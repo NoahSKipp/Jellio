@@ -5,7 +5,7 @@
 // carry instead. Pure logic, no DOM, shared by the home tile strip and
 // the service screen.
 
-export const SERVICES = [
+const SERVICES = [
   'Netflix',
   'HBO Max',
   'Max',
@@ -35,7 +35,7 @@ export function serviceOf(name) {
   return null;
 }
 
-export function logoSlug(name) {
+function logoSlug(name) {
   return String(name)
     .toLowerCase()
     .replace(/\+/g, '')

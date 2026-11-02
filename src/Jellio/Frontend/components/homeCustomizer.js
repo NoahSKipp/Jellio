@@ -27,7 +27,7 @@ function defaultCustomization() {
   return { order: [], hidden: [] };
 }
 
-export function getHomeCustomization() {
+function getHomeCustomization() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultCustomization();
@@ -63,7 +63,7 @@ export function resetHomeCustomization() {
 // seen before appended after it in its own natural order rather than
 // lost. Nothing here ever needs a stored key list to exactly match
 // today's real rows for the whole feature to keep working.
-export function effectiveOrder(liveKeys, customization) {
+function effectiveOrder(liveKeys, customization) {
   const liveSet = new Set(liveKeys);
   const ordered = customization.order.filter(function (key) {
     return liveSet.has(key);
@@ -75,7 +75,7 @@ export function effectiveOrder(liveKeys, customization) {
   return ordered;
 }
 
-export function moveRowKey(customization, liveKeys, key, delta) {
+function moveRowKey(customization, liveKeys, key, delta) {
   const order = effectiveOrder(liveKeys, customization);
   const idx = order.indexOf(key);
   if (idx < 0) return customization;
@@ -90,7 +90,7 @@ export function moveRowKey(customization, liveKeys, key, delta) {
   return updated;
 }
 
-export function toggleRowHiddenKey(customization, key) {
+function toggleRowHiddenKey(customization, key) {
   const has = customization.hidden.includes(key);
   const updated = Object.assign({}, customization, {
     hidden: has ? customization.hidden.filter(function (k) { return k !== key; }) : customization.hidden.concat([key]),

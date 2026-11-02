@@ -1,7 +1,7 @@
 // A link to a title that anyone with an account on this server can open:
 // this app's own address plus the title's page. Someone not signed in is
 // asked to sign in first and then lands on it (screens/login.js).
-export function buildShareUrl(item) {
+function buildShareUrl(item) {
   const base = window.location.origin + window.location.pathname;
   return base + '#/item?id=' + encodeURIComponent(item.Id);
 }
@@ -24,11 +24,11 @@ async function copyText(text) {
 }
 
 // A link to any page of this app by its hash route.
-export function buildHashUrl(hash) {
+function buildHashUrl(hash) {
   return window.location.origin + window.location.pathname + hash;
 }
 
-export function shareItemLabel(item) {
+function shareItemLabel(item) {
   if (!item) return '';
   if (item.Type === 'Episode') {
     const series = item.SeriesName || '';
@@ -62,7 +62,7 @@ export function shareItemLabel(item) {
   return item.Name || '';
 }
 
-export function formatShareText(label, url) {
+function formatShareText(label, url) {
   if (label) {
     return 'Look at ' + label + ' on Jellyfin - ' + url;
   }

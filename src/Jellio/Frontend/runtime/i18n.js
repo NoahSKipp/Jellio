@@ -15,7 +15,7 @@ export const DISPLAY_LANGUAGES = [
   { code: 'pt', label: 'Portuguese', nativeName: 'Português' },
 ];
 
-export const STRINGS = {
+const STRINGS = {
   en: {
     settings_signed_in_as: "Signed in as {name}",
     settings_view_profile: "View profile",
@@ -7669,7 +7669,7 @@ export function t(key, params) {
   return text;
 }
 
-export const GENRE_TRANSLATIONS = {
+const GENRE_TRANSLATIONS = {
   "Action": {
     "en": "Action",
     "de": "Action",
@@ -8008,18 +8008,6 @@ export function translateGenre(name, lang) {
     }
   } catch (_) {}
   return name;
-}
-
-export function saveGenreTranslation(englishName, translatedName, lang) {
-  if (!englishName || !translatedName) return;
-  const code = ((typeof lang === 'string' && lang) || getDisplayLanguage() || 'en').toLowerCase();
-  try {
-    const dynamicKey = 'jellio_genre_translations_' + code;
-    const raw = window.localStorage.getItem(dynamicKey);
-    const map = raw ? JSON.parse(raw) : {};
-    map[englishName] = translatedName;
-    window.localStorage.setItem(dynamicKey, JSON.stringify(map));
-  } catch (_) {}
 }
 
 export function getBadgeName(badgeOrId, fallback) {

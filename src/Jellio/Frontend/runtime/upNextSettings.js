@@ -1,6 +1,6 @@
 // Up Next countdown length, a client only display preference.
 const COUNTDOWN_KEY = 'jellioUpNextCountdownSeconds';
-export const DEFAULT_COUNTDOWN_SECONDS = 15;
+const DEFAULT_COUNTDOWN_SECONDS = 15;
 
 export const UPNEXT_COUNTDOWN_OPTIONS = [
   { value: '0', label: 'Off (Do not auto-advance)' },

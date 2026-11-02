@@ -340,7 +340,7 @@ function buildGenreRows(genres, itemsPerGenre, exclude) {
 // Picks, the seasonal row, "Because you watched", then "Because you're
 // watching". Each row's slot is its family's base plus its index; slots 11
 // to 19 are free for rows placed between seasonal and the per-title rows.
-export const RECOMMENDATION_SLOTS = { genres: 0, seasonal: 10, completed: 20, nextUp: 40 };
+const RECOMMENDATION_SLOTS = { genres: 0, seasonal: 10, completed: 20, nextUp: 40 };
 
 // The same rows as buildRecommendationRows, each handed to onRow(spec,
 // slot) the moment its own data arrives instead of all at the end. A
@@ -397,7 +397,7 @@ export async function streamRecommendationRows(exclude, onRow) {
   await Promise.all(jobs);
 }
 
-export async function buildRecommendationRows(exclude) {
+async function buildRecommendationRows(exclude) {
   const [history, nextUp] = await Promise.all([
     getRecentlyCompleted(HISTORY_SAMPLE_LIMIT).catch(function () {
       return [];

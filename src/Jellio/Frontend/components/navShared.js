@@ -12,9 +12,9 @@ import { t } from '../runtime/i18n.js';
 import { getUserViews, getCollections, getCurrentUser, getUserImageUrl } from '../runtime/api.js';
 import { currentHash } from '../runtime/router.js';
 
-export const SVG_NS = 'http://www.w3.org/2000/svg';
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export const SVG_ICONS = {
+const SVG_ICONS = {
   movies: {
     viewBox: '0 0 24 24',
     stroke: true,
@@ -76,7 +76,7 @@ export const FIXED_NAV_LINKS = [
   { icon: 'dynamic_feed', get label() { return t('nav_feed'); }, hash: '#/feed' },
 ];
 
-export const MANGA_LIBRARY = /manga|comic|manhwa|webtoon/i;
+const MANGA_LIBRARY = /manga|comic|manhwa|webtoon/i;
 
 function libraryHash(view) {
   const route = view.CollectionType && LIBRARY_ROUTES[view.CollectionType];

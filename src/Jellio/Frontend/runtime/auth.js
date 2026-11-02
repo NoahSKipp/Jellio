@@ -475,7 +475,7 @@ export function clearSession() {
 // source, version matched against a live deployment during the reskin
 // codebase's own quick sign-in work), and at least one real deployment had
 // it rejected. The full header has no such dependency.
-export function buildAuthHeader() {
+function buildAuthHeader() {
   const token = getAccessToken();
   const parts = [
     'Client="' + clientName() + '"',

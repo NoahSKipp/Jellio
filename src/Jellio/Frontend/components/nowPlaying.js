@@ -106,7 +106,7 @@ function posterUrls(item, imageId) {
 // id nothing here otherwise refers to.
 // A Material icon for the device a session plays on, from what its client
 // reports about itself (Jellyfin has no device type of its own).
-export function deviceIcon(session) {
+function deviceIcon(session) {
   const text = ((session.Client || '') + ' ' + (session.DeviceName || '')).toLowerCase();
   if (!text.trim()) return null;
   if (/chromecast|crkey|\bcast\b/.test(text)) return { icon: 'cast', label: 'Chromecast' };
@@ -275,7 +275,7 @@ export function toggleNowPlayingPanel() {
   if (button) button.setAttribute('aria-expanded', String(visible));
 }
 
-export function hideNowPlayingPanel() {
+function hideNowPlayingPanel() {
   cancelHoverClose();
   if (!panel) return;
   panel.classList.remove('jellio-now-playing-panel-visible');

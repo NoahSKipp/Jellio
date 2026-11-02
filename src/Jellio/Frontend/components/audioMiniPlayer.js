@@ -29,7 +29,7 @@ const DEFAULT_SPEED_KEY = 'jellio_audiobook_default_speed';
 const AUDIOBOOK_VOLUME_KEY = 'jellio_audiobook_volume';
 const AUDIOBOOK_MUTED_KEY = 'jellio_audiobook_muted';
 
-export function getSavedAudiobookVolume() {
+function getSavedAudiobookVolume() {
   try {
     const val = window.localStorage.getItem(AUDIOBOOK_VOLUME_KEY);
     return val !== null ? Math.min(1, Math.max(0, Number(val))) : 1;
@@ -38,7 +38,7 @@ export function getSavedAudiobookVolume() {
   }
 }
 
-export function saveAudiobookVolume(volume, muted) {
+function saveAudiobookVolume(volume, muted) {
   try {
     window.localStorage.setItem(AUDIOBOOK_VOLUME_KEY, String(volume));
     window.localStorage.setItem(AUDIOBOOK_MUTED_KEY, muted ? '1' : '0');
@@ -141,7 +141,7 @@ export function buildVolumeControl(extraClass) {
   return wrap;
 }
 
-export function getSavedAudiobookMuted() {
+function getSavedAudiobookMuted() {
   try {
     return window.localStorage.getItem(AUDIOBOOK_MUTED_KEY) === '1';
   } catch (err) {
@@ -225,7 +225,7 @@ function notifySleep() {
   }
 }
 
-export function currentTrack() {
+function currentTrack() {
   if (!activeSession || !activeSession.timeline) return null;
   return activeSession.timeline.tracks[activeSession.trackIndex];
 }
@@ -245,7 +245,7 @@ export function chapterIndexAt(seconds) {
   return found;
 }
 
-export function currentChapter() {
+function currentChapter() {
   if (!activeSession || !activeSession.timeline) return null;
   return activeSession.timeline.chapters[chapterIndexAt(getBookTime())];
 }
@@ -641,7 +641,7 @@ export function startAudioSession(config) {
   return activeSession;
 }
 
-export function stopAudioSession() {
+function stopAudioSession() {
   if (!activeSession) return;
   // Before the session is cleared: flushListening reads it, and used to
   // find nothing, so closing the player dropped every minute listened.
@@ -677,7 +677,7 @@ export function stopAudioSession() {
   }
 }
 
-export function pauseAudioIfPlaying() {
+function pauseAudioIfPlaying() {
   if (activeSession && activeSession.audio && !activeSession.audio.paused) {
     activeSession.audio.pause();
   }

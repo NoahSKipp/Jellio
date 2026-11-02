@@ -177,7 +177,7 @@ export async function openAvatarPicker(onChanged) {
   }
 }
 
-export function closeAvatarPicker() {
+function closeAvatarPicker() {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) existing.remove();
   document.removeEventListener('keydown', handleKeydown);

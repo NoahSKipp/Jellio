@@ -4,7 +4,7 @@
 // are not alerted on small patch releases.
 import { getCurrentUserId } from './auth.js';
 
-export function isBigRelease(version) {
+function isBigRelease(version) {
   if (!version || typeof version !== 'string') return false;
   const clean = version.trim().replace(/^v/i, '');
   const parts = clean.split('.');
@@ -3888,12 +3888,6 @@ export function hasSeenLatestChangelog() {
   } catch (err) {
     return false;
   }
-}
-
-export function clearPreviousChangelogs() {
-  try {
-    localStorage.removeItem(storageKey());
-  } catch (_) {}
 }
 
 export function markLatestChangelogSeen() {

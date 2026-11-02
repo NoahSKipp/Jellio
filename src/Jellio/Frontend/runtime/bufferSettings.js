@@ -3,7 +3,7 @@
 // Maximum trade a longer wait for fewer hiccups on big (4K) files.
 const KEY = 'jellio_prebuffer';
 
-export const PREBUFFER_LEVELS = {
+const PREBUFFER_LEVELS = {
   standard: { startSeconds: 8, startTimeoutMs: 12000, stallSeconds: 0, stallTimeoutMs: 0 },
   more: { startSeconds: 20, startTimeoutMs: 30000, stallSeconds: 15, stallTimeoutMs: 30000 },
   max: { startSeconds: 45, startTimeoutMs: 60000, stallSeconds: 30, stallTimeoutMs: 60000 },
