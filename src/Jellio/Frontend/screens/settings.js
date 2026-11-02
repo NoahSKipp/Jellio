@@ -91,6 +91,7 @@ import {
 } from '../components/readerStudy.js';
 import { el } from '../runtime/dom.js';
 import { openOnboardingModal } from '../components/onboardingModal.js';
+import { jellioVersion } from '../runtime/util.js';
 
 // One grouped list card: an icon'd header (skipped entirely when
 // no title is given, RemoveShow/Sign out's own bare single-row card)
@@ -917,23 +918,6 @@ function buildSessionsCategory(sleepTimerCard, quickConnectCard) {
   wrap.appendChild(sleepTimerCard);
   if (quickConnectCard) wrap.appendChild(quickConnectCard);
   return wrap;
-}
-
-// app.js's own real script tag, the one IndexHtmlPatchService itself
-// stamps a ?v= query string onto every release (confirmed against
-// that file's own header, and against this exact query string live in
-// this server's own served index.html): the one place this plugin's
-// own real running version already lives on the page, read back here
-// rather than adding a second endpoint just to ask the backend for
-// what the page it already served says.
-function jellioVersion() {
-  const script = document.querySelector('script[src*="/Jellio/frontend/app.js"]');
-  if (!script) return '';
-  try {
-    return new URL(script.src, window.location.origin).searchParams.get('v') || '';
-  } catch (err) {
-    return '';
-  }
 }
 
 // The macOS app (Jellio-macOS) checks, downloads and installs its own

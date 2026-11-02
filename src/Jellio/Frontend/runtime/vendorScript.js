@@ -1,19 +1,10 @@
+import { jellioVersion } from './util.js';
 // Loads one of the UMD bundles under Frontend/vendor (epub.js, JSZip,
 // pdf.js) on demand, as a plain <script>: they publish browser globals
 // (window.ePub, window.JSZip, window.pdfjsLib), not ES modules. Loaded
 // once per page, and only when a reader actually opens a book, so none
 // of this weight lands on anyone who never does.
 const loaded = new Map();
-
-function jellioVersion() {
-  const script = document.querySelector('script[src*="/Jellio/frontend/app.js"]');
-  if (!script) return '';
-  try {
-    return new URL(script.src, window.location.origin).searchParams.get('v') || '';
-  } catch (err) {
-    return '';
-  }
-}
 
 export function vendorUrl(file) {
   const version = jellioVersion();

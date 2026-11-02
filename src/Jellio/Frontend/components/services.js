@@ -1,3 +1,4 @@
+import { jellioVersion } from '../runtime/util.js';
 // Service name matching, grouping and logo slugs, ported from the
 // original Jellio codebase's own streamingHub.js: a service only shows
 // up when its real catalog collections exist, matched on the
@@ -41,20 +42,6 @@ function logoSlug(name) {
     .replace(/\+/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-}
-
-// screens/settings.js's own real jellioVersion(): app.js's own script
-// tag is the one place this plugin's own real running version already
-// lives on the page (IndexHtmlPatchService stamps a ?v= query string
-// onto it every release), read back here rather than a second endpoint.
-function jellioVersion() {
-  const script = document.querySelector('script[src*="/Jellio/frontend/app.js"]');
-  if (!script) return '';
-  try {
-    return new URL(script.src, window.location.origin).searchParams.get('v') || '';
-  } catch (err) {
-    return '';
-  }
 }
 
 // Real bug, found live: FrontendController.cs used to serve these SVGs

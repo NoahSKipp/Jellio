@@ -1,5 +1,6 @@
 import { getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
 import { chapterNameKey, compareChapters, isPrologue } from '../runtime/mangaChapters.js';
+import { idKey } from '../runtime/util.js';
 
 export {
   chapterSource,
@@ -53,10 +54,6 @@ export function groupMangaSeries(items) {
     series.push(group);
   });
   return { series: series, singles: items.filter((item) => !inSeries.has(item)) };
-}
-
-function idKey(id) {
-  return String(id).replace(/-/g, '');
 }
 
 const FINISHED = 0.98;

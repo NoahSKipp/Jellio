@@ -53,6 +53,7 @@ import { openMangaRequestSheet } from '../components/mangaRequest.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { coverSrc, idKey, normalizeTitle } from '../runtime/util.js';
 
 const KINDS = {
   ebook: {
@@ -160,10 +161,6 @@ function writeCategory(kind, id) {
   }
 }
 
-function idKey(id) {
-  return String(id || '').replace(/-/g, '');
-}
-
 function authorKey(name) {
   return name
     .toLowerCase()
@@ -171,24 +168,6 @@ function authorKey(name) {
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-}
-
-function normalizeTitle(title) {
-  return String(title || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[,:;(\[].*$/, '')
-    .replace(/\s+vol(ume)?\.?\s*\d+.*$/, '')
-    .replace(/^(the|a|an)\s+/, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-
-function coverSrc(url) {
-  if (!url) return '';
-  if (url.indexOf('/Jellio/') !== 0) return url;
-  return getServerAddress() + url + '&ApiKey=' + encodeURIComponent(getAccessToken() || '');
 }
 
 function thumbnailSrc(path) {

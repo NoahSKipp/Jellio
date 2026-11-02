@@ -5,11 +5,11 @@ import { t } from '../runtime/i18n.js';
 // Each one can be searched for again or removed
 // (Controllers/BookLibraryController.cs).
 import { getBookRequests, searchBookAgain, removeBookFromLibrary } from '../runtime/api.js';
-import { getAccessToken, getServerAddress } from '../runtime/auth.js';
 import { formatRelativeTime } from '../runtime/format.js';
 import { showToast } from '../components/toast.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { coverSrc } from '../runtime/util.js';
 
 const REFRESH_MS = 15000;
 
@@ -24,12 +24,6 @@ const STATES = {
   available: { label: 'In library', icon: 'check_circle' },
   missing: { label: 'Not tracked', icon: 'help_outline' },
 };
-
-function coverSrc(url) {
-  if (!url) return '';
-  if (url.indexOf('/Jellio/') !== 0) return url;
-  return getServerAddress() + url + '&ApiKey=' + encodeURIComponent(getAccessToken() || '');
-}
 
 export function renderBookRequests(root, params, kind) {
   const isAudiobook = kind === 'audiobook';

@@ -11,6 +11,7 @@
 // Deliberately free of runtime/api.js (which builds on this): it talks
 // to the server with its own fetch calls.
 import { getServerAddress, getAuthHeaders, getCurrentUserId } from './auth.js';
+import { idKey } from './util.js';
 
 const DB_NAME = 'jellio-offline';
 const DB_VERSION = 1;
@@ -189,10 +190,6 @@ function requestResult(request) {
       reject(request.error);
     };
   });
-}
-
-function idKey(id) {
-  return String(id || '').replace(/-/g, '').toLowerCase();
 }
 
 // --- downloads ------------------------------------------------------------

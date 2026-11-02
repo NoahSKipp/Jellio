@@ -37,6 +37,7 @@ import {
 import { mangaSeriesTitle, mangaSeriesKey } from './mangaSeries.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
+import { idKey } from '../runtime/util.js';
 
 // The reader's libraries, fetched once so the service worker keeps them
 // for opening books offline.
@@ -49,10 +50,6 @@ function warmReaderScripts() {
   ['jszip.min.js', 'epub.min.js', 'pdf.min.js', 'pdf.worker.min.js'].forEach(function (name) {
     fetch(vendorUrl(name)).catch(() => {});
   });
-}
-
-function idKey(id) {
-  return String(id || '').replace(/-/g, '').toLowerCase();
 }
 
 // Like the streaming apps: Low is small and quick to fetch, Higher keeps

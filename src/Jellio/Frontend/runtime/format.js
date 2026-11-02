@@ -75,3 +75,7 @@ export function formatRelativeTime(isoString) {
   const years = Math.round(months / 12);
   return t('time_years_ago', { count: years });
 }
+
+export function formatClockTime(ms) {
+  return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}

@@ -35,6 +35,7 @@ import {
   describeOpenFailure,
 } from '../runtime/liveTv.js';
 import { openGuide, buildChannelLogo, liveFilters } from './liveTv.js';
+import { formatClockTime } from '../runtime/format.js';
 
 const STALL_NOTICE_MS = 15000;
 const STALL_RESTART_MS = 30000;
@@ -42,10 +43,6 @@ const MAX_RESTARTS = 2;
 const INFO_VISIBLE_MS = 5000;
 const CHANNEL_SWITCH_DELAY_MS = 600;
 const STATE_KEY = 'jellio.livetv.state';
-
-function formatTime(ms) {
-  return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-}
 
 function rememberedFilter() {
   try {
@@ -221,8 +218,8 @@ export async function renderLivePlayer(root, params) {
       if (shown !== channel) return;
       const pair = nowAndNext(programs, Date.now());
       if (shown === channel) currentProgramme = pair.now ? pair.now.name : null;
-      if (pair.now) nowLine.textContent = t('live_on_now') + ': ' + pair.now.name + ' (' + formatTime(pair.now.start) + ' – ' + formatTime(pair.now.end) + ')';
-      if (pair.next) nextLine.textContent = t('live_up_next') + ': ' + pair.next.name + ' (' + formatTime(pair.next.start) + ')';
+      if (pair.now) nowLine.textContent = t('live_on_now') + ': ' + pair.now.name + ' (' + formatClockTime(pair.now.start) + ' – ' + formatClockTime(pair.now.end) + ')';
+      if (pair.next) nextLine.textContent = t('live_up_next') + ': ' + pair.next.name + ' (' + formatClockTime(pair.next.start) + ')';
     } catch (err) {}
   }
 

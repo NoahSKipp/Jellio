@@ -21,6 +21,7 @@ import { flattenStreamLinks, groupStreamLinks, streamLinkErrorKey, PLAYLIST_PREV
 import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, applyHealth, GUIDE_HOURS } from '../runtime/liveTv.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
+import { formatClockTime } from '../runtime/format.js';
 
 const STATE_KEY = 'jellio.livetv.state';
 const HOUR_MS = 60 * 60 * 1000;
@@ -57,10 +58,6 @@ function languageName(language) {
 export function liveFilters() {
   const state = readState();
   return { kind: state.kind || null, language: state.language || null };
-}
-
-function formatTime(ms) {
-  return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
 function initials(name) {
@@ -176,7 +173,7 @@ export async function openGuide(channel, onPlay) {
         list.appendChild(el('div', 'jellio-live-guide-day', day));
       }
       const row = el('div', 'jellio-live-guide-row' + (programme.airing ? ' jellio-live-guide-row-airing' : ''));
-      row.appendChild(el('div', 'jellio-live-guide-time', formatTime(programme.start) + ' – ' + formatTime(programme.end)));
+      row.appendChild(el('div', 'jellio-live-guide-time', formatClockTime(programme.start) + ' – ' + formatClockTime(programme.end)));
       const body = el('div', 'jellio-live-guide-body');
       body.appendChild(el('div', 'jellio-live-guide-title', programme.name || t('live_nothing_listed')));
       if (programme.airing) {
@@ -217,7 +214,7 @@ function buildChannelTile(channel, onFavorite) {
   }
   if (channel.now) {
     text.appendChild(el('div', 'jellio-live-tile-now', channel.now.name || t('live_nothing_listed')));
-    const times = el('div', 'jellio-live-tile-times', formatTime(channel.now.start) + ' – ' + formatTime(channel.now.end));
+    const times = el('div', 'jellio-live-tile-times', formatClockTime(channel.now.start) + ' – ' + formatClockTime(channel.now.end));
     text.appendChild(times);
     const bar = el('div', 'jellio-live-progress');
     const fill = el('div', 'jellio-live-progress-fill');

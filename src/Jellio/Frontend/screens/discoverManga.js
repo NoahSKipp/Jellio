@@ -11,6 +11,7 @@ import { attachScrollArrows } from '../components/scrollArrows.js';
 import { openMangaRequestSheet } from '../components/mangaRequest.js';
 import { mangaSeriesKey } from '../components/mangaSeries.js';
 import { el } from '../runtime/dom.js';
+import { normalizeTitle } from '../runtime/util.js';
 
 const COUNTRIES = [
   ['JP', 'Manga'],
@@ -41,18 +42,6 @@ const ROW_LIMIT = 18;
 function countryLabel(code) {
   const match = COUNTRIES.find((country) => country[0] === code);
   return match ? match[1] : code === 'TW' ? 'Manhua' : '';
-}
-
-function normalizeTitle(title) {
-  return String(title || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[,:;(\[].*$/, '')
-    .replace(/\s+vol(ume)?\.?\s*\d+.*$/, '')
-    .replace(/^(the|a|an)\s+/, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
 }
 
 export async function renderMangaDiscover(root, params) {

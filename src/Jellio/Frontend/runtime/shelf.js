@@ -3,13 +3,10 @@
 // settings and chapter bookmarks. Kept in memory per shelf kind; every
 // change fires jellio:shelf-changed so open screens can repaint.
 import { getServerAddress, getAuthHeaders } from './auth.js';
+import { idKey } from './util.js';
 
 const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [], LibraryRemoved: [], SeriesDefaults: null };
 const loaded = new Map();
-
-function idKey(id) {
-  return String(id || '').replace(/-/g, '').toLowerCase();
-}
 
 export function itemShelfKey(item) {
   return 'i:' + idKey(item.Id);
