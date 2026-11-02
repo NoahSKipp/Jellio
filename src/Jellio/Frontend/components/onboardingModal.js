@@ -4,7 +4,7 @@
 // Follows Jellio and Nuvio glassmorphic styling.
 
 import { el } from '../runtime/dom.js';
-import { t, getDisplayLanguage, setDisplayLanguage, DISPLAY_LANGUAGES } from '../runtime/i18n.js';
+import { t, getDisplayLanguage, setDisplayLanguage, DISPLAY_LANGUAGES, loadDisplayLanguage } from '../runtime/i18n.js';
 import { getCurrentUserId, getCurrentUser as getSessionUser } from '../runtime/auth.js';
 import {
   getCurrentUser,
@@ -380,7 +380,7 @@ export async function openOnboardingModal(options) {
       item.addEventListener('click', function () {
         selectedDisplayLang = lang.code;
         setDisplayLanguage(lang.code);
-        renderStep();
+        loadDisplayLanguage(lang.code).then(renderStep);
       });
       langGrid.appendChild(item);
     });

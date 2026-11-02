@@ -1,4 +1,4 @@
-import { t } from './runtime/i18n.js';
+import { t, loadDisplayLanguage } from './runtime/i18n.js';
 // Bootstrap: mounts Jellio's own root container over the native page,
 // renders the persistent sidebar alongside whichever screen owns the
 // current route. An unmigrated route (no entry in SCREENS) leaves native
@@ -748,8 +748,11 @@ function scheduleNavRecheck(attemptsLeft, delayMs) {
 let userDataRowsHooked = false;
 let onboardingPrompted = false;
 
+const languageReady = loadDisplayLanguage();
+
 async function runSync() {
   try {
+    await languageReady;
     if (!isAuthenticated()) {
       lastRenderedRouteKey = null;
       if (loginScreenBypassed()) {
