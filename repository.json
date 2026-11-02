@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.102.4] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(reader)* Remove the comic page-hold listeners when the reader closes\n- *(i18n)* Show the server's badge name when a badge has no translation\n- *(web)* Show the online and offline toasts in the display language\n\n### 📚 Documentation\n\n- *(changelog)* Faster start and fixes in 1.102.4\n\n### ⚡ Performance\n\n- *(i18n)* Load only the display language\n- *(web)* Load the changelog and Group Watch panel when needed\n- *(web)* Serve trimmed CSS and preload exactly the startup modules\n\n### 🚜 Refactor\n\n- *(player)* Remove the seek bar trickplay preview\n- *(css)* Drop rules for markup that no longer exists\n- *(web)* Remove unused functions and internal-only exports\n- *(web)* Share idKey, jellioVersion, normalizeTitle, coverSrc and clock formatting\n- *(server)* Read the caller's user id through one extension\n- *(api)* Split books, live TV and social calls out of api.js\n- *(player)* Move the end screen, prompts and preferences out of player.js\n\n### ⚙️ Miscellaneous Tasks\n\n- *(web)* Cut the frontend's comments down to short notes\n- *(server)* Cut the server's comments down to short notes\n",
+        "checksum": "67fc14a34269b8c8ab3af4b8b873a708",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.4/jellio_1.102.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-02T02:20:15Z",
+        "version": "1.102.4"
+      },
+      {
         "changelog": "## [1.102.3] - 2026-11-02\n\n### 📚 Documentation\n\n- *(changelog)* Faster icons and hero in 1.102.3\n\n### ⚡ Performance\n\n- *(web)* Preload the icon font and the last hero backdrop\n- *(home)* Remember the first hero backdrop for the next load\n",
         "checksum": "cb2d4ae54be97c56dc99f23a7ed63482",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.3/jellio_1.102.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-25T02:26:47Z",
         "version": "1.89.2"
-      },
-      {
-        "changelog": "## [1.89.1] - 2026-10-24\n\n### 🐛 Bug Fixes\n\n- *(web)* Faster startup, AirPlay for long movies, Android cast picker\n",
-        "checksum": "6fadce1108f3a2245342068ab45019b8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.89.1/jellio_1.89.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-24T20:38:13Z",
-        "version": "1.89.1"
       }
     ]
   }
