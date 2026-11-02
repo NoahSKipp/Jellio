@@ -1,11 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getNowPlayingSessions,
-  getImageUrl,
-  getBookCoverUrl,
-  getMangaSeriesCoverUrl,
-  getStreamCoverUrl,
-} from '../runtime/api.js';
+import { getNowPlayingSessions, getImageUrl } from '../runtime/api.js';
+import { getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { getMangaShelfHash } from './navShared.js';
 import { mangaSeriesKey } from './mangaSeries.js';
 import { isAuthenticated } from '../runtime/auth.js';

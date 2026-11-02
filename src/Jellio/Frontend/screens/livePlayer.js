@@ -3,19 +3,7 @@ import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
 import { getAuthHeaders } from '../runtime/auth.js';
 import { loadVendorScript } from '../runtime/vendorScript.js';
-import {
-  getLiveChannels,
-  getLivePrograms,
-  openLiveChannel,
-  closeLiveStream,
-  getStreamLinks,
-  playStreamLink,
-  getLiveHealth,
-  reportLiveChannel,
-  reportStreamLinkPlay,
-  reportLiveWatching,
-  stopLiveWatching,
-} from '../runtime/api.js';
+import { getLiveChannels, getLivePrograms, openLiveChannel, closeLiveStream, getStreamLinks, playStreamLink, getLiveHealth, reportLiveChannel, reportStreamLinkPlay, reportLiveWatching, stopLiveWatching } from '../runtime/apiLive.js';
 import { flattenStreamLinks, parseLinkChannelId, streamLinkErrorKey, playableInBrowser } from '../runtime/streamLinks.js';
 import {
   mapChannels,

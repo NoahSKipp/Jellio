@@ -1,4 +1,5 @@
-import { getGroupWatchInvites, getItem, getImageUrl, getCurrentUser } from '../runtime/api.js';
+import { getGroupWatchInvites } from '../runtime/apiSocial.js';
+import { getItem, getImageUrl, getCurrentUser } from '../runtime/api.js';
 import { isAuthenticated, getCurrentUserId } from '../runtime/auth.js';
 import { joinGroup, onWatchTargetChange, onGroupPresenceChange } from '../runtime/syncPlay.js';
 import { navigateTo, parseRoute } from '../runtime/router.js';

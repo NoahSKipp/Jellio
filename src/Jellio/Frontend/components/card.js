@@ -1,14 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getImageUrl,
-  getUserImageUrl,
-  getBookCoverUrl,
-  getStreamCoverUrl,
-  getMangaSeriesCoverUrl,
-  TICKS_PER_SECOND,
-  prefetchStreams,
-  seedItemCache,
-} from '../runtime/api.js';
+import { getImageUrl, getUserImageUrl, TICKS_PER_SECOND, prefetchStreams, seedItemCache } from '../runtime/api.js';
+import { getBookCoverUrl, getStreamCoverUrl, getMangaSeriesCoverUrl } from '../runtime/apiBooks.js';
 import { isMangaChapter } from '../runtime/mangaChapters.js';
 import { navigateTo } from '../runtime/router.js';
 import {

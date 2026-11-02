@@ -1,4 +1,4 @@
-import { getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
+import { getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { chapterNameKey, compareChapters, isPrologue } from '../runtime/mangaChapters.js';
 import { idKey } from '../runtime/util.js';
 

@@ -1,22 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getItem,
-  getReadingProgress,
-  saveReadingProgress,
-  fetchBookFile,
-  setPlayed,
-  getJellioConfig,
-  reportReadingSession,
-  getStreamChapter,
-  getStreamPageCount,
-  getStreamPageUrl,
-  reportNowReading,
-  clearNowReading,
-  getStreamSeries,
-  findStreamSeries,
-  getAllReadingProgress,
-  syncTracker,
-} from '../runtime/api.js';
+import { getItem, setPlayed, getJellioConfig } from '../runtime/api.js';
+import { getReadingProgress, saveReadingProgress, fetchBookFile, reportReadingSession, getStreamChapter, getStreamPageCount, getStreamPageUrl, reportNowReading, clearNowReading, getStreamSeries, findStreamSeries, getAllReadingProgress, syncTracker } from '../runtime/apiBooks.js';
 import { getMangaShelfHash } from '../components/navShared.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { findAnyDownload, removeDownload, isAutoDeleteReadEnabled } from '../runtime/offline.js';

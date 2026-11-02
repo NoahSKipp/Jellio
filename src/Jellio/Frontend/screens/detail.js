@@ -1,23 +1,8 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
-import {
-  getItemDetails,
-  getImageUrl,
-  getItem,
-  getSeasons,
-  getEpisodes,
-  setPlayed,
-  getSeriesNextUp,
-  getBookMetadata,
-  getBookCoverUrl,
-  getMangaSeriesCoverUrl,
-  getAudiobookTracks,
-  audiobookTitle,
-  getCachedItemSync,
-  getReadingProgress,
-  getMediaSources,
-} from '../runtime/api.js';
+import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, audiobookTitle, getCachedItemSync, getMediaSources } from '../runtime/api.js';
+import { getBookMetadata, getBookCoverUrl, getMangaSeriesCoverUrl, getAudiobookTracks, getReadingProgress } from '../runtime/apiBooks.js';
 import { watchSources } from '../runtime/itemInfo.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';

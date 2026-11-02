@@ -1,12 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  reportPlaybackStart,
-  reportPlaybackProgress,
-  reportPlaybackStopped,
-  TICKS_PER_SECOND,
-  reportReadingSession,
-  buildAudioStreamUrl,
-} from '../runtime/api.js';
+import { reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, TICKS_PER_SECOND } from '../runtime/api.js';
+import { reportReadingSession, buildAudioStreamUrl } from '../runtime/apiBooks.js';
 import {
   findDownload,
   removeDownload,

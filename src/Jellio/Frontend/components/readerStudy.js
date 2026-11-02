@@ -1,13 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getAnnotations,
-  addAnnotation,
-  updateAnnotation,
-  deleteAnnotation,
-  translateText,
-  defineWord,
-  addVocabulary,
-} from '../runtime/api.js';
+import { getAnnotations, addAnnotation, updateAnnotation, deleteAnnotation, translateText, defineWord, addVocabulary } from '../runtime/apiBooks.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 

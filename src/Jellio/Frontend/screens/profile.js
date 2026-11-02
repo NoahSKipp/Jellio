@@ -1,17 +1,6 @@
 import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
-import {
-  getUserById,
-  getUserImageUrl,
-  getProfileForUser,
-  setProfileBio,
-  getBannerUrl,
-  setProfileBannerFromFile,
-  getAchievementsForUser,
-  getCurrentUser,
-  deleteActivityEntry,
-  lockBadgeForUser,
-  resetAchievementsForUser,
-} from '../runtime/api.js';
+import { getUserById, getUserImageUrl, getCurrentUser } from '../runtime/api.js';
+import { getProfileForUser, setProfileBio, getBannerUrl, setProfileBannerFromFile, getAchievementsForUser, deleteActivityEntry, lockBadgeForUser, resetAchievementsForUser } from '../runtime/apiSocial.js';
 import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';

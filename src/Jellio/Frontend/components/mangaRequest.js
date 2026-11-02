@@ -1,12 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import {
-  invalidateStreamLibrary,
-  getMangaRequestStatus,
-  streamMangaSources,
-  bestMangaMatch,
-  requestMangaSeries,
-  migrateMangaSeries,
-} from '../runtime/api.js';
+import { invalidateStreamLibrary, getMangaRequestStatus, streamMangaSources, bestMangaMatch, requestMangaSeries, migrateMangaSeries } from '../runtime/apiBooks.js';
 import { getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { buildBookRequestPanel } from './bookRequest.js';
 import { mangaSeriesKey } from './mangaSeries.js';

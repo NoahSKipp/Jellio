@@ -1,15 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getTrackerStatus,
-  connectTracker,
-  disconnectTracker,
-  searchTracker,
-  getTrackerLink,
-  setTrackerLink,
-  removeTrackerLink,
-  setTrackerEntry,
-  syncTracker,
-} from '../runtime/api.js';
+import { getTrackerStatus, connectTracker, disconnectTracker, searchTracker, getTrackerLink, setTrackerLink, removeTrackerLink, setTrackerEntry, syncTracker } from '../runtime/apiBooks.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 

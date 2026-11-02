@@ -1,18 +1,8 @@
 import { t, getDisplayLanguage } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
 import { navigateTo } from '../runtime/router.js';
-import {
-  getLiveChannels,
-  getLiveHealth,
-  getLivePrograms,
-  getImageUrl,
-  setChannelFavorite,
-  getStreamLinks,
-  addStreamLink,
-  removeStreamLink,
-  refreshStreamLink,
-  removeStreamLinkEntry,
-} from '../runtime/api.js';
+import { getLiveChannels, getLiveHealth, getLivePrograms, setChannelFavorite, getStreamLinks, addStreamLink, removeStreamLink, refreshStreamLink, removeStreamLinkEntry } from '../runtime/apiLive.js';
+import { getImageUrl } from '../runtime/api.js';
 import { flattenStreamLinks, groupStreamLinks, streamLinkErrorKey, PLAYLIST_PREVIEW } from '../runtime/streamLinks.js';
 import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFacets, applyHealth, GUIDE_HOURS } from '../runtime/liveTv.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';

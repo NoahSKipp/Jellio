@@ -1,17 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getBookshelfItems,
-  getAllReadingProgress,
-  getImageUrl,
-  getStreamLibrary,
-  getStreamSeries,
-  findStreamSeries,
-  getTrackerStatus,
-  getTrackerLink,
-  syncTracker,
-  markReadingItems,
-  setPlayed,
-} from '../runtime/api.js';
+import { getBookshelfItems, getAllReadingProgress, getStreamLibrary, getStreamSeries, findStreamSeries, getTrackerStatus, getTrackerLink, syncTracker, markReadingItems } from '../runtime/apiBooks.js';
+import { getImageUrl, setPlayed } from '../runtime/api.js';
 import { openCardOptionsMenu } from '../components/cardOptionsMenu.js';
 import { shareHash } from '../runtime/shareLink.js';
 import {

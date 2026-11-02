@@ -1,5 +1,5 @@
 import { t, getBadgeName } from '../runtime/i18n.js';
-import { getMyAchievements } from '../runtime/api.js';
+import { getMyAchievements } from '../runtime/apiSocial.js';
 import { isAuthenticated } from '../runtime/auth.js';
 import { showToast } from './toast.js';
 import { navigateTo } from '../runtime/router.js';

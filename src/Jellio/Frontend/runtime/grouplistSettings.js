@@ -1,4 +1,4 @@
-import { getProfileSettings } from './api.js';
+import { getProfileSettings } from './apiSocial.js';
 
 let enabled = false;
 let loaded = false;

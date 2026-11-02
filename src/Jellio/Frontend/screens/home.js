@@ -1,31 +1,9 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
-import {
-  getCurrentUser,
-  getResumeItems,
-  getContinueReading,
-  getContinueListening,
-  getNextUp,
-  getWatchlistItems,
-  getGrouplistItems,
-  getCollections,
-  collectionKind,
-  getCollectionItems,
-  discoverGenres,
-  getGenreItems,
-  getGenreItemsPage,
-  isAnimeCollection,
-  getCalendarEntries,
-  setUpcomingHidden,
-  getImageUrl,
-  getAnimeIds,
-  withoutAnime,
-  isHomeRowCacheEnabled,
-  markHomeRowPainted,
-  getCommunityWatching,
-  invalidateCommunityWatchingCache,
-} from '../runtime/api.js';
+import { getCurrentUser, getResumeItems, getNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
+import { getContinueReading, getContinueListening } from '../runtime/apiBooks.js';
+import { getCommunityWatching, invalidateCommunityWatchingCache } from '../runtime/apiSocial.js';
 import {
   isCommunityRowEnabled,
   getCommunityExcludedUsers,

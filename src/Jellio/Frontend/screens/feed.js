@@ -1,14 +1,7 @@
 import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
-import {
-  getActivityFeed,
-  getUserImageUrl,
-  getImageUrl,
-  getBookCoverUrl,
-  getMangaSeriesCoverUrl,
-  getCurrentUser,
-  deleteActivityEntry,
-  hideFeedBadge,
-} from '../runtime/api.js';
+import { getActivityFeed, deleteActivityEntry, hideFeedBadge } from '../runtime/apiSocial.js';
+import { getUserImageUrl, getImageUrl, getCurrentUser } from '../runtime/api.js';
+import { getBookCoverUrl, getMangaSeriesCoverUrl } from '../runtime/apiBooks.js';
 import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';

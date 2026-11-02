@@ -1,19 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getItemDetails,
-  getAudiobookTracks,
-  getReadingProgress,
-  getAnnotations,
-  audiobookTitle,
-  getEpisodes,
-  getSeriesEpisodes,
-  getMediaSources,
-  getCurrentUser,
-  getDownloadPlaybackInfo,
-  getConversionStatus,
-  matchAudioStreamIndex,
-  getAudioStreams,
-} from '../runtime/api.js';
+import { getItemDetails, audiobookTitle, getEpisodes, getSeriesEpisodes, getMediaSources, getCurrentUser, getDownloadPlaybackInfo, getConversionStatus, matchAudioStreamIndex, getAudioStreams } from '../runtime/api.js';
+import { getAudiobookTracks, getReadingProgress, getAnnotations } from '../runtime/apiBooks.js';
 import { sourceAudioLanguages } from './streamPicker.js';
 import { languageName } from '../runtime/languages.js';
 import { getDeviceId } from '../runtime/auth.js';

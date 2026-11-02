@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl, getStreamCoverUrl } from '../runtime/api.js';
+import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl } from '../runtime/api.js';
+import { getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { isAuthenticated, getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';

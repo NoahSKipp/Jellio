@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getMangaUpdates, refreshMangaUpdates, getStreamCoverUrl, markReadingItems } from '../runtime/api.js';
+import { getMangaUpdates, refreshMangaUpdates, getStreamCoverUrl, markReadingItems } from '../runtime/apiBooks.js';
 import { formatRelativeTime } from '../runtime/format.js';
 import { showToast } from '../components/toast.js';
 import { navigateTo, setTitle } from '../runtime/router.js';

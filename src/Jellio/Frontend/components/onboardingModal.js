@@ -2,14 +2,8 @@
 import { el } from '../runtime/dom.js';
 import { t, getDisplayLanguage, setDisplayLanguage, DISPLAY_LANGUAGES, loadDisplayLanguage } from '../runtime/i18n.js';
 import { getCurrentUserId, getCurrentUser as getSessionUser } from '../runtime/auth.js';
-import {
-  getCurrentUser,
-  updateLanguagePreferences,
-  startMangaImport,
-  getServerDisplayPreferences,
-  getCachedServerDisplayPreferences,
-  saveServerDisplayPreferences,
-} from '../runtime/api.js';
+import { getCurrentUser, updateLanguagePreferences, getServerDisplayPreferences, getCachedServerDisplayPreferences, saveServerDisplayPreferences } from '../runtime/api.js';
+import { startMangaImport } from '../runtime/apiBooks.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from './streamPicker.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
 import { LANGUAGES, languageLabel, readTargetLanguage, writeTargetLanguage } from './readerStudy.js';

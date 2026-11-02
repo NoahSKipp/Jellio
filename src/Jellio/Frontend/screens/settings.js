@@ -1,26 +1,7 @@
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel } from '../runtime/bufferSettings.js';
-import {
-  getCurrentUser,
-  saveServerDisplayLanguage,
-  saveServerDisplayPreferences,
-  updateUserPassword,
-  getSleepTimerStatus,
-  cancelSleepTimer,
-  updateLanguagePreferences,
-  isQuickConnectEnabled,
-  authorizeQuickConnect,
-  getProfileSettings,
-  setProfilePrivacy,
-  setGrouplistEnabled,
-  getJellioConfig,
-  startMangaImport,
-  getMangaImportStatus,
-  clearCachedRows,
-  isHomeRowCacheEnabled,
-  getCommunityUsers,
-  getAllGenres,
-  getUserImageUrl,
-} from '../runtime/api.js';
+import { getCurrentUser, saveServerDisplayLanguage, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl } from '../runtime/api.js';
+import { getProfileSettings, setProfilePrivacy, setGrouplistEnabled, getCommunityUsers } from '../runtime/apiSocial.js';
+import { startMangaImport, getMangaImportStatus } from '../runtime/apiBooks.js';
 import {
   isCommunityRowEnabled,
   setCommunityRowEnabled,

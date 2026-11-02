@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import { getRankingSession, startRankingSession, voteRankingSession, getItem, getImageUrl } from '../runtime/api.js';
+import { getRankingSession, startRankingSession, voteRankingSession } from '../runtime/apiSocial.js';
+import { getItem, getImageUrl } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
 
 export function buildPickTrigger(onStart) {

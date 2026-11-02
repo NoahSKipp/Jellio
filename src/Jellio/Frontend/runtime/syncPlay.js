@@ -1,5 +1,6 @@
 import { getCurrentUserId } from './auth.js';
-import { getSyncPlayGroups, getCurrentUser } from './api.js';
+import { getSyncPlayGroups } from './apiSocial.js';
+import { getCurrentUser } from './api.js';
 
 const TicksPerMillisecond = 10000;
 const MaxMeasurements = 6;

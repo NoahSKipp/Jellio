@@ -1,11 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getVocabulary,
-  reviewVocabulary,
-  deleteVocabulary,
-  updateVocabulary,
-  downloadVocabularyExport,
-} from '../runtime/api.js';
+import { getVocabulary, reviewVocabulary, deleteVocabulary, updateVocabulary, downloadVocabularyExport } from '../runtime/apiBooks.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { showToast } from '../components/toast.js';

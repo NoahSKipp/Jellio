@@ -1,13 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  getItemDetails,
-  getAudiobookTracks,
-  audiobookTitle,
-  getAudiobookLibraryChapters,
-  getImageUrl,
-  getBookCoverUrl,
-  TICKS_PER_SECOND,
-} from '../runtime/api.js';
+import { getItemDetails, audiobookTitle, getAudiobookLibraryChapters, getImageUrl, TICKS_PER_SECOND } from '../runtime/api.js';
+import { getAudiobookTracks, getBookCoverUrl } from '../runtime/apiBooks.js';
 import { findDownload, getOfflineObjectUrl, getLocalProgress } from '../runtime/offline.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';

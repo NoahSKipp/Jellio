@@ -1,14 +1,6 @@
 import { t } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
-import {
-  getGroupWatchMessages,
-  sendGroupWatchMessage,
-  getPartyState,
-  setPartyItem,
-  setPartyReady,
-  startPartyCountdown,
-  requestPartyControl,
-} from '../runtime/api.js';
+import { getGroupWatchMessages, sendGroupWatchMessage, getPartyState, setPartyItem, setPartyReady, startPartyCountdown, requestPartyControl } from '../runtime/apiSocial.js';
 import { getCurrentGroup, requestSeek, requestPause, requestUnpause } from '../runtime/syncPlay.js';
 import {
   PARTY_REACTIONS,

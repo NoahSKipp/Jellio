@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import { getImageUrl, getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/api.js';
+import { getImageUrl } from '../runtime/api.js';
+import { getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 

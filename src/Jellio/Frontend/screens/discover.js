@@ -1,11 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import {
-  discoverBooks,
-  requestBook,
-  getBookshelfItems,
-  getBookShelfInfo,
-  getJellioConfig,
-} from '../runtime/api.js';
+import { discoverBooks, requestBook, getBookshelfItems, getBookShelfInfo } from '../runtime/apiBooks.js';
+import { getJellioConfig } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { el } from '../runtime/dom.js';

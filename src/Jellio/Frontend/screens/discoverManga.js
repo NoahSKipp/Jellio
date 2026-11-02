@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import { discoverManga, getBookshelfItems, getJellioConfig, getMangaCoverUrl, findStreamSeries } from '../runtime/api.js';
+import { discoverManga, getBookshelfItems, getMangaCoverUrl, findStreamSeries } from '../runtime/apiBooks.js';
+import { getJellioConfig } from '../runtime/api.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { openMangaRequestSheet } from '../components/mangaRequest.js';

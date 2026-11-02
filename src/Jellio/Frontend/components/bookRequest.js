@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { searchBooksToRequest, requestBook } from '../runtime/api.js';
+import { searchBooksToRequest, requestBook } from '../runtime/apiBooks.js';
 import { el } from '../runtime/dom.js';
 import { coverSrc } from '../runtime/util.js';
 
