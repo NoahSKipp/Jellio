@@ -4,7 +4,7 @@
 // same info through /Items?ids= comes back in well under a second, so the
 // detail page renders from that and looks for streams separately.
 const INFO_FIELDS = ['Overview', 'Genres', 'People', 'Studios', 'ProductionYear', 'RunTimeTicks', 'PremiereDate', 'RemoteTrailers'];
-const PLAYBACK_FIELDS = ['Trickplay', 'Chapters'];
+const PLAYBACK_FIELDS = ['Chapters'];
 
 function fieldsFor(includePlaybackFields) {
   return (includePlaybackFields ? INFO_FIELDS.concat(PLAYBACK_FIELDS) : INFO_FIELDS).join(',');

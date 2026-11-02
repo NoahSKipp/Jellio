@@ -2994,51 +2994,6 @@ export function buildCastStreamUrl(itemId, mediaSource, startTimeTicks, options)
   return getServerAddress() + '/Videos/' + itemId + '/stream.mp4?' + params.toString();
 }
 
-// Real endpoint, GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg
-// (TrickplayController.cs's own GetTrickplayTileImage), confirmed
-// against that controller's own real route before writing this: index
-// is a tile sheet's own position, not a single thumbnail's, several
-// thumbnails packed into one real sheet per BaseItemDto.Trickplay's own
-// TrickplayInfoDto (TileWidth/TileHeight thumbnails per sheet).
-// screens/player.js's own pickTrickplayTile() below does the real
-// thumbnail-index-to-sheet-and-cell math this only ever needs a URL for.
-export function getTrickplayTileUrl(itemId, mediaSourceId, width, tileIndex) {
-  const params = new URLSearchParams({
-    ApiKey: getAccessToken() || '',
-    mediaSourceId: mediaSourceId || itemId,
-  });
-  return getServerAddress() + '/Videos/' + itemId + '/Trickplay/' + width + '/' + tileIndex + '.jpg?' + params.toString();
-}
-
-// Seek bar frames for titles without trickplay (Jellio's
-// ScrubPreviewController), one per 10 seconds, grabbed server side.
-export function getScrubPreviewUrl(itemId, mediaSourceId, seconds) {
-  const params = new URLSearchParams({ ApiKey: getAccessToken() || '' });
-  if (mediaSourceId) params.set('mediaSourceId', mediaSourceId);
-  return getServerAddress() + '/Jellio/scrub-preview/' + itemId + '/' + Math.max(0, Math.floor(seconds)) + '.jpg?' + params.toString();
-}
-
-// A real MediaSource can carry more than one real generated resolution
-// (BaseItemDto.Trickplay is width keyed), screens/player.js's own seek
-// bar preview wants exactly one to work from: the smallest available,
-// same real reasoning Nuvio's own trickplay work already settled on, a
-// scrub preview reads at a glance, not full detail, and a small real
-// sheet is the cheaper real download on every single hover move.
-export function pickTrickplayInfo(item, mediaSourceId) {
-  const bySource = item && item.Trickplay && item.Trickplay[mediaSourceId];
-  if (!bySource) return null;
-  const widths = Object.keys(bySource)
-    .map(Number)
-    .filter(function (width) {
-      return !Number.isNaN(width);
-    })
-    .sort(function (a, b) {
-      return a - b;
-    });
-  if (!widths.length) return null;
-  return Object.assign({ Width: widths[0] }, bySource[widths[0]]);
-}
-
 // Real endpoints, POST /Sessions/Playing, /Sessions/Playing/Progress and
 // /Sessions/Playing/Stopped, the same three every real Jellyfin client
 // reports through, confirmed against jellyfin-apiclient-javascript's own
@@ -3202,8 +3157,8 @@ export function getAvatarPresets() {
 // filename itself carries a character that would otherwise break the URL.
 // Token goes on as an ApiKey query param rather than an Authorization
 // header: this URL is handed straight to a plain <img> tag, which never
-// sends custom headers, the same reason getStreamUrl/getTrickplayUrl
-// already do this for <video>/trickplay requests against the same
+// sends custom headers, the same reason getStreamUrl
+// already does this for <video> requests against the same
 // [Authorize]-gated API surface.
 export function getAvatarPresetUrl(id) {
   const encodedSegments = String(id).split('/').map(encodeURIComponent).join('/');

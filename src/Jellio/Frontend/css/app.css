@@ -5871,58 +5871,6 @@
   display: flex;
 }
 
-/* screens/player.js's own pickTrickplayInfo(): a real BaseItemDto.Trickplay
-   tile sheet, cropped down to the one cell under the pointer. Hidden by
-   default, only shown (and only ever built at all) when that data is
-   real for this title. */
-.jellio-player-scrub-preview {
-  position: absolute;
-  bottom: calc(100% + 0.6em);
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3em;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-}
-
-.jellio-player-scrub-preview-visible {
-  opacity: 1;
-}
-
-.jellio-player-scrub-preview-image {
-  border-radius: 0.4em;
-  outline: 2px solid rgb(255 255 255 / 0.25);
-  background-color: #000;
-  background-repeat: no-repeat;
-  box-shadow: 0 0.6em 1.6em rgb(0 0 0 / 0.5);
-}
-
-.jellio-player-scrub-preview-image[hidden] {
-  display: none;
-}
-
-/* A dark frame with a soft pulse while the first server frame loads. */
-.jellio-player-scrub-preview-image-empty {
-  animation: jellio-scrub-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes jellio-scrub-pulse {
-  50% {
-    background-color: #1a1a1a;
-  }
-}
-
-.jellio-player-scrub-preview-time {
-  font-size: 0.78em;
-  font-weight: 600;
-  padding: 0.15em 0.6em;
-  border-radius: 999px;
-  background: rgb(0 0 0 / 0.7);
-}
-
 .jellio-player-pill {
   display: flex;
   align-items: center;
