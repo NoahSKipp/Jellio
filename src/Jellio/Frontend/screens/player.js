@@ -379,7 +379,9 @@ export async function renderPlayer(root, params) {
   if (params.get('fromStart') === '1') startTicks = 0;
   // A buffering switch carries the position over and plays straight on.
   let lastUserSeekAt = 0;
-  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId;
+  const reloadedAtTicks = Number(params.get('at')) || 0;
+  if (reloadedAtTicks > 0 && !syncPlaylistItemId) startTicks = reloadedAtTicks;
+  const hasResumePosition = startTicks > 0 && !syncPlaylistItemId && !reloadedAtTicks;
 
   const video = document.createElement('video');
   video.className = 'jellio-player-video';
@@ -593,6 +595,17 @@ export async function renderPlayer(root, params) {
       onReturn: function () {
         checkForFrozenPicture();
       },
+      // The browser will not let go of this video element: carry on in a
+      // fresh player at the same spot.
+      onStuck: function () {
+        if (screenTornDown) return;
+        navigateTo(
+          playHash(itemId, mediaSource && mediaSource.Id) +
+            (failoverTried.length ? '&tried=' + encodeURIComponent(failoverTried.join(',')) : '') +
+            '&at=' + currentPositionTicks() +
+            '&r=' + Date.now(),
+        );
+      },
     });
     topbarActions.appendChild(pip.button);
   }
@@ -625,6 +638,7 @@ export async function renderPlayer(root, params) {
       navigator.mediaSession.setActionHandler('enterpictureinpicture', function () {
         if (pip) pip.enterForTabLeave();
       });
+      if (pip) pip.markBrowserOpensOnLeave();
     } catch (err) {
       // Not every browser knows this action.
     }

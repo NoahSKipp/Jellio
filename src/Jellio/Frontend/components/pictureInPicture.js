@@ -5,19 +5,61 @@ import { isAutoPipEnabled } from '../runtime/pipSettings.js';
 // Only a window the viewer opened with the button stays open once the
 // page is back; one opened automatically or left over closes.
 let manualPipElement = null;
+const controllers = new Map();
 
-export function closeStrayPictureInPicture(attempt) {
-  const current = document.pictureInPictureElement;
-  if (!current || document.visibilityState !== 'visible') return;
-  if (current === manualPipElement && current.isConnected) return;
-  const tries = typeof attempt === 'number' ? attempt : 0;
-  document.exitPictureInPicture().catch(function () {
-    if (tries < 4) {
-      window.setTimeout(function () {
-        closeStrayPictureInPicture(tries + 1);
-      }, 400);
-    }
+function wait(ms) {
+  return new Promise(function (resolve) {
+    window.setTimeout(resolve, ms);
   });
+}
+
+function waitUntilLeft(element, ms) {
+  const until = Date.now() + ms;
+  return new Promise(function (resolve) {
+    (function check() {
+      if (document.pictureInPictureElement !== element) return resolve(true);
+      if (Date.now() >= until) return resolve(false);
+      window.setTimeout(check, 50);
+    })();
+  });
+}
+
+// Chrome can keep a video marked as in picture in picture after its own
+// automatic window closed, and then ignores exitPictureInPicture. Within
+// a click, reopening and closing the window resets it; false means the
+// browser still holds the video and the caller has to replace it.
+export async function forceLeavePictureInPicture(element, fromClick) {
+  if (document.pictureInPictureElement !== element) return true;
+  await Promise.race([document.exitPictureInPicture().catch(function () {}), wait(800)]);
+  if (await waitUntilLeft(element, 300)) return true;
+  if (fromClick) {
+    await Promise.race([
+      element
+        .requestPictureInPicture()
+        .then(function () {
+          return document.exitPictureInPicture();
+        })
+        .catch(function () {}),
+      wait(1200),
+    ]);
+    if (await waitUntilLeft(element, 300)) return true;
+  }
+  return false;
+}
+
+let strayCheck = null;
+export function closeStrayPictureInPicture() {
+  window.clearTimeout(strayCheck);
+  if (!document.pictureInPictureElement || document.visibilityState !== 'visible') return;
+  // Give the browser a moment to close its own automatic window first.
+  strayCheck = window.setTimeout(function () {
+    const current = document.pictureInPictureElement;
+    if (!current || document.visibilityState !== 'visible') return;
+    if (current === manualPipElement && current.isConnected) return;
+    const controller = controllers.get(current);
+    if (controller) controller.bringBack();
+    else forceLeavePictureInPicture(current, false);
+  }, 700);
 }
 
 if (typeof document !== 'undefined' && document.pictureInPictureEnabled) {
@@ -36,6 +78,7 @@ export function attachPictureInPicture(options) {
   const video = options.video;
   const root = options.root;
   const onReturn = options.onReturn || function () {};
+  const onStuck = options.onStuck || function () {};
 
   const button = el('button', 'jellio-player-back jellio-player-pip');
   button.type = 'button';
@@ -70,23 +113,31 @@ export function attachPictureInPicture(options) {
     }
   }
 
+  let leaving = false;
   function bringBack(event) {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
     if (manualPipElement === video) manualPipElement = null;
-    if (!document.pictureInPictureElement) {
+    if (!active()) {
       sync();
       onReturn();
       return;
     }
-    document
-      .exitPictureInPicture()
-      .catch(function (err) {
-        console.warn('Jellio: could not leave picture in picture', err);
-      })
-      .then(sync);
+    if (leaving) return;
+    leaving = true;
+    const fromClick = !!(event && event.isTrusted);
+    forceLeavePictureInPicture(video, fromClick).then(function (left) {
+      leaving = false;
+      sync();
+      if (left) {
+        onReturn();
+        return;
+      }
+      console.warn('Jellio: the browser kept the video in picture in picture, reloading it here');
+      onStuck();
+    });
   }
 
   button.addEventListener('click', function () {
@@ -131,9 +182,16 @@ export function attachPictureInPicture(options) {
     return video.requestPictureInPicture().then(sync, function () {});
   }
 
+  // Where the browser opens the window itself through the media session,
+  // asking again on tab leave only races with it.
+  let browserOpensOnLeave = false;
+  function markBrowserOpensOnLeave() {
+    browserOpensOnLeave = true;
+  }
+
   function onVisibility() {
     if (document.visibilityState === 'hidden') {
-      enterForTabLeave();
+      if (!browserOpensOnLeave) enterForTabLeave();
       return;
     }
     closeStrayPictureInPicture();
@@ -142,7 +200,11 @@ export function attachPictureInPicture(options) {
   document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('focus', sync);
 
+  const controller = { bringBack: bringBack };
+  controllers.set(video, controller);
+
   function destroy() {
+    if (controllers.get(video) === controller) controllers.delete(video);
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('focus', sync);
     root.removeEventListener('click', onRootClick, true);
@@ -154,5 +216,12 @@ export function attachPictureInPicture(options) {
     if (active()) document.exitPictureInPicture().catch(function () {});
   }
 
-  return { button: button, placeholder: placeholder, enterForTabLeave: enterForTabLeave, sync: sync, destroy: destroy };
+  return {
+    button: button,
+    placeholder: placeholder,
+    enterForTabLeave: enterForTabLeave,
+    markBrowserOpensOnLeave: markBrowserOpensOnLeave,
+    sync: sync,
+    destroy: destroy,
+  };
 }
