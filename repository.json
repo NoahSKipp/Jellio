@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.104.5] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Recover from Chrome keeping the video in picture in picture\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture recovery in 1.104.5\n",
+        "checksum": "fa67dda583aa969e5fc2af61e241c46c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.5/jellio_1.104.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-02T23:57:07Z",
+        "version": "1.104.5"
+      },
+      {
         "changelog": "## [1.104.4] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Make Bring it back always return the video from picture in picture\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture fix in 1.104.4\n",
         "checksum": "1c3eb49f34dd52d79aba957af4c3c710",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.4/jellio_1.104.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-26T17:12:31Z",
         "version": "1.91.1"
-      },
-      {
-        "changelog": "## [1.91.0] - 2026-10-26\n\n### 🚀 Features\n\n- *(search)* Suggestions for searches that find nothing; View all lists load in pages\n- *(search)* Related titles on the web when a search finds nothing\n\n### 🐛 Bug Fixes\n\n- *(search)* Qualify MetadataProvider in the suggestions controller\n",
-        "checksum": "e63db1fc22bc5ae010a467e76c12011f",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.0/jellio_1.91.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-26T14:05:14Z",
-        "version": "1.91.0"
       }
     ]
   }
