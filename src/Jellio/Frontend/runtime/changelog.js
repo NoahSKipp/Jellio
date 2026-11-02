@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.3",
+    "summary": "A small greeting fix.",
+    "highlights": [
+      {
+        "title": "Late Night Greeting",
+        "description": "The home screen now says Still up, name? instead of Still up?, name, in every language."
+      }
+    ]
+  },
+  {
     "version": "1.104.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.2",
