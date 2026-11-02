@@ -15,6 +15,22 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.103.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.103.0",
+    "summary": "Smarter stream switching when a stream fails or keeps buffering.",
+    "highlights": [
+      {
+        "title": "Switch Streams When Buffering",
+        "description": "When a stream keeps stopping to buffer, Jellio offers to switch to another one and picks up right where you were. In Settings, under Playback, you can have it ask, switch on its own, or keep playing."
+      },
+      {
+        "title": "Failover in Your Language",
+        "description": "When a stream doesn't play, Jellio now tries streams in your preferred audio language first, or your menu language if you haven't set one, then multi-audio streams, and only then streams in other languages."
+      }
+    ]
+  },
+  {
     "version": "1.102.5",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.102.5",
