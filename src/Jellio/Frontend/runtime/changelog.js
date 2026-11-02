@@ -19,6 +19,18 @@ export function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.102.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.102.3",
+    "summary": "Icons and the home banner show up sooner.",
+    "highlights": [
+      {
+        "title": "Faster First Paint",
+        "description": "Icons in the sidebar and on buttons no longer pop in after the rest of the page, and the home banner's picture starts loading the moment the page opens instead of after the app has started."
+      }
+    ]
+  },
+  {
     "version": "1.102.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.102.2",
