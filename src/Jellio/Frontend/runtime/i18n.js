@@ -161,12 +161,8 @@ const STRINGS = {
     action_saving: 'Saving…',
     action_saved: 'Saved',
     action_cancel: 'Cancel',
-    action_delete: 'Delete',
-    action_close: 'Close',
     action_done: 'Done',
-    action_edit: 'Edit',
     action_refresh: 'Refresh',
-    action_retry: 'Retry',
     action_clear: 'Clear',
     action_connect: 'Connect',
     action_sign_in: 'Sign In',
@@ -210,7 +206,6 @@ const STRINGS = {
     detail_more_like_this: 'More Like This',
   
     // Player
-    player_next_episode: 'Next Episode',
     player_up_next: 'Up Next',
     player_audio_track: 'Audio Track',
     player_subtitle_track: 'Subtitles',
@@ -1186,10 +1181,10 @@ export function getAcceptLanguageHeader() {
   return 'en-US, en;q=0.9';
 }
 
-export function t(key, params) {
+export function t(key, params, fallback) {
   const lang = getDisplayLanguage();
   const dict = STRINGS[lang] || STRINGS.en;
-  let text = dict[key] || STRINGS.en[key] || key;
+  let text = dict[key] || STRINGS.en[key] || fallback || key;
   if (params && typeof params === 'object') {
     Object.keys(params).forEach(function (paramKey) {
       text = text.replace(new RegExp('\\{' + paramKey + '\\}', 'g'), params[paramKey]);

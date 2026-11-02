@@ -144,12 +144,8 @@ export default {
   action_saving: 'Zapisywanie…',
   action_saved: 'Zapisano',
   action_cancel: 'Anuluj',
-  action_delete: 'Usuń',
-  action_close: 'Zamknij',
   action_done: 'Gotowe',
-  action_edit: 'Edytuj',
   action_refresh: 'Odśwież',
-  action_retry: 'Ponów',
   action_clear: 'Wyczyść',
   action_connect: 'Połącz',
   action_sign_in: 'Zaloguj się',
@@ -193,7 +189,6 @@ export default {
   detail_more_like_this: 'Podobne tytuły',
 
   // Player
-  player_next_episode: 'Następny odcinek',
   player_up_next: 'Następny',
   player_audio_track: 'Ścieżka dźwiękowa',
   player_subtitle_track: 'Napisy',

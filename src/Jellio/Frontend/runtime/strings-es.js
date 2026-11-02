@@ -144,12 +144,8 @@ export default {
   action_saving: 'Guardando…',
   action_saved: 'Guardado',
   action_cancel: 'Cancelar',
-  action_delete: 'Eliminar',
-  action_close: 'Cerrar',
   action_done: 'Listo',
-  action_edit: 'Editar',
   action_refresh: 'Actualizar',
-  action_retry: 'Reintentar',
   action_clear: 'Borrar',
   action_connect: 'Conectar',
   action_sign_in: 'Iniciar sesión',
@@ -193,7 +189,6 @@ export default {
   detail_more_like_this: 'Títulos similares',
 
   // Player
-  player_next_episode: 'Siguiente episodio',
   player_up_next: 'A continuación',
   player_audio_track: 'Pista de audio',
   player_subtitle_track: 'Subtítulos',

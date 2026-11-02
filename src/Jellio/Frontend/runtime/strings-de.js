@@ -144,12 +144,8 @@ export default {
   action_saving: 'Wird gespeichert…',
   action_saved: 'Gespeichert',
   action_cancel: 'Abbrechen',
-  action_delete: 'Löschen',
-  action_close: 'Schließen',
   action_done: 'Fertig',
-  action_edit: 'Bearbeiten',
   action_refresh: 'Aktualisieren',
-  action_retry: 'Wiederholen',
   action_clear: 'Leeren',
   action_connect: 'Verbinden',
   action_sign_in: 'Anmelden',
@@ -193,7 +189,6 @@ export default {
   detail_more_like_this: 'Ähnliche Titel',
 
   // Player
-  player_next_episode: 'Nächste Episode',
   player_up_next: 'Als Nächstes',
   player_audio_track: 'Tonspur',
   player_subtitle_track: 'Untertitel',
