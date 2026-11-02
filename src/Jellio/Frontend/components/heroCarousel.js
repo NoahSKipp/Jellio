@@ -20,6 +20,9 @@ import { transitionsAllowed } from '../runtime/motionSettings.js';
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
 
+// Read by Services/IndexHtmlPatchService.cs's early script.
+const HERO_PRELOAD_KEY = 'jellio.heroPreload';
+
 export function getHeroBackdropUrl(item) {
   if (!item || !item.Id) return '';
   const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
@@ -223,6 +226,13 @@ export function buildHeroCarousel(options) {
     }
 
     const backdropUrl = getHeroBackdropUrl(item);
+    // The first backdrop on this page, for the next load: index.html's
+    // early script starts downloading it before any of Jellio's code runs.
+    if (backdropUrl && !shownOnce) {
+      try {
+        localStorage.setItem(HERO_PRELOAD_KEY, JSON.stringify({ route: location.hash || '', url: backdropUrl }));
+      } catch (err) {}
+    }
     if (backdropUrl) {
       const currentId = item.Id;
       crossfadeBackdrop(backdrop, backdropUrl, function () {
