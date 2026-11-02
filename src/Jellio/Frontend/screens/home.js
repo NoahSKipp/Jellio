@@ -694,7 +694,10 @@ export async function renderHome(root, params) {
     .then(function (user) {
       const name = user && user.Name;
       if (!name) return;
-      greetingEl.textContent = greeting + ', ' + name + (greeting === 'Still up' ? '?' : '');
+      const question = /\s?\?$/.exec(greeting);
+      greetingEl.textContent = question
+        ? greeting.slice(0, question.index) + ', ' + name + question[0]
+        : greeting + ', ' + name;
     })
     .catch(function () {});
 
