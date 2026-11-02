@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.104.2] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Close automatic picture in picture on return and make the way back clickable\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture fix in 1.104.2\n",
+        "checksum": "5f426ec7efaf23a33462196e1b3db69b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.2/jellio_1.104.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-02T23:16:22Z",
+        "version": "1.104.2"
+      },
+      {
         "changelog": "## [1.104.1] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Hide party overlays outside a group and keep them off the controls\n- *(player)* Make automatic picture in picture reliable and reversible\n\n### 📚 Documentation\n\n- *(changelog)* Player fixes in 1.104.1\n",
         "checksum": "43c6cb22bb2446a4313991970cf5c5f0",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.1/jellio_1.104.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-26T12:32:48Z",
         "version": "1.90.1"
-      },
-      {
-        "changelog": "## [1.90.0] - 2026-10-26\n\n### 🚀 Features\n\n- *(feed)* Mark repeat completions as Rewatched\n",
-        "checksum": "f993c68d36a294a7c0f999c7dbad182c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.90.0/jellio_1.90.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-26T12:14:26Z",
-        "version": "1.90.0"
       }
     ]
   }
