@@ -83,7 +83,7 @@ public class IndexHtmlPatchService(
 
         var version =
             JellioPlugin.Instance?.GetType().Assembly.GetName().Version?.ToString() ?? "0.0.0.0";
-        var block = BuildBlock(version);
+        var block = BuildBlock(version, FindIconFont(applicationPaths.WebPath));
 
         string updated;
         if (content!.Contains(StartMarker, StringComparison.Ordinal))
@@ -240,7 +240,35 @@ public class IndexHtmlPatchService(
         return JsonSerializer.Serialize(new { imports });
     }
 
-    private static string BuildBlock(string version)
+    // jellyfin-web's Material Icons font, which every Jellio icon outside
+    // the inline SVGs draws with. The browser only asks for it once the
+    // page is drawing, so those icons stayed blank for a moment on every
+    // load; a preload starts it with the page instead. Relative to
+    // index.html, so a base URL prefix still resolves.
+    public static string? FindIconFont(string webPath)
+    {
+        try
+        {
+            if (!Directory.Exists(webPath))
+            {
+                return null;
+            }
+
+            var font = Directory.EnumerateFiles(webPath, "*.woff2", SearchOption.AllDirectories)
+                .Select(path => Path.GetRelativePath(webPath, path).Replace('\\', '/'))
+                .Where(rel => Path.GetFileName(rel).StartsWith("MaterialIcons-Regular", StringComparison.OrdinalIgnoreCase)
+                    || Path.GetFileName(rel).StartsWith("material-icons.", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(rel => rel.Length)
+                .FirstOrDefault();
+            return font;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private static string BuildBlock(string version, string? iconFont = null)
     {
         var preloadLinks = string.Concat(
             ModulePreloadPaths.Select(path =>
@@ -262,6 +290,7 @@ public class IndexHtmlPatchService(
             // nothing ever linked the real webfont itself. A client with
             // no real path to fonts.googleapis.com still gets that same
             // fallback stack it always has, no worse off than before.
+            + (iconFont != null ? $"<link rel=\"preload\" href=\"{iconFont}\" as=\"font\" type=\"font/woff2\" crossorigin>\n" : string.Empty)
             + "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n"
             + "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n"
             // Not render blocking: the page paints in the fallback font and
@@ -299,6 +328,20 @@ public class IndexHtmlPatchService(
     // full user object can still finish after app.js's own first sync().
     private const string EarlySessionCaptureScript =
         @"(function () {
+  // The hero backdrop the home screen showed first last time, fetched
+  // now rather than after the app's code and the hero list have loaded
+  // (components/heroCarousel.js stores it).
+  try {
+    var hero = JSON.parse(localStorage.getItem('jellio.heroPreload') || 'null');
+    if (hero && hero.url && (hero.route || '') === (location.hash || '')) {
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = hero.url;
+      link.setAttribute('fetchpriority', 'high');
+      document.head.appendChild(link);
+    }
+  } catch (e) {}
   // Jellio's service worker (Frontend/sw.js, offline support) takes the
   // place of jellyfin-web's: one worker per page scope, and Jellio's loads
   // jellyfin-web's own inside it. Swapped here, before jellyfin-web's
