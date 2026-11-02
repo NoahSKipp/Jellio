@@ -3,7 +3,6 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Jellio.Services;
 using Jellyfin.Data.Enums;
@@ -11,6 +10,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 using Jellio.Services.Reading;
 
@@ -389,8 +389,7 @@ public partial class NotificationsController(
     private Guid GetUserId()
     {
         if (
-            HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            User.TryGetJellyfinUserId(out var userId)
         )
         {
             return userId;

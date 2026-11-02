@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Security.Claims;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +7,7 @@ using Jellio.Services.Manga;
 using Jellio.Services.Reading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -265,8 +265,7 @@ public partial class TrackerController(
     private bool TryUser(out Guid userId)
     {
         userId = Guid.Empty;
-        return HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out userId);
+        return User.TryGetJellyfinUserId(out userId);
     }
 
     [GeneratedRegex("access_token=([^&\\s]+)", RegexOptions.CultureInvariant)]

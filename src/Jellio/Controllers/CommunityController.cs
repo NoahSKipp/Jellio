@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Claims;
 using Jellio.Services;
 using Jellio.Services.Achievements;
 using Jellyfin.Data.Enums;
@@ -19,6 +18,7 @@ using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -84,7 +84,7 @@ public class CommunityController(
     [HttpGet("watching")]
     public ActionResult<CommunityWatchingResponse> GetWatching([FromQuery] string? excludedUserIds)
     {
-        var callerUserId = HttpContext.User.Identity is ClaimsIdentity identity && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var cid) ? cid : Guid.Empty;
+        var callerUserId = User.TryGetJellyfinUserId(out var cid) ? cid : Guid.Empty;
         var caller = callerUserId != Guid.Empty ? userManager.GetUserById(callerUserId) : null;
         if (caller is null)
         {

@@ -1,6 +1,6 @@
 using System;
+using Jellio.Extensions;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
@@ -33,7 +33,7 @@ public class SingleGroupWatchFilter(
     {
         // A private party takes only people let in by its code or an invite.
         if (context.ActionDescriptor is ControllerActionDescriptor { ActionName: "SyncPlayJoinGroup" }
-            && Guid.TryParse(context.HttpContext.User.FindFirst("Jellyfin-UserId")?.Value, out var joiningUserId)
+            && context.HttpContext.User.TryGetJellyfinUserId(out var joiningUserId)
             && TargetGroupId(context) is { } joiningGroupId
             && parties.Get(joiningGroupId) is { Private: true } meta
             && !parties.IsAdmitted(meta, joiningUserId)
@@ -45,7 +45,7 @@ public class SingleGroupWatchFilter(
 
         if (
             context.ActionDescriptor is ControllerActionDescriptor { ActionName: "SyncPlayCreateGroup" or "SyncPlayJoinGroup" }
-            && Guid.TryParse(context.HttpContext.User.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            && context.HttpContext.User.TryGetJellyfinUserId(out var userId)
             && syncPlayManager.IsUserActive(userId)
         )
         {

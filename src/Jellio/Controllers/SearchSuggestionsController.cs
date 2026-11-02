@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -20,6 +19,7 @@ using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -53,7 +53,7 @@ public class SearchSuggestionsController(
     public async Task<ActionResult<SuggestionsResponse>> Get([FromQuery] string query, CancellationToken cancellationToken)
     {
         var token = JellioPlugin.Instance?.Configuration.TmdbAccessToken;
-        var userId = HttpContext.User.Identity is ClaimsIdentity identity && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var id) ? id : Guid.Empty;
+        var userId = User.TryGetJellyfinUserId(out var id) ? id : Guid.Empty;
         var user = userManager.GetUserById(userId);
         if (string.IsNullOrWhiteSpace(query) || string.IsNullOrWhiteSpace(token) || user == null)
         {

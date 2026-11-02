@@ -1,10 +1,10 @@
 using System;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Jellio.Services;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -50,7 +50,7 @@ public class GenresController(GenreCache genres, IUserManager userManager) : Con
 
     private Jellyfin.Database.Implementations.Entities.User? CurrentUser()
     {
-        var id = HttpContext.User.Identity is ClaimsIdentity identity && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var parsed) ? parsed : Guid.Empty;
+        var id = User.TryGetJellyfinUserId(out var parsed) ? parsed : Guid.Empty;
         return id == Guid.Empty ? null : userManager.GetUserById(id);
     }
 }

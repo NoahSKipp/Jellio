@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -12,6 +11,7 @@ using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -527,8 +527,7 @@ public partial class BookRequestController(
     private Guid GetUserId()
     {
         if (
-            HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            User.TryGetJellyfinUserId(out var userId)
         )
         {
             return userId;

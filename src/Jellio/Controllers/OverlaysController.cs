@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -261,8 +261,7 @@ public partial class OverlaysController(IUserManager userManager, IApplicationPa
     private Guid GetUserId()
     {
         if (
-            HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            User.TryGetJellyfinUserId(out var userId)
         )
         {
             return userId;

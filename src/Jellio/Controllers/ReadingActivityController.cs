@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Jellio.Services;
 using Jellio.Services.Manga;
@@ -10,6 +9,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -33,8 +33,7 @@ public class ReadingActivityController(AchievementService achievementService, Ma
     [HttpPost]
     public async Task<IActionResult> Report([FromBody] SessionBody body)
     {
-        if (HttpContext.User.Identity is not ClaimsIdentity identity
-            || !Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId))
+        if (!User.TryGetJellyfinUserId(out var userId))
         {
             return BadRequest("Invalid user session");
         }

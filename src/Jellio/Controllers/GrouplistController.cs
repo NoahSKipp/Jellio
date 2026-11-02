@@ -1,8 +1,8 @@
 using System;
-using System.Security.Claims;
 using Jellio.Services.Grouplist;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -59,8 +59,7 @@ public class GrouplistController(GrouplistStore store) : ControllerBase
     private Guid GetUserId()
     {
         if (
-            HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            User.TryGetJellyfinUserId(out var userId)
         )
         {
             return userId;

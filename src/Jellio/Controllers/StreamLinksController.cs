@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Claims;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -412,8 +412,7 @@ public class StreamLinksController(
     private Guid GetUserId()
     {
         if (
-            HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            User.TryGetJellyfinUserId(out var userId)
         )
         {
             return userId;

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -359,8 +359,7 @@ public partial class MangaRequestController(
             shelfStore.SetInLibrary(requesterId, Jellio.Services.Reading.ShelfStore.SeriesShelfKey(body.Title), true);
         }
 
-        var requester = HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+        var requester = User.TryGetJellyfinUserId(out var userId)
                 ? userManager.GetUserById(userId)?.Username
                 : null;
         if (result.Success)
@@ -529,8 +528,7 @@ public partial class MangaRequestController(
     }
 
     private Guid GetUserId() =>
-        HttpContext.User.Identity is ClaimsIdentity identity
-        && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+        User.TryGetJellyfinUserId(out var userId)
             ? userId
             : Guid.Empty;
 

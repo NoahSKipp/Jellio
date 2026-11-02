@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Jellio.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -67,8 +68,7 @@ public class SleepTimerController(SleepTimerService sleepTimerService) : Control
     private Guid GetUserId()
     {
         if (
-            HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+            User.TryGetJellyfinUserId(out var userId)
         )
         {
             return userId;

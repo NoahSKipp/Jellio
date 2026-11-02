@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Claims;
 using Jellio.Services.Reading;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -116,8 +116,7 @@ public class AnnotationsController(AnnotationStore store, ILibraryManager librar
 
     private Guid? GetVisibleBookUser(Guid itemId)
     {
-        if (HttpContext.User.Identity is not ClaimsIdentity identity
-            || !Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId))
+        if (!User.TryGetJellyfinUserId(out var userId))
         {
             return null;
         }

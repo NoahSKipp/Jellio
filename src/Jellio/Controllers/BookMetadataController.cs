@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellio.Services.Chaptarr;
@@ -16,6 +15,7 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Jellio.Extensions;
 
 namespace Jellio.Controllers;
 
@@ -316,8 +316,7 @@ public class BookMetadataController(BookMetadataService metadataService, Chaptar
     }
 
     private User? GetUser() =>
-        HttpContext.User.Identity is ClaimsIdentity identity
-            && Guid.TryParse(identity.FindFirst("Jellyfin-UserId")?.Value, out var userId)
+        User.TryGetJellyfinUserId(out var userId)
                 ? userManager.GetUserById(userId)
                 : null;
 
