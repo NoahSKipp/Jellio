@@ -64,8 +64,6 @@ public class FrontendController : ControllerBase
             return NotFound();
         }
 
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "Jellio.Frontend." + path.Replace('/', '.');
 
         // Jellio's service worker lives here but looks after the web
         // client's own pages (IndexHtmlPatchService registers it for
@@ -141,8 +139,8 @@ public class FrontendController : ControllerBase
             if (encoding is not null)
             {
                 var compressed = CompressedCache.GetOrAdd(
-                    resourceName + ":" + encoding,
-                    _ => Compress(assembly, resourceName, encoding));
+                    path + ":" + encoding,
+                    _ => Compress(path, encoding));
                 if (compressed is not null)
                 {
                     Response.Headers.ContentEncoding = encoding;
@@ -151,19 +149,14 @@ public class FrontendController : ControllerBase
             }
         }
 
-        var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
-        {
-            return NotFound();
-        }
-
-        return File(stream, contentType);
+        var content = Jellio.Services.FrontendAssets.Read(path);
+        return content is null ? NotFound() : File(content, contentType);
     }
 
-    private static byte[]? Compress(Assembly assembly, string resourceName, string encoding)
+    private static byte[]? Compress(string path, string encoding)
     {
-        using var source = assembly.GetManifestResourceStream(resourceName);
-        if (source is null)
+        var content = Jellio.Services.FrontendAssets.Read(path);
+        if (content is null)
         {
             return null;
         }
@@ -173,7 +166,7 @@ public class FrontendController : ControllerBase
             ? new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true)
             : new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
         {
-            source.CopyTo(compressor);
+            compressor.Write(content);
         }
 
         return output.ToArray();

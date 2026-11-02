@@ -140,73 +140,6 @@ public class IndexHtmlPatchService(
         TryWrite(indexPath, updated);
     }
 
-    // app.js's own real import graph, flattened: every one of these is
-    // exactly one hop from app.js or from something app.js itself
-    // reaches, confirmed by walking every `from './...'` specifier in
-    // the actual Frontend tree rather than guessed at. A real ES module
-    // graph resolves breadth first, one network round trip per level
-    // deep it goes before the next level is even known to exist, three
-    // real levels deep here; on a real high latency connection (hotel
-    // wifi, the same one already behind the splash and image preload
-    // work) that is three real round trips paid serially before a
-    // single byte of actual Jellyfin data has been asked for yet.
-    // modulepreload tells the browser about every one of these the
-    // moment this markup itself parses, in parallel with app.js's own
-    // fetch rather than waiting on it, collapsing that same three level
-    // wait down to effectively one. They carry the same ?v= the import
-    // map (BuildImportMap) gives the real imports, since a preload hint
-    // has to name the exact URL the import will request or the browser
-    // fetches both. Non-initial screens (player, reader, settings, etc.)
-    // are loaded dynamically on demand to preserve bandwidth during initial boot.
-    private static readonly string[] ModulePreloadPaths =
-    [
-        "runtime/auth.js",
-        "runtime/api.js",
-        "runtime/itemInfo.js",
-        "runtime/cast.js",
-        "runtime/router.js",
-        "runtime/changelog.js",
-        "runtime/recommend.js",
-        "runtime/transcodeClassifier.js",
-        "runtime/transcodePolicy.js",
-        "runtime/quality.js",
-        "runtime/rowcache.js",
-        "runtime/rowGate.js",
-        "runtime/offline.js",
-        "runtime/grouplistSettings.js",
-        "runtime/adminStatus.js",
-        "runtime/introCreditsMenuSetting.js",
-        "runtime/syncPlay.js",
-        "screens/login.js",
-        "screens/home.js",
-        "components/sidebar.js",
-        "components/mobileNav.js",
-        "components/nowPlaying.js",
-        "components/notifications.js",
-        "components/sounds.js",
-        "components/overlays.js",
-        "components/achievementNotifier.js",
-        "components/groupWatchInvites.js",
-        "components/toast.js",
-        "components/splash.js",
-        "components/card.js",
-        "components/row.js",
-        "components/scrollArrows.js",
-        "components/services.js",
-        "components/heroCarousel.js",
-        "components/streamPicker.js",
-        "components/cardOptionsMenu.js",
-        "components/libraryCoverflow.js",
-        "components/avatarPicker.js",
-        "components/groupWatch.js",
-        "components/navShared.js",
-        "components/libraryPicker.js",
-        "components/seasons.js",
-        "components/homeCustomizer.js",
-        "components/rowListModal.js",
-        "components/audioMiniPlayer.js",
-    ];
-
     // Every module under runtime/, screens/ and components/, requested
     // as <file>?v=<version> through an import map. Only app.js and
     // app.css carried a version, so after an update a browser, a service
@@ -271,7 +204,7 @@ public class IndexHtmlPatchService(
     private static string BuildBlock(string version, string? iconFont = null)
     {
         var preloadLinks = string.Concat(
-            ModulePreloadPaths.Select(path =>
+            FrontendAssets.StartupModules().Select(path =>
                 $"<link rel=\"modulepreload\" href=\"/Jellio/frontend/{path}?v={version}\">\n"
             )
         );
