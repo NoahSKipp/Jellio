@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.4",
+    "summary": "Bring it back here works every time.",
+    "highlights": [
+      {
+        "title": "Back From Picture in Picture",
+        "description": "Bring it back here, or a click on the empty player, now always returns the video, and the picture in picture panel no longer gets stuck after the window has already closed."
+      }
+    ]
+  },
+  {
     "version": "1.104.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.3",
