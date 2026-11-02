@@ -1,3 +1,7 @@
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --jellio-accent-color: var(--jellio-secondary-color);
   --jellio-bg-color: #0d0d0d;
@@ -15516,7 +15520,7 @@
 .jellio-party-bubbles {
   position: absolute;
   right: clamp(16px, 3vw, 40px);
-  bottom: 8em;
+  bottom: calc(var(--jellio-player-bottom-inset, 7.5em) + 3.6em);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -15568,7 +15572,10 @@
 .jellio-party-reactions {
   position: absolute;
   right: clamp(16px, 3vw, 40px);
-  bottom: 5.2em;
+  bottom: calc(var(--jellio-player-bottom-inset, 7.5em) + 0.6em);
+  max-width: calc(100% - 2 * clamp(16px, 3vw, 40px));
+  overflow-x: auto;
+  scrollbar-width: none;
   display: flex;
   gap: 0.2em;
   padding: 0.25em;
@@ -15644,7 +15651,7 @@
 }
 
 .jellio-party-prompt {
-  top: clamp(20px, 6vh, 56px);
+  top: calc(var(--jellio-player-top-inset, 5em) + 0.6em);
 }
 
 .jellio-party-catchup {

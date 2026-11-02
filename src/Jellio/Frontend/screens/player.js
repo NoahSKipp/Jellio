@@ -120,6 +120,7 @@ export async function renderPlayer(root, params) {
   // The watch party layer (components/partyLayer.js), set once the
   // player is built.
   let partyLayer = null;
+  let overlayInsets = null;
   const initialSyncTarget = getCurrentPlaylistTarget();
   let startTicks = (item.UserData && item.UserData.PlaybackPositionTicks) || 0;
   if (initialSyncTarget && sameSyncId(initialSyncTarget.itemId, itemId)) {
@@ -2775,6 +2776,17 @@ export async function renderPlayer(root, params) {
   shell.appendChild(centerControls);
   shell.appendChild(seekRow);
   shell.appendChild(pill);
+  // Party overlays sit just above the seek row and below the top bar.
+  overlayInsets = new ResizeObserver(function () {
+    const box = root.getBoundingClientRect();
+    if (!box.height) return;
+    root.style.setProperty('--jellio-player-bottom-inset', Math.max(0, box.bottom - seekRow.getBoundingClientRect().top) + 'px');
+    root.style.setProperty('--jellio-player-top-inset', Math.max(0, topbar.getBoundingClientRect().bottom - box.top) + 'px');
+  });
+  overlayInsets.observe(root);
+  overlayInsets.observe(seekRow);
+  overlayInsets.observe(pill);
+  overlayInsets.observe(topbar);
   shell.appendChild(volumeMenu);
   shell.appendChild(speedMenu);
   shell.appendChild(subtitleMenu);
@@ -4324,6 +4336,7 @@ export async function renderPlayer(root, params) {
   pollSyncWait();
 
   async function cleanup() {
+    if (overlayInsets) overlayInsets.disconnect();
     if (bufferStallTimer) window.clearInterval(bufferStallTimer);
     closeBufferPrompt();
     setPlaybackActive(false);
