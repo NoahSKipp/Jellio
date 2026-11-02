@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.5",
+    "summary": "The video always comes back after picture in picture.",
+    "highlights": [
+      {
+        "title": "Back From Picture in Picture",
+        "description": "When the browser keeps the video in picture in picture after you return to the tab, Jellio now resets it, and if the browser still won't let go it picks the stream up again in the player at the same spot."
+      }
+    ]
+  },
+  {
     "version": "1.104.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.4",
