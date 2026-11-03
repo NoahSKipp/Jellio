@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.104.6] - 2026-11-03\n\n### 🐛 Bug Fixes\n\n- *(streams)* Ask the browser finder even when the plain fetch is refused, and allow it the time it needs\n\n### 📚 Documentation\n\n- *(changelog)* Note Add Stream on bot-checked pages in 1.104.6\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.104.6\n",
+        "checksum": "39c1bad9105c2b2daf74a3f9e5a13516",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.6/jellio_1.104.6.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-03T10:14:44Z",
+        "version": "1.104.6"
+      },
+      {
         "changelog": "## [1.104.5] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Recover from Chrome keeping the video in picture in picture\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture recovery in 1.104.5\n",
         "checksum": "fa67dda583aa969e5fc2af61e241c46c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.5/jellio_1.104.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-26T22:13:47Z",
         "version": "1.91.2"
-      },
-      {
-        "changelog": "## [1.91.1] - 2026-10-26\n\n### ⚡ Performance\n\n- *(state)* Keep large state files in memory and coalesce their writes\n",
-        "checksum": "087ec10f4754fd703da1eba80b38836b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.91.1/jellio_1.91.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-26T17:12:31Z",
-        "version": "1.91.1"
       }
     ]
   }
