@@ -274,7 +274,7 @@ export async function renderLivePlayer(root, params) {
     lastProgressAt = 0;
     playingSince = 0;
     destroyEngine();
-    setStatus(t('live_starting', { name: target.name }));
+    setStatus(t(target.userStream ? 'live_link_opening' : 'live_starting', { name: target.name }));
     renderInfo();
     try {
       window.history.replaceState(null, '', '#/live?id=' + encodeURIComponent(target.id));
@@ -376,7 +376,7 @@ export async function renderLivePlayer(root, params) {
     restarts = 0;
     lastProgressAt = 0;
     renderInfo();
-    setStatus(t('live_starting', { name: next.name }));
+    setStatus(t(next.userStream ? 'live_link_opening' : 'live_starting', { name: next.name }));
     window.clearTimeout(switchTimer);
     switchTimer = window.setTimeout(function () {
       play(next);

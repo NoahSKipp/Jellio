@@ -370,6 +370,33 @@ function openAddSheet(onAdded) {
   document.body.appendChild(overlay);
   url.focus();
 
+  // The server may need a browser and a bot-check solver for a page, which
+  // takes up to a couple of minutes: show that it is still working.
+  let workingTimer = null;
+  function showWorking() {
+    const started = Date.now();
+    status.textContent = '';
+    status.classList.add('jellio-live-add-status-working');
+    status.appendChild(el('span', 'jellio-live-add-spinner'));
+    const text = el('span', 'jellio-live-add-working-text');
+    text.appendChild(el('span', 'jellio-live-add-working-title', t('live_link_adding')));
+    const hint = el('span', 'jellio-live-add-working-hint', t('live_link_adding_hint'));
+    text.appendChild(hint);
+    status.appendChild(text);
+    const elapsed = el('span', 'jellio-live-add-elapsed', '0:00');
+    status.appendChild(elapsed);
+    workingTimer = window.setInterval(function () {
+      const seconds = Math.floor((Date.now() - started) / 1000);
+      elapsed.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+    }, 1000);
+  }
+  function stopWorking() {
+    window.clearInterval(workingTimer);
+    workingTimer = null;
+    status.classList.remove('jellio-live-add-status-working');
+    status.textContent = '';
+  }
+
   let busy = false;
   panel.addEventListener('submit', async function (event) {
     event.preventDefault();
@@ -382,12 +409,14 @@ function openAddSheet(onAdded) {
     }
     busy = true;
     submit.disabled = true;
-    status.textContent = t('live_link_adding');
+    showWorking();
     try {
       const link = await addStreamLink(value, name.value.trim());
+      stopWorking();
       close();
       onAdded(link);
     } catch (err) {
+      stopWorking();
       status.textContent = t(streamLinkErrorKey(err && err.code));
       submit.disabled = false;
       busy = false;
@@ -402,6 +431,7 @@ function openAddSheet(onAdded) {
     }
   }
   function close() {
+    window.clearInterval(workingTimer);
     document.removeEventListener('keydown', onKey, true);
     overlay.remove();
   }
