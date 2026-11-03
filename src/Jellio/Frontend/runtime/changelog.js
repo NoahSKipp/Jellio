@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.105.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.105.0",
+    "summary": "Fewer stand-in clips, faster starts and clearer Add Stream.",
+    "highlights": [
+      {
+        "title": "No More Two Minute Placeholder",
+        "description": "When a stream turns out to be the short, silent stand-in clip served for a release that couldn't be found, Jellio now notices while it plays and moves on to the next stream, also when the server is converting the stream on the way."
+      },
+      {
+        "title": "Faster Starts",
+        "description": "Titles in Continue Watching and Next Up, and the one in the banner, are prepared in the background while you browse, so they start sooner. This pauses while the tab is in the background or you are on data saver or mobile data."
+      },
+      {
+        "title": "Adding Your Own Streams",
+        "description": "Adding a stream now shows a spinner and a running timer and says some pages need a couple of minutes to open, and your own streams say they are opening instead of starting."
+      }
+    ]
+  },
+  {
     "version": "1.104.6",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.6",
