@@ -15,26 +15,10 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
-    "version": "1.106.0",
-    "title": "What's New in Jellio",
-    "subtitle": "Version 1.106.0",
-    "summary": "Faster starts from search, and sources marked Ready.",
-    "highlights": [
-      {
-        "title": "Ready Sources",
-        "description": "The stream picker marks sources that are already prepared on the server with a Ready badge; they start in about a second. With Prefer sources that are ready on, Jellio starts with one of them when it has the same quality, and never trades a better quality for a faster start."
-      },
-      {
-        "title": "Faster Starts From Search",
-        "description": "The top search results, and a result you rest on, are prepared in the background, and an open title page also gets its next stream ready, so pressing Play is quicker."
-      }
-    ]
-  },
-  {
     "version": "1.105.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.105.0",
-    "summary": "Fewer stand-in clips, faster starts and clearer Add Stream.",
+    "summary": "Fewer stand-in clips, faster starts, Ready sources and clearer Add Stream.",
     "highlights": [
       {
         "title": "No More Two Minute Placeholder",
@@ -47,6 +31,14 @@ export const CHANGELOG_RELEASES = [
       {
         "title": "Adding Your Own Streams",
         "description": "Adding a stream now shows a spinner and a running timer and says some pages need a couple of minutes to open, and your own streams say they are opening instead of starting."
+      },
+      {
+        "title": "Ready Sources",
+        "description": "The stream picker marks sources that are already prepared on the server with a Ready badge; they start in about a second. With Prefer sources that are ready on, Jellio starts with one of them when it has the same quality, and never trades a better quality for a faster start."
+      },
+      {
+        "title": "Faster Starts From Search",
+        "description": "The top search results, and a result you rest on, are prepared in the background, and an open title page also gets its next stream ready, so pressing Play is quicker."
       }
     ]
   },
