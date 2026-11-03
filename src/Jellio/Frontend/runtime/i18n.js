@@ -360,6 +360,8 @@ const STRINGS = {
     player_buffer_always: "Always switch automatically",
     player_buffer_no_other: "No other stream to switch to.",
     player_buffer_switching: "Switching to {label}…",
+    player_failover_list_timeout: "The list of other streams didn't load in time. The server may be busy; try again in a moment.",
+    player_failover_list_error: "The list of other streams couldn't be loaded because of a server or network error. Try again in a moment.",
     player_switch_connecting: "Connecting to the new stream…",
     player_switch_loading: "Loading the new stream…",
     player_switch_done: "Now playing {label}",

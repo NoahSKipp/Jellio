@@ -343,6 +343,8 @@ export default {
   player_buffer_always: "Zawsze zmieniaj automatycznie",
   player_buffer_no_other: "Brak innego strumienia.",
   player_buffer_switching: "Przełączanie na {label}…",
+  player_failover_list_timeout: "Lista pozostałych strumieni nie dotarła na czas. Serwer może być zajęty; spróbuj ponownie za chwilę.",
+  player_failover_list_error: "Nie udało się wczytać listy pozostałych strumieni z powodu błędu serwera lub sieci. Spróbuj ponownie za chwilę.",
   player_switch_connecting: "Łączenie z nowym strumieniem…",
   player_switch_loading: "Wczytywanie nowego strumienia…",
   player_switch_done: "Teraz odtwarzane: {label}",

@@ -343,6 +343,8 @@ export default {
   player_buffer_always: "Immer automatisch wechseln",
   player_buffer_no_other: "Kein anderer Stream verfügbar.",
   player_buffer_switching: "Wechsel zu {label}…",
+  player_failover_list_timeout: "Die Liste der anderen Streams kam nicht rechtzeitig. Der Server ist vielleicht ausgelastet; versuche es gleich noch einmal.",
+  player_failover_list_error: "Die Liste der anderen Streams konnte wegen eines Server- oder Netzwerkfehlers nicht geladen werden. Versuche es gleich noch einmal.",
   player_switch_connecting: "Verbindung zum neuen Stream…",
   player_switch_loading: "Neuer Stream wird geladen…",
   player_switch_done: "Jetzt läuft {label}",

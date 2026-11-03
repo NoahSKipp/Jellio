@@ -320,6 +320,8 @@ export default {
   player_buffer_always: "Cambia sempre automaticamente",
   player_buffer_no_other: "Nessun altro stream disponibile.",
   player_buffer_switching: "Passaggio a {label}…",
+  player_failover_list_timeout: "L'elenco degli altri stream non è arrivato in tempo. Il server potrebbe essere occupato; riprova tra poco.",
+  player_failover_list_error: "Non è stato possibile caricare l'elenco degli altri stream per un errore del server o di rete. Riprova tra poco.",
   player_switch_connecting: "Connessione al nuovo stream…",
   player_switch_loading: "Caricamento del nuovo stream…",
   player_switch_done: "Ora in riproduzione: {label}",

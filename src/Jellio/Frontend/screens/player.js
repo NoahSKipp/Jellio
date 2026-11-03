@@ -20,15 +20,16 @@ import {
   isGoogleCastSupported,
   isAirPlaySupported,
 } from '../runtime/cast.js';
-import { getItemDetails, getPlaybackInfo, getMediaSources, isPlaceholderSource, buildStreamUrl, buildCastStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getSubtitleStreams, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, buildSubtitleUrl, getNextEpisode, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getSeasons, getEpisodes, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, prefetchStreams, setPlaybackActive } from '../runtime/api.js';
+import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, buildCastStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getSubtitleStreams, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, buildSubtitleUrl, getNextEpisode, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getSeasons, getEpisodes, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, prefetchStreams, setPlaybackActive } from '../runtime/api.js';
 import { getGroupWatchMessages, sendGroupWatchMessage, creditGroupWatchTogether, voteRankingSession, startJoinSync, clearJoinSync, getJoinSync } from '../runtime/apiSocial.js';
 import { syncTracker } from '../runtime/apiBooks.js';
 import { getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
-import { markBadSource, unmarkBadSource, isBadSource, looksLikePlaceholder, hasNoAudio, looksLikeSilentSlideshow, stoppedTooEarly, PLACEHOLDER_STALL_MS } from '../runtime/streamHealth.js';
+import { markBadSource, unmarkBadSource, isBadSource, badSourceKind, looksLikePlaceholder, hasNoAudio, looksLikeSilentSlideshow, stoppedTooEarly, PLACEHOLDER_STALL_MS } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
+import { loadFailoverSources, planFailover, failoverOutcome, describeFailover } from '../runtime/failoverSources.js';
 import { sourceLabel, buildOutlookBadge, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -88,6 +89,77 @@ function willUseHls(source, forceTranscode) {
 }
 
 let mediaSessionOwner = null;
+
+// The next stream to try once one failed, with one decision line in the
+// console and the server log.
+async function chooseNextStream(itemId, tried, language, reason) {
+  const loaded = await loadFailoverSources({
+    lastList: function () {
+      return getLastMediaSources(itemId);
+    },
+    fetchSources: function (timeoutMs) {
+      return getMediaSources(itemId, { forceFresh: true, timeoutMs: timeoutMs });
+    },
+  });
+  const avoiding = avoidingVideoTranscodes();
+  const plan = planFailover(loaded.sources, tried, {
+    isBad: function (source) {
+      return badSourceKind(itemId, source);
+    },
+    byLanguage: function (list) {
+      return orderByLanguage(list, language, sourceAudioLanguages);
+    },
+    needsReencode: avoiding
+      ? function (source) {
+          return !!videoInfoOf(source) && classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
+        }
+      : null,
+    blockReencode: getVideoTranscodePolicy() === 'Block',
+  });
+  const outcome = failoverOutcome(loaded, plan);
+  const entry = { itemId: itemId, failedSourceId: tried[tried.length - 1], reason: reason, counts: plan.counts, loaded: loaded, outcome: outcome };
+  console.warn(describeFailover(entry));
+  logFailoverDecision(entry);
+  return { outcome: outcome, plan: plan };
+}
+
+function failoverHash(itemId, sourceId, tried, language) {
+  return (
+    playHash(itemId, sourceId) +
+    '&tried=' + encodeURIComponent(tried.join(',')) +
+    (language ? '&lang=' + encodeURIComponent(language) : '')
+  );
+}
+
+// Out of streams, or the list of them could not be loaded: the latter says
+// so and can be tried again.
+function renderFailoverEnd(root, itemId, outcome, tried, language, reason) {
+  if (outcome.action === 'list-failed') {
+    renderPlaybackError(
+      root,
+      itemId,
+      t(outcome.kind === 'timeout' ? 'player_failover_list_timeout' : 'player_failover_list_error'),
+      async function () {
+        const message = root.querySelector('.jellio-service-empty');
+        if (message) message.textContent = t('status_loading');
+        const choice = await chooseNextStream(itemId, tried, language, reason + ' (tried again)');
+        if (choice.outcome.action === 'navigate') {
+          navigateTo(failoverHash(itemId, choice.outcome.sourceId, tried, language));
+          return;
+        }
+        renderFailoverEnd(root, itemId, choice.outcome, tried, language, reason);
+      },
+    );
+    return;
+  }
+  renderPlaybackError(
+    root,
+    itemId,
+    tried.length > 1
+      ? 'None of the ' + tried.length + ' streams tried for this title worked. Try again later or pick one from Change Stream.'
+      : 'This stream could not be played and there is no other one to try. Pick one from Change Stream or try again later.',
+  );
+}
 
 export async function renderPlayer(root, params) {
   let screenTornDown = false;
@@ -230,11 +302,6 @@ export async function renderPlayer(root, params) {
     if (!getCurrentGroup() && !isTimeoutOrAbort && preferredMediaSourceId) {
       markBadSource(itemId, { Id: preferredMediaSourceId });
       const tried = failoverTried.concat([preferredMediaSourceId]);
-      let sources = [];
-      try {
-        sources = await getMediaSources(itemId, { forceFresh: true });
-      } catch (e) {}
-      if (screenTornDown) return undefined;
       let language = params.get('lang') || '';
       if (!language) {
         let audioPreference = '';
@@ -244,19 +311,14 @@ export async function renderPlayer(root, params) {
         } catch (e) {}
         language = preferredStreamLanguage(audioPreference, getDisplayLanguage());
       }
-      const candidates = orderByLanguage(
-        sources.filter(function (s) {
-          return tried.indexOf(s.Id) === -1 && !isBadSource(itemId, s);
-        }),
-        language,
-        sourceAudioLanguages,
-      );
-      if (candidates.length > 0) {
-        navigateTo(
-          playHash(itemId, candidates[0].Id) +
-            '&tried=' + encodeURIComponent(tried.join(',')) +
-            (language ? '&lang=' + encodeURIComponent(language) : ''),
-        );
+      const choice = await chooseNextStream(itemId, tried, language, 'could not start: ' + ((err && err.message) || 'error').split(':')[0]);
+      if (screenTornDown) return undefined;
+      if (choice.outcome.action === 'navigate') {
+        navigateTo(failoverHash(itemId, choice.outcome.sourceId, tried, language));
+        return undefined;
+      }
+      if (choice.outcome.action === 'list-failed') {
+        renderFailoverEnd(root, itemId, choice.outcome, tried, language, 'could not start');
         return undefined;
       }
     }
@@ -3571,29 +3633,8 @@ export async function renderPlayer(root, params) {
   }
 
   // The streams left to try, in the order to try them.
-  async function nextStreams(tried, language) {
-    let sources = [];
-    try {
-      sources = await getMediaSources(itemId, { forceFresh: true });
-    } catch (err) {}
-    const candidates = sources.filter(function (source) {
-      return tried.indexOf(source.Id) === -1 && !isBadSource(itemId, source);
-    });
-    function byLanguage(list) {
-      return orderByLanguage(list, language, sourceAudioLanguages);
-    }
-    let ordered = byLanguage(candidates);
-    if (avoidingVideoTranscodes()) {
-      const needsReencode = function (source) {
-        return !!videoInfoOf(source) && classifySource(source, canBrowserDirectPlay(source)).needsVideoTranscode;
-      };
-      const copyable = candidates.filter(function (source) {
-        return !needsReencode(source);
-      });
-      const reencode = getVideoTranscodePolicy() === 'Block' ? [] : candidates.filter(needsReencode);
-      ordered = byLanguage(copyable).concat(byLanguage(reencode));
-    }
-    return ordered;
+  async function nextStreams(tried, language, reason) {
+    return (await chooseNextStream(itemId, tried, language, reason || 'switching')).plan.ordered;
   }
 
   async function failoverToNextStream(reason) {
@@ -3604,24 +3645,14 @@ export async function renderPlayer(root, params) {
     markBadSource(itemId, mediaSource, { soft: /^(no picture after|placeholder: stalled)/.test(reason) });
     const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
     const language = await streamLanguage();
-    const ordered = await nextStreams(tried, language);
+    const choice = await chooseNextStream(itemId, tried, language, reason);
     if (screenTornDown) return true;
-    if (!ordered.length) {
-      cleanup();
-      renderPlaybackError(
-        root,
-        itemId,
-        tried.length > 1
-          ? 'None of the ' + tried.length + ' streams tried for this title worked. Try again later or pick one from Change Stream.'
-          : 'This stream could not be played and there is no other one to try. Pick one from Change Stream or try again later.',
-      );
+    if (choice.outcome.action === 'navigate') {
+      navigateTo(failoverHash(itemId, choice.outcome.sourceId, tried, language));
       return true;
     }
-    navigateTo(
-      playHash(itemId, ordered[0].Id) +
-        '&tried=' + encodeURIComponent(tried.join(',')) +
-        (language ? '&lang=' + encodeURIComponent(language) : ''),
-    );
+    cleanup();
+    renderFailoverEnd(root, itemId, choice.outcome, tried, language, reason);
     return true;
   }
 
@@ -4302,7 +4333,7 @@ export async function renderPlayer(root, params) {
     bufferSwitching = true;
     const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
     const language = await streamLanguage();
-    const ordered = await nextStreams(tried, language);
+    const ordered = await nextStreams(tried, language, 'buffering switch');
     if (screenTornDown) return;
     if (!ordered.length) {
       bufferSwitching = false;

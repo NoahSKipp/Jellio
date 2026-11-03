@@ -320,6 +320,8 @@ export default {
   player_buffer_always: "Toujours changer automatiquement",
   player_buffer_no_other: "Aucun autre flux disponible.",
   player_buffer_switching: "Passage à {label}…",
+  player_failover_list_timeout: "La liste des autres flux n'est pas arrivée à temps. Le serveur est peut-être occupé ; réessayez dans un instant.",
+  player_failover_list_error: "La liste des autres flux n'a pas pu être chargée à cause d'une erreur du serveur ou du réseau. Réessayez dans un instant.",
   player_switch_connecting: "Connexion au nouveau flux…",
   player_switch_loading: "Chargement du nouveau flux…",
   player_switch_done: "Lecture de {label}",

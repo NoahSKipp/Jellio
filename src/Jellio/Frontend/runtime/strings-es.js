@@ -343,6 +343,8 @@ export default {
   player_buffer_always: "Cambiar siempre automáticamente",
   player_buffer_no_other: "No hay otra emisión a la que cambiar.",
   player_buffer_switching: "Cambiando a {label}…",
+  player_failover_list_timeout: "La lista de las demás emisiones no llegó a tiempo. Puede que el servidor esté ocupado; vuelve a intentarlo en un momento.",
+  player_failover_list_error: "No se pudo cargar la lista de las demás emisiones por un error del servidor o de la red. Vuelve a intentarlo en un momento.",
   player_switch_connecting: "Conectando con la nueva emisión…",
   player_switch_loading: "Cargando la nueva emisión…",
   player_switch_done: "Ahora en reproducción: {label}",

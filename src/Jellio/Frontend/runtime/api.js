@@ -1197,6 +1197,13 @@ export function getQualityTiers(itemId) {
 }
 
 const mediaSourcesCache = new Map();
+// The last list loaded per title, kept past the cache's lifetime so a failed
+// reload still leaves something to fail over to.
+const lastMediaSources = new Map();
+
+export function getLastMediaSources(itemId) {
+  return lastMediaSources.get(String(itemId)) || null;
+}
 const mediaSourcesInFlight = new Map();
 const MEDIA_SOURCES_TTL_MS = 5 * 60 * 1000;
 
@@ -1224,11 +1231,12 @@ export function getMediaSources(itemId, options) {
   // Callers asking while a lookup runs share it.
   if (!options?.forceFresh && mediaSourcesInFlight.has(idStr)) return mediaSourcesInFlight.get(idStr);
   const params = new URLSearchParams({ Fields: 'MediaSources,OriginalTitle,PremiereDate,ProductionYear' });
-  const request = getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString())
+  const request = getJson('/Users/' + userId + '/Items/' + itemId + '?' + params.toString(), options && options.timeoutMs)
     .then(function (result) {
       const sources = filterPlayableSources(result && result.MediaSources);
       if (sources.length) {
         mediaSourcesCache.set(idStr, { time: Date.now(), sources: sources });
+        lastMediaSources.set(idStr, { at: Date.now(), sources: sources });
       } else {
         mediaSourcesCache.delete(idStr);
       }
@@ -1613,6 +1621,28 @@ export function logPlaybackDecision(itemId, mediaSource, classification, policy)
     Policy: policy,
   };
   postJson('/Jellio/playback/decision', body).catch(function () {});
+}
+
+// One line per switch to another stream: counts and ids, no addresses.
+export function logFailoverDecision(entry) {
+  const c = entry.counts;
+  postJson('/Jellio/playback/failover', {
+    ItemId: entry.itemId,
+    FailedSourceId: entry.failedSourceId || null,
+    Reason: entry.reason,
+    Total: c.total,
+    Tried: c.tried,
+    BadHard: c.badHard,
+    BadSoft: c.badSoft,
+    AfterLanguage: c.afterLanguage,
+    AfterTranscode: c.afterTranscode,
+    ListOrigin: entry.loaded.origin,
+    ListError: entry.loaded.error ? entry.loaded.error.kind : null,
+    ListMs: entry.loaded.error ? entry.loaded.error.ms : null,
+    Outcome: entry.outcome.action,
+    NextSourceId: entry.outcome.sourceId || null,
+    Client: 'web',
+  }).catch(function () {});
 }
 
 export function getJellioConfig() {

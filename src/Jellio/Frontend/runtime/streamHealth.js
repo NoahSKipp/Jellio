@@ -99,6 +99,22 @@ export function unmarkBadSource(itemId, source) {
   }
 }
 
+// 'hard' for a mark that lasts the full two days, 'soft' for a short one,
+// null when the source isn't marked.
+export function badSourceKind(itemId, source) {
+  const entries = load()[itemId];
+  if (!entries) return null;
+  const now = Date.now();
+  let kind = null;
+  keysFor(source).forEach(function (key) {
+    const until = entries[key];
+    if (!until || until <= now) return;
+    if (until - now > SOFT_LIFETIME_MS) kind = 'hard';
+    else if (!kind) kind = 'soft';
+  });
+  return kind;
+}
+
 export function isBadSource(itemId, source) {
   const entries = load()[itemId];
   if (!entries) return false;
