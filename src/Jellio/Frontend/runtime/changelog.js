@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.104.6",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.104.6",
+    "summary": "Add Stream works on more sites.",
+    "highlights": [
+      {
+        "title": "Streams From Pages With Bot Checks",
+        "description": "A page that refuses a plain request, or hides its player behind a browser check, is now opened in a real browser on the server, with a check solver for the sites that need one. Adding such a link can take up to a couple of minutes."
+      }
+    ]
+  },
+  {
     "version": "1.104.5",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.104.5",
