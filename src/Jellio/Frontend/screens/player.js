@@ -26,7 +26,7 @@ import { syncTracker } from '../runtime/apiBooks.js';
 import { getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHomeSections } from './home.js';
-import { markBadSource, unmarkBadSource, isBadSource, looksLikePlaceholder } from '../runtime/streamHealth.js';
+import { markBadSource, unmarkBadSource, isBadSource, looksLikePlaceholder, hasNoAudio, looksLikeSilentSlideshow, stoppedTooEarly, PLACEHOLDER_STALL_MS } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { sourceLabel, buildOutlookBadge, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
@@ -61,6 +61,9 @@ import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BA
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
 
 const PROGRESS_REPORT_MS = 5000;
+// title|source pairs already failed over as a placeholder clip this session,
+// so a genuinely silent, slideshow-like title can't send us round in circles.
+const placeholderFlagged = new Set();
 const GROUP_WATCH_COMPLETION_THRESHOLD = 0.9;
 const REAL_WATCH_COMPLETION_THRESHOLD = 0.9;
 const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
@@ -3598,7 +3601,7 @@ export async function renderPlayer(root, params) {
     failoverStarted = true;
     if (startTimer) window.clearTimeout(startTimer);
     console.warn('Jellio: stream failed (' + reason + '), trying the next one', mediaSource && mediaSource.Id);
-    markBadSource(itemId, mediaSource, { soft: /^no picture after/.test(reason) });
+    markBadSource(itemId, mediaSource, { soft: /^(no picture after|placeholder: stalled)/.test(reason) });
     const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
     const language = await streamLanguage();
     const ordered = await nextStreams(tried, language);
@@ -3667,6 +3670,60 @@ export async function renderPlayer(root, params) {
   }
   video.addEventListener('loadedmetadata', checkForPlaceholder);
   video.addEventListener('durationchange', checkForPlaceholder);
+
+  // The same clip behind a remux or HLS reports the title's full length, so
+  // these watch what actually plays instead, on every path.
+  function flagPlaceholder(reason) {
+    if (failoverStarted || screenTornDown || getCurrentGroup()) return;
+    const key = itemId + '|' + (mediaSource && mediaSource.Id);
+    if (placeholderFlagged.has(key)) return;
+    placeholderFlagged.add(key);
+    failoverToNextStream(reason);
+  }
+
+  let slideshowTimer = null;
+  function armSlideshowCheck(attempt) {
+    if (expectedRuntimeSeconds < 600 || typeof video.getVideoPlaybackQuality !== 'function') return;
+    const tries = attempt || 0;
+    slideshowTimer = window.setTimeout(function () {
+      if (screenTornDown || failoverStarted) return;
+      const sampledAt = Date.now();
+      const startFrames = video.getVideoPlaybackQuality().totalVideoFrames;
+      const startTime = video.currentTime;
+      slideshowTimer = window.setTimeout(function () {
+        if (screenTornDown || failoverStarted) return;
+        const seconds = video.currentTime - startTime;
+        const frames = video.getVideoPlaybackQuality().totalVideoFrames - startFrames;
+        if (lastUserSeekAt >= sampledAt || seconds < 3 || seconds > 12) {
+          if (tries < 3) armSlideshowCheck(tries + 1);
+          return;
+        }
+        if (looksLikeSilentSlideshow(frames, seconds, hasNoAudio(video), expectedRuntimeSeconds)) {
+          flagPlaceholder('placeholder: 1 fps, no audio');
+        }
+      }, 6000);
+    }, 1000);
+  }
+
+  let earlyStallTimer = null;
+  function clearEarlyStall() {
+    if (earlyStallTimer) window.clearTimeout(earlyStallTimer);
+    earlyStallTimer = null;
+  }
+  video.addEventListener('waiting', function () {
+    if (!hasReportedStart || video.paused || earlyStallTimer || Date.now() - lastUserSeekAt < 4000) return;
+    earlyStallTimer = window.setTimeout(function () {
+      earlyStallTimer = null;
+      if (screenTornDown || video.paused || video.readyState >= 3) return;
+      const position = streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0);
+      if (stoppedTooEarly(position, expectedRuntimeSeconds)) {
+        flagPlaceholder('placeholder: stalled ' + PLACEHOLDER_STALL_MS / 1000 + 's at ' + Math.round(position) + 's');
+      }
+    }, PLACEHOLDER_STALL_MS);
+  });
+  ['playing', 'pause', 'seeking', 'emptied'].forEach(function (type) {
+    video.addEventListener(type, clearEarlyStall);
+  });
   function hideFailoverIfPlaying() {
     if (failoverOverlay && !video.paused && video.currentTime > 0 && video.readyState >= 2) hideFailoverOverlay();
   }
@@ -3849,9 +3906,9 @@ export async function renderPlayer(root, params) {
     // Ending far short of the runtime is a placeholder clip, not the end
     // of the title: no end screen, no watched mark, try the next stream.
     const endedAtSeconds = streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0);
-    if (looksLikePlaceholder(endedAtSeconds, expectedRuntimeSeconds) && !getCurrentGroup()) {
-      failoverToNextStream('ended after ' + Math.round(endedAtSeconds) + 's');
-      return;
+    if ((looksLikePlaceholder(endedAtSeconds, expectedRuntimeSeconds) || stoppedTooEarly(endedAtSeconds, expectedRuntimeSeconds)) && !getCurrentGroup()) {
+      flagPlaceholder('placeholder: ended after ' + Math.round(endedAtSeconds) + 's');
+      if (failoverStarted) return;
     }
     reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0), true);
     markRealWatchComplete();
@@ -3869,6 +3926,7 @@ export async function renderPlayer(root, params) {
 
     if (!hasReportedStart) {
       hasReportedStart = true;
+      armSlideshowCheck();
       unmarkBadSource(itemId, mediaSource);
       reportPlaybackStart(itemId, mediaSource.Id, currentPositionTicks());
       requestProbedDuration();
@@ -4331,6 +4389,8 @@ export async function renderPlayer(root, params) {
 
   async function cleanup() {
     if (overlayInsets) overlayInsets.disconnect();
+    window.clearTimeout(slideshowTimer);
+    clearEarlyStall();
     if (bufferStallTimer) window.clearInterval(bufferStallTimer);
     closeBufferPrompt();
     setPlaybackActive(false);

@@ -108,6 +108,38 @@ export function isBadSource(itemId, source) {
   });
 }
 
+const PLACEHOLDER_MIN_RUNTIME_SECONDS = 600;
+const PLACEHOLDER_MAX_FPS = 2;
+const PLACEHOLDER_MIN_SAMPLE_SECONDS = 3;
+export const PLACEHOLDER_STALL_MS = 8000;
+
+// Whether the element decoded no audio at all: true or false when the
+// browser can tell, null when it can't.
+export function hasNoAudio(media) {
+  if (!media) return null;
+  if (media.audioTracks && typeof media.audioTracks.length === 'number') return media.audioTracks.length === 0;
+  if (typeof media.mozHasAudio === 'boolean') return !media.mozHasAudio;
+  if (typeof media.webkitAudioDecodedByteCount === 'number') return media.webkitAudioDecodedByteCount === 0;
+  return null;
+}
+
+// AIOStreams' "failed to download" clip plays at 1 fps with no audio,
+// whatever length the player was told. frames and seconds are the frames
+// drawn over that much played time.
+export function looksLikeSilentSlideshow(frames, seconds, noAudio, expectedSeconds) {
+  if (!expectedSeconds || expectedSeconds < PLACEHOLDER_MIN_RUNTIME_SECONDS) return false;
+  if (noAudio !== true) return false;
+  if (!isFinite(frames) || !isFinite(seconds) || seconds < PLACEHOLDER_MIN_SAMPLE_SECONDS) return false;
+  return frames / seconds <= PLACEHOLDER_MAX_FPS;
+}
+
+// Ending or stalling in the first quarter of a long title, on any path.
+export function stoppedTooEarly(positionSeconds, expectedSeconds) {
+  if (!expectedSeconds || expectedSeconds < PLACEHOLDER_MIN_RUNTIME_SECONDS) return false;
+  if (!isFinite(positionSeconds) || positionSeconds < 0) return false;
+  return positionSeconds < expectedSeconds * 0.25;
+}
+
 export function looksLikePlaceholder(actualSeconds, expectedSeconds) {
   if (!actualSeconds || !isFinite(actualSeconds) || actualSeconds <= 0 || !expectedSeconds) return false;
   if (actualSeconds > MAX_PLACEHOLDER_SECONDS) return false;
