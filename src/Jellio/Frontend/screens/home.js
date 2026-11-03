@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
-import { getCurrentUser, getResumeItems, getNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
+import { prefetchStreams, getCurrentUser, getResumeItems, getNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
 import { getContinueReading, getContinueListening } from '../runtime/apiBooks.js';
 import { getCommunityWatching, invalidateCommunityWatchingCache } from '../runtime/apiSocial.js';
 import {
@@ -16,6 +16,7 @@ import { buildRow } from '../components/row.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { groupByService, logoUrl, serviceOf } from '../components/services.js';
 import { buildHeroCarousel } from '../components/heroCarousel.js';
+import { shouldWarmStreams, pickWarmupItems, createStreamWarmup } from '../runtime/streamWarmup.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import {
   wrapRowForCustomization,
@@ -378,6 +379,23 @@ async function renderWatchlist(root, activeList) {
 }
 
 let cheapSectionsPromise = null;
+
+const WARMUP_COUNT = 6;
+let homeWarmupIds = [];
+const streamWarmup = createStreamWarmup({
+  prefetch: prefetchStreams,
+  canWarm: function () {
+    return shouldWarmStreams(document.visibilityState, navigator.connection || null);
+  },
+  wait: function (ms) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, ms);
+    });
+  },
+});
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') streamWarmup.resume();
+});
 let expensiveSectionsPromise = null;
 let cheapBuilt = [];
 let expensiveBuilt = [];
@@ -475,6 +493,7 @@ async function buildCheapSections() {
     if (result.status === 'fulfilled') {
       const nextUpItems = results[1].status === 'fulfilled' ? results[1].value : [];
       const items = withoutStaleEpisodes(result.value, nextUpItems);
+      homeWarmupIds = pickWarmupItems([items, nextUpItems], WARMUP_COUNT);
       const row = buildRow(t('home_continue_watching'), items, { continueWatching: true });
       if (row) push(wrapRowForCustomization(row, 'continue-watching'), 'continue-watching');
     }
@@ -683,7 +702,11 @@ export async function renderHome(root, params) {
     return undefined;
   }
 
-  const hero = buildHeroCarousel();
+  const hero = buildHeroCarousel({
+    onFocusItem: function (item) {
+      if (item && item.Id) streamWarmup.add([item.Id], true);
+    },
+  });
   root.appendChild(hero.element);
 
   const header = el('header', 'jellio-home-header');
@@ -830,7 +853,15 @@ export async function renderHome(root, params) {
   }
 
   const subscription = preloadHomeSectionsWithProgress(placeSection);
-  subscription.promise.then(settleRows).catch(function (err) {
+  subscription.promise
+    .then(settleRows)
+    .then(function () {
+      // Once the rows are on screen, so this never competes with them.
+      window.setTimeout(function () {
+        if (active) streamWarmup.add(homeWarmupIds);
+      }, 800);
+    })
+    .catch(function (err) {
     console.warn('Jellio: home sections promise failed', err);
     removeSkeleton();
   });

@@ -180,6 +180,7 @@ export function buildHeroCarousel(options) {
     if (!item) return;
 
     activeSlideId = item.Id;
+    if (!shownOnce || hovered) focusCurrent();
     root.classList.remove('jellio-hero-loading');
 
     // Synchronously update text so stale descriptions or metadata from
@@ -284,14 +285,21 @@ export function buildHeroCarousel(options) {
     index = (index + 1) % items.length;
     render();
   });
+  // The slide shown first, and whichever one the viewer points at.
+  function focusCurrent() {
+    const item = items[index];
+    if (item && options && typeof options.onFocusItem === 'function') options.onFocusItem(item);
+  }
   root.addEventListener('mouseenter', function () {
     hovered = true;
+    focusCurrent();
   });
   root.addEventListener('mouseleave', function () {
     hovered = false;
   });
   root.addEventListener('focusin', function () {
     hovered = true;
+    focusCurrent();
   });
   root.addEventListener('focusout', function () {
     hovered = false;

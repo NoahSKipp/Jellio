@@ -1123,14 +1123,16 @@ export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex,
 
 const prefetchedItemIds = new Set();
 export function prefetchStreams(itemId) {
-  if (!itemId || prefetchedItemIds.has(itemId)) return;
+  if (!itemId || prefetchedItemIds.has(itemId)) return Promise.resolve();
   prefetchedItemIds.add(itemId);
-  fetch(getServerAddress() + '/gelato/prefetch/' + itemId, {
+  return fetch(getServerAddress() + '/gelato/prefetch/' + itemId, {
     method: 'POST',
     headers: getAuthHeaders(),
-  }).catch(function () {
-    prefetchedItemIds.delete(itemId);
-  });
+  })
+    .then(function () {})
+    .catch(function () {
+      prefetchedItemIds.delete(itemId);
+    });
 }
 
 const mediaSourcesCache = new Map();
