@@ -1135,6 +1135,67 @@ export function prefetchStreams(itemId) {
     });
 }
 
+// Syncs the stream lists of a few titles on the server, one after another;
+// answers which were queued and which were already warm.
+export function prefetchStreamsBatch(itemIds, probe) {
+  return fetch(getServerAddress() + '/gelato/prefetch-batch', {
+    method: 'POST',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+    body: JSON.stringify({ ItemIds: itemIds, Probe: !!probe }),
+  })
+    .then(function (response) {
+      if (!response.ok) return null;
+      return response.json().catch(function () {
+        return null;
+      });
+    })
+    .catch(function () {
+      return null;
+    });
+}
+
+const warmCache = new Map();
+const WARM_CACHE_MS = 30 * 1000;
+
+// { sourceId: warmedAtUtc } for the sources that will start fast now; null
+// when the server can't say.
+export function getWarmSources(itemId, options) {
+  const hit = warmCache.get(itemId);
+  if (hit && Date.now() - hit.at < WARM_CACHE_MS && !(options && options.forceFresh)) return hit.promise;
+  const promise = fetch(getServerAddress() + '/gelato/warm/' + itemId, { headers: getAuthHeaders(), cache: 'no-store' })
+    .then(function (response) {
+      return response.ok ? response.json() : null;
+    })
+    .then(function (data) {
+      return data && typeof data === 'object' ? data : null;
+    })
+    .catch(function () {
+      return null;
+    });
+  warmCache.set(itemId, { at: Date.now(), promise: promise });
+  return promise;
+}
+
+const tierCache = new Map();
+
+// { sourceId: qualityTier }, e.g. "2160p-dv"; empty when the server can't say.
+export function getQualityTiers(itemId) {
+  if (tierCache.has(itemId)) return tierCache.get(itemId);
+  const promise = fetch(getServerAddress() + '/gelato/tiers/' + itemId, { headers: getAuthHeaders() })
+    .then(function (response) {
+      return response.ok ? response.json() : {};
+    })
+    .then(function (data) {
+      return data && typeof data === 'object' ? data : {};
+    })
+    .catch(function () {
+      tierCache.delete(itemId);
+      return {};
+    });
+  tierCache.set(itemId, promise);
+  return promise;
+}
+
 const mediaSourcesCache = new Map();
 const mediaSourcesInFlight = new Map();
 const MEDIA_SOURCES_TTL_MS = 5 * 60 * 1000;

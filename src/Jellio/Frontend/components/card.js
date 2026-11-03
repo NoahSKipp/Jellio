@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import { getImageUrl, getUserImageUrl, TICKS_PER_SECOND, prefetchStreams, seedItemCache } from '../runtime/api.js';
+import { getImageUrl, getUserImageUrl, TICKS_PER_SECOND, seedItemCache } from '../runtime/api.js';
+import { warmItem } from '../runtime/warmQueue.js';
 import { getBookCoverUrl, getStreamCoverUrl, getMangaSeriesCoverUrl } from '../runtime/apiBooks.js';
 import { isMangaChapter } from '../runtime/mangaChapters.js';
 import { navigateTo } from '../runtime/router.js';
@@ -90,7 +91,8 @@ function buildWatchersBadge(watchers) {
   return wrap;
 }
 
-const PREFETCH_DEBOUNCE_MS = 200;
+// Long enough that sweeping across a row doesn't warm every card on it.
+const PREFETCH_DEBOUNCE_MS = 400;
 
 function attachStreamPrefetch(card, item) {
   if (item.Type !== 'Movie' && item.Type !== 'Episode' && item.Type !== 'Series') return;
@@ -101,7 +103,7 @@ function attachStreamPrefetch(card, item) {
     if (timer) return;
     timer = window.setTimeout(function () {
       timer = null;
-      prefetchStreams(item.Id);
+      warmItem(item.Id, true);
     }, PREFETCH_DEBOUNCE_MS);
   }
   function cancelFire() {

@@ -1,5 +1,7 @@
 import { t } from '../runtime/i18n.js';
-import { getSearchSuggestions, searchItems, searchLibrary, searchMovies, searchSeries } from '../runtime/api.js';
+import { getSearchSuggestions, searchItems, searchLibrary, searchMovies, searchSeries, getSeriesNextUp } from '../runtime/api.js';
+import { createSearchWarmer } from '../runtime/streamWarmup.js';
+import { warmBatch, cancelWarmGroup } from '../runtime/warmQueue.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildSkeletonRow } from '../components/homeSkeleton.js';
@@ -187,6 +189,47 @@ export async function renderSearch(root, params) {
   let requestId = 0;
   let inFlight = [];
 
+  // The top results' stream lists are warmed once they stop changing.
+  const SEARCH_WARM_COUNT = 3;
+  const searchWarmer = createSearchWarmer({
+    schedule: function (fn, ms) {
+      return window.setTimeout(fn, ms);
+    },
+    cancel: function (timer) {
+      window.clearTimeout(timer);
+    },
+    settleMs: 600,
+    onQueryChanged: function () {
+      cancelWarmGroup('search');
+    },
+    onSettled: function (items) {
+      const mine = requestId;
+      const top = items
+        .filter(function (item) {
+          return item && item.Id && (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Series');
+        })
+        .slice(0, SEARCH_WARM_COUNT);
+      // A series plays its next (or first) episode; one not in the library
+      // yet is sent as is, which adds it.
+      Promise.all(
+        top.map(function (item) {
+          if (item.Type !== 'Series') return item.Id;
+          return getSeriesNextUp(item.Id).then(
+            function (episode) {
+              return (episode && episode.Id) || item.Id;
+            },
+            function () {
+              return item.Id;
+            },
+          );
+        }),
+      ).then(function (ids) {
+        if (mine === requestId) warmBatch(ids, 'search');
+      });
+    },
+    onFocused: function () {},
+  });
+
   function abortInFlight() {
     inFlight.forEach(function (controller) {
       controller.abort();
@@ -212,7 +255,7 @@ export async function renderSearch(root, params) {
   }
 
   function createTypeState(slot, title) {
-    return { slot: slot, title: title, section: null, grid: null, seen: new Set(), pending: 0, failed: null };
+    return { slot: slot, title: title, section: null, grid: null, seen: new Set(), items: [], pending: 0, failed: null };
   }
 
   function addItems(state, items) {
@@ -234,6 +277,7 @@ export async function renderSearch(root, params) {
       const firstPlaceholder = state.grid.querySelector('.jellio-search-skeleton-card');
       fresh.forEach(function (item) {
         state.grid.insertBefore(buildCard(item), firstPlaceholder);
+        state.items.push(item);
       });
     }
     paintLoading(state);
@@ -268,6 +312,7 @@ export async function renderSearch(root, params) {
     filterBar.hidden = false;
     reflectStateInAddressBar('#/search?q=' + encodeURIComponent(term));
     abortInFlight();
+    searchWarmer.query();
     const thisRequest = ++requestId;
     status.textContent = t('status_loading');
     results.textContent = '';
@@ -297,7 +342,10 @@ export async function renderSearch(root, params) {
     function add(items) {
       const movieCount = addItems(movies, items.filter(function (item) { return item.Type === 'Movie'; }));
       const seriesCount = addItems(series, items.filter(function (item) { return item.Type === 'Series'; }));
-      if (movieCount || seriesCount) anyResults = true;
+      if (movieCount || seriesCount) {
+        anyResults = true;
+        searchWarmer.results(movies.items.concat(series.items));
+      }
     }
 
     function settle(state) {
@@ -419,6 +467,7 @@ export async function renderSearch(root, params) {
       reflectStateInAddressBar('#/search');
       requestId += 1;
       abortInFlight();
+      searchWarmer.query();
       results.textContent = '';
       status.textContent = '';
       filterBar.hidden = true;
@@ -458,6 +507,7 @@ export async function renderSearch(root, params) {
       reflectStateInAddressBar('#/search');
       requestId += 1;
       abortInFlight();
+      searchWarmer.query();
       results.textContent = '';
       status.textContent = '';
       filterBar.hidden = true;

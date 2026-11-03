@@ -36,12 +36,16 @@ export function pickWarmupItems(lists, limit) {
   return picked;
 }
 
+// One warm-up request at a time across the app. Jobs carry a key, so the
+// same work is never queued twice, and a group, so a search can drop what
+// it queued once the query changes.
 export function createStreamWarmup(deps) {
   const prefetch = deps.prefetch;
   const canWarm = deps.canWarm;
   const wait = deps.wait;
   const queue = [];
   const done = new Set();
+  const knownWarm = new Set();
   let running = false;
 
   async function run() {
@@ -50,11 +54,11 @@ export function createStreamWarmup(deps) {
     try {
       while (queue.length) {
         if (!canWarm()) break;
-        const itemId = queue.shift();
-        if (done.has(itemId)) continue;
-        done.add(itemId);
+        const job = queue.shift();
+        if (done.has(job.key)) continue;
+        done.add(job.key);
         try {
-          await prefetch(itemId);
+          await job.run();
         } catch (err) {}
         if (queue.length) await wait(WARMUP_GAP_MS);
       }
@@ -63,18 +67,92 @@ export function createStreamWarmup(deps) {
     }
   }
 
+  function enqueue(job, first) {
+    if (!job || !job.key || done.has(job.key)) return;
+    if (queue.some(function (queued) { return queued.key === job.key; })) return;
+    if (first) queue.unshift(job);
+    else queue.push(job);
+  }
+
   return {
     add: function (itemIds, first) {
-      itemIds.forEach(function (itemId) {
-        if (!itemId || done.has(itemId) || queue.indexOf(itemId) !== -1) return;
-        if (first) queue.unshift(itemId);
-        else queue.push(itemId);
+      const ids = first ? itemIds.slice().reverse() : itemIds;
+      ids.forEach(function (itemId) {
+        if (!itemId || knownWarm.has(itemId)) return;
+        enqueue({ key: 'item:' + itemId, run: function () { return prefetch(itemId); } }, first);
       });
       return run();
     },
+    addJob: function (job, first) {
+      enqueue(job, first);
+      return run();
+    },
+    cancelGroup: function (group) {
+      for (let i = queue.length - 1; i >= 0; i--) {
+        if (queue[i].group === group) queue.splice(i, 1);
+      }
+    },
+    markWarm: function (itemIds) {
+      (itemIds || []).forEach(function (itemId) {
+        if (itemId) knownWarm.add(itemId);
+      });
+    },
+    isKnownWarm: function (itemId) {
+      return knownWarm.has(itemId);
+    },
     resume: run,
     pending: function () {
-      return queue.slice();
+      return queue.map(function (job) {
+        return job.key.indexOf('item:') === 0 ? job.key.slice(5) : job.key;
+      });
     },
+  };
+}
+
+// Search: once results have stood still for settleMs, warm the top ones
+// in one batch; a result keeping focus for focusMs is warmed on its own.
+// A new query drops whatever the last one had pending.
+export function createSearchWarmer(deps) {
+  const schedule = deps.schedule;
+  const cancel = deps.cancel;
+  const settleMs = deps.settleMs || 600;
+  const focusMs = deps.focusMs || 400;
+  let settleTimer = null;
+  let focusTimer = null;
+  let generation = 0;
+
+  function clearSettle() {
+    if (settleTimer !== null) cancel(settleTimer);
+    settleTimer = null;
+  }
+  function clearFocus() {
+    if (focusTimer !== null) cancel(focusTimer);
+    focusTimer = null;
+  }
+
+  return {
+    query: function () {
+      generation++;
+      clearSettle();
+      clearFocus();
+      if (deps.onQueryChanged) deps.onQueryChanged();
+    },
+    results: function (items) {
+      clearSettle();
+      const mine = generation;
+      settleTimer = schedule(function () {
+        settleTimer = null;
+        if (mine === generation) deps.onSettled(items);
+      }, settleMs);
+    },
+    focus: function (itemId) {
+      clearFocus();
+      const mine = generation;
+      focusTimer = schedule(function () {
+        focusTimer = null;
+        if (mine === generation) deps.onFocused(itemId);
+      }, focusMs);
+    },
+    blur: clearFocus,
   };
 }

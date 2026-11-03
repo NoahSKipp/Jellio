@@ -1,7 +1,10 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
-import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, audiobookTitle, getCachedItemSync, getMediaSources } from '../runtime/api.js';
+import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, audiobookTitle, getCachedItemSync, getMediaSources, getWarmSources } from '../runtime/api.js';
+import { warmItem, warmSource } from '../runtime/warmQueue.js';
+import { isBadSource } from '../runtime/streamHealth.js';
+import { normalizeId } from '../runtime/readySources.js';
 import { getBookMetadata, getBookCoverUrl, getMangaSeriesCoverUrl, getAudiobookTracks, getReadingProgress } from '../runtime/apiBooks.js';
 import { watchSources } from '../runtime/itemInfo.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
@@ -1402,6 +1405,26 @@ export async function renderDetail(root, params) {
 
   const playsVideo = !needsEpisodeResolution && !readerKind && (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Video');
   if (playsVideo) {
+    warmItem(item.Id, true);
+    // Still here after a moment: the next source in line is likely the
+    // fallback, so have its probe done too.
+    const openedHash = window.location.hash;
+    window.setTimeout(function () {
+      if (window.location.hash !== openedHash) return;
+      Promise.all([getMediaSources(item.Id), getWarmSources(item.Id)])
+        .then(function (results) {
+          if (window.location.hash !== openedHash) return;
+          const sources = results[0] || [];
+          const warm = results[1] || {};
+          const ordered = sources
+            .filter(function (source) { return !isBadSource(item.Id, source); })
+            .concat(sources.filter(function (source) { return isBadSource(item.Id, source); }));
+          const second = ordered[1];
+          const warmIds = Object.keys(warm).map(normalizeId);
+          if (second && warmIds.indexOf(normalizeId(second.Id)) === -1) warmSource(item.Id, second.Id);
+        })
+        .catch(function () {});
+    }, 1500);
     const streamStatus = el('div', 'jellio-detail-stream-status');
     heroContent.appendChild(streamStatus);
     watchSources(
