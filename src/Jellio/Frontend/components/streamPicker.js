@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
-import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy } from '../runtime/api.js';
+import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy, getWarmSources, getQualityTiers } from '../runtime/api.js';
+import { isPreferReadyEnabled, preferReadySource, normalizeId } from '../runtime/readySources.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
@@ -13,6 +14,7 @@ import { describeNetworkFailure } from '../runtime/network.js';
 import { el } from '../runtime/dom.js';
 
 const OVERLAY_ID = 'jellioStreamPicker';
+const READY_INFO_WAIT_MS = 1200;
 
 const REMEMBER_ENABLED_KEY = 'jellioRememberStream';
 const REMEMBERED_SOURCES_KEY = 'jellioRememberedStreamSources';
@@ -428,12 +430,26 @@ function buildDigitalReleaseFilterCard(onRefresh) {
 export async function openStreamPicker(item, options) {
   closeStreamPicker();
   const opts = options || {};
+  // Null until the server said which sources are ready.
+  let warmSourceIds = null;
+  function isSourceReady(source) {
+    return !!warmSourceIds && warmSourceIds.has(normalizeId(source.Id));
+  }
   const refreshStreams = function () {
     openStreamPicker(item, Object.assign({}, opts, { forceFresh: true }));
   };
 
   const shell = buildOverlayShell(item);
   renderLoading(shell.status);
+
+  // Which sources start fast and their quality tiers; never holds the list up
+  // for long.
+  const readyInfo = Promise.race([
+    Promise.all([getWarmSources(item.Id, { forceFresh: !!opts.forceFresh }), getQualityTiers(item.Id)]),
+    new Promise(function (resolve) {
+      window.setTimeout(function () { resolve(null); }, READY_INFO_WAIT_MS);
+    }),
+  ]);
 
   let sources = [];
   try {
@@ -487,13 +503,12 @@ export async function openStreamPicker(item, options) {
 
     // Streams that recently failed to play go last, flagged below; in Avoid,
     // streams that need a video re-encode go after the rest.
+    const ranks = new Map();
     sources = sources
       .map(function (source, index) {
-        return {
-          source: source,
-          index: index,
-          rank: (isBadSource(item.Id, source) ? 2 : 0) + (methods.has(source.Id) && methods.get(source.Id).method === 'Transcode' ? 1 : 0),
-        };
+        const rank = (isBadSource(item.Id, source) ? 2 : 0) + (methods.has(source.Id) && methods.get(source.Id).method === 'Transcode' ? 1 : 0);
+        ranks.set(source.Id, rank);
+        return { source: source, index: index, rank: rank };
       })
       .sort(function (a, b) {
         return a.rank - b.rank || a.index - b.index;
@@ -501,6 +516,21 @@ export async function openStreamPicker(item, options) {
       .map(function (entry) {
         return entry.source;
       });
+
+    const ready = await readyInfo;
+    if (ready && ready[0]) {
+      warmSourceIds = new Set(Object.keys(ready[0]).map(normalizeId));
+      const tiers = {};
+      Object.keys(ready[1] || {}).forEach(function (id) { tiers[normalizeId(id)] = ready[1][id]; });
+      if (isPreferReadyEnabled()) {
+        sources = preferReadySource(
+          sources,
+          isSourceReady,
+          function (source) { return tiers[normalizeId(source.Id)]; },
+          function (source) { return ranks.get(source.Id) || 0; },
+        );
+      }
+    }
 
     if (!opts.forceChoice && isRememberStreamEnabled()) {
       const remembered = readRememberedSources()[item.Id];
@@ -601,6 +631,11 @@ export async function openStreamPicker(item, options) {
       });
       const judged = methods.get(source.Id);
       if (judged) card.appendChild(buildOutlookBadge(playbackOutlook(judged.classification)));
+      if (warmSourceIds) {
+        const sourceReady = isSourceReady(source);
+        card.title = t(sourceReady ? 'stream_ready_tip' : 'stream_cold_tip');
+        if (sourceReady) card.appendChild(el('div', 'jellio-stream-picker-ready', '⚡ ' + t('stream_ready')));
+      }
       if (isBadSource(item.Id, source)) {
         card.classList.add('jellio-stream-picker-card-bad');
         card.insertBefore(el('div', 'jellio-stream-picker-bad-note', '⚠ ' + t('stream_picker_not_played_recently')), card.firstChild);

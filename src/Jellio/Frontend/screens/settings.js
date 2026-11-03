@@ -19,6 +19,7 @@ import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
 import { openAvatarPicker } from '../components/avatarPicker.js';
 import { refreshProfileAvatar } from '../components/navShared.js';
 import { isRememberStreamEnabled, setRememberStreamEnabled } from '../components/streamPicker.js';
+import { isPreferReadyEnabled, setPreferReadyEnabled } from '../runtime/readySources.js';
 import { isAutoPipEnabled, setAutoPipEnabled } from '../runtime/pipSettings.js';
 import { MOTION_OPTIONS, getMotionPreference, setMotionPreference } from '../runtime/motionSettings.js';
 import {
@@ -324,6 +325,17 @@ function buildPlaybackCard() {
       function (value, select, status) {
         setBufferSwitchMode(value);
         status.textContent = t('action_saved');
+      },
+    ),
+  );
+  body.appendChild(
+    buildToggleRow(
+      null,
+      t('settings_prefer_ready'),
+      t('settings_prefer_ready_desc'),
+      isPreferReadyEnabled(),
+      function (checked) {
+        setPreferReadyEnabled(checked);
       },
     ),
   );

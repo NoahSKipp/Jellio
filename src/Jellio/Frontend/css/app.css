@@ -14127,6 +14127,19 @@
   margin-bottom: 0.3em;
 }
 
+.jellio-stream-picker-ready {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 0.35em;
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  background: rgb(102 187 106 / 0.18);
+  color: #81c784;
+  font-size: 0.78em;
+  font-weight: 600;
+}
+
 .jellio-outlook {
   display: inline-flex;
   align-items: center;
