@@ -157,9 +157,9 @@ export function getStreamLinks() {
   });
 }
 
-// Following a page to its stream can take a while.
+// Following a page to its stream can take a while: up to a browser and a bot-check solver on the server.
 export function addStreamLink(url, name) {
-  return streamLinkRequest('POST', '', { Url: url, Name: name || null }, 45000);
+  return streamLinkRequest('POST', '', { Url: url, Name: name || null }, 140000);
 }
 
 export function removeStreamLink(id) {
@@ -172,14 +172,14 @@ export function removeStreamLinkEntry(id, index) {
 }
 
 export function refreshStreamLink(id) {
-  return streamLinkRequest('POST', '/' + encodeURIComponent(id) + '/refresh', undefined, 45000);
+  return streamLinkRequest('POST', '/' + encodeURIComponent(id) + '/refresh', undefined, 140000);
 }
 
 // Resolved fresh on every play; the proxy address is what the browser
 // plays, so streams on other sites and plain http still work.
 export async function playStreamLink(linkId, entry) {
   const query = entry == null ? '' : '?entry=' + entry;
-  const info = await streamLinkRequest('POST', '/' + encodeURIComponent(linkId) + '/play' + query, undefined, 40000);
+  const info = await streamLinkRequest('POST', '/' + encodeURIComponent(linkId) + '/play' + query, undefined, 140000);
   return {
     name: info.Name,
     format: info.Format,

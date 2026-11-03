@@ -23,7 +23,7 @@ public class StreamLinkResolver : IDisposable
     private const int MaxFetchesPerResolve = 24;
     // Channel page -> player page -> embedded player -> nested player -> the stream itself.
     private const int MaxDepth = 4;
-    private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(90);
+    private static readonly TimeSpan ResolveTimeout = TimeSpan.FromSeconds(150);
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(2);
 
     private readonly ILogger<StreamLinkResolver> _logger;
@@ -102,19 +102,32 @@ public class StreamLinkResolver : IDisposable
         var started = DateTime.UtcNow;
         try
         {
-            var result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token).ConfigureAwait(false);
-            if (result == null)
+            ResolveResult? result = null;
+            StreamLinkException? staticError = null;
+            try
             {
-                budget = new Budget();
-                var home = new Uri(url.GetLeftPart(UriPartial.Authority) + "/");
-                result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token, firstReferer: home).ConfigureAwait(false);
+                result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token).ConfigureAwait(false);
+                if (result == null)
+                {
+                    budget = new Budget();
+                    var home = new Uri(url.GetLeftPart(UriPartial.Authority) + "/");
+                    result = await ResolveInnerAsync(url, null, 0, budget, timeout.Token, firstReferer: home).ConfigureAwait(false);
+                }
+            }
+            catch (StreamLinkException err) when (err.Code is not StreamLinkErrors.BlockedAddress and not StreamLinkErrors.InvalidUrl)
+            {
+                // A page that refuses a plain request (a bot check, a 403) can still be opened by the browser.
+                staticError = err;
             }
 
+            // Pages whose player builds its address with scripts, or that sit behind a browser check, hold no
+            // stream a plain request can see; a headless browser, when one is set up, opens the page and
+            // reports what the player asks for.
             result ??= await FindWithBrowserAsync(url, timeout.Token).ConfigureAwait(false);
 
             if (result == null)
             {
-                throw new StreamLinkException(StreamLinkErrors.NoStream);
+                throw staticError ?? new StreamLinkException(StreamLinkErrors.NoStream);
             }
 
             _logger.LogInformation(
@@ -143,7 +156,7 @@ public class StreamLinkResolver : IDisposable
 
     private static readonly HttpClient FinderClient = new(new SocketsHttpHandler { UseProxy = false, ConnectTimeout = TimeSpan.FromSeconds(5) })
     {
-        Timeout = TimeSpan.FromSeconds(60),
+        Timeout = TimeSpan.FromSeconds(130),
     };
 
     private async Task<ResolveResult?> FindWithBrowserAsync(Uri page, CancellationToken ct)
