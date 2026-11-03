@@ -34,6 +34,49 @@ public class PlaybackLogController(ILogger<PlaybackLogController> logger) : Cont
         return NoContent();
     }
 
+    public record FailoverBody(
+        Guid ItemId,
+        string? FailedSourceId,
+        string? Reason,
+        int Total,
+        int Tried,
+        int BadHard,
+        int BadSoft,
+        int AfterLanguage,
+        int AfterTranscode,
+        string? ListOrigin,
+        string? ListError,
+        long? ListMs,
+        string? Outcome,
+        string? NextSourceId,
+        string? Client = null);
+
+    // One line per switch to another stream after one failed: why, how many
+    // sources there were and what ruled each out, and how the list loaded.
+    [HttpPost("failover")]
+    public IActionResult Failover([FromBody] FailoverBody body)
+    {
+        var userId = HttpContext.User.Identity is ClaimsIdentity identity ? identity.FindFirst("Jellyfin-UserId")?.Value : null;
+        logger.LogInformation(
+            "Jellio failover: item {ItemId} source {FailedSourceId} failed ({Reason}); {Total} sources, {Tried} tried, bad {BadHard} hard / {BadSoft} soft, {AfterLanguage} after language, {AfterTranscode} after transcode rule; list {ListOrigin}{ListError}; {Outcome} {NextSourceId}, client {Client}, user {UserId}",
+            body.ItemId,
+            Clean(body.FailedSourceId),
+            Clean(body.Reason),
+            body.Total,
+            body.Tried,
+            body.BadHard,
+            body.BadSoft,
+            body.AfterLanguage,
+            body.AfterTranscode,
+            Clean(body.ListOrigin),
+            string.IsNullOrEmpty(body.ListError) ? string.Empty : " (" + Clean(body.ListError) + " after " + (body.ListMs ?? 0) + " ms)",
+            Clean(body.Outcome),
+            Clean(body.NextSourceId),
+            Clean(body.Client ?? "web"),
+            userId);
+        return NoContent();
+    }
+
     public record HomeLoadBody(
         int Hits,
         int Stale,
