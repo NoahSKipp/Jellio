@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.105.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.105.1",
+    "summary": "Switching to another stream holds up on a busy server.",
+    "highlights": [
+      {
+        "title": "Finding the Next Stream",
+        "description": "When a stream fails and the server is slow to send the list of other streams, Jellio now waits longer and otherwise uses the list it already had, instead of saying there is no other stream. If the list really can't be loaded you see that, with Try again."
+      }
+    ]
+  },
+  {
     "version": "1.105.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.105.0",
