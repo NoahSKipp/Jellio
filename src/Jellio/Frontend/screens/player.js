@@ -29,7 +29,7 @@ import { invalidateHomeSections } from './home.js';
 import { markBadSource, unmarkBadSource, isBadSource, badSourceKind, looksLikePlaceholder, hasNoAudio, looksLikeSilentSlideshow, stoppedTooEarly, PLACEHOLDER_STALL_MS } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
-import { loadFailoverSources, planFailover, failoverOutcome, describeFailover } from '../runtime/failoverSources.js';
+import { loadFailoverSources, planFailover, failoverOutcome, describeFailover, isSourceNotReady } from '../runtime/failoverSources.js';
 import { sourceLabel, buildOutlookBadge, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -92,8 +92,9 @@ let mediaSessionOwner = null;
 
 // The next stream to try once one failed, with one decision line in the
 // console and the server log.
-async function chooseNextStream(itemId, tried, language, reason) {
+async function chooseNextStream(itemId, tried, language, reason, fresh) {
   const loaded = await loadFailoverSources({
+    skipRecent: !!fresh,
     lastList: function () {
       return getLastMediaSources(itemId);
     },
@@ -292,6 +293,17 @@ export async function renderPlayer(root, params) {
     root.appendChild(failoverOverlay);
   }
 
+  async function streamLanguage() {
+    const fromHash = params.get('lang') || '';
+    if (fromHash) return fromHash;
+    let audioPreference = '';
+    try {
+      const user = await currentUserPromise;
+      audioPreference = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
+    } catch (e) {}
+    return preferredStreamLanguage(audioPreference, getDisplayLanguage());
+  }
+
   let playbackInfo;
   try {
     playbackInfo = await getPlaybackInfo(itemId, startTicks, preferredMediaSourceId);
@@ -299,19 +311,18 @@ export async function renderPlayer(root, params) {
     if (screenTornDown) return undefined;
     console.warn('Jellio: could not negotiate playback', err);
     const isTimeoutOrAbort = err && (err.name === 'AbortError' || /timeout/i.test(err.message || ''));
+    const notReady = isSourceNotReady(err);
     if (!getCurrentGroup() && !isTimeoutOrAbort && preferredMediaSourceId) {
-      markBadSource(itemId, { Id: preferredMediaSourceId });
+      if (!notReady) markBadSource(itemId, { Id: preferredMediaSourceId });
       const tried = failoverTried.concat([preferredMediaSourceId]);
-      let language = params.get('lang') || '';
-      if (!language) {
-        let audioPreference = '';
-        try {
-          const user = await currentUserPromise;
-          audioPreference = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
-        } catch (e) {}
-        language = preferredStreamLanguage(audioPreference, getDisplayLanguage());
-      }
-      const choice = await chooseNextStream(itemId, tried, language, 'could not start: ' + ((err && err.message) || 'error').split(':')[0]);
+      const language = await streamLanguage();
+      const choice = await chooseNextStream(
+        itemId,
+        tried,
+        language,
+        notReady ? 'could not start: source not ready' : 'could not start: ' + ((err && err.message) || 'error').split(':')[0],
+        notReady,
+      );
       if (screenTornDown) return undefined;
       if (choice.outcome.action === 'navigate') {
         navigateTo(failoverHash(itemId, choice.outcome.sourceId, tried, language));
@@ -343,6 +354,18 @@ export async function renderPlayer(root, params) {
   const playbackSources = (playbackInfo && playbackInfo.MediaSources) || [];
   let mediaSource = pickNegotiatedSource(playbackInfo, preferredMediaSourceId);
   let playSessionId = playbackInfo && playbackInfo.PlaySessionId;
+  // The server knows no stream by that id any more: the title's streams were
+  // fetched again and got new ids. Go on with the fresh list.
+  if (!playbackSources.length && preferredMediaSourceId && !getCurrentGroup()) {
+    const tried = failoverTried.concat([preferredMediaSourceId]);
+    const language = await streamLanguage();
+    const choice = await chooseNextStream(itemId, tried, language, 'stream id unknown to the server', true);
+    if (screenTornDown) return undefined;
+    if (choice.outcome.action === 'navigate') {
+      navigateTo(failoverHash(itemId, choice.outcome.sourceId, tried, language));
+      return undefined;
+    }
+  }
   if (!mediaSource || (!preferredMediaSourceId && playbackSources.length === 1 && isPlaceholderSource(mediaSource))) {
     console.warn('Jellio: no playable media source for', itemId);
     renderPlaybackError(
@@ -3617,20 +3640,9 @@ export async function renderPlayer(root, params) {
     avoidingVideoTranscodes() && sourceClassification.needsVideoTranscode
       ? Math.max(prebufferSettings().startTimeoutMs, 12000)
       : 25000;
-  const failoverLanguage = params.get('lang') || '';
   let failoverStarted = false;
   let startTimer = null;
   const expectedRuntimeSeconds = item && item.RunTimeTicks ? item.RunTimeTicks / TICKS_PER_SECOND : 0;
-
-  async function streamLanguage() {
-    if (failoverLanguage) return failoverLanguage;
-    let audioPreference = '';
-    try {
-      const user = await currentUserPromise;
-      audioPreference = (user && user.Configuration && user.Configuration.AudioLanguagePreference) || '';
-    } catch (err) {}
-    return preferredStreamLanguage(audioPreference, getDisplayLanguage());
-  }
 
   // The streams left to try, in the order to try them.
   async function nextStreams(tried, language, reason) {

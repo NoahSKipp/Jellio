@@ -1,7 +1,7 @@
 // node --test tests/frontend
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadFailoverSources, planFailover, failoverOutcome, describeFailover, errorKind, RETRY_TIMEOUT_MS } from '../../src/Jellio/Frontend/runtime/failoverSources.js';
+import { loadFailoverSources, planFailover, failoverOutcome, describeFailover, errorKind, isSourceNotReady, RETRY_TIMEOUT_MS } from '../../src/Jellio/Frontend/runtime/failoverSources.js';
 
 const timeout = () => Object.assign(new Error('Request timed out: /Users/x/Items/y'), { timedOut: true });
 const src = (Id, lang = 'ger') => ({ Id, lang });
@@ -98,4 +98,30 @@ test('error kinds', () => {
   assert.equal(errorKind(timeout()), 'timeout');
   assert.equal(errorKind(Object.assign(new Error('x'), { status: 502 })), 'server');
   assert.equal(errorKind(new TypeError('Failed to fetch')), 'network');
+});
+
+test('after source_not_ready the recent list is skipped, its ids can be stale', async () => {
+  let fetched = 0;
+  const loaded = await loadFailoverSources({
+    skipRecent: true,
+    now: () => 1_000_000,
+    lastList: () => ({ at: 1_000_000 - 5_000, sources: [src('old')] }),
+    fetchSources: async () => {
+      fetched++;
+      return [src('new')];
+    },
+  });
+  assert.equal(fetched, 1);
+  assert.equal(loaded.origin, 'fresh');
+  assert.deepEqual(loaded.sources.map((s) => s.Id), ['new']);
+});
+
+test('source_not_ready is told apart from other server errors', () => {
+  const notReady = Object.assign(new Error('Request failed: /Items/x/PlaybackInfo'), { status: 503, errorCode: 'source_not_ready' });
+  const busy = Object.assign(new Error('Request failed: /Items/x/PlaybackInfo'), { status: 503 });
+  assert.equal(isSourceNotReady(notReady), true);
+  assert.equal(isSourceNotReady(busy), false);
+  assert.equal(isSourceNotReady(null), false);
+  assert.equal(errorKind(notReady), 'source not ready');
+  assert.equal(errorKind(busy), 'server');
 });

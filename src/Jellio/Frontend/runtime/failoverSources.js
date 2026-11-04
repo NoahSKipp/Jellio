@@ -4,7 +4,15 @@
 export const RECENT_LIST_MS = 60 * 1000;
 export const RETRY_TIMEOUT_MS = 30 * 1000;
 
+// Gelato could not open the stream's stored link (expired at the addon, or
+// the title's streams are gone). The stream itself is not bad: the server
+// fetches the title's streams again, so the ids in a loaded list can be stale.
+export function isSourceNotReady(err) {
+  return !!err && err.status === 503 && err.errorCode === 'source_not_ready';
+}
+
 export function errorKind(err) {
+  if (isSourceNotReady(err)) return 'source not ready';
   if (!err) return 'unknown';
   if (err.timedOut || err.name === 'AbortError' || /timed out/i.test(String(err.message || ''))) return 'timeout';
   if (typeof err.status === 'number' && err.status >= 500) return 'server';
@@ -13,7 +21,8 @@ export function errorKind(err) {
 }
 
 // deps.lastList(itemId) -> { sources, at } or null; deps.fetchSources(timeoutMs)
-// -> sources (throws on failure); deps.now() -> ms.
+// -> sources (throws on failure); deps.now() -> ms; deps.skipRecent when the
+// stream ids or links in the recent list may be stale.
 // origin: 'recent' (the list already loaded, under a minute old), 'fresh',
 // 'retry', 'fallback' (an older loaded list after both tries failed) or
 // 'failed' (nothing to go on). error holds the last failure's kind and how
@@ -21,7 +30,7 @@ export function errorKind(err) {
 export async function loadFailoverSources(deps) {
   const now = deps.now || Date.now;
   const last = deps.lastList ? deps.lastList() : null;
-  if (last && last.sources && last.sources.length && now() - last.at < RECENT_LIST_MS) {
+  if (!deps.skipRecent && last && last.sources && last.sources.length && now() - last.at < RECENT_LIST_MS) {
     return { sources: last.sources, origin: 'recent', error: null };
   }
   const started = now();

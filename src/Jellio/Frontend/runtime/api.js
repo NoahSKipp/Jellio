@@ -180,6 +180,12 @@ export async function requestJson(url, options, path, timeoutMs, externalSignal,
       }
       const err = new Error('Request failed: ' + path);
       err.status = response.status;
+      if (response.status === 503) {
+        try {
+          const body = await response.json();
+          if (body && typeof body.Error === 'string') err.errorCode = body.Error;
+        } catch (e) {}
+      }
       throw err;
     }
     return response;
