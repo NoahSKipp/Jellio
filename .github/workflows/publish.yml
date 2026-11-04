@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+# One run per release at a time, so a second run cannot replace the
+# assets while the first one reads them for the manifest.
+concurrency:
+  group: publish-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/build.yaml@master
@@ -49,8 +55,15 @@ jobs:
     needs:
       - upload
     steps:
-      - name: Jellyfin plugin repo
-        uses: Kevinjil/jellyfin-plugin-repo-action@v0.4.3
-        with:
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Regenerate the plugin repository
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || pip install --quiet --break-system-packages pyyaml
+          tag="${{ github.event.release.tag_name }}"
+          [ -n "$tag" ] || tag=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name)
+          python3 scripts/plugin-repository.py generate --tag "$tag"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
