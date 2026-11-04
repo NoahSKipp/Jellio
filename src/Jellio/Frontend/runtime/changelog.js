@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.105.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.105.2",
+    "summary": "Films whose stream links expired play again.",
+    "highlights": [
+      {
+        "title": "Expired Stream Links",
+        "description": "When the server reports that a stream is not ready because its link expired, Jellio now asks for the title's streams again and goes on with that list, instead of trying every old stream and ending with no stream left."
+      }
+    ]
+  },
+  {
     "version": "1.105.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.105.1",
