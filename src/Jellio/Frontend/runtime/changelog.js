@@ -15,6 +15,22 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.105.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.105.4",
+    "summary": "What others are watching on Jellyfin 12, and airing shows stay out of Next Up until their next episode is out.",
+    "highlights": [
+      {
+        "title": "Next Up and Unreleased Episodes",
+        "description": "Next Up now skips episodes that have not aired yet, so a show you are caught up on waits until the new episode is out. Unreleased episodes on a show's page carry the same orange release badge as Coming Soon (such as Tomorrow, In 5 days, or Coming soon) so you can see when they air before trying to play them."
+      },
+      {
+        "title": "What Others Are Watching on Jellyfin 12",
+        "description": "Fixed an incompatibility with Jellyfin 12.0 that kept the What others are watching row from loading."
+      }
+    ]
+  },
+  {
     "version": "1.105.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.105.3",
