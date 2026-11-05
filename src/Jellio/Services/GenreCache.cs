@@ -13,6 +13,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Microsoft.Extensions.Logging;
+using Jellio.Extensions;
 
 namespace Jellio.Services;
 
@@ -130,7 +131,7 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
             EnableUserData = true,
             EnableImages = true,
         };
-        IReadOnlyList<BaseItemDto> dtos = ConvertToBaseItemDtos(distinct, options, user);
+        IReadOnlyList<BaseItemDto> dtos = dtoService.GetBaseItemDtosCompat(distinct, options, user, logger);
         if (_rows.Count > 500)
         {
             _rows.Clear();
@@ -161,47 +162,5 @@ public class GenreCache(ILibraryManager libraryManager, IDtoService dtoService, 
             keys.ForEach(key => seen.Add(key));
             yield return item;
         }
-    }
-
-    private static readonly MethodInfo? DtoBatchMethod = typeof(IDtoService)
-        .GetMethods()
-        .FirstOrDefault(m => m.Name == nameof(IDtoService.GetBaseItemDtos));
-
-    private IReadOnlyList<BaseItemDto> ConvertToBaseItemDtos(IReadOnlyList<BaseItem> items, DtoOptions options, User user)
-    {
-        if (DtoBatchMethod is not null)
-        {
-            try
-            {
-                var parameters = DtoBatchMethod.GetParameters();
-                var args = new object?[parameters.Length];
-                if (parameters.Length > 0) args[0] = items;
-                if (parameters.Length > 1) args[1] = options;
-                if (parameters.Length > 2) args[2] = user;
-                if (parameters.Length > 3) args[3] = null;
-                if (parameters.Length > 4) args[4] = false;
-                for (var i = 5; i < parameters.Length; i++)
-                {
-                    args[i] = parameters[i].HasDefaultValue ? parameters[i].DefaultValue : null;
-                }
-
-                if (DtoBatchMethod.Invoke(dtoService, args) is IReadOnlyList<BaseItemDto> batch)
-                {
-                    return batch;
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "Jellio: IDtoService.GetBaseItemDtos invocation failed, falling back to per-item conversion");
-            }
-        }
-
-        var result = new List<BaseItemDto>(items.Count);
-        foreach (var item in items)
-        {
-            result.Add(dtoService.GetBaseItemDto(item, options, user));
-        }
-
-        return result;
     }
 }

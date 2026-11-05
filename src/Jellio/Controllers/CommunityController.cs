@@ -78,10 +78,23 @@ public class CommunityController(
             return Unauthorized();
         }
 
+        try
+        {
+            return Ok(BuildWatchingResponse(caller, callerUserId, excludedUserIds));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Jellio: community watching failed, returning empty list");
+            return Ok(new CommunityWatchingResponse([]));
+        }
+    }
+
+    private CommunityWatchingResponse BuildWatchingResponse(Jellyfin.Database.Implementations.Entities.User caller, Guid callerUserId, string? excludedUserIds)
+    {
         var cacheKey = callerUserId.ToString("N") + "|" + string.Join(',', (excludedUserIds ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Order(StringComparer.OrdinalIgnoreCase));
         if (cache.TryGet(cacheKey, out var cachedResponse) && cachedResponse is CommunityWatchingResponse hit)
         {
-            return Ok(hit);
+            return hit;
         }
 
         var timer = Stopwatch.StartNew();
@@ -105,7 +118,7 @@ public class CommunityController(
         {
             var empty = new CommunityWatchingResponse([]);
             cache.Set(cacheKey, empty);
-            return Ok(empty);
+            return empty;
         }
 
         var eligibleUserIds = eligibleUsers.Select(u => u.Id).ToHashSet();
@@ -189,7 +202,7 @@ public class CommunityController(
 
         // One batch for all cards; the fields carry no media sources, so no
         // stream list is looked up per title.
-        var dtos = dtoService.GetBaseItemDtos(orderedCandidates.Select(c => c.Item).ToList(), dtoOptions, caller);
+        var dtos = dtoService.GetBaseItemDtosCompat(orderedCandidates.Select(c => c.Item).ToList(), dtoOptions, caller, logger);
         var resultItems = orderedCandidates
             .Zip(dtos, (candidate, dto) => new CommunityWatchingItem(dto, candidate.Watchers))
             .ToList();
@@ -201,6 +214,6 @@ public class CommunityController(
             timer.ElapsedMilliseconds,
             eligibleUsers.Count,
             resultItems.Count);
-        return Ok(response);
+        return response;
     }
 }

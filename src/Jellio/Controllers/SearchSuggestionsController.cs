@@ -74,7 +74,7 @@ public class SearchSuggestionsController(
             var picked = items.Where(item => used.Add(item.Id)).Take(RowSize).ToList();
             if (picked.Count > 0)
             {
-                rows.Add(new SuggestionRow(kind, name, dtoService.GetBaseItemDtos(picked, dtoOptions, user)));
+                rows.Add(new SuggestionRow(kind, name, dtoService.GetBaseItemDtosCompat(picked, dtoOptions, user, logger)));
             }
         }
 
