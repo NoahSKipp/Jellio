@@ -23,6 +23,7 @@ import { openTrackerDialog } from '../components/trackerDialog.js';
 import { showToast } from '../components/toast.js';
 import { formatRuntime } from '../runtime/format.js';
 import { el, fadeInBackdrop } from '../runtime/dom.js';
+import { isUnreleasedItem, episodeReleaseLabel, filterReleasedItems, seasonEpisodeReleaseLabels } from '../runtime/releaseDate.js';
 
 function renderDetailError(root, message, onRetry) {
   renderRetry(root, message, onRetry, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
@@ -571,16 +572,21 @@ function buildEpisodeCard(episode, context) {
   }
   paintEpisodeWatched(thumb, episode);
 
-  const quickPlay = el('button', 'jellio-episode-quick-play');
-  quickPlay.type = 'button';
-  quickPlay.setAttribute('aria-label', t('detail_play_episode_aria', { number: episode.IndexNumber != null ? episode.IndexNumber : episode.Name || '' }));
-  quickPlay.title = t('detail_play_episode');
-  quickPlay.appendChild(el('span', 'material-icons play_arrow'));
-  quickPlay.addEventListener('click', function (e) {
-    e.stopPropagation();
-    openStreamPicker(episode);
-  });
-  thumb.appendChild(quickPlay);
+  const releaseLabel = (context && context.releaseLabels && context.releaseLabels[episode.Id]) || episodeReleaseLabel(episode);
+  if (releaseLabel) {
+    thumb.appendChild(el('span', 'jellio-coming-soon-date jellio-episode-release-date', releaseLabel));
+  } else {
+    const quickPlay = el('button', 'jellio-episode-quick-play');
+    quickPlay.type = 'button';
+    quickPlay.setAttribute('aria-label', t('detail_play_episode_aria', { number: episode.IndexNumber != null ? episode.IndexNumber : episode.Name || '' }));
+    quickPlay.title = t('detail_play_episode');
+    quickPlay.appendChild(el('span', 'material-icons play_arrow'));
+    quickPlay.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openStreamPicker(episode);
+    });
+    thumb.appendChild(quickPlay);
+  }
 
   card.appendChild(thumb);
   card.appendChild(el('div', 'jellio-episode-title', episode.Name || ''));
@@ -622,7 +628,7 @@ async function resolveSeriesPlayTarget(seriesId) {
       const firstSeason = orderedSeasons[0];
       if (firstSeason) {
         const episodes = await getEpisodes(seriesId, firstSeason.Id);
-        episode = episodes[0] || null;
+        episode = filterReleasedItems(episodes)[0] || episodes[0] || null;
       }
     } catch (err) {
       console.warn('Jellio: could not load first episode for series', err);
@@ -648,10 +654,12 @@ async function resolveSeasonPlayTarget(item) {
 
   if (!episodes.length) return null;
 
+  const released = filterReleasedItems(episodes);
+  const pool = released.length ? released : episodes;
   const episode =
-    episodes.filter(function (e) {
+    pool.filter(function (e) {
       return !(e.UserData && e.UserData.Played);
-    })[0] || episodes[episodes.length - 1];
+    })[0] || pool[pool.length - 1];
 
   const isFirstEpisode = episode.Id === episodes[0].Id;
   const hasProgress = !!(episode.UserData && episode.UserData.PlaybackPositionTicks > 0);
@@ -708,12 +716,14 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
 
   function renderTrack(season, episodes) {
     track.textContent = '';
+    const releaseLabels = seasonEpisodeReleaseLabels(episodes);
     episodes.forEach(function (episode, index) {
       track.appendChild(
         buildEpisodeCard(episode, {
           episodes: episodes,
           index: index,
           season: season,
+          releaseLabels: releaseLabels,
           onChanged: function () {
             renderTrack(season, episodes);
           },
@@ -1003,8 +1013,19 @@ export async function renderDetail(root, params) {
   }
 
   const meta = el('div', 'jellio-detail-meta');
-  if (item.Type === 'Episode' && item.PremiereDate) {
-    meta.appendChild(el('span', null, new Date(item.PremiereDate).toLocaleDateString()));
+  if (item.Type === 'Episode') {
+    const releaseLabel = episodeReleaseLabel(item);
+    if (releaseLabel) {
+      meta.appendChild(el('span', 'jellio-detail-release-date', releaseLabel));
+    }
+    if (item.PremiereDate) {
+      const premDate = new Date(item.PremiereDate);
+      if (!isNaN(premDate.getTime()) && premDate.getUTCFullYear() < 9000) {
+        meta.appendChild(el('span', null, premDate.toLocaleDateString()));
+      }
+    } else if (item.ProductionYear) {
+      meta.appendChild(el('span', null, String(item.ProductionYear)));
+    }
   } else if (item.ProductionYear) {
     meta.appendChild(el('span', null, String(item.ProductionYear)));
   }

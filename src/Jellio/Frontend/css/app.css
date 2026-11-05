@@ -3185,6 +3185,22 @@
   font-weight: 700;
 }
 
+.jellio-episode-release-date {
+  left: auto;
+  right: 0.5em;
+}
+
+.jellio-detail-release-date {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15em 0.65em;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.65);
+  color: var(--jellio-trending-color);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
 .jellio-episode-watched {
   position: absolute;
   top: 0.5em;

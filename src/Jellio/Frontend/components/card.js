@@ -15,6 +15,7 @@ import { openListMembershipMenu } from './listMembershipMenu.js';
 import { showToast } from './toast.js';
 import { buildRatingBadge } from './ratingBadge.js';
 import { el } from '../runtime/dom.js';
+import { isUnreleasedItem, episodeReleaseLabel } from '../runtime/releaseDate.js';
 
 function paintCardState(imageWrap, item) {
   const existingBadge = imageWrap.querySelector('.jellio-card-watched');
@@ -345,6 +346,16 @@ function buildLandscapeCard(item, options) {
     const watchersBadge = buildWatchersBadge(item.Watchers);
     if (watchersBadge) imageWrap.appendChild(watchersBadge);
   }
+
+  let isUnreleased = false;
+  if (item && item.Type === 'Episode') {
+    const releaseLabel = episodeReleaseLabel(item);
+    if (releaseLabel) {
+      isUnreleased = true;
+      imageWrap.appendChild(el('div', 'jellio-coming-soon-date', releaseLabel));
+    }
+  }
+
   card.appendChild(imageWrap);
 
   const landscapeItemId = item.Id || item.id;
@@ -365,7 +376,9 @@ function buildLandscapeCard(item, options) {
     paintLandscapeProgress(imageWrap, updatedItem);
   }, options);
 
-  attachStreamPrefetch(card, item);
+  if (!isUnreleased) {
+    attachStreamPrefetch(card, item);
+  }
 
   return card;
 }
@@ -539,6 +552,15 @@ export function buildCard(item, options) {
     if (watchersBadge) imageWrap.appendChild(watchersBadge);
   }
 
+  let isUnreleased = false;
+  if (item && item.Type === 'Episode') {
+    const releaseLabel = episodeReleaseLabel(item);
+    if (releaseLabel) {
+      isUnreleased = true;
+      imageWrap.appendChild(el('div', 'jellio-coming-soon-date', releaseLabel));
+    }
+  }
+
   function handleChanged(updatedItem) {
     paintCardState(imageWrap, updatedItem);
   }
@@ -584,7 +606,9 @@ export function buildCard(item, options) {
     options,
   );
 
-  attachStreamPrefetch(card, item);
+  if (!isUnreleased) {
+    attachStreamPrefetch(card, item);
+  }
 
   return card;
 }

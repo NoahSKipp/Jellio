@@ -9,6 +9,7 @@ export { getCurrentUserId };
 import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
 import { isOffline, stillOffline, isNetworkError, reportNetworkFailure, findDownload, queueSync } from './offline.js';
+import { isUnreleasedItem, filterReleasedItems } from './releaseDate.js';
 
 export const DEFAULT_TIMEOUT_MS = 10000;
 const NEGOTIATION_TIMEOUT_MS = 30000;
@@ -618,10 +619,12 @@ export function getAudiobookLibraryChapters(itemId) {
 export function getNextUp(limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
+  const targetLimit = limit || 20;
+  const fetchLimit = Math.max(targetLimit * 2, 40);
   const params = new URLSearchParams({
     userId: userId,
-    Limit: String(limit || 20),
-    Fields: 'PrimaryImageAspectRatio,Genres,People,RunTimeTicks',
+    Limit: String(fetchLimit),
+    Fields: 'PrimaryImageAspectRatio,Genres,People,RunTimeTicks,PremiereDate,EndDate',
     enableResumable: 'false',
   });
   const path = '/Shows/NextUp?' + params.toString();
@@ -631,12 +634,15 @@ export function getNextUp(limit) {
     }, SHORT_CACHE_TTL_MS),
     getHiddenNextUpSeries(),
   ]).then(function (results) {
-    const items = (results[0] && results[0].Items) || [];
+    const rawItems = (results[0] && results[0].Items) || [];
+    const items = filterReleasedItems(rawItems);
     const hidden = results[1];
-    if (!hidden.length) return items;
-    return items.filter(function (item) {
-      return hidden.indexOf(item.SeriesId) === -1;
-    });
+    const filtered = !hidden.length
+      ? items
+      : items.filter(function (item) {
+          return hidden.indexOf(item.SeriesId) === -1;
+        });
+    return filtered.slice(0, targetLimit);
   });
 }
 
@@ -666,13 +672,14 @@ export function getSeriesNextUp(seriesId) {
     userId: userId,
     seriesId: seriesId,
     Limit: '1',
-    Fields: 'PrimaryImageAspectRatio,RunTimeTicks',
+    Fields: 'PrimaryImageAspectRatio,RunTimeTicks,PremiereDate,EndDate',
   });
   const path = '/Shows/NextUp?' + params.toString();
   return cached(path, function () {
     return getJson(path);
   }, SHORT_CACHE_TTL_MS).then(function (result) {
-    return (result && result.Items && result.Items[0]) || null;
+    const items = (result && result.Items) || [];
+    return filterReleasedItems(items)[0] || null;
   });
 }
 
@@ -880,7 +887,7 @@ export function getEpisodes(seriesId, seasonId) {
   const params = new URLSearchParams({
     userId: userId,
     seasonId: seasonId,
-    Fields: 'Overview,PrimaryImageAspectRatio',
+    Fields: 'Overview,PrimaryImageAspectRatio,PremiereDate,EndDate',
   });
   if (culture) params.set('Culture', culture);
   const path = '/Shows/' + seriesId + '/Episodes?' + params.toString();
@@ -1976,7 +1983,9 @@ export async function getNextEpisode(item) {
       return episode.Id === item.Id;
     });
     if (index !== -1 && index + 1 < episodes.length) {
-      return episodes[index + 1];
+      const candidate = episodes[index + 1];
+      if (candidate && isUnreleasedItem(candidate)) return null;
+      return candidate;
     }
   }
 
@@ -1988,7 +1997,9 @@ export async function getNextEpisode(item) {
   if (!nextSeason) return null;
 
   const nextEpisodes = await getEpisodes(item.SeriesId, nextSeason.Id);
-  return nextEpisodes.length ? nextEpisodes[0] : null;
+  const candidate = nextEpisodes.length ? nextEpisodes[0] : null;
+  if (candidate && isUnreleasedItem(candidate)) return null;
+  return candidate;
 }
 
 export function getHeroCandidates(limit, options) {
