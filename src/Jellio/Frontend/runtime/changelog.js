@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.105.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.105.3",
+    "summary": "Title pages open quickly while others are watching.",
+    "highlights": [
+      {
+        "title": "Watching Now Without the Wait",
+        "description": "What everyone else is watching is now worked out in the background every few minutes and right after someone starts or stops playing, instead of each time a home screen asks for it. Opening a new title no longer waits behind it."
+      }
+    ]
+  },
+  {
     "version": "1.105.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.105.2",
