@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.105.3] - 2026-11-05\n\n### 📚 Documentation\n\n- *(changelog)* Community watching without the wait in 1.105.3\n\n### ⚡ Performance\n\n- *(community)* Build the watch history behind community watching in the background\n",
+        "checksum": "c618ac24d8c9f821809b053e37391ea1",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.3/jellio_1.105.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-05T00:58:18Z",
+        "version": "1.105.3"
+      },
+      {
         "changelog": "## [1.105.2] - 2026-11-04\n\n### 🐛 Bug Fixes\n\n- *(player)* Load a fresh stream list when the server says a stream is not ready\n\n### 📚 Documentation\n\n- *(changelog)* Expired stream links in 1.105.2\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Finish a release that failed after the version commit\n- *(publish)* Never publish a repository entry without its zip and checksum\n- *(publish)* Treat 1.2.3 and 1.2.3.0 as the same version when verifying the manifest\n",
         "checksum": "d2de96b9e60885e0dc967b3ac6770e54",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.2/jellio_1.105.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-27T22:48:52Z",
         "version": "1.93.0"
-      },
-      {
-        "changelog": "## [1.92.0] - 2026-10-27\n\n### 🚀 Features\n\n- *(home)* Fold the Calendar into the Coming Soon row and remove the Calendar tab\n",
-        "checksum": "1dedda056aa6ce5c3198ecfd92d0e374",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.92.0/jellio_1.92.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-27T22:32:49Z",
-        "version": "1.92.0"
       }
     ]
   }
