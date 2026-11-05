@@ -29,10 +29,10 @@ public class CommunityController(
     ISessionManager sessionManager,
     ILibraryManager libraryManager,
     IUserManager userManager,
-    IUserDataManager userDataManager,
     IDtoService dtoService,
     ProfileSettingsStore profileSettingsStore,
     CommunityWatchingCache cache,
+    CommunityWatchingService watchHistory,
     ILogger<CommunityController> logger) : ControllerBase
 {
     public record CommunityUserDto(Guid Id, string Name, string? PrimaryImageTag);
@@ -51,14 +51,6 @@ public class CommunityController(
 
     public record CommunityWatchingResponse(
         List<CommunityWatchingItem> Items
-    );
-
-    public record HistoricalActivity(
-        Guid ItemId,
-        Guid UserId,
-        string Activity,
-        int Priority,
-        DateTime Date
     );
 
     [HttpGet("users")]
@@ -166,54 +158,9 @@ public class CommunityController(
             }
         }
 
-        if (!cache.TryGetHistory<List<HistoricalActivity>>(out var history) || history == null)
-        {
-            var fourteenDaysAgo = DateTime.UtcNow.AddDays(-14);
-            history = eligibleUsers
-                .AsParallel()
-                .SelectMany(user =>
-                {
-                    var userHistory = new List<HistoricalActivity>();
-
-                    var resumable = libraryManager.GetItemList(new InternalItemsQuery(user)
-                    {
-                        IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
-                        IsResumable = true,
-                        Recursive = true,
-                        OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
-                        Limit = 8,
-                    });
-
-                    foreach (var item in resumable)
-                    {
-                        var date = userDataManager.GetUserData(user, item)?.LastPlayedDate ?? DateTime.MinValue;
-                        userHistory.Add(new HistoricalActivity(item.Id, user.Id, "watching", 1, date));
-                    }
-
-                    var played = libraryManager.GetItemList(new InternalItemsQuery(user)
-                    {
-                        IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Episode],
-                        IsPlayed = true,
-                        Recursive = true,
-                        OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
-                        Limit = 12,
-                    });
-
-                    foreach (var item in played)
-                    {
-                        var date = userDataManager.GetUserData(user, item)?.LastPlayedDate ?? DateTime.MinValue;
-                        if (date >= fourteenDaysAgo)
-                        {
-                            userHistory.Add(new HistoricalActivity(item.Id, user.Id, "finished", 2, date));
-                        }
-                    }
-
-                    return userHistory;
-                })
-                .ToList();
-
-            cache.SetHistory(history);
-        }
+        // Built in the background (CommunityWatchingService); until the
+        // first build is done only live sessions are shown.
+        var history = watchHistory.History ?? [];
 
         foreach (var entry in history)
         {
@@ -240,18 +187,17 @@ public class CommunityController(
             .Take(24)
             .ToList();
 
-        var resultItems = new List<CommunityWatchingItem>();
-        foreach (var candidate in orderedCandidates)
-        {
-            var item = libraryManager.GetItemById(candidate.Item.Id) ?? candidate.Item;
-            var dto = dtoService.GetBaseItemDto(item, dtoOptions, caller);
-            resultItems.Add(new CommunityWatchingItem(dto, candidate.Watchers));
-        }
+        // One batch for all cards; the fields carry no media sources, so no
+        // stream list is looked up per title.
+        var dtos = dtoService.GetBaseItemDtos(orderedCandidates.Select(c => c.Item).ToList(), dtoOptions, caller);
+        var resultItems = orderedCandidates
+            .Zip(dtos, (candidate, dto) => new CommunityWatchingItem(dto, candidate.Watchers))
+            .ToList();
 
         var response = new CommunityWatchingResponse(resultItems);
         cache.Set(cacheKey, response);
         logger.LogInformation(
-            "Jellio: community watching built in {Ms} ms for {Users} users, {Items} items",
+            "Jellio: community watching answered in {Ms} ms for {Users} users, {Items} items",
             timer.ElapsedMilliseconds,
             eligibleUsers.Count,
             resultItems.Count);

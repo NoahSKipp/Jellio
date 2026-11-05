@@ -48,6 +48,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddHostedService(sp => sp.GetRequiredService<AchievementService>());
         services.AddSingleton<ProfileSettingsStore>();
         services.AddSingleton<CommunityWatchingCache>();
+        services.AddSingleton<CommunityWatchingService>();
+        services.AddHostedService(sp => sp.GetRequiredService<CommunityWatchingService>());
         services.AddSingleton<GenreCache>();
 
         services.AddSingleton<GrouplistStore>();
