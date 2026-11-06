@@ -104,10 +104,16 @@ class MockElement {
   scrollBy() {}
 }
 
+const storage = new Map();
 globalThis.window = {
   Jellio: {},
   location: { origin: 'http://localhost', hash: '' },
-  localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+  localStorage: {
+    getItem: (k) => (storage.has(k) ? storage.get(k) : null),
+    setItem: (k, v) => storage.set(k, String(v)),
+    removeItem: (k) => storage.delete(k),
+    clear: () => storage.clear(),
+  },
   history: { pushState: () => {}, replaceState: () => {} },
   addEventListener: () => {},
   removeEventListener: () => {},
@@ -124,6 +130,7 @@ globalThis.document = {
   getElementById: () => null,
   querySelector: () => null,
   querySelectorAll: () => [],
+  dispatchEvent: () => {},
 };
 
 const { buildRatingBadge } = await import('../../src/Jellio/Frontend/components/ratingBadge.js');
@@ -133,6 +140,9 @@ const {
   VIEWPORT_DEDUPE_LIMIT,
   SLIDING_WINDOW_ROW_COUNT,
 } = await import('../../src/Jellio/Frontend/screens/home.js');
+const { isTvSession, TV_PATTERN } = await import('../../src/Jellio/Frontend/runtime/cast.js');
+const { getRemoteSessions } = await import('../../src/Jellio/Frontend/runtime/api.js');
+const { setSession, clearSession } = await import('../../src/Jellio/Frontend/runtime/auth.js');
 
 test('buildRatingBadge creates TMDB rating badge with correct icon class and formatted score', () => {
   const badge = buildRatingBadge(8.46, 'custom-badge');
@@ -341,4 +351,167 @@ test('dedupeRow: intra-row duplicates (same Id or same titleKey) are always elim
   assert.equal(result.keys['the matrix|1999'], true);
   assert.equal(result.keys['id-2'], true);
   assert.equal(result.keys['inception|2010'], true);
+});
+
+test('isTvSession correctly identifies Jellio TV and Smart TV client sessions', () => {
+  // Jellio TV variations
+  assert.equal(isTvSession({ Client: 'Jellio TV', DeviceName: 'Living Room TV' }), true);
+  assert.equal(isTvSession({ Client: 'Jellio', DeviceName: 'Living Room' }), true);
+  assert.equal(isTvSession({ Client: 'Jellio-TV', ApplicationVersion: '0.43.0' }), true);
+  assert.equal(isTvSession({ DeviceName: 'Bedroom Screen', ApplicationVersion: 'Jellio 1.80.0' }), true);
+
+  // Common Smart TV / Streaming devices
+  assert.equal(isTvSession({ DeviceName: 'Android TV' }), true);
+  assert.equal(isTvSession({ DeviceName: 'Chromecast with Google TV' }), true);
+  assert.equal(isTvSession({ DeviceName: 'SHIELD Android TV' }), true);
+  assert.equal(isTvSession({ DeviceName: 'Apple TV 4K' }), true);
+  assert.equal(isTvSession({ DeviceName: 'Sony Bravia' }), true);
+  assert.equal(isTvSession({ DeviceName: 'Fire TV Stick 4K' }), true);
+  assert.equal(isTvSession({ DeviceName: 'Roku Express' }), true);
+  assert.equal(isTvSession({ Client: 'LG Smart TV', DeviceName: 'webOS' }), true);
+  assert.equal(isTvSession({ Client: 'Samsung Smart TV', DeviceName: 'Tizen' }), true);
+  assert.equal(isTvSession({ Client: 'Kodi', DeviceName: 'HTPC' }), true);
+  assert.equal(isTvSession({ Client: 'Jellyfin Media Player', DeviceName: 'Living Room' }), true);
+
+  // Non-TV sessions
+  assert.equal(isTvSession({ DeviceName: 'MacBook Pro', Client: 'Jellyfin Web' }), false);
+  assert.equal(isTvSession({ DeviceName: 'Workstation', Client: 'Firefox' }), false);
+  assert.equal(isTvSession(null), false);
+  assert.equal(isTvSession(undefined), false);
+  assert.equal(isTvSession({}), false);
+});
+
+test('getRemoteSessions: query construction and deduplication when signed in', async () => {
+  setSession('test-token', { Id: 'user-guid-456', Name: 'Alice' });
+
+  const originalFetch = globalThis.fetch;
+  const requestedUrls = [];
+
+  try {
+    globalThis.fetch = async (url) => {
+      requestedUrls.push(url);
+      if (url.includes('ControllableByUserId=' + encodeURIComponent('user-guid-456'))) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            { Id: 'sess-1', DeviceName: 'Jellio TV Living Room' },
+            { Id: 'sess-2', DeviceName: 'SHIELD Android TV' },
+          ],
+        };
+      }
+      if (url.endsWith('/Sessions')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            { Id: 'sess-1', DeviceName: 'Jellio TV Living Room' },
+            { Id: 'sess-3', DeviceName: 'Apple TV' },
+          ],
+        };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    };
+
+    const sessions = await getRemoteSessions();
+
+    // Verify both endpoints were called in order with correct parameters
+    assert.equal(requestedUrls.length, 2);
+    assert.ok(requestedUrls[0].includes('/Sessions?ControllableByUserId=user-guid-456'));
+    assert.ok(requestedUrls[1].endsWith('/Sessions'));
+
+    // Verify deduplication: sess-1 appears only once; sess-2 and sess-3 are retained
+    assert.equal(sessions.length, 3);
+    assert.deepEqual(sessions.map((s) => s.Id), ['sess-1', 'sess-2', 'sess-3']);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSession();
+  }
+});
+
+test('getRemoteSessions: query construction without user session (anonymous)', async () => {
+  clearSession();
+
+  const originalFetch = globalThis.fetch;
+  const requestedUrls = [];
+
+  try {
+    globalThis.fetch = async (url) => {
+      requestedUrls.push(url);
+      if (url.endsWith('/Sessions')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [{ Id: 'sess-anon', DeviceName: 'Chromecast with Google TV' }],
+        };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    };
+
+    const sessions = await getRemoteSessions();
+
+    assert.equal(requestedUrls.length, 1);
+    assert.ok(requestedUrls[0].endsWith('/Sessions'));
+    assert.equal(sessions.length, 1);
+    assert.equal(sessions[0].Id, 'sess-anon');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('getRemoteSessions: graceful error handling when non-admin receives 403 Forbidden on /Sessions', async () => {
+  setSession('test-token', { Id: 'user-guid-789', Name: 'Bob' });
+
+  const originalFetch = globalThis.fetch;
+
+  try {
+    globalThis.fetch = async (url) => {
+      if (url.includes('ControllableByUserId=' + encodeURIComponent('user-guid-789'))) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [{ Id: 'sess-controllable', DeviceName: 'Jellio TV Bedroom' }],
+        };
+      }
+      if (url.endsWith('/Sessions')) {
+        return {
+          ok: false,
+          status: 403,
+          json: async () => ({ Error: 'Forbidden' }),
+        };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    };
+
+    const sessions = await getRemoteSessions();
+
+    // 403 is caught gracefully and user-controllable sessions are returned
+    assert.equal(sessions.length, 1);
+    assert.equal(sessions[0].Id, 'sess-controllable');
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSession();
+  }
+});
+
+test('getRemoteSessions: graceful error handling when network or API fails', async () => {
+  setSession('test-token', { Id: 'user-guid-fail', Name: 'Charlie' });
+
+  const originalFetch = globalThis.fetch;
+
+  try {
+    globalThis.fetch = async () => {
+      return {
+        ok: false,
+        status: 403,
+        json: async () => ({ Error: 'Forbidden' }),
+      };
+    };
+
+    const sessions = await getRemoteSessions();
+    assert.deepEqual(sessions, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSession();
+  }
 });

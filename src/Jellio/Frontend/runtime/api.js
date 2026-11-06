@@ -2679,11 +2679,35 @@ export function getPersonFilmography(personId, limit) {
 
 // === Remote Playback & Smart TV Sessions API ===
 // Discovers all active Jellyfin client sessions (Smart TVs, mobile apps, desktop players).
-export function getRemoteSessions(controllableOnly) {
-  const query = controllableOnly ? '?controllableByUserId=true' : '';
-  return getJson('/Sessions' + query).catch(function () {
-    return getJson('/Sessions');
-  });
+export async function getRemoteSessions(controllableOnly) {
+  const userId = getCurrentUserId();
+  const results = [];
+  const seenIds = new Set();
+
+  function addSessions(sessions) {
+    if (Array.isArray(sessions)) {
+      sessions.forEach(function (s) {
+        if (s && s.Id && !seenIds.has(s.Id)) {
+          seenIds.add(s.Id);
+          results.push(s);
+        }
+      });
+    }
+  }
+
+  if (userId) {
+    try {
+      const userSessions = await getJson('/Sessions?ControllableByUserId=' + encodeURIComponent(userId));
+      addSessions(userSessions);
+    } catch (_) {}
+  }
+
+  try {
+    const allSessions = await getJson('/Sessions');
+    addSessions(allSessions);
+  } catch (_) {}
+
+  return results;
 }
 
 // Instructs a remote Jellyfin session (e.g. Smart TV app) to play an item.

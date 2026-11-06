@@ -218,11 +218,13 @@ export function isAirPlaySupported(video) {
 }
 
 // === Smart TV & Controllable Client Discovery ===
-const TV_PATTERN = /tv|android\s*tv|google\s*tv|webos|lg|tizen|samsung|roku|fire\s*tv|firetv|apple\s*tv|appletv|shield|bravia|chromecast|kodi|jellyfin media player|theater|smart/i;
+export const TV_PATTERN =
+  /tv|android\s*tv|google\s*tv|webos|lg|tizen|samsung|roku|fire\s*tv|firetv|apple\s*tv|appletv|shield|bravia|chromecast|kodi|jellyfin media player|theater|smart|jellio/i;
 
-function isTvSession(session) {
+export function isTvSession(session) {
   if (!session) return false;
-  const name = (session.DeviceName || '') + ' ' + (session.Client || '');
+  const name =
+    (session.DeviceName || '') + ' ' + (session.Client || '') + ' ' + (session.ApplicationVersion || '');
   return TV_PATTERN.test(name);
 }
 
