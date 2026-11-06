@@ -15,6 +15,34 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.106.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.106.0",
+    "summary": "Infinite virtual rows, smart home row deduplication, enhanced remote cast to Smart TVs, and refined TMDB ratings badge.",
+    "highlights": [
+      {
+        "title": "Infinite Virtual Rows",
+        "description": "Genre rows on the home screen now load continuously as you scroll horizontally, dynamically discovering more titles via TMDB and on-demand catalog virtualization."
+      },
+      {
+        "title": "Smart Row Deduplication",
+        "description": "Sliding window deduplication prevents repetitive titles across adjacent genre collections while keeping personal rows (Continue Watching, Next Up, Watchlist, Favorites) completely untouched."
+      },
+      {
+        "title": "Enhanced Smart TV Cast & Session Control",
+        "description": "Seamless remote device discovery and session casting between Jellio Web and Jellio TV across your local network, with full support for remote play, pause, seek, and volume control."
+      },
+      {
+        "title": "Modern TMDB Rating Badge",
+        "description": "Upgraded TMDB rating indicators with the official compact two-line badge and vibrant linear gradient styling."
+      },
+      {
+        "title": "Responsive Navigation & Data Safety",
+        "description": "Navigation requests now immediately cancel in-flight loading so screens switch instantly without getting stuck, paired with atomic configuration writes and corruption recovery."
+      }
+    ]
+  },
+  {
     "version": "1.105.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.105.4",
@@ -3969,6 +3997,38 @@ export const LATEST_CHANGELOG = CHANGELOG_RELEASES[0];
 export const LATEST_BIG_CHANGELOG = CHANGELOG_RELEASES.find((r) => isBigRelease(r.version)) || LATEST_CHANGELOG;
 
 export const MACOS_CHANGELOG_RELEASES = [
+  {
+    "version": "0.7.0",
+    "title": "What's New in Jellio for macOS",
+    "subtitle": "Version 0.7.0",
+    "summary": "Native macOS playback menu, menu bar status item, deep linking, Dock progress bar, and atomic configuration.",
+    "highlights": [
+      {
+        "title": "Native Playback Menu",
+        "description": "Standard macOS Playback menu with shortcuts for play/pause, next/previous tracks, 10-second seek, volume adjustments, and Picture-in-Picture."
+      },
+      {
+        "title": "Menu Bar Status Item",
+        "description": "System tray icon with live playback controls, current media title, active downloads count, and quick window toggle."
+      },
+      {
+        "title": "Deep Linking Support",
+        "description": "Launch and navigate directly via jellio:// and jellyfin:// protocol links."
+      },
+      {
+        "title": "Dock & Window Progress Bar",
+        "description": "Live progress indication on the macOS Dock tile and window during downloads and in-app updates."
+      },
+      {
+        "title": "Atomic Settings & Safe Updates",
+        "description": "Crash-resilient configuration writes with corrupted file backup recovery, and automatic temporary directory cleanup during updates."
+      },
+      {
+        "title": "Correct Version in Jellyfin",
+        "description": "Jellyfin's Devices and Dashboard now list this Mac as Jellio for macOS with the app's real version, instead of Jellio 0.1.0."
+      }
+    ]
+  },
   {
     "version": "0.6.1",
     "title": "What's New in Jellio for macOS",
