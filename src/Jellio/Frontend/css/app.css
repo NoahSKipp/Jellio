@@ -2582,10 +2582,10 @@
 }
 
 .jellio-rating-badge-icon {
-  width: 1em;
-  height: 1em;
+  width: 1.8em;
+  height: 0.85em;
   object-fit: contain;
-  filter: brightness(0) invert(1);
+  vertical-align: middle;
 }
 
 .jellio-detail-tech-badges {

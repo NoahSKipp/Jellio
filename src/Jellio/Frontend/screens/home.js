@@ -593,7 +593,16 @@ async function buildExpensiveSections() {
   const recommendations = animeIdsPromise
     .then(function (animeIds) {
       return streamRecommendationRows(seen, function (spec, slot) {
-        const row = buildRow(spec.title, withoutAnime(spec.items, animeIds));
+        const fetchOpts = spec.fetchPage
+          ? {
+              fetchPage: function (start, size) {
+                return spec.fetchPage(start, size).then(function (page) {
+                  return withoutAnime(page, animeIds);
+                });
+              },
+            }
+          : null;
+        const row = buildRow(spec.title, withoutAnime(spec.items, animeIds), null, fetchOpts);
         if (row) place(wrapRowForCustomization(row, 'rec:' + spec.title), EXPENSIVE_SLOTS.recommendations + slot);
       });
     })

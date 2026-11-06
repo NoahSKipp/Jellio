@@ -31,7 +31,16 @@ public class GenresController(GenreCache genres, IUserManager userManager) : Con
     }
 
     [HttpGet("items")]
-    public IActionResult Items([FromQuery] string genre, [FromQuery] string? types, [FromQuery] Guid? parentId, [FromQuery] int limit = 20)
+    public async Task<IActionResult> Items(
+        [FromQuery] string genre,
+        [FromQuery] string? types,
+        [FromQuery] Guid? parentId,
+        [FromQuery] int startIndex = 0,
+        [FromQuery] int? start = null,
+        [FromQuery] int limit = 20,
+        [FromQuery] int? size = null,
+        [FromQuery] bool? enableVirtual = null,
+        [FromQuery] bool? virtualExpansion = null)
     {
         var user = CurrentUser();
         if (user is null)
@@ -44,8 +53,21 @@ public class GenresController(GenreCache genres, IUserManager userManager) : Con
             return BadRequest("genre is required");
         }
 
-        var items = genres.GetRow(user, genre, GenreCache.ParseTypes(types), parentId ?? Guid.Empty, Math.Clamp(limit, 1, 200));
-        return Ok(new { Items = items, TotalRecordCount = items.Count });
+        var offset = Math.Max(0, start ?? startIndex);
+        var count = Math.Clamp(size ?? limit, 1, 200);
+        var allowVirtual = enableVirtual ?? virtualExpansion ?? false;
+
+        var (items, totalCount) = await genres.GetRowAsync(
+            user,
+            genre,
+            GenreCache.ParseTypes(types),
+            parentId ?? Guid.Empty,
+            offset,
+            count,
+            allowVirtual,
+            cancellationToken: HttpContext.RequestAborted).ConfigureAwait(false);
+
+        return Ok(new { Items = items, TotalRecordCount = totalCount, StartIndex = offset });
     }
 
     private Jellyfin.Database.Implementations.Entities.User? CurrentUser()

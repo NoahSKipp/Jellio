@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems } from './api.js';
+import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems, getGenreItemsPage } from './api.js';
 import { getSeasonalRecommendationRow } from './seasonalRecommendations.js';
 
 const SEED_LIMIT = 4;
@@ -216,8 +216,20 @@ function buildGenreRows(genres, itemsPerGenre, exclude) {
   for (let i = 0; i < genres.length; i++) {
     const raw = itemsPerGenre[i];
     if (!raw) continue;
+    const genre = genres[i];
     const items = dedupe(raw.filter(notPlayed), exclude);
-    if (items.length) rows.push({ title: t('home_top_picks'), items: items });
+    if (items.length) {
+      rows.push({
+        title: t('home_top_picks'),
+        items: items,
+        genre: genre,
+        fetchPage: function (start, size) {
+          return getGenreItemsPage(null, 'Movie,Series', genre, start, size).then(function (page) {
+            return dedupe((page || []).filter(notPlayed), exclude);
+          });
+        },
+      });
+    }
   }
   return rows;
 }

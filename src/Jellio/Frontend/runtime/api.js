@@ -2401,20 +2401,35 @@ export function getGenreItems(parentId, itemType, genre, limit) {
 export function getGenreItemsPage(parentId, itemType, genre, startIndex, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const params = new URLSearchParams({
-    Recursive: 'true',
-    IncludeItemTypes: itemType,
-    Genres: genre,
-    StartIndex: String(startIndex || 0),
-    Limit: String(limit || 60),
-    Fields: 'ProductionYear,CommunityRating',
-    SortBy: 'CommunityRating',
-    SortOrder: 'Descending',
+  const cachedParams = new URLSearchParams({
+    genre: genre,
+    types: itemType || 'Movie,Series',
+    startIndex: String(startIndex || 0),
+    limit: String(limit || 24),
+    enableVirtual: 'true',
   });
-  if (parentId) params.set('ParentId', parentId);
-  return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'genres').then(function (result) {
-    return collapseAudiobookTracks((result && result.Items) || []);
-  });
+  if (parentId) cachedParams.set('parentId', parentId);
+  const cachedPath = '/Jellio/genres/items?' + cachedParams.toString();
+  return rowJson(cachedPath, 'genres')
+    .then(function (result) {
+      return collapseAudiobookTracks((result && result.Items) || []);
+    })
+    .catch(function () {
+      const params = new URLSearchParams({
+        Recursive: 'true',
+        IncludeItemTypes: itemType,
+        Genres: genre,
+        StartIndex: String(startIndex || 0),
+        Limit: String(limit || 60),
+        Fields: 'ProductionYear,CommunityRating',
+        SortBy: 'CommunityRating',
+        SortOrder: 'Descending',
+      });
+      if (parentId) params.set('ParentId', parentId);
+      return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'genres').then(function (result) {
+        return collapseAudiobookTracks((result && result.Items) || []);
+      });
+    });
 }
 
 function getGenreItemsDirect(parentId, itemType, genre, limit) {
