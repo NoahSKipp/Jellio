@@ -132,7 +132,14 @@ public class CommunityController(
             var targetItem = rawItem is Episode ep
                 ? (libraryManager.GetItemById(ep.SeriesId) ?? ep.Series ?? (BaseItem)ep)
                 : rawItem;
-            if (!targetItem.IsVisible(caller)) return;
+            try
+            {
+                if (!targetItem.IsVisible(caller)) return;
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Jellio: IsVisible check failed for item {ItemId}", targetItem.Id);
+            }
 
             var user = userMap.GetValueOrDefault(userId);
             if (user is null) return;
