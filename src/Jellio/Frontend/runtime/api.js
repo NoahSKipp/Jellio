@@ -1863,6 +1863,12 @@ export function getJellioConfig() {
 
 export function getImageUrl(itemId, type, options) {
   const opts = options || {};
+  if (opts.tag && (opts.tag.startsWith('http://') || opts.tag.startsWith('https://'))) {
+    return opts.tag;
+  }
+  if (typeof itemId === 'string' && (itemId.startsWith('http://') || itemId.startsWith('https://'))) {
+    return itemId;
+  }
   const params = new URLSearchParams();
   if (opts.tag) params.set('tag', opts.tag);
   if (opts.maxWidth) params.set('maxWidth', String(opts.maxWidth));
@@ -2383,7 +2389,12 @@ export function discoverGenres(parentId, itemType, limit) {
 export function getGenreItems(parentId, itemType, genre, limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const cachedParams = new URLSearchParams({ genre: genre, types: itemType, limit: String(limit || 20) });
+  const cachedParams = new URLSearchParams({
+    genre: genre,
+    types: itemType,
+    limit: String(limit || 24),
+    enableVirtual: 'true',
+  });
   if (parentId) cachedParams.set('parentId', parentId);
   const cachedPath = '/Jellio/genres/items?' + cachedParams.toString();
   return cached(cachedPath, function () {

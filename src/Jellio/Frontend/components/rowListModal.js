@@ -22,7 +22,18 @@ function closeRowListModal() {
 function itemSubtitle(item) {
   const bits = [];
   if (item.ProductionYear) bits.push(String(item.ProductionYear));
-  if (item.Type === 'Series' || item.Type === 'Season') bits.push('Series');
+  if (item.Type === 'Series' || item.Type === 'Season') {
+    bits.push(t('type_series') || 'Series');
+  } else if (item.Type === 'Movie') {
+    bits.push(t('type_movie') || 'Movie');
+  }
+  if (typeof item.CommunityRating === 'number' && item.CommunityRating > 0) {
+    bits.push('★ ' + item.CommunityRating.toFixed(1));
+  }
+  if (Array.isArray(item.Genres) && item.Genres.length > 0) {
+    const genreStr = item.Genres.filter(Boolean).slice(0, 2).join(', ');
+    if (genreStr) bits.push(genreStr);
+  }
   return bits.join(' · ');
 }
 
@@ -31,36 +42,40 @@ function buildListItem(item, select) {
   row.type = 'button';
   row.className = 'jellio-row-list-item';
 
-  const tag = item.ImageTags && item.ImageTags.Primary;
+  const tag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
   const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
-  if (tag || (isBook && item.Id)) {
-    const candidates = [];
-    if (tag) candidates.push(getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 160 }));
-    if (isBook && item.Id) {
-      if (item.Stream && item.Stream.MangaId) candidates.push(getStreamCoverUrl(item.Stream.MangaId, item.SeriesName));
-      candidates.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
-      candidates.push(getBookCoverUrl(item.Id));
-    }
-    const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
-    if (uniqueCandidates.length) {
-      const img = document.createElement('img');
-      img.className = 'jellio-row-list-item-image';
-      let candidateIndex = 0;
-      img.src = uniqueCandidates[0];
-      img.alt = '';
-      img.loading = 'lazy';
-      img.addEventListener('error', function () {
-        candidateIndex += 1;
-        if (candidateIndex < uniqueCandidates.length) {
-          img.src = uniqueCandidates[candidateIndex];
-        } else {
-          img.replaceWith(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
-        }
-      });
-      row.appendChild(img);
-    } else {
-      row.appendChild(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
-    }
+  const candidates = [];
+  if (tag) {
+    candidates.push(getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 160 }));
+  }
+  if (item.PosterUrl) candidates.push(item.PosterUrl);
+  if (item.Poster) candidates.push(item.Poster);
+  if (item.ImageUrl) candidates.push(item.ImageUrl);
+  if (item.SeriesPrimaryImageTag) {
+    candidates.push(getImageUrl(item.SeriesId || item.Id, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 160 }));
+  }
+  if (isBook && item.Id) {
+    if (item.Stream && item.Stream.MangaId) candidates.push(getStreamCoverUrl(item.Stream.MangaId, item.SeriesName));
+    candidates.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
+    candidates.push(getBookCoverUrl(item.Id));
+  }
+  const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
+  if (uniqueCandidates.length) {
+    const img = document.createElement('img');
+    img.className = 'jellio-row-list-item-image';
+    let candidateIndex = 0;
+    img.src = uniqueCandidates[0];
+    img.alt = '';
+    img.loading = 'lazy';
+    img.addEventListener('error', function () {
+      candidateIndex += 1;
+      if (candidateIndex < uniqueCandidates.length) {
+        img.src = uniqueCandidates[candidateIndex];
+      } else {
+        img.replaceWith(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
+      }
+    });
+    row.appendChild(img);
   } else {
     row.appendChild(el('div', 'jellio-row-list-item-image jellio-row-list-item-image-empty'));
   }
@@ -131,45 +146,76 @@ function openRowListModal(title, items, options) {
     // scrolls into view, until the server runs out.
     let shown = items.slice();
     const seenIds = {};
-    shown.forEach(function (item) { seenIds[item.Id] = true; });
-    let nextStart = 0;
+    shown.forEach(function (item) {
+      if (item && item.Id) seenIds[String(item.Id)] = true;
+    });
+    let nextStart = shown.length;
     let loading = false;
     let done = false;
     const sentinel = el('div', 'jellio-row-list-sentinel');
-    panel.appendChild(sentinel);
-    panel.appendChild(loadingNote);
-    const observer = new IntersectionObserver(function (entries) {
-      if (entries.some(function (entry) { return entry.isIntersecting; })) loadMore();
-    }, { rootMargin: '400px' });
+    list.appendChild(sentinel);
+    list.appendChild(loadingNote);
+
     function loadMore() {
       if (loading || done || token !== openToken) return;
       loading = true;
       const start = nextStart;
       opts.fetchPage(start, PAGE_SIZE).then(function (page) {
         if (token !== openToken) return;
-        nextStart = start + PAGE_SIZE;
-        if (!page || page.length < PAGE_SIZE / 2) done = true;
-        (page || []).forEach(function (item) {
-          if (seenIds[item.Id]) return;
-          seenIds[item.Id] = true;
+        const pageItems = Array.isArray(page) ? page : ((page && page.Items) ? page.Items : []);
+        nextStart = start + pageItems.length;
+        if (!pageItems.length) {
+          done = true;
+        }
+        let added = 0;
+        pageItems.forEach(function (item) {
+          if (!item) return;
+          const id = item.Id ? String(item.Id) : null;
+          if (id && seenIds[id]) return;
+          if (id) seenIds[id] = true;
           shown.push(item);
-          list.appendChild(buildListItem(item, select));
+          list.insertBefore(buildListItem(item, select), sentinel);
+          added++;
         });
+        if (pageItems.length < 5 && added === 0) {
+          done = true;
+        }
       }).catch(function (err) {
         console.warn('Jellio: could not load more of this row', err);
         done = true;
       }).then(function () {
         loading = false;
         if (done) {
-          observer.disconnect();
+          if (observer) observer.disconnect();
           loadingNote.remove();
           sentinel.remove();
-        } else if (token === openToken && sentinel.getBoundingClientRect().top < window.innerHeight + 400) {
-          loadMore();
+        } else if (token === openToken) {
+          const listRect = list.getBoundingClientRect();
+          const sentinelRect = sentinel.getBoundingClientRect();
+          if (sentinelRect.top <= listRect.bottom + 300) {
+            loadMore();
+          }
         }
       });
     }
-    observer.observe(sentinel);
+
+    const observer = typeof IntersectionObserver !== 'undefined'
+      ? new IntersectionObserver(function (entries) {
+          if (entries.some(function (entry) { return entry.isIntersecting; })) loadMore();
+        }, { root: list, rootMargin: '300px' })
+      : null;
+
+    if (observer) {
+      observer.observe(sentinel);
+    }
+    list.addEventListener('scroll', function () {
+      if (loading || done) return;
+      const remaining = list.scrollHeight - (list.scrollTop + list.clientHeight);
+      if (remaining < 400) {
+        loadMore();
+      }
+    }, { passive: true });
+
     loadMore();
   } else if (opts.fetchAll) {
     panel.appendChild(loadingNote);

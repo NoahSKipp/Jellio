@@ -252,4 +252,66 @@ public class GenreCacheTests
         Assert.Equal("Brand New Virtual Movie", items[1].Name);
         Assert.Equal(GenreCache.GenerateDeterministicId("movie", "202"), items[1].Id);
     }
+
+    [Fact]
+    public async Task GetRowAsyncVirtualExpansionPopulatesImageTagsAndFallbackKey()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+
+        var results = Enumerable.Range(1, 20).Select(i => $$"""
+            {
+              "id": {{300 + i}},
+              "title": "Poster Test Movie {{i}}",
+              "release_date": "2025-05-01",
+              "vote_average": 9.1,
+              "poster_path": "/path_to_poster.jpg",
+              "backdrop_path": "/path_to_backdrop.jpg"
+            }
+            """);
+        var tmdbJson = $$"""
+            {
+              "page": 1,
+              "total_pages": 5,
+              "results": [ {{string.Join(",", results)}} ]
+            }
+            """;
+
+        string? capturedQuery = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            capturedQuery = req.RequestUri?.Query;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(tmdbJson, Encoding.UTF8, "application/json"),
+            };
+        });
+
+        var factory = new TestHttpClientFactory(handler);
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+        var cache = new GenreCache(libProxy, dtoProxy, logger, factory);
+        var user = new Jellyfin.Database.Implementations.Entities.User("testUser", "Default", "Default");
+
+        var (items, total) = await cache.GetRowAsync(
+            user,
+            "Action",
+            [BaseItemKind.Movie],
+            Guid.Empty,
+            0,
+            10,
+            enableVirtual: true,
+            tokenOverride: null);
+
+        Assert.Equal(10, items.Count);
+        Assert.True(total > 20); // Not exhausted because total_pages is 5 and 20 items returned
+        var item = items[0];
+        Assert.NotNull(item.ImageTags);
+        Assert.True(item.ImageTags.ContainsKey(ImageType.Primary));
+        Assert.Equal("https://image.tmdb.org/t/p/w500/path_to_poster.jpg", item.ImageTags[ImageType.Primary]);
+        Assert.NotNull(item.BackdropImageTags);
+        Assert.Single(item.BackdropImageTags);
+        Assert.Equal("https://image.tmdb.org/t/p/w1280/path_to_backdrop.jpg", item.BackdropImageTags[0]);
+        Assert.NotNull(capturedQuery);
+        Assert.Contains("api_key=4219e299c89411838049ab0dab19ebd5", capturedQuery);
+    }
 }

@@ -42,6 +42,8 @@ public class GenreCache(
         PropertyNameCaseInsensitive = true,
     };
 
+    private const string DefaultTmdbApiKey = "4219e299c89411838049ab0dab19ebd5";
+
     private static readonly Dictionary<string, int> MovieGenreMap = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Action"] = 28,
@@ -61,15 +63,70 @@ public class GenreCache(
         ["Romance"] = 10749,
         ["Science Fiction"] = 878,
         ["Sci-Fi"] = 878,
+        ["Sci Fi"] = 878,
+        ["SciFi"] = 878,
         ["TV Movie"] = 10770,
         ["Thriller"] = 53,
         ["War"] = 10752,
         ["Western"] = 37,
+        ["Action & Adventure"] = 28,
+        ["Action and Adventure"] = 28,
+        ["Sci-Fi & Fantasy"] = 878,
+        ["Sci Fi & Fantasy"] = 878,
+        ["War & Politics"] = 10752,
+        // Common German localized genre names
+        ["Abenteuer"] = 12,
+        ["Komödie"] = 35,
+        ["Krimi"] = 80,
+        ["Dokumentation"] = 99,
+        ["Familie"] = 10751,
+        ["Liebesfilm"] = 10749,
+        ["Krieg"] = 10752,
+        ["Musik"] = 10402,
+        ["Historie"] = 36,
+        ["Zeichentrick"] = 16,
+        // Common French localized genre names
+        ["Aventure"] = 12,
+        ["Comédie"] = 35,
+        ["Documentaire"] = 99,
+        ["Drame"] = 18,
+        ["Familial"] = 10751,
+        ["Fantastique"] = 14,
+        ["Histoire"] = 36,
+        ["Horreur"] = 27,
+        ["Musique"] = 10402,
+        ["Mystère"] = 9648,
+        ["Guerre"] = 10752,
+        // Common Spanish localized genre names
+        ["Acción"] = 28,
+        ["Aventura"] = 12,
+        ["Animación"] = 16,
+        ["Comedia"] = 35,
+        ["Crimen"] = 80,
+        ["Documental"] = 99,
+        ["Familia"] = 10751,
+        ["Fantasía"] = 14,
+        ["Historia"] = 36,
+        ["Misterio"] = 9648,
+        ["Película de TV"] = 10770,
+        ["Suspense"] = 53,
+        ["Bélica"] = 10752,
+        // Common Italian localized genre names
+        ["Avventura"] = 12,
+        ["Azione"] = 28,
+        ["Commedia"] = 35,
+        ["Documentario"] = 99,
+        ["Famiglia"] = 10751,
+        ["Fantascienza"] = 878,
+        ["Musica"] = 10402,
+        ["Mistero"] = 9648,
+        ["Storia"] = 36,
     };
 
     private static readonly Dictionary<string, int> TvGenreMap = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Action & Adventure"] = 10759,
+        ["Action and Adventure"] = 10759,
         ["Action"] = 10759,
         ["Adventure"] = 10759,
         ["Animation"] = 16,
@@ -84,20 +141,53 @@ public class GenreCache(
         ["News"] = 10763,
         ["Reality"] = 10764,
         ["Sci-Fi & Fantasy"] = 10765,
+        ["Sci-Fi and Fantasy"] = 10765,
         ["Science Fiction"] = 10765,
         ["Sci-Fi"] = 10765,
+        ["Sci Fi"] = 10765,
+        ["SciFi"] = 10765,
         ["Fantasy"] = 10765,
         ["Soap"] = 10766,
         ["Talk"] = 10767,
         ["War & Politics"] = 10768,
+        ["War and Politics"] = 10768,
         ["War"] = 10768,
         ["Western"] = 37,
+        // Common German localized genre names
+        ["Abenteuer"] = 10759,
+        ["Action & Abenteuer"] = 10759,
+        ["Komödie"] = 35,
+        ["Krimi"] = 80,
+        ["Dokumentation"] = 99,
+        ["Familie"] = 10751,
+        ["Musik"] = 10402,
+        ["Zeichentrick"] = 16,
+        // Common French localized genre names
+        ["Action et aventure"] = 10759,
+        ["Aventure"] = 10759,
+        ["Comédie"] = 35,
+        ["Documentaire"] = 99,
+        ["Drame"] = 18,
+        ["Familial"] = 10751,
+        ["Fantastique"] = 10765,
+        ["Mystère"] = 9648,
+        // Common Spanish localized genre names
+        ["Acción"] = 10759,
+        ["Acción y aventura"] = 10759,
+        ["Aventura"] = 10759,
+        ["Animación"] = 16,
+        ["Comedia"] = 35,
+        ["Crimen"] = 80,
+        ["Documental"] = 99,
+        ["Familia"] = 10751,
+        ["Fantasía"] = 10765,
+        ["Misterio"] = 9648,
     };
 
     private readonly ConcurrentDictionary<string, (DateTime At, IReadOnlyList<GenreCount> Counts)> _counts = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task<IReadOnlyList<GenreCount>>> _countsBuilding = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, (DateTime At, IReadOnlyList<BaseItemDto> Items)> _rows = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, (DateTime At, IReadOnlyList<BaseItemDto> Items)> _virtualGenreCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, (DateTime At, List<BaseItemDto> Items, int LastMoviePage, int LastTvPage, bool MovieExhausted, bool TvExhausted)> _virtualGenreCache = new(StringComparer.OrdinalIgnoreCase);
 
     public static Guid GenerateDeterministicId(string kind, string tmdbId)
     {
@@ -242,7 +332,8 @@ public class GenreCache(
             return (pagedLocal, localDtos.Count);
         }
 
-        var virtualDtos = await GetVirtualItemsAsync(genre, types, tokenOverride, cancellationToken).ConfigureAwait(false);
+        var targetCount = startIndex + limit;
+        var virtualDtos = await GetVirtualItemsAsync(genre, types, targetCount, tokenOverride, cancellationToken).ConfigureAwait(false);
         if (virtualDtos.Count == 0)
         {
             var pagedLocal = localDtos.Skip(startIndex).Take(limit).ToList();
@@ -277,58 +368,137 @@ public class GenreCache(
 
         var combined = localDtos.Concat(nonDuplicateVirtual).ToList();
         var paged = combined.Skip(startIndex).Take(limit).ToList();
-        return (paged, combined.Count);
+
+        var cacheKey = genre + "|" + string.Join(',', types.OrderBy(t => t));
+        var isExhausted = _virtualGenreCache.TryGetValue(cacheKey, out var cacheHit) && cacheHit.MovieExhausted && cacheHit.TvExhausted;
+        var totalCount = isExhausted ? combined.Count : Math.Max(combined.Count, combined.Count + 100);
+
+        return (paged, totalCount);
     }
 
     public async Task<IReadOnlyList<BaseItemDto>> GetVirtualItemsAsync(
         string genre,
         BaseItemKind[] types,
+        int targetCount = 60,
         string? tokenOverride = null,
         CancellationToken cancellationToken = default)
     {
-        var token = tokenOverride ?? JellioPlugin.Instance?.Configuration.TmdbAccessToken;
-        if (string.IsNullOrWhiteSpace(token) || httpClientFactory == null)
+        if (httpClientFactory == null)
         {
             return Array.Empty<BaseItemDto>();
         }
 
+        var token = !string.IsNullOrWhiteSpace(tokenOverride)
+            ? tokenOverride
+            : JellioPlugin.Instance?.Configuration.TmdbAccessToken;
+
+        var useDefaultKey = string.IsNullOrWhiteSpace(token);
+        var activeToken = useDefaultKey ? DefaultTmdbApiKey : token!.Trim();
+
         var cacheKey = genre + "|" + string.Join(',', types.OrderBy(t => t));
+        List<BaseItemDto> virtualItems;
+        int lastMoviePage = 0;
+        int lastTvPage = 0;
+        bool movieExhausted = !types.Contains(BaseItemKind.Movie) || !MovieGenreMap.ContainsKey(genre);
+        bool tvExhausted = !types.Contains(BaseItemKind.Series) || !TvGenreMap.ContainsKey(genre);
+
         if (_virtualGenreCache.TryGetValue(cacheKey, out var hit) && DateTime.UtcNow - hit.At < VirtualTtl)
         {
-            return hit.Items;
-        }
+            if (hit.Items.Count >= targetCount || (hit.MovieExhausted && hit.TvExhausted))
+            {
+                return hit.Items;
+            }
 
-        var virtualItems = new List<BaseItemDto>();
-        var seenTmdb = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            virtualItems = new List<BaseItemDto>(hit.Items);
+            lastMoviePage = hit.LastMoviePage;
+            lastTvPage = hit.LastTvPage;
+            movieExhausted = hit.MovieExhausted;
+            tvExhausted = hit.TvExhausted;
+        }
+        else
+        {
+            virtualItems = new List<BaseItemDto>();
+        }
 
         try
         {
-            var client = httpClientFactory.CreateClient();
+            var client = httpClientFactory.CreateClient("tmdb");
             client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Trim());
+            if (!useDefaultKey && (activeToken.Length > 40 || activeToken.StartsWith("ey", StringComparison.OrdinalIgnoreCase)))
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", activeToken);
+            }
             client.Timeout = TimeSpan.FromSeconds(8);
 
-            var tasks = new List<Task<IReadOnlyList<BaseItemDto>>>();
+            var queryKey = (useDefaultKey || activeToken.Length <= 40)
+                ? $"&api_key={Uri.EscapeDataString(activeToken)}"
+                : string.Empty;
 
-            if (types.Contains(BaseItemKind.Movie) && MovieGenreMap.TryGetValue(genre, out var movieGenreId))
-            {
-                tasks.Add(FetchTmdbDiscoverAsync(client, "movie", movieGenreId, genre, cancellationToken));
-            }
+            var seenTmdb = new HashSet<string>(virtualItems
+                .Where(it => it.ProviderIds != null && it.ProviderIds.ContainsKey("Tmdb"))
+                .Select(it => it.ProviderIds!["Tmdb"]),
+                StringComparer.OrdinalIgnoreCase);
 
-            if (types.Contains(BaseItemKind.Series) && TvGenreMap.TryGetValue(genre, out var tvGenreId))
+            var iterations = 0;
+            while (virtualItems.Count < targetCount && (!movieExhausted || !tvExhausted) && iterations < 5)
             {
-                tasks.Add(FetchTmdbDiscoverAsync(client, "tv", tvGenreId, genre, cancellationToken));
-            }
+                iterations++;
+                var tasks = new List<Task<(string Kind, int Page, IReadOnlyList<BaseItemDto> Items, int TotalPages)>>();
 
-            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-            foreach (var list in results)
-            {
-                foreach (var item in list)
+                if (!movieExhausted && MovieGenreMap.TryGetValue(genre, out var movieGenreId))
                 {
-                    if (item.ProviderIds != null && item.ProviderIds.TryGetValue("Tmdb", out var tmdbId) && seenTmdb.Add(tmdbId))
+                    var nextMoviePage = lastMoviePage + 1;
+                    tasks.Add(FetchTmdbDiscoverAsync(client, "movie", movieGenreId, genre, nextMoviePage, queryKey, cancellationToken)
+                        .ContinueWith(t => ("movie", nextMoviePage, t.Result.Items, t.Result.TotalPages), TaskContinuationOptions.ExecuteSynchronously));
+                }
+
+                if (!tvExhausted && TvGenreMap.TryGetValue(genre, out var tvGenreId))
+                {
+                    var nextTvPage = lastTvPage + 1;
+                    tasks.Add(FetchTmdbDiscoverAsync(client, "tv", tvGenreId, genre, nextTvPage, queryKey, cancellationToken)
+                        .ContinueWith(t => ("tv", nextTvPage, t.Result.Items, t.Result.TotalPages), TaskContinuationOptions.ExecuteSynchronously));
+                }
+
+                if (tasks.Count == 0)
+                {
+                    break;
+                }
+
+                var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+                var addedAny = false;
+
+                foreach (var res in results)
+                {
+                    if (res.Kind == "movie")
                     {
-                        virtualItems.Add(item);
+                        lastMoviePage = res.Page;
+                        if (res.Items.Count < 20 || res.TotalPages <= 1 || res.Page >= res.TotalPages)
+                        {
+                            movieExhausted = true;
+                        }
                     }
+                    else
+                    {
+                        lastTvPage = res.Page;
+                        if (res.Items.Count < 20 || res.TotalPages <= 1 || res.Page >= res.TotalPages)
+                        {
+                            tvExhausted = true;
+                        }
+                    }
+
+                    foreach (var item in res.Items)
+                    {
+                        if (item.ProviderIds != null && item.ProviderIds.TryGetValue("Tmdb", out var tmdbId) && seenTmdb.Add(tmdbId))
+                        {
+                            virtualItems.Add(item);
+                            addedAny = true;
+                        }
+                    }
+                }
+
+                if (!addedAny && (movieExhausted || !types.Contains(BaseItemKind.Movie)) && (tvExhausted || !types.Contains(BaseItemKind.Series)))
+                {
+                    break;
                 }
             }
         }
@@ -342,33 +512,35 @@ public class GenreCache(
             _virtualGenreCache.Clear();
         }
 
-        _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems);
+        _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems, lastMoviePage, lastTvPage, movieExhausted, tvExhausted);
         return virtualItems;
     }
 
-    private static async Task<IReadOnlyList<BaseItemDto>> FetchTmdbDiscoverAsync(
+    private static async Task<(IReadOnlyList<BaseItemDto> Items, int TotalPages)> FetchTmdbDiscoverAsync(
         HttpClient client,
         string kind,
         int genreId,
         string genreName,
+        int page,
+        string queryKey,
         CancellationToken cancellationToken)
     {
         var isMovie = kind == "movie";
         var path = isMovie
-            ? $"discover/movie?include_adult=false&sort_by=vote_average.desc&vote_count.gte=100&with_genres={genreId}"
-            : $"discover/tv?include_adult=false&sort_by=vote_average.desc&vote_count.gte=50&with_genres={genreId}";
+            ? $"discover/movie?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{queryKey}"
+            : $"discover/tv?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{queryKey}";
 
         using var response = await client.GetAsync(path, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            return Array.Empty<BaseItemDto>();
+            return (Array.Empty<BaseItemDto>(), 0);
         }
 
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         var payload = await JsonSerializer.DeserializeAsync<TmdbDiscoverResponse>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
         if (payload?.Results == null || payload.Results.Count == 0)
         {
-            return Array.Empty<BaseItemDto>();
+            return (Array.Empty<BaseItemDto>(), payload?.TotalPages ?? 0);
         }
 
         var list = new List<BaseItemDto>();
@@ -395,6 +567,21 @@ public class GenreCache(
             }
 
             var tmdbIdStr = result.Id.ToString();
+            var posterUrl = !string.IsNullOrWhiteSpace(result.PosterPath)
+                ? $"https://image.tmdb.org/t/p/w500{result.PosterPath}"
+                : null;
+            var backdropUrl = !string.IsNullOrWhiteSpace(result.BackdropPath)
+                ? $"https://image.tmdb.org/t/p/w1280{result.BackdropPath}"
+                : null;
+
+            var imageTags = new Dictionary<ImageType, string>();
+            if (posterUrl != null)
+            {
+                imageTags[ImageType.Primary] = posterUrl;
+            }
+
+            var backdropTags = backdropUrl != null ? new[] { backdropUrl } : Array.Empty<string>();
+
             list.Add(new BaseItemDto
             {
                 Id = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr),
@@ -410,10 +597,12 @@ public class GenreCache(
                 Overview = result.Overview,
                 Genres = [genreName],
                 PrimaryImageAspectRatio = 2.0 / 3.0,
+                ImageTags = imageTags,
+                BackdropImageTags = backdropTags,
             });
         }
 
-        return list;
+        return (list, payload.TotalPages);
     }
 
     // One entry per title: the same film in several versions (or imported
@@ -441,6 +630,15 @@ public class GenreCache(
 
     private sealed class TmdbDiscoverResponse
     {
+        [JsonPropertyName("page")]
+        public int Page { get; set; }
+
+        [JsonPropertyName("total_pages")]
+        public int TotalPages { get; set; }
+
+        [JsonPropertyName("total_results")]
+        public int TotalResults { get; set; }
+
         [JsonPropertyName("results")]
         public List<TmdbDiscoverItem>? Results { get; set; }
     }
@@ -470,5 +668,8 @@ public class GenreCache(
 
         [JsonPropertyName("poster_path")]
         public string? PosterPath { get; set; }
+
+        [JsonPropertyName("backdrop_path")]
+        public string? BackdropPath { get; set; }
     }
 }
