@@ -39,6 +39,8 @@ const MIN_CATALOG_ITEMS = 3;
 const MAX_ANIME_CATALOG_ROWS = 0;
 const GENRE_ROWS = 4;
 const GENRE_ROW_LIMIT = 24;
+export const VIEWPORT_DEDUPE_LIMIT = 6;
+export const SLIDING_WINDOW_ROW_COUNT = 2;
 
 // Catalogs worth leading with, in this order. Anything unlisted keeps
 // its own alphabetical order behind them.
@@ -48,6 +50,42 @@ const GENERIC_NAME = /^(trending|popular|top rated)$/i;
 function leadIndex(name) {
   const index = LEAD.indexOf(String(name || '').toLowerCase());
   return index === -1 ? LEAD.length : index;
+}
+
+export function dedupeRow(items, recentRows, limit) {
+  if (typeof limit === 'number' && limit <= 0) {
+    return { items: [], keys: {} };
+  }
+  const rows = Array.isArray(recentRows) ? recentRows : recentRows ? [recentRows] : [];
+  const recentSeen = Object.assign({}, ...rows);
+  const rowSeen = {};
+  const kept = [];
+  const list = Array.isArray(items) ? items : [];
+
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    if (!item) continue;
+    const id = item.Id;
+    const key = item.Name ? titleKey(item) : (item.titleKey || null);
+
+    if ((id && rowSeen[id]) || (key && rowSeen[key])) {
+      continue;
+    }
+
+    if (kept.length < VIEWPORT_DEDUPE_LIMIT && ((id && recentSeen[id]) || (key && recentSeen[key]))) {
+      continue;
+    }
+
+    if (id) rowSeen[id] = true;
+    if (key) rowSeen[key] = true;
+    kept.push(item);
+
+    if (typeof limit === 'number' && kept.length >= limit) {
+      break;
+    }
+  }
+
+  return { items: kept, keys: rowSeen };
 }
 
 function dedupe(items, seen) {
@@ -90,15 +128,19 @@ function chooseCatalogs(collections) {
   return usable.slice(0, MAX_CATALOG_ROWS);
 }
 
-function buildCatalogRow(entry, seen) {
-  const row = buildRow(entry.title, dedupe(entry.items, seen), null, {
+export function buildCatalogRow(entry, recentRows) {
+  const deduped = dedupeRow(entry.items, recentRows);
+  const row = buildRow(entry.title, deduped.items, null, {
     fetchPage: function (start, size) {
       return Promise.all([getCollectionItems(entry.id, entry.kind, size, start), getAnimeIds()]).then(function (results) {
         return withoutAnime(results[0], results[1]);
       });
     },
   });
-  return row ? wrapRowForCustomization(row, 'catalog:' + entry.id) : null;
+  return {
+    row: row ? wrapRowForCustomization(row, 'catalog:' + entry.id) : null,
+    keys: deduped.keys,
+  };
 }
 
 const HOME_GENRES_KEY = 'jellioHomeGenres';
@@ -137,15 +179,19 @@ function chooseHomeGenres() {
   return discovered;
 }
 
-function buildGenreRow(entry, seen) {
-  const row = buildRow(translateGenre(entry.title), dedupe(entry.items, seen), null, {
+export function buildGenreRow(entry, recentRows) {
+  const deduped = dedupeRow(entry.items, recentRows);
+  const row = buildRow(translateGenre(entry.title), deduped.items, null, {
     fetchPage: function (start, size) {
       return Promise.all([getGenreItemsPage(null, 'Movie,Series', entry.title, start, size), getAnimeIds()]).then(function (results) {
         return withoutAnime(results[0], results[1]);
       });
     },
   });
-  return row ? wrapRowForCustomization(row, 'genre:' + entry.title) : null;
+  return {
+    row: row ? wrapRowForCustomization(row, 'genre:' + entry.title) : null,
+    keys: deduped.keys,
+  };
 }
 
 function buildHubTile(name) {
@@ -562,7 +608,8 @@ const EXPENSIVE_SLOTS = { recommendations: 0, community: 15, catalogs: 200, genr
 async function buildExpensiveSections() {
   const built = [];
   expensiveBuilt = built;
-  const seen = {};
+  const recSeen = {};
+  const recentRowKeys = [];
   const animeIdsPromise = getAnimeIds();
   const rowGate = createRowGate(2);
 
@@ -571,6 +618,14 @@ async function buildExpensiveSections() {
     section.dataset.jellioHomeOrder = String(EXPENSIVE_ORDER_BASE + slot);
     built.push(section);
     notifySections([section]);
+  }
+
+  function recordRowKeys(keys) {
+    if (!keys || !Object.keys(keys).length) return;
+    recentRowKeys.push(keys);
+    if (recentRowKeys.length > SLIDING_WINDOW_ROW_COUNT) {
+      recentRowKeys.shift();
+    }
   }
 
   // Never awaited: a slow community lookup can't hold the other rows up.
@@ -592,7 +647,7 @@ async function buildExpensiveSections() {
   // Each recommendation row goes up as soon as its own data arrives.
   const recommendations = animeIdsPromise
     .then(function (animeIds) {
-      return streamRecommendationRows(seen, function (spec, slot) {
+      return streamRecommendationRows(recSeen, function (spec, slot) {
         const fetchOpts = spec.fetchPage
           ? {
               fetchPage: function (start, size) {
@@ -622,7 +677,11 @@ async function buildExpensiveSections() {
           return Promise.all([rowGate(slot, () => getCollectionItems(collection.Id, kind, CATALOG_ROW_LIMIT)), animeIdsPromise])
             .then(function (results) {
               const entry = { id: collection.Id, kind: kind, title: titleFor(collection.Name, kind), items: withoutAnime(results[0], results[1]) };
-              place(buildCatalogRow(entry, seen), slot);
+              const catalogRow = buildCatalogRow(entry, recentRowKeys);
+              if (catalogRow && catalogRow.row) {
+                place(catalogRow.row, slot);
+                recordRowKeys(catalogRow.keys);
+              }
             })
             .catch(function () {});
         }),
@@ -639,7 +698,11 @@ async function buildExpensiveSections() {
           const slot = EXPENSIVE_SLOTS.genres + index;
           return Promise.all([rowGate(slot, () => getGenreItems(null, 'Movie,Series', genre, GENRE_ROW_LIMIT)), animeIdsPromise])
             .then(function (results) {
-              place(buildGenreRow({ title: genre, items: withoutAnime(results[0], results[1]) }, seen), slot);
+              const genreRow = buildGenreRow({ title: genre, items: withoutAnime(results[0], results[1]) }, recentRowKeys);
+              if (genreRow && genreRow.row) {
+                place(genreRow.row, slot);
+                recordRowKeys(genreRow.keys);
+              }
             })
             .catch(function () {});
         }),

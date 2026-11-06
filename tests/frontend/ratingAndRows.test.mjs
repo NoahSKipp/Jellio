@@ -108,6 +108,7 @@ globalThis.window = {
   Jellio: {},
   location: { origin: 'http://localhost', hash: '' },
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+  history: { pushState: () => {}, replaceState: () => {} },
   addEventListener: () => {},
   removeEventListener: () => {},
   requestAnimationFrame: (cb) => setTimeout(cb, 0),
@@ -127,6 +128,11 @@ globalThis.document = {
 
 const { buildRatingBadge } = await import('../../src/Jellio/Frontend/components/ratingBadge.js');
 const { buildRow } = await import('../../src/Jellio/Frontend/components/row.js');
+const {
+  dedupeRow,
+  VIEWPORT_DEDUPE_LIMIT,
+  SLIDING_WINDOW_ROW_COUNT,
+} = await import('../../src/Jellio/Frontend/screens/home.js');
 
 test('buildRatingBadge creates TMDB rating badge with correct icon class and formatted score', () => {
   const badge = buildRatingBadge(8.46, 'custom-badge');
@@ -190,4 +196,149 @@ test('buildRow sets up horizontal infinite scroll and fetches next page on scrol
 
   // item-3 appended, duplicate item-1 skipped -> total 3 cards
   assert.equal(track.children.length, 3);
+});
+
+test('dedupeRow: items from the recommendations tier can appear in genre rows (Tiered Isolation)', () => {
+  // Recommendation rows use an isolated recSeen tracking map and do not populate
+  // recentRows used by catalogs and genres.
+  const recSeen = {
+    'rec-movie-1': true,
+    'dune|2021': true,
+  };
+
+  const genreItems = [
+    { Id: 'rec-movie-1', Name: 'Dune', ProductionYear: 2021 },
+    { Id: 'genre-movie-2', Name: 'Star Wars', ProductionYear: 1977 },
+  ];
+
+  // Recent rows sliding window for catalogs/genres is empty or does not include recSeen
+  const recentRows = [];
+  const result = dedupeRow(genreItems, recentRows);
+
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].Id, 'rec-movie-1');
+  assert.equal(result.items[1].Id, 'genre-movie-2');
+});
+
+test('dedupeRow: items from the previous 2 rows are omitted from the first 6 slots (viewport deduplication)', () => {
+  const row1 = [
+    { Id: 'r1-1', Name: 'Movie R1-1', ProductionYear: 2020 },
+    { Id: 'r1-2', Name: 'Movie R1-2', ProductionYear: 2020 },
+  ];
+  const row2 = [
+    { Id: 'r2-1', Name: 'Movie R2-1', ProductionYear: 2021 },
+    { Id: 'r2-2', Name: 'Movie R2-2', ProductionYear: 2021 },
+  ];
+
+  const keys1 = dedupeRow(row1, []).keys;
+  const keys2 = dedupeRow(row2, [keys1]).keys;
+  const recentRows = [keys1, keys2];
+
+  // In row 3, we put items from row 1 and row 2 at the front of the candidates list
+  const row3Candidates = [
+    { Id: 'r1-1', Name: 'Movie R1-1', ProductionYear: 2020 },
+    { Id: 'r2-1', Name: 'Movie R2-1', ProductionYear: 2021 },
+    { Id: 'fresh-1', Name: 'Fresh 1', ProductionYear: 2022 },
+    { Id: 'fresh-2', Name: 'Fresh 2', ProductionYear: 2022 },
+    { Id: 'fresh-3', Name: 'Fresh 3', ProductionYear: 2022 },
+    { Id: 'fresh-4', Name: 'Fresh 4', ProductionYear: 2022 },
+    { Id: 'fresh-5', Name: 'Fresh 5', ProductionYear: 2022 },
+    { Id: 'fresh-6', Name: 'Fresh 6', ProductionYear: 2022 },
+  ];
+
+  const result = dedupeRow(row3Candidates, recentRows, VIEWPORT_DEDUPE_LIMIT);
+
+  // The first 6 slots must contain only fresh items, omitting r1-1 and r2-1
+  assert.equal(result.items.length, VIEWPORT_DEDUPE_LIMIT);
+  const resultIds = result.items.map((it) => it.Id);
+  assert.ok(!resultIds.includes('r1-1'), 'r1-1 should be omitted from viewport slots');
+  assert.ok(!resultIds.includes('r2-1'), 'r2-1 should be omitted from viewport slots');
+  assert.deepEqual(resultIds, ['fresh-1', 'fresh-2', 'fresh-3', 'fresh-4', 'fresh-5', 'fresh-6']);
+});
+
+test('dedupeRow: items from the previous 2 rows CAN appear after the first 6 slots (beyond viewport)', () => {
+  const row1 = [{ Id: 'r1-1', Name: 'Movie R1-1', ProductionYear: 2020 }];
+  const row2 = [{ Id: 'r2-1', Name: 'Movie R2-1', ProductionYear: 2021 }];
+
+  const keys1 = dedupeRow(row1, []).keys;
+  const keys2 = dedupeRow(row2, [keys1]).keys;
+  const recentRows = [keys1, keys2];
+
+  const row3Candidates = [
+    { Id: 'fresh-1', Name: 'Fresh 1', ProductionYear: 2022 },
+    { Id: 'fresh-2', Name: 'Fresh 2', ProductionYear: 2022 },
+    { Id: 'fresh-3', Name: 'Fresh 3', ProductionYear: 2022 },
+    { Id: 'fresh-4', Name: 'Fresh 4', ProductionYear: 2022 },
+    { Id: 'fresh-5', Name: 'Fresh 5', ProductionYear: 2022 },
+    { Id: 'fresh-6', Name: 'Fresh 6', ProductionYear: 2022 },
+    { Id: 'r1-1', Name: 'Movie R1-1', ProductionYear: 2020 },
+    { Id: 'r2-1', Name: 'Movie R2-1', ProductionYear: 2021 },
+  ];
+
+  const result = dedupeRow(row3Candidates, recentRows);
+
+  assert.equal(result.items.length, 8);
+  // Viewport slots (0 to 5) are fresh items
+  assert.equal(result.items[0].Id, 'fresh-1');
+  assert.equal(result.items[5].Id, 'fresh-6');
+  // Slots beyond viewport (index 6 and 7) allow items from recentRows
+  assert.equal(result.items[6].Id, 'r1-1');
+  assert.equal(result.items[7].Id, 'r2-1');
+});
+
+test('dedupeRow: items separated by 3 or more rows can reappear in the viewport slots (distance decay)', () => {
+  const itemA = { Id: 'item-a', Name: 'Movie A', ProductionYear: 2019 };
+  const itemB = { Id: 'item-b', Name: 'Movie B', ProductionYear: 2020 };
+  const itemC = { Id: 'item-c', Name: 'Movie C', ProductionYear: 2021 };
+
+  const keysRow1 = dedupeRow([itemA], []).keys;
+  const keysRow2 = dedupeRow([itemB], [keysRow1]).keys;
+  const keysRow3 = dedupeRow([itemC], [keysRow1, keysRow2]).keys;
+
+  // Sliding window maintains at most SLIDING_WINDOW_ROW_COUNT (2) entries in history.
+  // For row 4, keysRow1 has slid out of the window.
+  const recentRowsFor4 = [keysRow2, keysRow3];
+  assert.equal(recentRowsFor4.length, SLIDING_WINDOW_ROW_COUNT);
+
+  const row4Candidates = [itemA, { Id: 'fresh-4', Name: 'Fresh 4', ProductionYear: 2024 }];
+  const result = dedupeRow(row4Candidates, recentRowsFor4);
+
+  // itemA was separated by 3 rows (row 1 vs row 4), so it reappears in slot 0
+  assert.equal(result.items[0].Id, 'item-a');
+  assert.equal(result.items.length, 2);
+});
+
+test('dedupeRow: intra-row duplicates (same Id or same titleKey) are always eliminated', () => {
+  const candidates = [
+    // Unique item 1
+    { Id: 'id-1', Name: 'The Matrix', ProductionYear: 1999 },
+    // Duplicate by same Id
+    { Id: 'id-1', Name: 'The Matrix (Special Edition)', ProductionYear: 2000 },
+    // Duplicate by same titleKey (same name and year, different Id)
+    { Id: 'id-alt', Name: 'The Matrix', ProductionYear: 1999 },
+    // Unique item 2
+    { Id: 'id-2', Name: 'Inception', ProductionYear: 2010 },
+    // Duplicate by case and whitespace in titleKey
+    { Id: 'id-3', Name: '  inception  ', ProductionYear: 2010 },
+    // Duplicate by same titleKey beyond viewport
+    { Id: 'fresh-1', Name: 'Fresh 1', ProductionYear: 2024 },
+    { Id: 'fresh-2', Name: 'Fresh 2', ProductionYear: 2024 },
+    { Id: 'fresh-3', Name: 'Fresh 3', ProductionYear: 2024 },
+    { Id: 'fresh-4', Name: 'Fresh 4', ProductionYear: 2024 },
+    { Id: 'id-dup-late', Name: 'The Matrix', ProductionYear: 1999 },
+  ];
+
+  const result = dedupeRow(candidates, []);
+
+  // id-1, id-2, fresh-1, fresh-2, fresh-3, fresh-4 should be kept (6 items total)
+  // All duplicate occurrences of The Matrix and Inception should be eliminated
+  assert.equal(result.items.length, 6);
+  assert.deepEqual(
+    result.items.map((it) => it.Id),
+    ['id-1', 'id-2', 'fresh-1', 'fresh-2', 'fresh-3', 'fresh-4'],
+  );
+  assert.equal(result.keys['id-1'], true);
+  assert.equal(result.keys['the matrix|1999'], true);
+  assert.equal(result.keys['id-2'], true);
+  assert.equal(result.keys['inception|2010'], true);
 });
