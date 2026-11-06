@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.106.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.106.1",
+    "summary": "Infinite full row modals, TMDB poster and metadata resolution, and multi-page catalog discovery.",
+    "highlights": [
+      {
+        "title": "Infinite Full Row Modal",
+        "description": "Opening any row menu now continuously paginates without premature cutoffs, loading new titles smoothly as you scroll."
+      },
+      {
+        "title": "TMDB Posters & Metadata",
+        "description": "Resolved an issue where row modal items appeared as empty grey placeholders. Virtual titles now render TMDB posters, ratings, and genre tags properly."
+      },
+      {
+        "title": "Multi-Page TMDB Discovery",
+        "description": "Genre rows with small local collections now discover multiple pages of popular titles from TMDB, preventing rows from staying stranded with 1-4 items."
+      }
+    ]
+  },
+  {
     "version": "1.106.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.106.0",
