@@ -582,16 +582,22 @@ public class GenreCache(
 
             var backdropTags = backdropUrl != null ? new[] { backdropUrl } : Array.Empty<string>();
 
+            var providerIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb"] = tmdbIdStr,
+            };
+            if (posterUrl != null)
+            {
+                providerIds["TmdbPoster"] = posterUrl;
+            }
+
             list.Add(new BaseItemDto
             {
                 Id = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr),
                 Name = title,
                 ProductionYear = year,
                 CommunityRating = result.VoteAverage.HasValue ? (float)result.VoteAverage.Value : null,
-                ProviderIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Tmdb"] = tmdbIdStr,
-                },
+                ProviderIds = providerIds,
                 Type = isMovie ? BaseItemKind.Movie : BaseItemKind.Series,
                 LocationType = LocationType.Virtual,
                 Overview = result.Overview,

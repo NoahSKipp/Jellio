@@ -42,7 +42,9 @@ function buildListItem(item, select) {
   row.type = 'button';
   row.className = 'jellio-row-list-item';
 
-  const tag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
+  const tag = (item.ImageTags && (item.ImageTags.Primary || item.ImageTags.primary || item.ImageTags['0'] || item.ImageTags[0]))
+    || item.PrimaryImageTag
+    || (item.ProviderIds && (item.ProviderIds.TmdbPoster || item.ProviderIds.PosterUrl));
   const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
   const candidates = [];
   if (tag) {
@@ -51,13 +53,36 @@ function buildListItem(item, select) {
   if (item.PosterUrl) candidates.push(item.PosterUrl);
   if (item.Poster) candidates.push(item.Poster);
   if (item.ImageUrl) candidates.push(item.ImageUrl);
+  if (item.PosterPath) {
+    candidates.push(item.PosterPath.startsWith('http') ? item.PosterPath : 'https://image.tmdb.org/t/p/w500' + item.PosterPath);
+  }
   if (item.SeriesPrimaryImageTag) {
     candidates.push(getImageUrl(item.SeriesId || item.Id, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 160 }));
+  }
+  const seriesTag = item.SeriesPrimaryImageTag || (item.ImageTags && (item.ImageTags.SeriesPrimary || item.ImageTags.seriesPrimary));
+  if (seriesTag) {
+    candidates.push(getImageUrl(item.SeriesId || item.Id, 'Primary', { tag: seriesTag, maxWidth: 160 }));
+  }
+  const thumbTag = (item.ImageTags && (item.ImageTags.Thumb || item.ImageTags.thumb || item.ImageTags['1'] || item.ImageTags[1])) || item.ThumbImageTag;
+  if (thumbTag) {
+    candidates.push(getImageUrl(item.Id, 'Thumb', { tag: thumbTag, maxWidth: 160 }));
+  }
+  const backdropTag = (item.BackdropImageTags && item.BackdropImageTags[0])
+    || (item.ImageTags && (item.ImageTags.Backdrop || item.ImageTags.backdrop || item.ImageTags['2'] || item.ImageTags[2]));
+  if (backdropTag) {
+    candidates.push(getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 160 }));
   }
   if (isBook && item.Id) {
     if (item.Stream && item.Stream.MangaId) candidates.push(getStreamCoverUrl(item.Stream.MangaId, item.SeriesName));
     candidates.push(getMangaSeriesCoverUrl(item.Id, item.SeriesName));
     candidates.push(getBookCoverUrl(item.Id));
+  }
+  if (item.Id && !isBook) {
+    candidates.push(getImageUrl(item.Id, 'Primary', { maxWidth: 160 }));
+    if (item.SeriesId) {
+      candidates.push(getImageUrl(item.SeriesId, 'Primary', { maxWidth: 160 }));
+    }
+    candidates.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 160 }));
   }
   const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
   if (uniqueCandidates.length) {

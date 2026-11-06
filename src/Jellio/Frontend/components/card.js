@@ -227,7 +227,9 @@ function landscapeImageCandidates(item) {
     urls.push(getImageUrl(item.Id, 'Backdrop', { maxWidth: 500, quality: 85 }));
   }
 
-  const primaryTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
+  const primaryTag = (item.ImageTags && (item.ImageTags.Primary || item.ImageTags.primary || item.ImageTags['0'] || item.ImageTags[0]))
+    || item.PrimaryImageTag
+    || (item.ProviderIds && (item.ProviderIds.TmdbPoster || item.ProviderIds.PosterUrl));
   if (primaryTag) {
     urls.push(getImageUrl(item.Id, 'Primary', { tag: primaryTag, maxWidth: 500, quality: 85 }));
   } else if (!knowsImages) {
@@ -397,7 +399,9 @@ function cardImageCandidates(item) {
   // Books keep their untagged guesses (covers live outside image tags).
   const isBookLike = item.Type === 'AudioBook' || item.Type === 'Book';
   const knowsImages = !isBookLike && hasImageInfo(item);
-  const ownPrimaryTag = (item.ImageTags && item.ImageTags.Primary) || item.PrimaryImageTag;
+  const ownPrimaryTag = (item.ImageTags && (item.ImageTags.Primary || item.ImageTags.primary || item.ImageTags['0'] || item.ImageTags[0]))
+    || item.PrimaryImageTag
+    || (item.ProviderIds && (item.ProviderIds.TmdbPoster || item.ProviderIds.PosterUrl));
   if (ownPrimaryTag) {
     urls.push(getImageUrl(item.Id, 'Primary', { tag: ownPrimaryTag, maxWidth: 400, quality: 85 }));
   } else if (!knowsImages) {

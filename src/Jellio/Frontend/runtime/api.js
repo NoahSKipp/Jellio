@@ -2432,7 +2432,7 @@ export function getGenreItemsPage(parentId, itemType, genre, startIndex, limit) 
         Genres: genre,
         StartIndex: String(startIndex || 0),
         Limit: String(limit || 60),
-        Fields: 'ProductionYear,CommunityRating',
+        Fields: 'ProductionYear,CommunityRating,PrimaryImageAspectRatio,Genres,Overview,ImageTags,BackdropImageTags',
         SortBy: 'CommunityRating',
         SortOrder: 'Descending',
       });
@@ -2451,7 +2451,7 @@ function getGenreItemsDirect(parentId, itemType, genre, limit) {
     IncludeItemTypes: itemType,
     Genres: genre,
     Limit: String(limit || 20),
-    Fields: 'ProductionYear,CommunityRating',
+    Fields: 'ProductionYear,CommunityRating,PrimaryImageAspectRatio,Genres,Overview,ImageTags,BackdropImageTags',
     SortBy: 'CommunityRating',
     SortOrder: 'Descending',
   });
