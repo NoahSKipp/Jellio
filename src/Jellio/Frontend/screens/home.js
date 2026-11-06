@@ -310,13 +310,28 @@ async function buildComingSoonRow() {
   return section;
 }
 
-function buildWatchlistSection(title, items) {
+function buildWatchlistSection(title, items, onSectionEmpty) {
   if (!items.length) return null;
   const section = el('section', 'jellio-row');
   section.appendChild(el('h2', 'jellio-row-title', title));
   const grid = el('div', 'jellio-library-grid');
   section.appendChild(grid);
-  appendCardsLazily(grid, items, buildCard);
+  appendCardsLazily(grid, items, function (item) {
+    return buildCard(item, {
+      onChanged: function (updatedItem, cardEl) {
+        if (!updatedItem || !updatedItem.UserData || !updatedItem.UserData.IsFavorite) {
+          animateCardRemoval(cardEl);
+          setTimeout(function () {
+            if (cardEl.parentNode) cardEl.remove();
+            if (grid.children.length === 0 && section.parentNode) {
+              section.remove();
+              if (onSectionEmpty) onSectionEmpty();
+            }
+          }, 220);
+        }
+      },
+    });
+  });
   return section;
 }
 
@@ -365,9 +380,19 @@ async function renderWatchlist(root, activeList) {
       return item.Type === 'Series';
     });
 
-    const movieSection = buildWatchlistSection('Movies', movies);
+    function checkBothEmpty() {
+      const hasMovie = movieSection && movieSection.parentNode;
+      const hasSeries = seriesSection && seriesSection.parentNode;
+      if (!hasMovie && !hasSeries) {
+        if (!root.querySelector('.jellio-service-empty')) {
+          root.appendChild(el('p', 'jellio-service-empty', emptyMessage));
+        }
+      }
+    }
+
+    const movieSection = buildWatchlistSection('Movies', movies, checkBothEmpty);
     if (movieSection) root.appendChild(movieSection);
-    const seriesSection = buildWatchlistSection('Series', series);
+    const seriesSection = buildWatchlistSection('Series', series, checkBothEmpty);
     if (seriesSection) root.appendChild(seriesSection);
 
     if (!movieSection && !seriesSection) {

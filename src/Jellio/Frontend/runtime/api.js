@@ -10,6 +10,7 @@ import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USE
 import { languageName } from './languages.js';
 import { isOffline, stillOffline, isNetworkError, reportNetworkFailure, findDownload, queueSync } from './offline.js';
 import { isUnreleasedItem, filterReleasedItems } from './releaseDate.js';
+import { isRemoveFromWatchlistAfterWatchingEnabled } from './watchlistSettings.js';
 
 export const DEFAULT_TIMEOUT_MS = 10000;
 const NEGOTIATION_TIMEOUT_MS = 30000;
@@ -874,7 +875,7 @@ export function getSeasons(seriesId) {
 export function getSeriesEpisodes(seriesId) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const params = new URLSearchParams({ userId: userId, Fields: 'PrimaryImageAspectRatio' });
+  const params = new URLSearchParams({ userId: userId, Fields: 'PrimaryImageAspectRatio,PremiereDate,EndDate' });
   return getJson('/Shows/' + seriesId + '/Episodes?' + params.toString(), 30000).then(function (result) {
     return (result && result.Items) || [];
   });
@@ -886,9 +887,9 @@ export function getEpisodes(seriesId, seasonId) {
   const culture = getDisplayCulture();
   const params = new URLSearchParams({
     userId: userId,
-    seasonId: seasonId,
     Fields: 'Overview,PrimaryImageAspectRatio,PremiereDate,EndDate',
   });
+  if (seasonId) params.set('seasonId', seasonId);
   if (culture) params.set('Culture', culture);
   const path = '/Shows/' + seriesId + '/Episodes?' + params.toString();
   return cachedRecent(path, function () {
@@ -1027,7 +1028,147 @@ export async function setPlayed(itemId, isPlayed) {
     throw err;
   }
   invalidateUserDataRows();
+  if (isPlayed) {
+    maybeRemoveFromWatchlistAfterWatching(itemId).catch(function () {});
+  }
   return response.json();
+}
+
+export async function maybeRemoveFromWatchlistAfterWatching(itemId) {
+  if (!isRemoveFromWatchlistAfterWatchingEnabled()) return;
+  try {
+    const item = await getItem(itemId);
+    if (!item) return;
+
+    if (item.Type === 'Movie') {
+      if (item.UserData && item.UserData.IsFavorite) {
+        await setWatchlist(item.Id, false);
+        item.UserData.IsFavorite = false;
+      }
+      return;
+    }
+
+    if (item.Type === 'Episode') {
+      if (item.UserData && item.UserData.IsFavorite) {
+        await setWatchlist(item.Id, false);
+        item.UserData.IsFavorite = false;
+      }
+
+      if (item.SeasonId) {
+        try {
+          const season = await getItem(item.SeasonId);
+          if (season && season.UserData && season.UserData.IsFavorite) {
+            const episodes = await getEpisodes(item.SeriesId, item.SeasonId);
+            const regularEpisodes = episodes.filter(function (ep) {
+              return ep.ParentIndexNumber == null || ep.ParentIndexNumber > 0;
+            });
+            if (regularEpisodes.length > 0) {
+              const allDone = regularEpisodes.every(function (ep) {
+                if (isUnreleasedItem(ep)) return false;
+                return ep.Id === itemId || (ep.UserData && ep.UserData.Played);
+              });
+              if (allDone) {
+                await setWatchlist(season.Id, false);
+                season.UserData.IsFavorite = false;
+              }
+            }
+          }
+        } catch (err) {}
+      }
+
+      if (item.SeriesId) {
+        try {
+          const series = await getItem(item.SeriesId);
+          if (series && series.UserData && series.UserData.IsFavorite) {
+            if (String(series.Status || '').toLowerCase() === 'ended') {
+              const episodes = await getSeriesEpisodes(series.Id);
+              const regularEpisodes = episodes.filter(function (ep) {
+                return ep.ParentIndexNumber == null || ep.ParentIndexNumber > 0;
+              });
+              if (regularEpisodes.length > 0) {
+                const allDone = regularEpisodes.every(function (ep) {
+                  if (isUnreleasedItem(ep)) return false;
+                  return ep.Id === itemId || (ep.UserData && ep.UserData.Played);
+                });
+                if (allDone) {
+                  await setWatchlist(series.Id, false);
+                  series.UserData.IsFavorite = false;
+                }
+              }
+            }
+          }
+        } catch (err) {}
+      }
+      return;
+    }
+
+    if (item.Type === 'Season') {
+      if (item.UserData && item.UserData.IsFavorite) {
+        try {
+          const episodes = await getEpisodes(item.SeriesId, item.Id);
+          const regularEpisodes = episodes.filter(function (ep) {
+            return ep.ParentIndexNumber == null || ep.ParentIndexNumber > 0;
+          });
+          if (regularEpisodes.length > 0) {
+            const allDone = regularEpisodes.every(function (ep) {
+              if (isUnreleasedItem(ep)) return false;
+              return ep.Id === itemId || (ep.UserData && ep.UserData.Played);
+            });
+            if (allDone) {
+              await setWatchlist(item.Id, false);
+              item.UserData.IsFavorite = false;
+            }
+          }
+        } catch (err) {}
+      }
+
+      if (item.SeriesId) {
+        try {
+          const series = await getItem(item.SeriesId);
+          if (series && series.UserData && series.UserData.IsFavorite) {
+            if (String(series.Status || '').toLowerCase() === 'ended') {
+              const episodes = await getSeriesEpisodes(series.Id);
+              const regularEpisodes = episodes.filter(function (ep) {
+                return ep.ParentIndexNumber == null || ep.ParentIndexNumber > 0;
+              });
+              if (regularEpisodes.length > 0) {
+                const allDone = regularEpisodes.every(function (ep) {
+                  if (isUnreleasedItem(ep)) return false;
+                  return ep.UserData && ep.UserData.Played;
+                });
+                if (allDone) {
+                  await setWatchlist(series.Id, false);
+                  series.UserData.IsFavorite = false;
+                }
+              }
+            }
+          }
+        } catch (err) {}
+      }
+      return;
+    }
+
+    if (item.Type === 'Series') {
+      if (item.UserData && item.UserData.IsFavorite && String(item.Status || '').toLowerCase() === 'ended') {
+        const episodes = await getSeriesEpisodes(item.Id);
+        const regularEpisodes = episodes.filter(function (ep) {
+          return ep.ParentIndexNumber == null || ep.ParentIndexNumber > 0;
+        });
+        if (regularEpisodes.length > 0) {
+          const allDone = regularEpisodes.every(function (ep) {
+            if (isUnreleasedItem(ep)) return false;
+            return ep.UserData && ep.UserData.Played;
+          });
+          if (allDone) {
+            await setWatchlist(item.Id, false);
+            item.UserData.IsFavorite = false;
+          }
+        }
+      }
+      return;
+    }
+  } catch (err) {
+  }
 }
 
 export async function setWatchlist(itemId, isWatchlisted) {

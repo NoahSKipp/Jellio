@@ -18,7 +18,8 @@ public class AchievementService(
     ISessionManager sessionManager,
     ILibraryManager libraryManager,
     AchievementStore store,
-    ILogger<AchievementService> logger
+    ILogger<AchievementService> logger,
+    WatchlistAutoRemoveService? watchlistAutoRemoveService = null
 ) : IHostedService
 {
     private const double CompletionThreshold = 0.9;
@@ -106,6 +107,7 @@ public class AchievementService(
         }
 
         await CreditUserAsync(userId, item).ConfigureAwait(false);
+        watchlistAutoRemoveService?.OnItemWatched(userId, item);
     }
 
     private async Task CreditUserAsync(Guid userId, BaseItem item)

@@ -444,6 +444,8 @@ export default {
   settings_prebuffer_desc: "Quantité de vidéo chargée avant le démarrage.",
   settings_delete_watched: "Supprimer après visionnage",
   settings_delete_watched_desc: "Supprime automatiquement les épisodes et films téléchargés une fois terminés.",
+  settings_remove_watchlist_watched: "Retirer de Ma liste après visionnage",
+  settings_remove_watchlist_watched_desc: "Retirer automatiquement les films et les séries terminées entièrement vues de votre liste.",
   settings_up_next_timer: "Minuteur de l'épisode suivant",
   settings_up_next_timer_desc: "Durée du compte à rebours avant la lecture automatique de l'épisode suivant.",
   settings_theme_title: "Thème et apparence",

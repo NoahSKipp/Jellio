@@ -467,6 +467,8 @@ export default {
   settings_prebuffer_desc: "Cuánto video se carga antes de comenzar.",
   settings_delete_watched: "Eliminar después de ver",
   settings_delete_watched_desc: "Elimina automáticamente episodios y películas descargados una vez finalizados.",
+  settings_remove_watchlist_watched: "Quitar de Mi lista después de ver",
+  settings_remove_watchlist_watched_desc: "Quita automáticamente de tu lista las películas y las series finalizadas que hayas completado.",
   settings_up_next_timer: "Temporizador de siguiente episodio",
   settings_up_next_timer_desc: "Cuánto tiempo cuenta la tarjeta antes de reproducir automáticamente el siguiente episodio.",
   settings_theme_title: "Tema y apariencia",

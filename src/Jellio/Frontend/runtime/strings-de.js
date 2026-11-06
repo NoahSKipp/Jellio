@@ -467,6 +467,8 @@ export default {
   settings_prebuffer_desc: "Wie viel von einem Video vorab geladen wird.",
   settings_delete_watched: "Nach dem Anschauen löschen",
   settings_delete_watched_desc: "Heruntergeladene Episoden und Filme nach dem Anschauen automatisch von diesem Gerät entfernen.",
+  settings_remove_watchlist_watched: "Nach dem Ansehen von der Merkliste entfernen",
+  settings_remove_watchlist_watched_desc: "Filme und vollständig angesehene beendete Serien automatisch von deiner Merkliste entfernen.",
   settings_up_next_timer: "Nächste-Folge-Timer",
   settings_up_next_timer_desc: "Wie lange die Nächste-Folge-Karte herunterzählt, bevor die nächste Folge abgespielt wird.",
   settings_theme_title: "Design & Erscheinungsbild",

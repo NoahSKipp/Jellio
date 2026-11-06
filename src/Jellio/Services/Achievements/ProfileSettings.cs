@@ -7,4 +7,6 @@ public class ProfileSettings
     public string? Bio { get; set; }
 
     public bool GrouplistEnabled { get; set; }
+
+    public bool RemoveFromWatchlistAfterWatching { get; set; } = true;
 }

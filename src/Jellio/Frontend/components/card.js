@@ -203,6 +203,14 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
 
   bar.appendChild(watchlistButton);
   bar.appendChild(watchedButton);
+  bar.paintWatchlist = function (updated) {
+    if (updated) item = updated;
+    paintWatchlist();
+  };
+  bar.paintWatched = function (updated) {
+    if (updated) item = updated;
+    paintWatched();
+  };
   return bar;
 }
 
@@ -561,11 +569,24 @@ export function buildCard(item, options) {
     }
   }
 
+  let cardActionsBar = null;
   function handleChanged(updatedItem) {
     paintCardState(imageWrap, updatedItem);
+    if (cardActionsBar && typeof cardActionsBar.paintWatchlist === 'function') {
+      cardActionsBar.paintWatchlist(updatedItem);
+    }
+    if (cardActionsBar && typeof cardActionsBar.paintWatched === 'function') {
+      cardActionsBar.paintWatched(updatedItem);
+    }
+    if (options && typeof options.onChanged === 'function') {
+      options.onChanged(updatedItem, card);
+    }
   }
   // Books and manga have no watchlist or watched state.
-  if (!(options && options.reading)) imageWrap.appendChild(buildCardActions(item, card, imageWrap, options, handleChanged));
+  if (!(options && options.reading)) {
+    cardActionsBar = buildCardActions(item, card, imageWrap, options, handleChanged);
+    imageWrap.appendChild(cardActionsBar);
+  }
 
   card.appendChild(imageWrap);
 

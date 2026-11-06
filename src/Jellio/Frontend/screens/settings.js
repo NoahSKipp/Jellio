@@ -33,6 +33,11 @@ import {
   isAutoDeleteReadEnabled,
   setAutoDeleteReadEnabled,
 } from '../runtime/offline.js';
+import {
+  isRemoveFromWatchlistAfterWatchingEnabled,
+  setRemoveFromWatchlistAfterWatchingEnabled,
+  syncWatchlistSettingsFromServer,
+} from '../runtime/watchlistSettings.js';
 import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from '../components/audioMiniPlayer.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
@@ -296,6 +301,7 @@ async function buildGrouplistCard() {
 }
 
 function buildPlaybackCard() {
+  syncWatchlistSettingsFromServer().catch(function () {});
   const { card, body } = buildCard('play_circle', t('settings_playback_title'));
   body.appendChild(
     buildSelectRow(
@@ -358,6 +364,17 @@ function buildPlaybackCard() {
       isAutoDeleteWatchedEnabled(),
       function (checked) {
         setAutoDeleteWatchedEnabled(checked);
+      },
+    ),
+  );
+  body.appendChild(
+    buildToggleRow(
+      null,
+      t('settings_remove_watchlist_watched'),
+      t('settings_remove_watchlist_watched_desc'),
+      isRemoveFromWatchlistAfterWatchingEnabled(),
+      function (checked) {
+        setRemoveFromWatchlistAfterWatchingEnabled(checked);
       },
     ),
   );

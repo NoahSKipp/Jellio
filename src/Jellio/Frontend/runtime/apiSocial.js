@@ -129,6 +129,12 @@ export function setGrouplistEnabled(enabled) {
   return postJson('/Jellio/profile/grouplist-enabled', { GrouplistEnabled: enabled });
 }
 
+export function saveWatchlistAutoRemoveSetting(removeFromWatchlistAfterWatching) {
+  return postJson('/Jellio/profile/watchlist-auto-remove', {
+    RemoveFromWatchlistAfterWatching: Boolean(removeFromWatchlistAfterWatching),
+  });
+}
+
 export function getMyAchievements() {
   return getJson('/Jellio/achievements');
 }

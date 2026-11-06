@@ -467,6 +467,8 @@ export default {
   settings_prebuffer_desc: "Ile wideo ładuje się przed rozpoczęciem.",
   settings_delete_watched: "Usuń po obejrzeniu",
   settings_delete_watched_desc: "Automatycznie usuwaj pobrane odcinki i filmy po zakończeniu.",
+  settings_remove_watchlist_watched: "Usuń z listy Do obejrzenia po obejrzeniu",
+  settings_remove_watchlist_watched_desc: "Automatycznie usuwaj obejrzane filmy oraz w pełni ukończone zakończone seriale z listy Do obejrzenia.",
   settings_up_next_timer: "Licznik następnego odcinka",
   settings_up_next_timer_desc: "Jak długo odlicza karta, zanim automatycznie odtworzy kolejny odcinek.",
   settings_theme_title: "Motyw i wygląd",

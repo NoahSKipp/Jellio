@@ -484,6 +484,8 @@ const STRINGS = {
     settings_prebuffer_desc: "How much of a video loads before it starts, and again if it runs out mid-playback.",
     settings_delete_watched: "Delete after watching",
     settings_delete_watched_desc: "Automatically remove downloaded episodes and movies from this device once finished.",
+    settings_remove_watchlist_watched: "Remove from Watchlist after watching",
+    settings_remove_watchlist_watched_desc: "Automatically remove movies and completed ended shows from your Watchlist once watched.",
     settings_up_next_timer: "Up Next timer",
     settings_up_next_timer_desc: "How long the Up Next card counts down before automatically playing the next episode when credits begin.",
     settings_theme_title: "Theme & Appearance",

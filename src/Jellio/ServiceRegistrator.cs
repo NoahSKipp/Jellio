@@ -39,6 +39,10 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddHostedService(sp => sp.GetRequiredService<Jellio.Services.Parties.PartyMonitor>());
         services.AddSingleton<CalendarService>();
 
+        services.AddSingleton<ProfileSettingsStore>();
+        services.AddSingleton<WatchlistAutoRemoveService>();
+        services.AddHostedService(sp => sp.GetRequiredService<WatchlistAutoRemoveService>());
+
         services.AddSingleton<DefaultAvatarService>();
         services.AddHostedService(sp => sp.GetRequiredService<DefaultAvatarService>());
         services.AddScoped<IEventConsumer<UserCreatedEventArgs>>(sp => sp.GetRequiredService<DefaultAvatarService>());
@@ -46,7 +50,6 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<AchievementStore>();
         services.AddSingleton<AchievementService>();
         services.AddHostedService(sp => sp.GetRequiredService<AchievementService>());
-        services.AddSingleton<ProfileSettingsStore>();
         services.AddSingleton<CommunityWatchingCache>();
         services.AddSingleton<CommunityWatchingService>();
         services.AddHostedService(sp => sp.GetRequiredService<CommunityWatchingService>());

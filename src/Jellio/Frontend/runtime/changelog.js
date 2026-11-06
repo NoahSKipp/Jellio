@@ -21,6 +21,10 @@ export const CHANGELOG_RELEASES = [
     "summary": "What others are watching on Jellyfin 12, and airing shows stay out of Next Up until their next episode is out.",
     "highlights": [
       {
+        "title": "Automatic Watchlist Cleanup",
+        "description": "Watched movies and completely watched ended series are now automatically removed from your Watchlist (enabled by default, configurable in Settings > Playback)."
+      },
+      {
         "title": "Next Up and Unreleased Episodes",
         "description": "Next Up now skips episodes that have not aired yet, so a show you are caught up on waits until the new episode is out. Unreleased episodes on a show's page carry the same orange release badge as Coming Soon (such as Tomorrow, In 5 days, or Coming soon) so you can see when they air before trying to play them."
       },

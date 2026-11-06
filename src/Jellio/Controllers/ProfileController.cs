@@ -17,6 +17,8 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
 
     public record GrouplistEnabledRequest(bool GrouplistEnabled);
 
+    public record WatchlistAutoRemoveRequest(bool RemoveFromWatchlistAfterWatching);
+
     [HttpGet("settings")]
     public IActionResult GetSettings()
     {
@@ -60,6 +62,24 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
 
         var settings = store.Update(userId, s => s.GrouplistEnabled = request.GrouplistEnabled);
         return Ok(settings);
+    }
+
+    [HttpPost("watchlist-auto-remove")]
+    public ActionResult<ProfileSettings> SetWatchlistAutoRemove([FromBody] WatchlistAutoRemoveRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        if (request == null)
+        {
+            return BadRequest();
+        }
+
+        var updated = store.Update(userId, s => s.RemoveFromWatchlistAfterWatching = request.RemoveFromWatchlistAfterWatching);
+        return Ok(updated);
     }
 
     [HttpPost("bio")]
