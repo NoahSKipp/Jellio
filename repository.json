@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.106.1] - 2026-11-06\n\n### 🐛 Bug Fixes\n\n- *(rows)* Support infinite pagination, poster rendering, and multi-page TMDB discovery\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.1\n",
+        "checksum": "1c41a56fdc5d61d9bc0d8f7cefa6d516",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.106.1/jellio_1.106.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-06T20:33:38Z",
+        "version": "1.106.1"
+      },
+      {
         "changelog": "## [1.106.0] - 2026-11-06\n\n### 🚀 Features\n\n- Improve data safety, recovery, caching, and fix navigation interruption\n- Upgrade TMDB rating badge and implement infinite virtual rows\n\n### 🐛 Bug Fixes\n\n- *(cast)* Improve remote session discovery and Smart TV identification\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.0 and macOS 0.7.0\n\n### 💼 Other\n\n- Add tiered isolation and sliding window deduplication to Home screen\n\nIntroduce Tiered Isolation so recommendations deduplicate amongst themselves\nusing recSeen and do not block items in catalog or genre rows. Implement\nSliding Window Distance Deduplication for catalogs and genres using dedupeRow\nwith a 2-row history window and 6-item viewport deduplication limit, while\npreserving intra-row duplicate protection and full catalogs beyond the viewport.\n",
         "checksum": "4331d83aeaba3b43bc0263518bfbd0cc",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.106.0/jellio_1.106.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T08:48:52Z",
         "version": "1.97.0"
-      },
-      {
-        "changelog": "## [1.96.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Link details, dead-link checks and channel removal\n- *(livetv)* Show link details and Not working in My streams\n\n### 📚 Documentation\n\n- *(changelog)* Note dead-link checks in 1.96.0\n",
-        "checksum": "7dbb939c13964bf00f5faf506a54d9f1",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.96.0/jellio_1.96.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T07:30:23Z",
-        "version": "1.96.0"
       }
     ]
   }
