@@ -64,6 +64,23 @@ test('fallback returning an Items array unpacks the item properly', async () => 
   assert.equal(item.Name, 'Wrapped');
 });
 
+test('passes signal to getJson and aborts without falling back', async () => {
+  const controller = new AbortController();
+  const asked = [];
+  const getJson = async (path, timeout, signal) => {
+    asked.push({ path, timeout, signal });
+    const err = new DOMException('Aborted', 'AbortError');
+    throw err;
+  };
+  await assert.rejects(
+    loadItemInfo(getJson, 'u1', 'i1', { signal: controller.signal, timeoutMs: 5000 }),
+    { name: 'AbortError' }
+  );
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].signal, controller.signal);
+  assert.equal(asked[0].timeout, 5000);
+});
+
 test('the page has its info while streams are still being found, and they fill in later', async () => {
   let release;
   const sourcesPending = new Promise((resolve) => (release = resolve));

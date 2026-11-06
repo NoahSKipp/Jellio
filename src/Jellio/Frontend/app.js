@@ -84,37 +84,37 @@ const loadLiveTv = () => import('./screens/liveTv.js').then((m) => m.renderLiveT
 const loadLivePlayer = () => import('./screens/livePlayer.js').then((m) => m.renderLivePlayer);
 
 const SCREENS = {
-  home: renderHome,
-  search: async (content, params) => (await loadSearch())(content, params),
-  item: async (content, params) => (await loadDetail())(content, params),
-  play: async (content, params) => (await loadPlayer())(content, params),
-  service: async (content, params) => (await loadService())(content, params),
-  account: async (content, params) => (await loadSettings())(content, params),
-  person: async (content, params) => (await loadPerson())(content, params),
-  profile: async (content, params) => (await loadProfile())(content, params),
-  feed: async (content, params) => (await loadFeed())(content, params),
+  home: (content, params, signal) => renderHome(content, params, signal),
+  search: async (content, params, signal) => (await loadSearch())(content, params, signal),
+  item: async (content, params, signal) => (await loadDetail())(content, params, signal),
+  play: async (content, params, signal) => (await loadPlayer())(content, params, signal),
+  service: async (content, params, signal) => (await loadService())(content, params, signal),
+  account: async (content, params, signal) => (await loadSettings())(content, params, signal),
+  person: async (content, params, signal) => (await loadPerson())(content, params, signal),
+  profile: async (content, params, signal) => (await loadProfile())(content, params, signal),
+  feed: async (content, params, signal) => (await loadFeed())(content, params, signal),
   // The Calendar screen is gone; its entries are the Coming Soon row on
   // Home. Old links and bookmarks land there.
-  livetv: async (content, params) => (await loadLiveTv())(content, params),
-  live: async (content, params) => (await loadLivePlayer())(content, params),
-  calendar: (content, params) => {
+  livetv: async (content, params, signal) => (await loadLiveTv())(content, params, signal),
+  live: async (content, params, signal) => (await loadLivePlayer())(content, params, signal),
+  calendar: (content, params, signal) => {
     try {
       window.history.replaceState(null, '', '#/home');
     } catch (err) {}
-    return renderHome(content, params);
+    return renderHome(content, params, signal);
   },
-  read: async (content, params) => (await loadReader())(content, params),
-  listen: async (content, params) => (await loadListen())(content, params),
-  vocab: async (content, params) => (await loadVocab())(content, params),
-  discover: async (content, params) => (await loadDiscover())(content, params),
-  downloads: async (content, params) => (await loadDownloads())(content, params),
-  movies: async (content, params) => (await loadLibrary())(content, params),
-  tv: async (content, params) => (await loadLibrary())(content, params),
-  music: async (content, params) => (await loadLibrary())(content, params),
-  books: async (content, params) => (await loadLibrary())(content, params),
-  homevideos: async (content, params) => (await loadLibrary())(content, params),
-  musicvideos: async (content, params) => (await loadLibrary())(content, params),
-  list: async (content, params) => (await loadLibrary())(content, params),
+  read: async (content, params, signal) => (await loadReader())(content, params, signal),
+  listen: async (content, params, signal) => (await loadListen())(content, params, signal),
+  vocab: async (content, params, signal) => (await loadVocab())(content, params, signal),
+  discover: async (content, params, signal) => (await loadDiscover())(content, params, signal),
+  downloads: async (content, params, signal) => (await loadDownloads())(content, params, signal),
+  movies: async (content, params, signal) => (await loadLibrary())(content, params, signal),
+  tv: async (content, params, signal) => (await loadLibrary())(content, params, signal),
+  music: async (content, params, signal) => (await loadLibrary())(content, params, signal),
+  books: async (content, params, signal) => (await loadLibrary())(content, params, signal),
+  homevideos: async (content, params, signal) => (await loadLibrary())(content, params, signal),
+  musicvideos: async (content, params, signal) => (await loadLibrary())(content, params, signal),
+  list: async (content, params, signal) => (await loadLibrary())(content, params, signal),
 };
 
 // The player owns the whole viewport, no persistent sidebar competing
@@ -213,6 +213,7 @@ function hide() {
 let activeCleanup = null;
 
 let lastRenderedRouteKey = null;
+let activeScreenAbortController = null;
 
 function routeKey(route) {
   return route.path + '?' + route.params.toString();
@@ -223,6 +224,14 @@ let renderToken = 0;
 async function teardownActiveScreen() {
   // Any screen still mounting is stale now and cleans itself up when it resolves.
   renderToken++;
+  if (activeScreenAbortController) {
+    try {
+      activeScreenAbortController.abort();
+    } catch (err) {
+      console.warn('Jellio: screen abort failed', err);
+    }
+    activeScreenAbortController = null;
+  }
   if (activeCleanup) {
     try {
       await activeCleanup();
@@ -230,6 +239,11 @@ async function teardownActiveScreen() {
       console.warn('Jellio: screen cleanup failed', err);
     }
     activeCleanup = null;
+  }
+  const root = document.getElementById(ROOT_ID);
+  const content = root && root.querySelector('.jellio-content');
+  if (content && (content.querySelector('.jellio-screen-loading') || content.querySelector('.jellio-screen-spinner'))) {
+    content.textContent = '';
   }
 }
 
@@ -239,6 +253,13 @@ let syncQueued = false;
 async function sync() {
   if (syncRunning) {
     syncQueued = true;
+    if (activeScreenAbortController) {
+      try {
+        activeScreenAbortController.abort();
+      } catch (err) {
+        console.warn('Jellio: screen abort failed', err);
+      }
+    }
     return;
   }
   syncRunning = true;
@@ -460,6 +481,7 @@ let onboardingPrompted = false;
 const languageReady = loadDisplayLanguage();
 
 async function runSync() {
+  let token = 0;
   try {
     await languageReady;
     if (!isAuthenticated()) {
@@ -502,8 +524,14 @@ async function runSync() {
     }
 
     const key = routeKey(route);
-    if (key === lastRenderedRouteKey) return;
-    lastRenderedRouteKey = key;
+    const root = getRoot();
+    const content = root.querySelector('.jellio-content');
+    const isCurrentlyRendered = key === lastRenderedRouteKey &&
+      content &&
+      content.hasChildNodes() &&
+      !content.querySelector('.jellio-screen-loading') &&
+      !content.querySelector('.jellio-screen-spinner');
+    if (isCurrentlyRendered) return;
 
     await teardownActiveScreen();
     startNowPlaying();
@@ -525,7 +553,6 @@ async function runSync() {
     loadServerPreferences().catch(function () {});
     setTitle('Jellio');
 
-    const root = getRoot();
     root.classList.add('jellio-root-visible');
     root.classList.toggle('jellio-root-fullscreen', FULLSCREEN_ROUTES.has(route.path));
     mountSeasons(root);
@@ -534,10 +561,10 @@ async function runSync() {
 
     const sidebarMount = root.querySelector('.jellio-sidebar-mount');
     const mobileNavMount = root.querySelector('.jellio-mobile-nav-mount');
-    const content = root.querySelector('.jellio-content');
 
-    const token = ++renderToken;
-    const tasks = [screen(content, route.params)];
+    activeScreenAbortController = new AbortController();
+    token = ++renderToken;
+    const tasks = [screen(content, route.params, activeScreenAbortController.signal)];
     if (!FULLSCREEN_ROUTES.has(route.path)) {
       tasks.push(renderSidebar(sidebarMount));
       tasks.push(renderMobileNav(mobileNavMount));
@@ -551,6 +578,7 @@ async function runSync() {
       }
       return;
     }
+    lastRenderedRouteKey = key;
     activeCleanup = cleanup;
     fadeInContent(content);
 
@@ -564,6 +592,12 @@ async function runSync() {
       }, 350);
     }
   } catch (err) {
+    if (err && (err.name === 'AbortError' || err.aborted)) {
+      return;
+    }
+    if (token && token !== renderToken) {
+      return;
+    }
     if (err && err.status === 401) {
       clearSession();
       sync();
@@ -602,3 +636,19 @@ document.addEventListener('keydown', function (event) {
 });
 
 window.addEventListener('beforeunload', teardownActiveScreen);
+
+export {
+  sync,
+  runSync,
+  teardownActiveScreen,
+  routeKey,
+};
+
+export function getLastRenderedRouteKey() {
+  return lastRenderedRouteKey;
+}
+
+export function getActiveScreenAbortController() {
+  return activeScreenAbortController;
+}
+

@@ -561,6 +561,7 @@ export function getItemDetails(itemId, options) {
       includePlaybackFields: !!opts.includePlaybackFields,
       timeoutMs: ITEM_DETAILS_TIMEOUT_MS,
       culture: culture,
+      signal: opts.signal,
     });
   }, SHORT_CACHE_TTL_MS, itemId).catch(function (err) {
     return downloadedItem(itemId, err);

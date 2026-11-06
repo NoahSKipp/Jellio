@@ -945,13 +945,49 @@ function buildCastRow(people) {
 const IMPORT_POLL_INTERVAL_MS = 3000;
 const IMPORT_POLL_MAX_ATTEMPTS = 15;
 
-function fetchItemDetailsWithRetry(itemId, onRetrying) {
+function fetchItemDetailsWithRetry(itemId, onRetrying, signal) {
   function attempt(attemptsLeft) {
-    return getItemDetails(itemId).catch(function (err) {
+    if (signal && signal.aborted) {
+      return Promise.reject(new DOMException('Aborted', 'AbortError'));
+    }
+    return getItemDetails(itemId, { signal: signal }).catch(function (err) {
+      if (signal && signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      if (err && (err.name === 'AbortError' || err.aborted)) {
+        throw err;
+      }
       if (attemptsLeft <= 0) throw err;
       if (onRetrying) onRetrying();
-      return new Promise(function (resolve) {
-        window.setTimeout(resolve, IMPORT_POLL_INTERVAL_MS);
+      return new Promise(function (resolve, reject) {
+        let timer = null;
+        const onAbort = function () {
+          if (timer !== null) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+          if (signal) {
+            signal.removeEventListener('abort', onAbort);
+          }
+          reject(new DOMException('Aborted', 'AbortError'));
+        };
+
+        if (signal && signal.aborted) {
+          reject(new DOMException('Aborted', 'AbortError'));
+          return;
+        }
+
+        if (signal) {
+          signal.addEventListener('abort', onAbort);
+        }
+
+        timer = window.setTimeout(function () {
+          timer = null;
+          if (signal) {
+            signal.removeEventListener('abort', onAbort);
+          }
+          resolve();
+        }, IMPORT_POLL_INTERVAL_MS);
       }).then(function () {
         return attempt(attemptsLeft - 1);
       });
@@ -986,7 +1022,7 @@ function renderDetailSkeleton(root, preview) {
   root.appendChild(skeletonLoading);
 }
 
-export async function renderDetail(root, params) {
+export async function renderDetail(root, params, signal) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-detail';
 
@@ -1001,12 +1037,17 @@ export async function renderDetail(root, params) {
     if (!event.detail || (event.detail.itemId !== itemId && event.detail.itemId !== String(itemId))) return;
     window.removeEventListener('jellio-item-refreshed', onRefreshed);
     if (!root.isConnected || window.location.hash.indexOf('id=' + itemId) === -1) return;
-    renderDetail(root, params);
+    renderDetail(root, params, signal);
   };
   window.addEventListener('jellio-item-refreshed', onRefreshed);
   window.setTimeout(function () {
     window.removeEventListener('jellio-item-refreshed', onRefreshed);
   }, 30000);
+  if (signal) {
+    signal.addEventListener('abort', function () {
+      window.removeEventListener('jellio-item-refreshed', onRefreshed);
+    }, { once: true });
+  }
 
   // If we already know the item from card click or memory cache, render an instant
   // hero skeleton with title, backdrop, and year so the transition feels instant.
@@ -1025,19 +1066,27 @@ export async function renderDetail(root, params) {
       shownImportMessage = true;
       root.textContent = '';
       renderLoading(root, 'Importing this title for the first time. This can take up to a minute.');
-    });
+    }, signal);
   } catch (err) {
+    if (signal && signal.aborted) {
+      throw err;
+    }
+    if (err && (err.name === 'AbortError' || err.aborted)) {
+      throw err;
+    }
     console.warn('Jellio: could not load item details', err);
     renderDetailError(root, describeNetworkFailure('this title', err), function () {
-      renderDetail(root, params);
+      renderDetail(root, params, signal);
     });
     return;
   }
 
+  if (signal && signal.aborted) return;
+
   if (!item || (!item.Id && !item.Name && !item.Type)) {
     console.warn('Jellio: item details missing for id', itemId);
     renderDetailError(root, describeNetworkFailure('this title', new Error('Title details unavailable')), function () {
-      renderDetail(root, params);
+      renderDetail(root, params, signal);
     });
     return;
   }
@@ -1045,6 +1094,7 @@ export async function renderDetail(root, params) {
   // Fetched while the loading state is still up, not after it clears.
   const isBook = item.Type === 'Book' || item.Type === 'AudioBook';
   const bookMeta = isBook ? await loadBookMetadata(item.Id || itemId).catch(() => null) : null;
+  if (signal && signal.aborted) return;
   mergeBookMetadata(item, bookMeta);
 
   root.textContent = '';

@@ -9,6 +9,7 @@ namespace Jellio.Services;
 public class RealDurationStore(IApplicationPaths applicationPaths)
 {
     private readonly object _lock = new();
+    private Dictionary<string, long>? _cache;
 
     private string StorePath =>
         Path.Combine(applicationPaths.PluginConfigurationsPath, "Jellio", "real-duration.json");
@@ -48,27 +49,73 @@ public class RealDurationStore(IApplicationPaths applicationPaths)
         }
     }
 
+    public void ClearCache()
+    {
+        lock (_lock)
+        {
+            _cache = null;
+        }
+    }
+
     private Dictionary<string, long> LoadLocked()
     {
+        if (_cache != null)
+        {
+            return _cache;
+        }
+
         if (!File.Exists(StorePath))
         {
-            return new Dictionary<string, long>();
+            _cache = new Dictionary<string, long>();
+            return _cache;
         }
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, long>>(File.ReadAllText(StorePath))
+            _cache = JsonSerializer.Deserialize<Dictionary<string, long>>(File.ReadAllText(StorePath))
                 ?? new Dictionary<string, long>();
+            return _cache;
         }
         catch (JsonException)
         {
-            return new Dictionary<string, long>();
+            var corruptBackup = StorePath + ".corrupted." + DateTimeOffset.UtcNow.ToUnixTimeSeconds() + ".bak";
+            try
+            {
+                File.Copy(StorePath, corruptBackup, overwrite: true);
+            }
+            catch
+            {
+            }
+
+            _cache = new Dictionary<string, long>();
+            return _cache;
         }
     }
 
     private void SaveLocked(Dictionary<string, long> overrides)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        File.WriteAllText(StorePath, JsonSerializer.Serialize(overrides));
+        var dir = Path.GetDirectoryName(StorePath)!;
+        Directory.CreateDirectory(dir);
+
+        var tempPath = StorePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(overrides));
+            File.Move(tempPath, StorePath, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch
+                {
+                }
+            }
+            throw;
+        }
     }
 }

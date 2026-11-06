@@ -6,13 +6,20 @@ export function navigateTo(hash) {
   if (window.Emby && window.Emby.Page && typeof window.Emby.Page.show === 'function') {
     try {
       window.Emby.Page.show(hash);
-      if (normalizedHash(window.location.hash) === normalizedHash(hash)) return;
+      if (normalizedHash(window.location.hash) === normalizedHash(hash)) {
+        notify();
+        return;
+      }
       console.warn('Jellio: Emby.Page.show() did not navigate, falling back to a plain hash change');
     } catch (err) {
       console.warn('Jellio: Emby.Page.show() failed, falling back to a plain hash change', err);
     }
   }
+  const isSameHash = normalizedHash(window.location.hash) === normalizedHash(hash);
   window.location.hash = hash;
+  if (isSameHash) {
+    notify();
+  }
 }
 
 export function currentHash() {

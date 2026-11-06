@@ -21,6 +21,10 @@ export const CHANGELOG_RELEASES = [
     "summary": "What others are watching on Jellyfin 12, and airing shows stay out of Next Up until their next episode is out.",
     "highlights": [
       {
+        "title": "Responsive Navigation While Loading",
+        "description": "Clicking navigation links while a screen is loading or retrying now immediately cancels the in-flight load and opens the requested page without getting stuck."
+      },
+      {
         "title": "Automatic Watchlist Cleanup",
         "description": "Watched movies and completely watched ended series are now automatically removed from your Watchlist (enabled by default, configurable in Settings > Playback)."
       },
