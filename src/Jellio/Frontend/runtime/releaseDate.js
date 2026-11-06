@@ -1,7 +1,53 @@
 // Release date detection and badge label formatting for episodes and items.
+import { t } from './i18n.js';
 
 export const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export const SENTINEL_YEAR = 9000;
+
+const verifiedTodayStreamIds = new Set();
+
+export function markTodayItemHasStream(itemId, hasStream) {
+  if (!itemId) return;
+  const key = String(itemId);
+  if (hasStream) verifiedTodayStreamIds.add(key);
+  else verifiedTodayStreamIds.delete(key);
+}
+
+export function isTodayItemStreamVerified(itemId) {
+  return !!itemId && verifiedTodayStreamIds.has(String(itemId));
+}
+
+export function clearVerifiedTodayStreamIds() {
+  verifiedTodayStreamIds.clear();
+}
+
+export function isReleasedToday(item, nowMs) {
+  if (!item || typeof item !== 'object') return false;
+  if (item.UserData && (item.UserData.Played || item.UserData.PlaybackPositionTicks > 0)) {
+    return false;
+  }
+
+  const now = typeof nowMs === 'number' ? nowMs : Date.now();
+  const nowDate = new Date(now);
+  const today = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
+
+  let dateObj = null;
+  if (item.PremiereDate) {
+    const d = new Date(item.PremiereDate);
+    if (!isNaN(d.getTime())) dateObj = d;
+  }
+  if (!dateObj && item.EndDate) {
+    const endD = new Date(item.EndDate);
+    if (!isNaN(endD.getTime())) dateObj = endD;
+  }
+
+  if (dateObj && dateObj.getUTCFullYear() < SENTINEL_YEAR) {
+    const premiereDay = Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
+    return premiereDay === today;
+  }
+
+  return false;
+}
 
 export function isUnreleasedItem(item, nowMs) {
   if (!item || typeof item !== 'object') return false;
@@ -13,22 +59,31 @@ export function isUnreleasedItem(item, nowMs) {
   const nowDate = new Date(now);
   const today = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
 
+  let dateObj = null;
   if (item.PremiereDate) {
     const d = new Date(item.PremiereDate);
     if (!isNaN(d.getTime())) {
-      if (d.getUTCFullYear() >= SENTINEL_YEAR) return true;
-      const premiereDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-      return premiereDay > today;
+      dateObj = d;
+    }
+  }
+  if (!dateObj && item.EndDate) {
+    const endD = new Date(item.EndDate);
+    if (!isNaN(endD.getTime())) {
+      dateObj = endD;
     }
   }
 
-  if (item.EndDate) {
-    const endD = new Date(item.EndDate);
-    if (!isNaN(endD.getTime())) {
-      if (endD.getUTCFullYear() >= SENTINEL_YEAR) return true;
-      const endDay = Date.UTC(endD.getUTCFullYear(), endD.getUTCMonth(), endD.getUTCDate());
-      if (endDay > today) return true;
+  if (dateObj) {
+    if (dateObj.getUTCFullYear() >= SENTINEL_YEAR) return true;
+    const itemDay = Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
+    if (itemDay > today) return true;
+    if (itemDay === today) {
+      if (dateObj.getTime() > now) return true;
+      if (!item.Type || item.Type === 'Episode') {
+        return !isTodayItemStreamVerified(item.Id);
+      }
     }
+    return false;
   }
 
   if (item.LocationType === 'Virtual' && !item.RunTimeTicks) {
@@ -42,17 +97,35 @@ export function episodeReleaseLabel(item, nowMs) {
   if (!isUnreleasedItem(item, nowMs)) return '';
 
   const now = typeof nowMs === 'number' ? nowMs : Date.now();
+  let dateObj = null;
   if (item.PremiereDate) {
     const d = new Date(item.PremiereDate);
-    if (!isNaN(d.getTime()) && d.getUTCFullYear() < SENTINEL_YEAR) {
-      const nowDate = new Date(now);
-      const today = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
-      const premiereDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-      const diffDays = Math.round((premiereDay - today) / MS_PER_DAY);
-      if (diffDays <= 0) return 'Today';
-      if (diffDays === 1) return 'Tomorrow';
-      if (diffDays < 7) return 'In ' + diffDays + ' days';
-      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    if (!isNaN(d.getTime())) dateObj = d;
+  }
+  if (!dateObj && item.EndDate) {
+    const endD = new Date(item.EndDate);
+    if (!isNaN(endD.getTime())) dateObj = endD;
+  }
+
+  if (dateObj && dateObj.getUTCFullYear() < SENTINEL_YEAR) {
+    const nowDate = new Date(now);
+    const today = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
+    const premiereDay = Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
+    const diffDays = Math.round((premiereDay - today) / MS_PER_DAY);
+    if (diffDays === 0) {
+      let todayLabel = 'Today';
+      try {
+        if (typeof t === 'function') {
+          const localized = t('calendar_today');
+          if (localized) todayLabel = localized;
+        }
+      } catch (_) {}
+      return todayLabel;
+    }
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays > 1 && diffDays < 7) return 'In ' + diffDays + ' days';
+    if (diffDays >= 7) {
+      return dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
     }
   }
 

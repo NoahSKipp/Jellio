@@ -26,11 +26,15 @@ export const CHANGELOG_RELEASES = [
       },
       {
         "title": "Next Up and Unreleased Episodes",
-        "description": "Next Up now skips episodes that have not aired yet, so a show you are caught up on waits until the new episode is out. Unreleased episodes on a show's page carry the same orange release badge as Coming Soon (such as Tomorrow, In 5 days, or Coming soon) so you can see when they air before trying to play them."
+        "description": "Next Up now skips episodes that have not aired yet, so a show you are caught up on waits until the new episode is out. Episodes airing today are held back from Next Up and badged as Today on the show page until their air time passes and at least one valid stream is available. Other unreleased episodes carry release badges such as Tomorrow, In 5 days, or Coming soon so you can see when they air before trying to play them."
       },
       {
         "title": "What Others Are Watching on Jellyfin 12",
         "description": "Fixed an incompatibility with Jellyfin 12.0 that kept the What others are watching row from loading."
+      },
+      {
+        "title": "Upcoming Digital Releases",
+        "description": "Already-released movies no longer show a false upcoming Digital release date from later streaming windows on the Upcoming calendar."
       }
     ]
   },

@@ -9,7 +9,13 @@ export { getCurrentUserId };
 import { createReturnWatcher, createRowCache, createTabChannel, pickStorage, USER_DATA_CLASSES } from './rowcache.js';
 import { languageName } from './languages.js';
 import { isOffline, stillOffline, isNetworkError, reportNetworkFailure, findDownload, queueSync } from './offline.js';
-import { isUnreleasedItem, filterReleasedItems } from './releaseDate.js';
+import {
+  isUnreleasedItem,
+  filterReleasedItems,
+  isReleasedToday,
+  isTodayItemStreamVerified,
+  markTodayItemHasStream,
+} from './releaseDate.js';
 import { isRemoveFromWatchlistAfterWatchingEnabled } from './watchlistSettings.js';
 
 export const DEFAULT_TIMEOUT_MS = 10000;
@@ -617,6 +623,53 @@ export function getAudiobookLibraryChapters(itemId) {
   });
 }
 
+const todayEmptyStreamsCache = new Map();
+export const TODAY_EMPTY_STREAMS_TTL_MS = 2 * 60 * 1000;
+
+export function clearTodayEmptyStreamsCache() {
+  todayEmptyStreamsCache.clear();
+}
+
+export async function verifyTodayEpisodesHaveStreams(items) {
+  if (!Array.isArray(items) || !items.length) return items || [];
+  const now = Date.now();
+  await Promise.all(
+    items.map(async function (item) {
+      if (!item || !item.Id) return;
+      if (!isReleasedToday(item, now)) return;
+      const dateStr = item.PremiereDate || item.EndDate;
+      if (dateStr) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime()) && d.getTime() > now) {
+          return;
+        }
+      }
+      if (isTodayItemStreamVerified(item.Id)) return;
+      const idStr = String(item.Id);
+      const lastEmptyTime = todayEmptyStreamsCache.get(idStr);
+      if (lastEmptyTime && now - lastEmptyTime < TODAY_EMPTY_STREAMS_TTL_MS) {
+        return;
+      }
+      try {
+        const sources = await getMediaSources(item.Id);
+        const hasStreams = Array.isArray(sources) && sources.length > 0;
+        markTodayItemHasStream(item.Id, hasStreams);
+        if (hasStreams) {
+          todayEmptyStreamsCache.delete(idStr);
+        } else {
+          todayEmptyStreamsCache.set(idStr, Date.now());
+        }
+      } catch (_) {
+        markTodayItemHasStream(item.Id, false);
+        todayEmptyStreamsCache.set(idStr, Date.now());
+      }
+    }),
+  );
+  return items.filter(function (item) {
+    return !isUnreleasedItem(item, now) && (!isReleasedToday(item, now) || isTodayItemStreamVerified(item.Id));
+  });
+}
+
 export function getNextUp(limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
@@ -634,9 +687,10 @@ export function getNextUp(limit) {
       return rowJson(path, 'personal', { priority: true, rank: 1 });
     }, SHORT_CACHE_TTL_MS),
     getHiddenNextUpSeries(),
-  ]).then(function (results) {
+  ]).then(async function (results) {
     const rawItems = (results[0] && results[0].Items) || [];
-    const items = filterReleasedItems(rawItems);
+    const verifiedItems = await verifyTodayEpisodesHaveStreams(rawItems);
+    const items = filterReleasedItems(verifiedItems);
     const hidden = results[1];
     const filtered = !hidden.length
       ? items
@@ -678,9 +732,10 @@ export function getSeriesNextUp(seriesId) {
   const path = '/Shows/NextUp?' + params.toString();
   return cached(path, function () {
     return getJson(path);
-  }, SHORT_CACHE_TTL_MS).then(function (result) {
-    const items = (result && result.Items) || [];
-    return filterReleasedItems(items)[0] || null;
+  }, SHORT_CACHE_TTL_MS).then(async function (result) {
+    const rawItems = (result && result.Items) || [];
+    const items = await verifyTodayEpisodesHaveStreams(rawItems);
+    return items[0] || null;
   });
 }
 
@@ -2125,8 +2180,11 @@ export async function getNextEpisode(item) {
     });
     if (index !== -1 && index + 1 < episodes.length) {
       const candidate = episodes[index + 1];
-      if (candidate && isUnreleasedItem(candidate)) return null;
-      return candidate;
+      if (candidate) {
+        const verified = await verifyTodayEpisodesHaveStreams([candidate]);
+        if (!verified.length) return null;
+        return candidate;
+      }
     }
   }
 
@@ -2139,8 +2197,12 @@ export async function getNextEpisode(item) {
 
   const nextEpisodes = await getEpisodes(item.SeriesId, nextSeason.Id);
   const candidate = nextEpisodes.length ? nextEpisodes[0] : null;
-  if (candidate && isUnreleasedItem(candidate)) return null;
-  return candidate;
+  if (candidate) {
+    const verified = await verifyTodayEpisodesHaveStreams([candidate]);
+    if (!verified.length) return null;
+    return candidate;
+  }
+  return null;
 }
 
 export function getHeroCandidates(limit, options) {

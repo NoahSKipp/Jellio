@@ -23,7 +23,15 @@ import { openTrackerDialog } from '../components/trackerDialog.js';
 import { showToast } from '../components/toast.js';
 import { formatRuntime } from '../runtime/format.js';
 import { el, fadeInBackdrop } from '../runtime/dom.js';
-import { isUnreleasedItem, episodeReleaseLabel, filterReleasedItems, seasonEpisodeReleaseLabels } from '../runtime/releaseDate.js';
+import {
+  isUnreleasedItem,
+  episodeReleaseLabel,
+  filterReleasedItems,
+  seasonEpisodeReleaseLabels,
+  isReleasedToday,
+  isTodayItemStreamVerified,
+  markTodayItemHasStream,
+} from '../runtime/releaseDate.js';
 
 function renderDetailError(root, message, onRetry) {
   renderRetry(root, message, onRetry, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
@@ -611,12 +619,38 @@ function isSpecialsSeason(season) {
   return /special/i.test(season.Name || '');
 }
 
+async function verifyItemHasStreamIfToday(item) {
+  if (!item) return null;
+  const now = Date.now();
+  if (isUnreleasedItem(item, now)) return null;
+  if (!isReleasedToday(item, now)) return item;
+  if (isTodayItemStreamVerified(item.Id)) return item;
+  const dateStr = item.PremiereDate || item.EndDate;
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime()) && d.getTime() > now) return null;
+  }
+  try {
+    const sources = await getMediaSources(item.Id);
+    const has = Array.isArray(sources) && sources.length > 0;
+    markTodayItemHasStream(item.Id, has);
+    return has ? item : null;
+  } catch (_) {
+    markTodayItemHasStream(item.Id, false);
+    return null;
+  }
+}
+
 async function resolveSeriesPlayTarget(seriesId) {
   let episode = null;
   try {
     episode = await getSeriesNextUp(seriesId);
   } catch (err) {
     console.warn('Jellio: could not load next up for series', err);
+  }
+
+  if (episode) {
+    episode = await verifyItemHasStreamIfToday(episode);
   }
 
   if (!episode) {
@@ -628,7 +662,15 @@ async function resolveSeriesPlayTarget(seriesId) {
       const firstSeason = orderedSeasons[0];
       if (firstSeason) {
         const episodes = await getEpisodes(seriesId, firstSeason.Id);
-        episode = filterReleasedItems(episodes)[0] || episodes[0] || null;
+        const released = filterReleasedItems(episodes);
+        const pool = released.length ? released : episodes;
+        for (let i = 0; i < pool.length; i++) {
+          const verified = await verifyItemHasStreamIfToday(pool[i]);
+          if (verified) {
+            episode = verified;
+            break;
+          }
+        }
       }
     } catch (err) {
       console.warn('Jellio: could not load first episode for series', err);
@@ -656,10 +698,32 @@ async function resolveSeasonPlayTarget(item) {
 
   const released = filterReleasedItems(episodes);
   const pool = released.length ? released : episodes;
-  const episode =
-    pool.filter(function (e) {
-      return !(e.UserData && e.UserData.Played);
-    })[0] || pool[pool.length - 1];
+  const unplayedCandidates = pool.filter(function (e) {
+    return !(e.UserData && e.UserData.Played);
+  });
+  let episode = null;
+  for (let i = 0; i < unplayedCandidates.length; i++) {
+    const verified = await verifyItemHasStreamIfToday(unplayedCandidates[i]);
+    if (verified) {
+      episode = verified;
+      break;
+    }
+  }
+  if (!episode) {
+    for (let i = pool.length - 1; i >= 0; i--) {
+      const ep = pool[i];
+      if (isReleasedToday(ep) && !isTodayItemStreamVerified(ep.Id)) {
+        continue;
+      }
+      if (isUnreleasedItem(ep)) {
+        continue;
+      }
+      episode = ep;
+      break;
+    }
+  }
+
+  if (!episode) return null;
 
   const isFirstEpisode = episode.Id === episodes[0].Id;
   const hasProgress = !!(episode.UserData && episode.UserData.PlaybackPositionTicks > 0);
@@ -752,6 +816,42 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
     getEpisodes(seriesId, season.Id)
       .then(function (episodes) {
         renderTrack(season, episodes);
+
+        const now = Date.now();
+        const unverifiedToday = (episodes || []).filter(function (ep) {
+          if (!ep || !ep.Id) return false;
+          if (!isReleasedToday(ep, now) || isTodayItemStreamVerified(ep.Id)) return false;
+          const dateStr = ep.PremiereDate || ep.EndDate;
+          if (dateStr) {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime()) && d.getTime() > now) return false;
+          }
+          return true;
+        });
+
+        if (unverifiedToday.length > 0) {
+          Promise.all(
+            unverifiedToday.map(function (ep) {
+              return getMediaSources(ep.Id)
+                .then(function (sources) {
+                  const has = Array.isArray(sources) && sources.length > 0;
+                  markTodayItemHasStream(ep.Id, has);
+                  return has;
+                })
+                .catch(function () {
+                  markTodayItemHasStream(ep.Id, false);
+                  return false;
+                });
+            }),
+          ).then(function (results) {
+            const anyVerified = results.some(function (has) {
+              return has;
+            });
+            if (anyVerified && tabButton.classList.contains('jellio-season-tab-selected')) {
+              renderTrack(season, episodes);
+            }
+          });
+        }
       })
       .catch(function (err) {
         console.warn('Jellio: could not load episodes', err);

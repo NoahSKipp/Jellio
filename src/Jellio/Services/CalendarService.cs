@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -265,9 +266,14 @@ public class CalendarService(
         return false;
     }
 
-    private static CalendarEntry? PickDigitalRelease(JsonDocument doc)
+    internal static CalendarEntry? PickDigitalRelease(JsonDocument doc, DateTime? nowUtc = null)
     {
-        if (!doc.RootElement.TryGetProperty("results", out var results))
+        if (doc == null || doc.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!doc.RootElement.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
@@ -275,7 +281,14 @@ public class CalendarService(
         JsonElement? bestRegion = null;
         foreach (var region in results.EnumerateArray())
         {
-            if (region.TryGetProperty("iso_3166_1", out var code) && code.GetString() == "US")
+            if (region.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (region.TryGetProperty("iso_3166_1", out var code) &&
+                code.ValueKind == JsonValueKind.String &&
+                code.GetString() == "US")
             {
                 bestRegion = region;
                 break;
@@ -284,34 +297,58 @@ public class CalendarService(
             bestRegion ??= region;
         }
 
-        if (bestRegion == null || !bestRegion.Value.TryGetProperty("release_dates", out var dates))
+        if (bestRegion == null ||
+            !bestRegion.Value.TryGetProperty("release_dates", out var dates) ||
+            dates.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
 
-        DateTime? nearest = null;
+        var today = (nowUtc ?? DateTime.UtcNow).Date;
+        DateTime? earliestFuture = null;
+
         foreach (var release in dates.EnumerateArray())
         {
-            if (!release.TryGetProperty("type", out var typeProp) || typeProp.GetInt32() != 4)
+            if (release.ValueKind != JsonValueKind.Object)
             {
                 continue;
             }
 
-            if (!release.TryGetProperty("release_date", out var dateProp))
+            if (!release.TryGetProperty("type", out var typeProp) ||
+                typeProp.ValueKind != JsonValueKind.Number ||
+                !typeProp.TryGetInt32(out var releaseType) ||
+                releaseType != 4)
             {
                 continue;
             }
 
-            if (DateTime.TryParse(dateProp.GetString(), out var parsed) && parsed >= DateTime.UtcNow.Date)
+            if (!release.TryGetProperty("release_date", out var dateProp) ||
+                dateProp.ValueKind != JsonValueKind.String)
             {
-                if (nearest == null || parsed < nearest)
-                {
-                    nearest = parsed;
-                }
+                continue;
+            }
+
+            var dateStr = dateProp.GetString();
+            if (string.IsNullOrEmpty(dateStr) ||
+                !DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsed))
+            {
+                continue;
+            }
+
+            if (parsed.Date < today)
+            {
+                return null;
+            }
+
+            if (earliestFuture == null || parsed < earliestFuture)
+            {
+                earliestFuture = parsed;
             }
         }
 
-        return nearest == null ? null : new CalendarEntry(nearest.Value, "digital-release", "Digital release");
+        return earliestFuture == null
+            ? null
+            : new CalendarEntry(earliestFuture.Value, "digital-release", "Digital release");
     }
 
     private static CalendarEntry? PickNextEpisode(JsonDocument doc)
