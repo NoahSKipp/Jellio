@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.105.5] - 2026-11-06\n\n### 🚀 Features\n\n- Auto-remove watched items from Watchlist and regenerate Watchlist view\n\n### 🐛 Bug Fixes\n\n- Filter streamless today episodes and ignore past digital windows\n- (community) Handle IsVisible exceptions gracefully during watching build\n\n### ⚙️ Miscellaneous Tasks\n\n- (release) Bump version to 1.105.5",
+        "checksum": "594f8eb23f0027f70ad0ad64b37d156b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.5/jellio_1.105.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-06T03:31:55Z",
+        "version": "1.105.5"
+      },
+      {
         "changelog": "## [1.105.4] - 2026-11-05\n\n### 🐛 Bug Fixes\n\n- *(community)* Support Jellyfin 12.0 IDtoService signature and handle GetWatching errors gracefully\n- *(episodes)* Exclude unreleased episodes from Next Up and show orange release date labels\n\n### 📚 Documentation\n\n- *(changelog)* Community watching on Jellyfin 12.0 and unreleased episode labels in 1.105.4\n",
         "checksum": "1049eda5ad9050a6f9b469b15bd8295e",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.4/jellio_1.105.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T07:05:34Z",
         "version": "1.95.0"
-      },
-      {
-        "changelog": "## [1.94.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(livetv)* Filter channels by type and language\n\n### 🐛 Bug Fixes\n\n- *(home)* Keep anime from the reader's Watchlist in Coming Soon\n",
-        "checksum": "e01a8608bbc9da79560004e93c45dde8",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.94.0/jellio_1.94.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T02:34:01Z",
-        "version": "1.94.0"
       }
     ]
   }
