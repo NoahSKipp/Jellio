@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.106.0] - 2026-11-06\n\n### 🚀 Features\n\n- Improve data safety, recovery, caching, and fix navigation interruption\n- Upgrade TMDB rating badge and implement infinite virtual rows\n\n### 🐛 Bug Fixes\n\n- *(cast)* Improve remote session discovery and Smart TV identification\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.0 and macOS 0.7.0\n\n### 💼 Other\n\n- Add tiered isolation and sliding window deduplication to Home screen\n\nIntroduce Tiered Isolation so recommendations deduplicate amongst themselves\nusing recSeen and do not block items in catalog or genre rows. Implement\nSliding Window Distance Deduplication for catalogs and genres using dedupeRow\nwith a 2-row history window and 6-item viewport deduplication limit, while\npreserving intra-row duplicate protection and full catalogs beyond the viewport.\n",
+        "checksum": "4331d83aeaba3b43bc0263518bfbd0cc",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.106.0/jellio_1.106.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-06T18:26:33Z",
+        "version": "1.106.0"
+      },
+      {
         "changelog": "## [1.105.5] - 2026-11-06\n\n### 🚀 Features\n\n- Auto-remove watched items from Watchlist and regenerate Watchlist view\n\n### 🐛 Bug Fixes\n\n- Filter streamless today episodes and ignore past digital windows\n- (community) Handle IsVisible exceptions gracefully during watching build\n\n### ⚙️ Miscellaneous Tasks\n\n- (release) Bump version to 1.105.5",
         "checksum": "594f8eb23f0027f70ad0ad64b37d156b",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.5/jellio_1.105.5.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T07:30:23Z",
         "version": "1.96.0"
-      },
-      {
-        "changelog": "## [1.95.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Resolve, save and proxy stream links per user\n- *(livetv)* My streams on Live TV with Add stream\n\n### 🐛 Bug Fixes\n\n- *(livetv)* Open the channel that was picked, not the first one\n\n### 📚 Documentation\n\n- *(changelog)* Note My streams in 1.95.0\n\n### ⚙️ Miscellaneous Tasks\n\n- Remove a stray dev server log from the frontend folder\n",
-        "checksum": "6c4f24691aa66ad881c99a73af38d9e5",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.95.0/jellio_1.95.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T07:05:34Z",
-        "version": "1.95.0"
       }
     ]
   }
