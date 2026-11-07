@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "**Full Changelog**: https://github.com/NoahSKipp/Jellio/compare/1.107.1...1.107.2",
+        "checksum": "e11b06a6e5e49c172aa0dfbf188999ad",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.2/jellio_1.107.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-07T03:36:20Z",
+        "version": "1.107.2"
+      },
+      {
         "changelog": "- Isolate Coming Soon series schedules from per-user watch progress to prevent cross-user cache poisoning\n- Advance Coming Soon to the next upcoming episode in the season for currently airing shows\n- Fix multi-page Gelato Discover delegation, reflection signatures, and localized genre mappings in GenreCache\n- Fix full row modal and horizontal row pagination offsets, offline download byte progress persistence, and offline player arrow key seeking",
         "checksum": "b906ed84febcf516dbe3fee9b3e62277",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.1/jellio_1.107.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T11:51:57Z",
         "version": "1.99.1"
-      },
-      {
-        "changelog": "## [1.99.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(streams)* Channel pages that offer several players resolve as pasted\n\n### 🐛 Bug Fixes\n\n- *(streams)* Find players nested a level deeper, retry with the site's own referer\n- *(streams)* Throw when no stream is found without a throw expression\n\n### 📚 Documentation\n\n- *(changelog)* Note better stream links in 1.98.1\n- *(changelog)* Reword the 1.98.1 stream link note\n- *(changelog)* File the stream link note under 1.99.0, the version this release gets\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.98.1\n",
-        "checksum": "ed6a4b3aa941c1840609d66043c2ca25",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.0/jellio_1.99.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T11:34:18Z",
-        "version": "1.99.0"
       }
     ]
   }
