@@ -3772,17 +3772,20 @@ export async function renderPlayer(root, params) {
   }
   video.addEventListener('timeupdate', hideFailoverIfPlaying);
   video.addEventListener('playing', hideFailoverIfPlaying);
+  let failoverWatch = 0;
   if (failoverOverlay) {
     let lastSeen = { element: null, time: 0 };
-    const failoverWatch = window.setInterval(function () {
+    failoverWatch = window.setInterval(function () {
       if (!failoverOverlay || screenTornDown) {
         window.clearInterval(failoverWatch);
+        failoverWatch = 0;
         return;
       }
       const current = root.querySelector('video') || video;
       if (lastSeen.element === current && !current.paused && current.currentTime > lastSeen.time + 0.3) {
         hideFailoverOverlay();
         window.clearInterval(failoverWatch);
+        failoverWatch = 0;
         return;
       }
       lastSeen = { element: current, time: current.currentTime };
@@ -3805,8 +3808,6 @@ export async function renderPlayer(root, params) {
     creditRealWatch(itemId).catch(function () {
     });
     setPlayed(itemId, true).catch(function () {
-    });
-    maybeRemoveFromWatchlistAfterWatching(itemId).catch(function () {
     });
     if (isAutoDeleteWatchedEnabled()) {
       findAnyDownload(itemId)
@@ -4444,6 +4445,9 @@ export async function renderPlayer(root, params) {
   async function cleanup() {
     if (overlayInsets) overlayInsets.disconnect();
     window.clearTimeout(slideshowTimer);
+    if (failoverWatch) { window.clearInterval(failoverWatch); failoverWatch = 0; }
+    if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = 0; }
+    if (startTimer) { window.clearTimeout(startTimer); startTimer = 0; }
     clearEarlyStall();
     if (bufferStallTimer) window.clearInterval(bufferStallTimer);
     closeBufferPrompt();

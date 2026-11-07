@@ -57,9 +57,9 @@ test('isEpisodicAnthology: detects anthology genres and tags', () => {
   assert.equal(isEpisodicAnthology({ Tags: ['sci-fi anthology', 'horror'] }), true);
 });
 
-test('isEpisodicAnthology: detects anthology in overview', () => {
-  assert.equal(isEpisodicAnthology({ Overview: 'An animated anthology series presenting short stories.' }), true);
-  assert.equal(isEpisodicAnthology({ Overview: 'A standalone horror anthology.' }), true);
+test('isEpisodicAnthology: ignores anthology in overview alone to avoid false positives', () => {
+  assert.equal(isEpisodicAnthology({ Overview: 'An animated anthology series presenting short stories.' }), false);
+  assert.equal(isEpisodicAnthology({ Overview: 'A standalone horror anthology.' }), false);
 });
 
 test('isEpisodicAnthology: detects curated anthology series names', () => {

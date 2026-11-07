@@ -535,6 +535,16 @@ export function seedItemCache(item) {
   } else if (!existing.value) {
     existing.value = item;
   }
+  const culture = getDisplayCulture();
+  if (culture) {
+    const cultureKey = 'item:' + id + ':' + culture;
+    const existingCulture = cache.get(cultureKey);
+    if (!existingCulture) {
+      cache.set(cultureKey, { promise: Promise.resolve(item), ts: Date.now(), value: item });
+    } else if (!existingCulture.value) {
+      existingCulture.value = item;
+    }
+  }
 }
 
 export function getCachedItemSync(itemId) {
@@ -1254,8 +1264,6 @@ export function isEpisodicAnthology(series) {
   if (genres.some(function (g) { return g && g.toLowerCase().includes('anthology'); })) return true;
   const tags = series.Tags || [];
   if (tags.some(function (t) { return t && t.toLowerCase().includes('anthology'); })) return true;
-  const overview = (series.Overview || '').toLowerCase();
-  if (overview.includes('anthology series') || overview.includes('anthology')) return true;
   const name = (series.Name || '').toLowerCase();
   return KNOWN_ANTHOLOGIES.some(function (title) { return name.includes(title); });
 }
@@ -1282,11 +1290,15 @@ export async function autoCompletePreviousEpisodesIfSkipped(episode) {
   }
 
   try {
+    const userId = getCurrentUserId();
+    if (!userId) return;
     const allEpisodes = await getSeriesEpisodes(seriesId);
     const toMark = (allEpisodes || []).filter(function (ep) {
+      if (!ep || !ep.Id || isUnreleasedItem(ep)) return false;
+      if (typeof ep.IndexNumber !== 'number') return false;
       const sNum = ep.ParentIndexNumber || 0;
-      const eNum = ep.IndexNumber || 0;
-      if (sNum === 0) return false;
+      const eNum = ep.IndexNumber;
+      if (sNum <= 0) return false;
       const isBefore = sNum < currentSeasonNum || (sNum === currentSeasonNum && eNum < currentEpNum);
       const isUnfinished = !(ep.UserData && ep.UserData.Played) || (ep.UserData && ep.UserData.PlaybackPositionTicks > 0);
       return isBefore && isUnfinished;
@@ -1294,10 +1306,19 @@ export async function autoCompletePreviousEpisodesIfSkipped(episode) {
 
     if (toMark.length > 0) {
       console.info('Jellio: Auto-completing ' + toMark.length + ' previous skipped episodes for series', (series && series.Name) || seriesId);
+      const culture = getDisplayCulture();
       for (let i = 0; i < toMark.length; i++) {
         const prevEp = toMark[i];
         try {
-          await setPlayed(prevEp.Id, true);
+          await fetch(
+            getServerAddress() + '/Users/' + userId + '/PlayedItems/' + prevEp.Id,
+            {
+              method: 'POST',
+              headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+            },
+          );
+          invalidateCache('item:' + prevEp.Id);
+          if (culture) invalidateCache('item:' + prevEp.Id + ':' + culture);
         } catch (err) {
           console.warn('Jellio: failed to mark previous episode played', prevEp.Id, err);
         }

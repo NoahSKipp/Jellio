@@ -83,6 +83,7 @@ public class GenreCache(
         ["Familie"] = 10751,
         ["Liebesfilm"] = 10749,
         ["Krieg"] = 10752,
+        ["Kriegsfilm"] = 10752,
         ["Musik"] = 10402,
         ["Historie"] = 36,
         ["Zeichentrick"] = 16,
@@ -112,16 +113,55 @@ public class GenreCache(
         ["Película de TV"] = 10770,
         ["Suspense"] = 53,
         ["Bélica"] = 10752,
+        ["Bélico"] = 10752,
         // Common Italian localized genre names
+        ["Animazione"] = 16,
         ["Avventura"] = 12,
         ["Azione"] = 28,
         ["Commedia"] = 35,
         ["Documentario"] = 99,
+        ["Dramma"] = 18,
+        ["Drammatico"] = 18,
         ["Famiglia"] = 10751,
         ["Fantascienza"] = 878,
+        ["Film TV"] = 10770,
+        ["Guerra"] = 10752,
         ["Musica"] = 10402,
         ["Mistero"] = 9648,
+        ["Orrore"] = 27,
+        ["Romantico"] = 10749,
+        ["Sentimentale"] = 10749,
         ["Storia"] = 36,
+        ["televisione film"] = 10770,
+        // Common Polish localized genre names
+        ["Akcja"] = 28,
+        ["Przygodowy"] = 12,
+        ["Animacja"] = 16,
+        ["Komedia"] = 35,
+        ["Kryminał"] = 80,
+        ["Dokumentalny"] = 99,
+        ["Dramat"] = 18,
+        ["Familijny"] = 10751,
+        ["Historyczny"] = 36,
+        ["Muzyczny"] = 10402,
+        ["Tajemnica"] = 9648,
+        ["Romans"] = 10749,
+        ["Wojenny"] = 10752,
+        // Common Portuguese localized genre names
+        ["Ação"] = 28,
+        ["Animação"] = 16,
+        ["Comédia"] = 35,
+        ["Documentário"] = 99,
+        ["Família"] = 10751,
+        ["Fantasia"] = 14,
+        ["História"] = 36,
+        ["Terror"] = 27,
+        ["Música"] = 10402,
+        ["Mistério"] = 9648,
+        ["Ficção científica"] = 878,
+        ["Cinema TV"] = 10770,
+        ["Guerra"] = 10752,
+        ["Faroeste"] = 37,
     };
 
     private static readonly Dictionary<string, int> TvGenreMap = new(StringComparer.OrdinalIgnoreCase)
@@ -161,6 +201,8 @@ public class GenreCache(
         ["Krimi"] = 80,
         ["Dokumentation"] = 99,
         ["Familie"] = 10751,
+        ["Krieg"] = 10768,
+        ["Kriegsfilm"] = 10768,
         ["Musik"] = 10402,
         ["Zeichentrick"] = 16,
         // Common French localized genre names
@@ -172,6 +214,7 @@ public class GenreCache(
         ["Familial"] = 10751,
         ["Fantastique"] = 10765,
         ["Mystère"] = 9648,
+        ["Guerre"] = 10768,
         // Common Spanish localized genre names
         ["Acción"] = 10759,
         ["Acción y aventura"] = 10759,
@@ -183,7 +226,64 @@ public class GenreCache(
         ["Familia"] = 10751,
         ["Fantasía"] = 10765,
         ["Misterio"] = 9648,
+        ["Bélica"] = 10768,
+        ["Bélico"] = 10768,
+        // Common Italian localized genre names
+        ["Azione e avventura"] = 10759,
+        ["Azione"] = 10759,
+        ["Avventura"] = 10759,
+        ["Animazione"] = 16,
+        ["Commedia"] = 35,
+        ["Documentario"] = 99,
+        ["Dramma"] = 18,
+        ["Drammatico"] = 18,
+        ["Famiglia"] = 10751,
+        ["Bambini"] = 10762,
+        ["Mistero"] = 9648,
+        ["Fantascienza"] = 10765,
+        ["Guerra e politica"] = 10768,
+        ["Guerra"] = 10768,
+        // Common Polish localized genre names
+        ["Akcja i przygoda"] = 10759,
+        ["Akcja"] = 10759,
+        ["Przygodowy"] = 10759,
+        ["Animacja"] = 16,
+        ["Komedia"] = 35,
+        ["Kryminał"] = 80,
+        ["Dokumentalny"] = 99,
+        ["Dramat"] = 18,
+        ["Familijny"] = 10751,
+        ["Dla dzieci"] = 10762,
+        ["Tajemnica"] = 9648,
+        ["Wiadomości"] = 10763,
+        ["Sci-Fi i Fantasy"] = 10765,
+        ["Opera mydlana"] = 10766,
+        ["Talk-show"] = 10767,
+        ["Wojna i polityka"] = 10768,
+        ["Wojenny"] = 10768,
+        // Common Portuguese localized genre names
+        ["Ação e Aventura"] = 10759,
+        ["Ação"] = 10759,
+        ["Animação"] = 16,
+        ["Comédia"] = 35,
+        ["Documentário"] = 99,
+        ["Família"] = 10751,
+        ["Infantil"] = 10762,
+        ["Mistério"] = 9648,
+        ["Notícias"] = 10763,
+        ["Ficção científica e Fantasia"] = 10765,
+        ["Ficção científica"] = 10765,
+        ["Fantasia"] = 10765,
+        ["Novela"] = 10766,
+        ["Guerra e Política"] = 10768,
+        ["Faroeste"] = 37,
     };
+
+    private static readonly Lazy<MethodInfo?> GelatoDiscoverMethod = new(() =>
+        Type.GetType("Gelato.GelatoPlugin, Gelato")?.GetMethod("DiscoverAsync", BindingFlags.Public | BindingFlags.Static));
+
+    private static readonly Lazy<MethodInfo?> GelatoRegisterVirtualMethod = new(() =>
+        Type.GetType("Gelato.GelatoPlugin, Gelato")?.GetMethod("RegisterVirtualTitle", BindingFlags.Public | BindingFlags.Static));
 
     private readonly ConcurrentDictionary<string, (DateTime At, IReadOnlyList<GenreCount> Counts)> _counts = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task<IReadOnlyList<GenreCount>>> _countsBuilding = new(StringComparer.Ordinal);
@@ -424,36 +524,61 @@ public class GenreCache(
         // Try delegating discovery to Gelato if Gelato is available in the AppDomain
         try
         {
-            var gelatoPluginType = Type.GetType("Gelato.GelatoPlugin, Gelato");
-            if (gelatoPluginType != null)
+            var discoverMethod = GelatoDiscoverMethod.Value;
+            if (discoverMethod != null)
             {
-                var discoverMethod = gelatoPluginType.GetMethod("DiscoverAsync", BindingFlags.Public | BindingFlags.Static);
-                if (discoverMethod != null)
-                {
-                    var typesParam = string.Join(',', types.Select(t => t == BaseItemKind.Movie ? "movie" : "tv"));
-                    var page = Math.Max(1, (virtualItems.Count / 20) + 1);
-                    var task = (Task<List<BaseItemDto>>)discoverMethod.Invoke(null, [genre, typesParam, page, null, cancellationToken])!;
-                    var gelatoDtos = await task.ConfigureAwait(false);
-                    if (gelatoDtos != null && gelatoDtos.Count > 0)
-                    {
-                        var seen = new HashSet<Guid>(virtualItems.Select(v => v.Id));
-                        foreach (var dto in gelatoDtos)
-                        {
-                            if (seen.Add(dto.Id))
-                            {
-                                virtualItems.Add(dto);
-                            }
-                        }
+                var paramCount = discoverMethod.GetParameters().Length;
+                var typesParam = string.Join(',', types.Select(t => t == BaseItemKind.Movie ? "movie" : "tv"));
+                var seen = new HashSet<Guid>(virtualItems.Select(v => v.Id));
+                var nextPage = lastMoviePage + 1;
 
-                        _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems, lastMoviePage, lastTvPage, movieExhausted, tvExhausted);
-                        return virtualItems;
+                while (virtualItems.Count < targetCount && !movieExhausted && nextPage <= 25)
+                {
+                    object?[] args = paramCount == 4
+                        ? [genre, nextPage, null, cancellationToken]
+                        : [genre, typesParam, nextPage, null, cancellationToken];
+                    var task = (Task<List<BaseItemDto>>)discoverMethod.Invoke(null, args)!;
+                    var gelatoItems = await task.ConfigureAwait(false);
+                    if (gelatoItems == null || gelatoItems.Count == 0)
+                    {
+                        movieExhausted = true;
+                        tvExhausted = true;
+                        break;
+                    }
+
+                    lastMoviePage = nextPage;
+                    nextPage++;
+                    foreach (var dto in gelatoItems)
+                    {
+                        if (seen.Add(dto.Id))
+                        {
+                            virtualItems.Add(dto);
+                        }
                     }
                 }
+
+                if (virtualItems.Count > 0 || lastMoviePage > 0)
+                {
+                    _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems, lastMoviePage, lastTvPage, movieExhausted, tvExhausted);
+                    return virtualItems;
+                }
+
+                movieExhausted = !types.Contains(BaseItemKind.Movie) || !MovieGenreMap.ContainsKey(genre);
+                tvExhausted = !types.Contains(BaseItemKind.Series) || !TvGenreMap.ContainsKey(genre);
             }
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Jellio: Gelato discovery delegation unavailable, falling back to direct TMDB");
+        }
+
+        static async Task<(string MediaType, int Page, IReadOnlyList<BaseItemDto> Items, int TotalPages)> FetchPageAsync(
+            Func<Task<(IReadOnlyList<BaseItemDto> Items, int TotalPages)>> fetcher,
+            string mediaType,
+            int page)
+        {
+            var res = await fetcher().ConfigureAwait(false);
+            return (mediaType, page, res.Items, res.TotalPages);
         }
 
         try
@@ -479,20 +604,24 @@ public class GenreCache(
             while (virtualItems.Count < targetCount && (!movieExhausted || !tvExhausted) && iterations < 5)
             {
                 iterations++;
-                var tasks = new List<Task<(string Kind, int Page, IReadOnlyList<BaseItemDto> Items, int TotalPages)>>();
+                var tasks = new List<Task<(string MediaType, int Page, IReadOnlyList<BaseItemDto> Items, int TotalPages)>>();
 
                 if (!movieExhausted && MovieGenreMap.TryGetValue(genre, out var movieGenreId))
                 {
                     var nextMoviePage = lastMoviePage + 1;
-                    tasks.Add(FetchTmdbDiscoverAsync(client, "movie", movieGenreId, genre, nextMoviePage, queryKey, cancellationToken)
-                        .ContinueWith(t => ("movie", nextMoviePage, t.Result.Items, t.Result.TotalPages), TaskContinuationOptions.ExecuteSynchronously));
+                    tasks.Add(FetchPageAsync(
+                        () => FetchTmdbDiscoverAsync(client, "movie", movieGenreId, genre, nextMoviePage, queryKey, cancellationToken),
+                        "movie",
+                        nextMoviePage));
                 }
 
                 if (!tvExhausted && TvGenreMap.TryGetValue(genre, out var tvGenreId))
                 {
                     var nextTvPage = lastTvPage + 1;
-                    tasks.Add(FetchTmdbDiscoverAsync(client, "tv", tvGenreId, genre, nextTvPage, queryKey, cancellationToken)
-                        .ContinueWith(t => ("tv", nextTvPage, t.Result.Items, t.Result.TotalPages), TaskContinuationOptions.ExecuteSynchronously));
+                    tasks.Add(FetchPageAsync(
+                        () => FetchTmdbDiscoverAsync(client, "tv", tvGenreId, genre, nextTvPage, queryKey, cancellationToken),
+                        "tv",
+                        nextTvPage));
                 }
 
                 if (tasks.Count == 0)
@@ -505,7 +634,7 @@ public class GenreCache(
 
                 foreach (var res in results)
                 {
-                    if (res.Kind == "movie")
+                    if (res.MediaType == "movie")
                     {
                         lastMoviePage = res.Page;
                         if (res.Items.Count < 20 || res.TotalPages <= 1 || res.Page >= res.TotalPages)
@@ -634,15 +763,16 @@ public class GenreCache(
                 providerIds["TmdbPoster"] = posterUrl;
             }
 
+            var rating = result.VoteAverage.HasValue ? (float)result.VoteAverage.Value : (float?)null;
             var itemId = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr);
-            RegisterVirtualWithGelato(itemId, isMovie ? "movie" : "tv", tmdbIdStr, title, year, posterUrl);
+            RegisterVirtualWithGelato(itemId, title, year, isMovie ? "movie" : "tv", tmdbIdStr, null, posterUrl, backdropUrl, rating, result.Overview);
 
             list.Add(new BaseItemDto
             {
                 Id = itemId,
                 Name = title,
                 ProductionYear = year,
-                CommunityRating = result.VoteAverage.HasValue ? (float)result.VoteAverage.Value : null,
+                CommunityRating = rating,
                 ProviderIds = providerIds,
                 Type = isMovie ? BaseItemKind.Movie : BaseItemKind.Series,
                 LocationType = LocationType.Virtual,
@@ -657,15 +787,32 @@ public class GenreCache(
         return (list, payload.TotalPages);
     }
 
-    private static void RegisterVirtualWithGelato(Guid guid, string kind, string tmdbId, string? title, int? year, string? posterUrl)
+    private static void RegisterVirtualWithGelato(
+        Guid guid,
+        string name,
+        int? year,
+        string mediaType,
+        string tmdbId,
+        string? imdbId,
+        string? posterUrl,
+        string? backdropUrl,
+        float? rating,
+        string? overview)
     {
         try
         {
-            var gelatoPluginType = Type.GetType("Gelato.GelatoPlugin, Gelato");
-            if (gelatoPluginType != null)
+            var regMethod = GelatoRegisterVirtualMethod.Value;
+            if (regMethod != null)
             {
-                var regMethod = gelatoPluginType.GetMethod("RegisterVirtualTitle", BindingFlags.Public | BindingFlags.Static);
-                regMethod?.Invoke(null, [guid, kind, tmdbId, title, year, null, posterUrl]);
+                var paramCount = regMethod.GetParameters().Length;
+                if (paramCount == 10)
+                {
+                    regMethod.Invoke(null, [guid, name, year, mediaType, tmdbId, imdbId, posterUrl, backdropUrl, rating, overview]);
+                }
+                else if (paramCount == 7)
+                {
+                    regMethod.Invoke(null, [guid, mediaType, tmdbId, name, year, imdbId, posterUrl]);
+                }
             }
         }
         catch

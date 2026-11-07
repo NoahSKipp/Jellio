@@ -15,9 +15,49 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.107.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.107.1",
+    "summary": "Coming Soon season progression, virtual catalog import & pagination fixes, and offline download improvements.",
+    "highlights": [
+      {
+        "title": "Coming Soon Airing Progression",
+        "description": "Currently airing shows stay in Coming Soon after you finish the latest episode, automatically advancing to the next upcoming episode in the season with per-user schedule filtering."
+      },
+      {
+        "title": "Virtual Catalog Imports & Modal Pagination",
+        "description": "Fixed virtual catalog item registration with Gelato when opening titles from full row views, localized media type labels in modals, and resolved duplicate page offsets during infinite scrolling."
+      },
+      {
+        "title": "Offline Downloads & Player Polish",
+        "description": "Persisted live byte progress for the macOS Dock indicator, prevented double-seeking on arrow keys in the offline player, and refined local calendar day badges."
+      }
+    ]
+  },
+  {
     "version": "1.107.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.0",
+    "summary": "Skipped episode auto-completion with anthology exemptions and active resume target priority.",
+    "highlights": [
+      {
+        "title": "Skipped Episode Progression",
+        "description": "Jumping forward to a later episode in a series automatically marks earlier unfinished episodes as watched, protecting your watch progress."
+      },
+      {
+        "title": "Episodic Anthology Exemption",
+        "description": "Anthology shows like Black Mirror, Love, Death & Robots, and The Twilight Zone are exempt from auto-completion so you can watch in any order."
+      },
+      {
+        "title": "Active Resume Target Priority",
+        "description": "Starting playback from a series detail page prioritizes your active in-progress episode from Continue Watching over Next Up."
+      }
+    ]
+  },
+  {
+    "version": "1.106.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.106.2",
     "summary": "Skipped episode auto-completion with anthology exemptions and active resume target priority.",
     "highlights": [
       {
@@ -3776,74 +3816,6 @@ export const CHANGELOG_RELEASES = [
       {
         "title": "Bug Fix",
         "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
-      },
-      {
-        "title": "Other",
-        "description": "Credit achievements off the real stream duration, not metadata"
       }
     ]
   },
@@ -3867,58 +3839,6 @@ export const CHANGELOG_RELEASES = [
     "highlights": [
       {
         "title": "Bug Fix",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
-        "description": "Guard against a stale subtitle track load race"
-      },
-      {
-        "title": "Other",
         "description": "Guard against a stale subtitle track load race"
       }
     ]

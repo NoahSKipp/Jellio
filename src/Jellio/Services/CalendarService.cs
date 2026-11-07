@@ -32,9 +32,11 @@ public class CalendarService(
 )
 {
     private const string BaseUrl = "https://api.themoviedb.org/3";
+    private const int MaxCacheEntries = 5000;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(6);
 
     private readonly ConcurrentDictionary<string, (DateTime CachedAt, CalendarEntry? Entry)> _cache = new();
+    private readonly ConcurrentDictionary<string, (DateTime CachedAt, IReadOnlyList<CalendarEntry> Entries)> _seriesScheduleCache = new();
 
     public static readonly TimeSpan SeriesWindow = TimeSpan.FromDays(3 * 365);
     public static readonly TimeSpan AnimeSeriesWindow = TimeSpan.FromDays(5 * 365);
@@ -98,6 +100,11 @@ public class CalendarService(
         // Taken out of Upcoming by the user: no row entry, no notification.
         var hidden = upcomingHidden.Load(user.Id);
         var result = monitored.Values.Where(item => !hidden.Contains(item.Id)).ToList();
+        if (_monitoredCache.Count >= MaxCacheEntries)
+        {
+            _monitoredCache.Clear();
+        }
+
         _monitoredCache[user.Id] = (DateTime.UtcNow, result);
         logger.LogInformation(
             "Jellio: calendar watches {Count} titles for {User} ({Watched} watched series)",
@@ -257,11 +264,20 @@ public class CalendarService(
             logger.LogWarning(ex, "Jellio: could not fetch TMDB release dates for movie {TmdbId}", tmdbId);
         }
 
+        if (_cache.Count >= MaxCacheEntries)
+        {
+            _cache.Clear();
+        }
+
         _cache[cacheKey] = (DateTime.UtcNow, entry);
         return entry;
     }
 
-    public void ForgetCachedSeries(string tmdbId) => _cache.TryRemove("tv:" + tmdbId, out _);
+    public void ForgetCachedSeries(string tmdbId)
+    {
+        _cache.TryRemove("tv:" + tmdbId, out _);
+        _seriesScheduleCache.TryRemove("tv:" + tmdbId, out _);
+    }
 
     public async Task<CalendarEntry?> GetSeriesEntryAsync(
         string tmdbId,
@@ -271,24 +287,12 @@ public class CalendarService(
     {
         var today = (nowUtc ?? DateTime.UtcNow).Date;
         var cacheKey = "tv:" + tmdbId;
-        if (TryGetCached(cacheKey, out var cached))
+        if (TryGetCachedSeriesSchedule(cacheKey, today, out var cachedSchedule))
         {
-            if (cached != null)
-            {
-                var (s, e) = ParseSeasonEpisode(cached.Detail);
-                if (cached.Date >= today &&
-                    (!s.HasValue || !e.HasValue || playedEpisodes == null || !playedEpisodes.Contains((s.Value, e.Value))))
-                {
-                    return cached;
-                }
-            }
-            else
-            {
-                return null;
-            }
+            return PickFirstUnplayed(cachedSchedule, today, playedEpisodes);
         }
 
-        CalendarEntry? entry = null;
+        var schedule = new List<CalendarEntry>();
         try
         {
             using var client = CreateClient(accessToken);
@@ -297,22 +301,31 @@ public class CalendarService(
             {
                 using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
-                entry = PickNextEpisode(doc, nowUtc, playedEpisodes);
-
-                if (entry == null)
+                var nextEp = PickNextEpisode(doc, nowUtc);
+                if (nextEp != null)
                 {
-                    var seasonNumber = PickSeasonNumberToSearch(doc);
-                    if (seasonNumber.HasValue)
+                    schedule.Add(nextEp);
+                }
+
+                var seasonNumber = PickSeasonNumberToSearch(doc);
+                if (seasonNumber.HasValue)
+                {
+                    using var seasonResp = await client.GetAsync("tv/" + tmdbId + "/season/" + seasonNumber.Value).ConfigureAwait(false);
+                    if (seasonResp.IsSuccessStatusCode)
                     {
-                        using var seasonResp = await client.GetAsync("tv/" + tmdbId + "/season/" + seasonNumber.Value).ConfigureAwait(false);
-                        if (seasonResp.IsSuccessStatusCode)
+                        using var seasonStream = await seasonResp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using var seasonDoc = await JsonDocument.ParseAsync(seasonStream).ConfigureAwait(false);
+                        foreach (var ep in PickUpcomingEpisodesFromSeason(seasonDoc, nowUtc))
                         {
-                            using var seasonStream = await seasonResp.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                            using var seasonDoc = await JsonDocument.ParseAsync(seasonStream).ConfigureAwait(false);
-                            entry = PickNextEpisodeFromSeason(seasonDoc, nowUtc, playedEpisodes);
+                            if (!schedule.Any(existing => existing.Detail == ep.Detail && existing.Date == ep.Date))
+                            {
+                                schedule.Add(ep);
+                            }
                         }
                     }
                 }
+
+                schedule.Sort((a, b) => a.Date.CompareTo(b.Date));
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
@@ -320,8 +333,52 @@ public class CalendarService(
             logger.LogWarning(ex, "Jellio: could not fetch TMDB next episode for series {TmdbId}", tmdbId);
         }
 
-        _cache[cacheKey] = (DateTime.UtcNow, entry);
-        return entry;
+        if (_seriesScheduleCache.Count >= MaxCacheEntries)
+        {
+            _seriesScheduleCache.Clear();
+        }
+
+        _seriesScheduleCache[cacheKey] = (DateTime.UtcNow, schedule);
+        return PickFirstUnplayed(schedule, today, playedEpisodes);
+    }
+
+    private bool TryGetCachedSeriesSchedule(string key, DateTime today, out IReadOnlyList<CalendarEntry> entries)
+    {
+        if (_seriesScheduleCache.TryGetValue(key, out var hit) && DateTime.UtcNow - hit.CachedAt < CacheTtl)
+        {
+            if (hit.Entries.Count == 0 || hit.Entries.Any(e => e.Date >= today))
+            {
+                entries = hit.Entries;
+                return true;
+            }
+        }
+
+        entries = Array.Empty<CalendarEntry>();
+        return false;
+    }
+
+    private static CalendarEntry? PickFirstUnplayed(
+        IReadOnlyList<CalendarEntry> schedule,
+        DateTime today,
+        ISet<(int Season, int Episode)>? playedEpisodes)
+    {
+        foreach (var entry in schedule)
+        {
+            if (entry.Date < today)
+            {
+                continue;
+            }
+
+            var (s, e) = ParseSeasonEpisode(entry.Detail);
+            if (s.HasValue && e.HasValue && playedEpisodes != null && playedEpisodes.Contains((s.Value, e.Value)))
+            {
+                continue;
+            }
+
+            return entry;
+        }
+
+        return null;
     }
 
     private bool TryGetCached(string key, out CalendarEntry? entry)
@@ -409,20 +466,20 @@ public class CalendarService(
         return null;
     }
 
-    internal static CalendarEntry? PickNextEpisodeFromSeason(
+    internal static List<CalendarEntry> PickUpcomingEpisodesFromSeason(
         JsonDocument seasonDoc,
-        DateTime? nowUtc = null,
-        ISet<(int Season, int Episode)>? playedEpisodes = null)
+        DateTime? nowUtc = null)
     {
+        var results = new List<CalendarEntry>();
         if (seasonDoc == null || seasonDoc.RootElement.ValueKind != JsonValueKind.Object)
         {
-            return null;
+            return results;
         }
 
         if (!seasonDoc.RootElement.TryGetProperty("episodes", out var episodes) ||
             episodes.ValueKind != JsonValueKind.Array)
         {
-            return null;
+            return results;
         }
 
         var today = (nowUtc ?? DateTime.UtcNow).Date;
@@ -454,22 +511,26 @@ public class CalendarService(
             int? seasonNumber = ep.TryGetProperty("season_number", out var sProp) && sProp.TryGetInt32(out var s) ? s : null;
             int? episodeNumber = ep.TryGetProperty("episode_number", out var eProp) && eProp.TryGetInt32(out var e) ? e : null;
 
-            if (seasonNumber.HasValue && episodeNumber.HasValue &&
-                playedEpisodes != null && playedEpisodes.Contains((seasonNumber.Value, episodeNumber.Value)))
-            {
-                continue;
-            }
-
             string? detail = null;
             if (seasonNumber.HasValue && episodeNumber.HasValue)
             {
                 detail = "S" + seasonNumber.Value + "E" + episodeNumber.Value;
             }
 
-            return new CalendarEntry(airDate.Date, "episode", detail);
+            results.Add(new CalendarEntry(airDate.Date, "episode", detail));
         }
 
-        return null;
+        return results;
+    }
+
+    internal static CalendarEntry? PickNextEpisodeFromSeason(
+        JsonDocument seasonDoc,
+        DateTime? nowUtc = null,
+        ISet<(int Season, int Episode)>? playedEpisodes = null)
+    {
+        var today = (nowUtc ?? DateTime.UtcNow).Date;
+        var upcoming = PickUpcomingEpisodesFromSeason(seasonDoc, nowUtc);
+        return PickFirstUnplayed(upcoming, today, playedEpisodes);
     }
 
     internal static CalendarEntry? PickNextEpisode(
@@ -568,7 +629,7 @@ public class CalendarService(
             if (!release.TryGetProperty("type", out var typeProp) ||
                 typeProp.ValueKind != JsonValueKind.Number ||
                 !typeProp.TryGetInt32(out var releaseType) ||
-                releaseType != 4)
+                releaseType is not (4 or 5))
             {
                 continue;
             }
@@ -591,9 +652,9 @@ public class CalendarService(
                 return null;
             }
 
-            if (earliestFuture == null || parsed < earliestFuture)
+            if (releaseType == 4 && (earliestFuture == null || parsed.Date < earliestFuture))
             {
-                earliestFuture = parsed;
+                earliestFuture = parsed.Date;
             }
         }
 

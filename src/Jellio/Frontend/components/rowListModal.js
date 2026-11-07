@@ -56,9 +56,6 @@ function buildListItem(item, select) {
   if (item.PosterPath) {
     candidates.push(item.PosterPath.startsWith('http') ? item.PosterPath : 'https://image.tmdb.org/t/p/w500' + item.PosterPath);
   }
-  if (item.SeriesPrimaryImageTag) {
-    candidates.push(getImageUrl(item.SeriesId || item.Id, 'Primary', { tag: item.SeriesPrimaryImageTag, maxWidth: 160 }));
-  }
   const seriesTag = item.SeriesPrimaryImageTag || (item.ImageTags && (item.ImageTags.SeriesPrimary || item.ImageTags.seriesPrimary));
   if (seriesTag) {
     candidates.push(getImageUrl(item.SeriesId || item.Id, 'Primary', { tag: seriesTag, maxWidth: 160 }));
@@ -175,7 +172,8 @@ function openRowListModal(title, items, options) {
     shown.forEach(function (item) {
       if (item && item.Id) seenIds[String(item.Id)] = true;
     });
-    let nextStart = shown.length;
+    let rawOffset = shown.length;
+    let emptyPages = 0;
     let loading = false;
     let done = false;
     const sentinel = el('div', 'jellio-row-list-sentinel');
@@ -185,14 +183,19 @@ function openRowListModal(title, items, options) {
     function loadMore() {
       if (loading || done || token !== openToken) return;
       loading = true;
-      const start = nextStart;
+      const start = rawOffset;
       opts.fetchPage(start, PAGE_SIZE).then(function (page) {
         if (token !== openToken) return;
         const pageItems = Array.isArray(page) ? page : ((page && page.Items) ? page.Items : []);
-        nextStart = start + pageItems.length;
+        rawOffset = start + PAGE_SIZE;
         if (!pageItems.length) {
-          done = true;
+          emptyPages += 1;
+          if (emptyPages >= 2 || rawOffset >= 1200) {
+            done = true;
+          }
+          return;
         }
+        emptyPages = 0;
         let added = 0;
         pageItems.forEach(function (item) {
           if (!item) return;
@@ -216,6 +219,10 @@ function openRowListModal(title, items, options) {
           loadingNote.remove();
           sentinel.remove();
         } else if (token === openToken) {
+          if (emptyPages > 0) {
+            loadMore();
+            return;
+          }
           const listRect = list.getBoundingClientRect();
           const sentinelRect = sentinel.getBoundingClientRect();
           if (sentinelRect.top <= listRect.bottom + 300) {

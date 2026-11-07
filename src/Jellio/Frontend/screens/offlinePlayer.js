@@ -119,8 +119,10 @@ export async function renderOfflinePlayer(root, params) {
       if (video.paused) video.play();
       else video.pause();
     } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
       video.currentTime = Math.max(0, video.currentTime - 10);
     } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
       video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
     } else if (event.key === 'f') {
       if (document.fullscreenElement) document.exitFullscreen();

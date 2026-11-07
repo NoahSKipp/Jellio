@@ -427,12 +427,21 @@ async function downloadParallel(record, file, cache, controller) {
   const size = Math.ceil(probe.total / PARTS);
   const partBytes = new Array(PARTS).fill(0);
   let lastNotify = 0;
+  let lastPersist = 0;
   function progress() {
     record.DoneBytes = baseBytes + partBytes.reduce((sum, bytes) => sum + bytes, 0);
     const now = Date.now();
     if (now - lastNotify > 400) {
       lastNotify = now;
       notify(record);
+    }
+    if (now - lastPersist >= 1000) {
+      lastPersist = now;
+      withStore('downloads', 'readwrite', (store) => {
+        if (activeDownload && activeDownload.id === record.Id && record.Status === 'downloading') {
+          store.put(record);
+        }
+      }).catch(() => {});
     }
   }
 
@@ -548,6 +557,7 @@ async function streamFile(record, file, cache, attempt, watch) {
   const length = Number(response.headers.get('Content-Length')) || 0;
   if (length) record.TotalBytes += length;
   let lastNotify = 0;
+  let lastPersist = 0;
   const counter = new TransformStream({
     transform(chunk, streamController) {
       watch();
@@ -556,6 +566,14 @@ async function streamFile(record, file, cache, attempt, watch) {
       if (now - lastNotify > 400) {
         lastNotify = now;
         notify(record);
+      }
+      if (now - lastPersist >= 1000) {
+        lastPersist = now;
+        withStore('downloads', 'readwrite', (store) => {
+          if (activeDownload && activeDownload.id === record.Id && record.Status === 'downloading') {
+            store.put(record);
+          }
+        }).catch(() => {});
       }
       streamController.enqueue(chunk);
     },

@@ -254,10 +254,13 @@ function comingSoonKindLabel(entry) {
 
 function comingSoonDateLabel(entry) {
   const date = new Date(entry.Date);
-  const diffDays = Math.round((date - new Date()) / (24 * 60 * 60 * 1000));
-  if (diffDays <= 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
-  if (diffDays < 7) return 'In ' + diffDays + ' days';
+  const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const now = new Date();
+  const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((targetDay - todayDay) / 86400000);
+  if (diffDays <= 0) return t('calendar_today', null, 'Today');
+  if (diffDays === 1) return t('calendar_tomorrow', null, 'Tomorrow');
+  if (diffDays < 7) return t('vocab_in_days', { days: diffDays }, 'In ' + diffDays + ' days');
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -436,9 +439,9 @@ async function renderWatchlist(root, activeList) {
       }
     }
 
-    const movieSection = buildWatchlistSection('Movies', movies, checkBothEmpty);
+    const movieSection = buildWatchlistSection(t('nav_movies', null, 'Movies'), movies, checkBothEmpty);
     if (movieSection) root.appendChild(movieSection);
-    const seriesSection = buildWatchlistSection('Series', series, checkBothEmpty);
+    const seriesSection = buildWatchlistSection(t('type_series', null, 'Series'), series, checkBothEmpty);
     if (seriesSection) root.appendChild(seriesSection);
 
     if (!movieSection && !seriesSection) {

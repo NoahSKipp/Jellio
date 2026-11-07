@@ -1044,11 +1044,14 @@ export async function renderDetail(root, params, signal) {
   }
 
   // Drawn from what was last seen: redraw once if the fresh copy differs.
+  let subCleanup = null;
   const onRefreshed = function (event) {
     if (!event.detail || (event.detail.itemId !== itemId && event.detail.itemId !== String(itemId))) return;
     window.removeEventListener('jellio-item-refreshed', onRefreshed);
     if (!root.isConnected || window.location.hash.indexOf('id=' + itemId) === -1) return;
-    renderDetail(root, params, signal);
+    Promise.resolve(renderDetail(root, params, signal)).then(function (fn) {
+      if (typeof fn === 'function') subCleanup = fn;
+    });
   };
   window.addEventListener('jellio-item-refreshed', onRefreshed);
   window.setTimeout(function () {
@@ -1683,6 +1686,8 @@ export async function renderDetail(root, params, signal) {
 
   return function () {
     cancelled = true;
+    window.removeEventListener('jellio-item-refreshed', onRefreshed);
+    if (subCleanup) subCleanup();
     collapseActions();
     closeEpisodeMenu();
     closeTrailerModal();

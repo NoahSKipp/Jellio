@@ -1,4 +1,4 @@
-const INFO_FIELDS = ['Overview', 'Genres', 'People', 'Studios', 'ProductionYear', 'RunTimeTicks', 'PremiereDate', 'RemoteTrailers'];
+const INFO_FIELDS = ['Overview', 'Genres', 'Tags', 'People', 'Studios', 'ProductionYear', 'RunTimeTicks', 'PremiereDate', 'RemoteTrailers'];
 const PLAYBACK_FIELDS = ['Chapters'];
 
 function fieldsFor(includePlaybackFields) {
