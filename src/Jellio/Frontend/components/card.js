@@ -93,7 +93,7 @@ function buildWatchersBadge(watchers) {
 }
 
 // Long enough that sweeping across a row doesn't warm every card on it.
-const PREFETCH_DEBOUNCE_MS = 400;
+const PREFETCH_DEBOUNCE_MS = 900;
 
 function attachStreamPrefetch(card, item) {
   if (item.Type !== 'Movie' && item.Type !== 'Episode' && item.Type !== 'Series') return;

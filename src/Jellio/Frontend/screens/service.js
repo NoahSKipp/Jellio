@@ -77,20 +77,26 @@ function topGenres(rows, limit) {
     .slice(0, limit);
 }
 
-function buildChips(genres, onFilter) {
+function buildChips(genres, onFilter, activeFilter) {
   const chips = [{ key: 'all', label: 'All' }, { key: 'movies', label: 'Movies' }, { key: 'tvshows', label: 'TV Shows' }].concat(
     genres.map(function (g) {
       return { key: 'genre:' + g, label: g };
     }),
   );
+  const selectedKey = chips.some(function (c) {
+    return c.key === activeFilter;
+  })
+    ? activeFilter
+    : 'all';
 
   const bar = el('div', 'jellio-service-chips');
   bar.setAttribute('role', 'tablist');
-  chips.forEach(function (chip, index) {
-    const button = el('button', 'jellio-service-chip' + (index === 0 ? ' jellio-service-chip-active' : ''), chip.label);
+  chips.forEach(function (chip) {
+    const isActive = chip.key === selectedKey;
+    const button = el('button', 'jellio-service-chip' + (isActive ? ' jellio-service-chip-active' : ''), chip.label);
     button.type = 'button';
     button.setAttribute('role', 'tab');
-    button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
     button.addEventListener('click', function () {
       Array.prototype.forEach.call(bar.children, function (sibling) {
         sibling.classList.remove('jellio-service-chip-active');
@@ -184,12 +190,31 @@ export async function renderService(root, params) {
 
   const header = buildHeader(service, null);
   root.appendChild(header);
-  const chipsMount = el('div');
+  let chipsMount = el('div');
   root.appendChild(chipsMount);
   const rowsMount = el('div', 'jellio-rows');
   const skeleton = buildHomeSkeleton(4);
   rowsMount.appendChild(skeleton);
   root.appendChild(rowsMount);
+
+  let activeFilter = 'all';
+  let bestHeroItem = null;
+  const filled = [];
+
+  function renderChips() {
+    const nextChips = buildChips(
+      topGenres(filled, 10),
+      function (filter) {
+        activeFilter = filter;
+        applyFilter(rowsMount, activeFilter);
+      },
+      activeFilter,
+    );
+    chipsMount.replaceWith(nextChips);
+    chipsMount = nextChips;
+  }
+
+  renderChips();
 
   let tornDown = false;
   const slots = matching.map(function () {
@@ -199,7 +224,6 @@ export async function renderService(root, params) {
   });
   let shownRows = 0;
 
-  const filled = [];
   Promise.all(
     matching.map(function (entry, index) {
       return getCollectionItems(entry.collection.Id, entry.kind, ROW_LIMIT)
@@ -209,6 +233,24 @@ export async function renderService(root, params) {
           filled.push(row);
           if (skeleton.parentNode) skeleton.remove();
           slots[index].replaceWith(buildRowSection(row, shownRows++));
+
+          let heroUpdated = false;
+          items.forEach(function (it) {
+            if (!it.BackdropImageTags || !it.BackdropImageTags[0]) return;
+            if (!bestHeroItem || (it.CommunityRating || 0) > (bestHeroItem.CommunityRating || 0)) {
+              bestHeroItem = it;
+              heroUpdated = true;
+            }
+          });
+          if (heroUpdated && bestHeroItem) {
+            fadeInBackdrop(
+              header,
+              getImageUrl(bestHeroItem.Id, 'Backdrop', { tag: bestHeroItem.BackdropImageTags[0], maxWidth: 1920 }),
+            );
+          }
+
+          renderChips();
+          applyFilter(rowsMount, activeFilter);
         })
         .catch(function (err) {
           console.warn('Jellio: could not load service catalog', err);
@@ -229,16 +271,7 @@ export async function renderService(root, params) {
             ' yet. Run the Gelato catalog import, and check that the catalogs for this service have Collection enabled.',
         ),
       );
-      return;
     }
-
-    const heroItem = pickHeroItem(filled);
-    if (heroItem) {
-      fadeInBackdrop(header, getImageUrl(heroItem.Id, 'Backdrop', { tag: heroItem.BackdropImageTags[0], maxWidth: 1920 }));
-    }
-    chipsMount.replaceWith(buildChips(topGenres(filled, 10), function (filter) {
-      applyFilter(rowsMount, filter);
-    }));
   });
 
   return function () {

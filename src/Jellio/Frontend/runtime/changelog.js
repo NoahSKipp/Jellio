@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.107.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.107.2",
+    "summary": "Instant Studio Hub progressive loading, longer BoxSets caching, and smoother card focus prefetching.",
+    "highlights": [
+      {
+        "title": "Progressive Studio Hub Rendering",
+        "description": "Studio Hubs now render their hero backdrop and genre filter chips progressively as soon as the first collection row loads instead of waiting for every row to finish."
+      },
+      {
+        "title": "Instant Studio Hub Switching",
+        "description": "Collection listings are now cached in memory and session storage for 10 minutes, making switching between Studio Hubs instantaneous."
+      },
+      {
+        "title": "Smarter Focus Prefetch Throttling",
+        "description": "Increased card focus prefetch debounce to 900ms to prevent rapid focus sweeps from queuing unnecessary background stream requests."
+      }
+    ]
+  },
+  {
     "version": "1.107.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.1",

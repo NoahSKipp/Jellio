@@ -438,10 +438,40 @@ export function invalidateUserDataRowsThrottled(intervalMs) {
   invalidateUserDataRows();
 }
 
+const COLLECTIONS_CACHE_TTL_MS = 10 * 60 * 1000;
+const COLLECTIONS_SESSION_PREFIX = 'jellio_collections_';
+
+function clearCollectionsSessionCache(userId) {
+  try {
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
+    if (userId) {
+      window.sessionStorage.removeItem(COLLECTIONS_SESSION_PREFIX + userId);
+    } else {
+      const currentUserId = getCurrentUserId();
+      if (currentUserId) {
+        window.sessionStorage.removeItem(COLLECTIONS_SESSION_PREFIX + currentUserId);
+      }
+    }
+    if (typeof window.sessionStorage.length === 'number' && typeof window.sessionStorage.key === 'function') {
+      const keys = [];
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key && key.indexOf(COLLECTIONS_SESSION_PREFIX) === 0) {
+          keys.push(key);
+        }
+      }
+      keys.forEach(function (key) {
+        window.sessionStorage.removeItem(key);
+      });
+    }
+  } catch (err) {}
+}
+
 // Settings > Clear cached rows, logout and the setting going off.
 export function clearCachedRows() {
   cache.clear();
   recentValues.clear();
+  clearCollectionsSessionCache();
   if (rowCache) {
     rowCache.wipe();
   } else {
@@ -2173,9 +2203,30 @@ function getAllCollections(userId) {
 export function getCollections() {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  return cached('collections:' + userId, function () {
-    return getAllCollections(userId);
-  });
+  const sessionKey = COLLECTIONS_SESSION_PREFIX + userId;
+  return cached(
+    'collections:' + userId,
+    function () {
+      try {
+        const raw = typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage.getItem(sessionKey) : null;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.items) && Date.now() - parsed.ts < COLLECTIONS_CACHE_TTL_MS) {
+            return Promise.resolve(parsed.items);
+          }
+        }
+      } catch (err) {}
+      return getAllCollections(userId).then(function (items) {
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem(sessionKey, JSON.stringify({ ts: Date.now(), items: items }));
+          }
+        } catch (err) {}
+        return items;
+      });
+    },
+    COLLECTIONS_CACHE_TTL_MS,
+  );
 }
 
 export function invalidateNavCaches() {
@@ -2183,6 +2234,7 @@ export function invalidateNavCaches() {
   if (!userId) return;
   invalidateCache('views:' + userId);
   invalidateCache('collections:' + userId);
+  clearCollectionsSessionCache(userId);
 }
 
 export function isAnimeCollection(collection) {
