@@ -9,6 +9,7 @@ import { getBookMetadata, getBookCoverUrl, getMangaSeriesCoverUrl, getAudiobookT
 import { watchSources } from '../runtime/itemInfo.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
+import { getAvailableEditions, getPreferredEdition, setPreferredEdition } from '../runtime/editions.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { toggleWatched, toggleWatchlist, toggleRating, findSkipTimestamps } from '../components/cardOptionsMenu.js';
@@ -1061,6 +1062,34 @@ function renderDetailSkeleton(root, preview) {
   root.appendChild(skeletonLoading);
 }
 
+function renderEditionSelector(container, editions, current, onSelect) {
+  container.textContent = '';
+  const selector = el('div', 'jellio-edition-selector');
+  selector.setAttribute('role', 'radiogroup');
+  selector.setAttribute('aria-label', 'Edition');
+
+  editions.forEach(function (edition) {
+    const isSelected = edition === current;
+    const pill = el('button', 'jellio-edition-pill' + (isSelected ? ' jellio-edition-pill-active' : ''), edition);
+    pill.type = 'button';
+    pill.setAttribute('role', 'radio');
+    pill.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    pill.addEventListener('click', function () {
+      if (edition === current) return;
+      current = edition;
+      Array.from(selector.querySelectorAll('.jellio-edition-pill')).forEach(function (btn) {
+        const isThis = btn === pill;
+        btn.classList.toggle('jellio-edition-pill-active', isThis);
+        btn.setAttribute('aria-checked', isThis ? 'true' : 'false');
+      });
+      onSelect(edition);
+    });
+    selector.appendChild(pill);
+  });
+
+  container.appendChild(selector);
+}
+
 export async function renderDetail(root, params, signal) {
   root.textContent = '';
   root.className = 'jellio-content jellio-screen-detail';
@@ -1250,6 +1279,7 @@ export async function renderDetail(root, params, signal) {
   // the video stream picker - there is no stream to pick for either.
   const readerKind = item.Type === 'Book' ? 'read' : item.Type === 'AudioBook' ? 'listen' : null;
   const iconActionClass = 'jellio-detail-icon-action jellio-detail-icon-action-collapsible';
+  let activeEdition = null;
   const actions = el('div', 'jellio-detail-actions jellio-detail-actions-has-more');
 
   if (readerKind) {
@@ -1283,7 +1313,7 @@ export async function renderDetail(root, params, signal) {
     playButton.appendChild(el('span', 'material-icons play_arrow'));
     playButton.appendChild(el('span', null, t('action_play')));
     playButton.addEventListener('click', function () {
-      openStreamPicker(item);
+      openStreamPicker(item, activeEdition ? { edition: activeEdition } : undefined);
     });
     actions.appendChild(playButton);
   } else {
@@ -1535,7 +1565,7 @@ export async function renderDetail(root, params, signal) {
     changeStreamButton.appendChild(el('span', 'material-icons sync_alt'));
     changeStreamButton.addEventListener('click', function (event) {
       event.stopPropagation();
-      openStreamPicker(item, { forceChoice: true });
+      openStreamPicker(item, Object.assign({ forceChoice: true }, activeEdition ? { edition: activeEdition } : {}));
     });
     actionsIcons.appendChild(changeStreamButton);
   }
@@ -1646,6 +1676,8 @@ export async function renderDetail(root, params, signal) {
   });
   actionsIcons.appendChild(moreButton);
 
+  const editionMount = el('div', 'jellio-detail-edition-mount');
+  heroContent.appendChild(editionMount);
   heroContent.appendChild(actions);
 
   const playsVideo = !needsEpisodeResolution && !readerKind && (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Video');
@@ -1684,6 +1716,17 @@ export async function renderDetail(root, params, signal) {
           streamStatus.hidden = true;
           const badges = buildMediaTechBadges({ MediaSources: update.sources });
           if (badges) badgeSlot.appendChild(badges);
+
+          const editions = getAvailableEditions(update.sources);
+          if (editions.length >= 2) {
+            activeEdition = getPreferredEdition(item.Id, editions);
+            renderEditionSelector(editionMount, editions, activeEdition, function (newEd) {
+              activeEdition = newEd;
+              setPreferredEdition(item.Id, newEd);
+            });
+          } else {
+            editionMount.textContent = '';
+          }
           return;
         }
         streamStatus.appendChild(el('span', null, update.state === 'empty' ? t('detail_no_streams') : 'Could not check for streams.'));

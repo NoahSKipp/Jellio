@@ -5,6 +5,7 @@ import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { QUALITY_ORDER, labelQuality, sourceQuality, filterPlayableSources } from '../runtime/quality.js';
+import { getAvailableEditions, detectSourceEdition, rawEditionTag } from '../runtime/editions.js';
 
 export { sourceQuality };
 import { navigateTo } from '../runtime/router.js';
@@ -239,7 +240,7 @@ export function buildOutlookBadge(outlook) {
   return badge;
 }
 
-export function buildSourceCard(source, onSelect, isActive) {
+export function buildSourceCard(source, onSelect, isActive, allSources) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = 'jellio-stream-picker-card' + (isActive ? ' jellio-stream-picker-card-active' : '');
@@ -250,6 +251,10 @@ export function buildSourceCard(source, onSelect, isActive) {
   if (description) {
     card.appendChild(el('div', 'jellio-stream-picker-card-desc', description));
   }
+
+  const detectedEdition = allSources && getAvailableEditions(allSources).length >= 2
+    ? detectSourceEdition(source, allSources)
+    : rawEditionTag(source);
 
   const tags = [
     labelQuality(source) || sourceResolutionLabel(source) || sourceQuality(source),
@@ -262,10 +267,18 @@ export function buildSourceCard(source, onSelect, isActive) {
     .map(function (tag) {
       return String(tag).toUpperCase();
     });
+
+  if (detectedEdition) {
+    tags.unshift(detectedEdition.toUpperCase());
+  }
+
   if (tags.length) {
     const tagRow = el('div', 'jellio-stream-picker-card-tags');
     tags.forEach(function (tag) {
-      tagRow.appendChild(el('span', 'jellio-stream-picker-card-tag', tag));
+      const isEdition = detectedEdition && tag === detectedEdition.toUpperCase();
+      tagRow.appendChild(
+        el('span', 'jellio-stream-picker-card-tag' + (isEdition ? ' jellio-stream-picker-card-edition' : ''), tag),
+      );
     });
     card.appendChild(tagRow);
   }
@@ -360,16 +373,29 @@ export function buildQualityFilterRow(sources, onSelect) {
   }), onSelect);
 }
 
-// Language and quality chips combine: a source has to match both.
-export function filterSources(sources, language, quality) {
+export function buildEditionFilterRow(sources, onSelect, initialSelected) {
+  const editions = getAvailableEditions(sources);
+  if (editions.length < 2) return null;
+  return buildChipRow(
+    editions.map(function (edition) {
+      return { value: edition, label: edition };
+    }),
+    onSelect,
+    initialSelected,
+  );
+}
+
+// Language, quality, and edition chips combine: a source has to match all active filters.
+export function filterSources(sources, language, quality, edition) {
   return sources.filter(function (source) {
     if (language && sourceAudioLanguages(source).indexOf(language) === -1) return false;
     if (quality && sourceQuality(source) !== quality) return false;
+    if (edition && detectSourceEdition(source, sources) !== edition) return false;
     return true;
   });
 }
 
-function buildChipRow(entries, onSelect) {
+function buildChipRow(entries, onSelect, initialSelected) {
   const filterRow = el('div', 'jellio-stream-picker-filters');
   const chips = [];
   function setSelected(value, chip) {
@@ -378,7 +404,12 @@ function buildChipRow(entries, onSelect) {
     });
     onSelect(value);
   }
-  const allChip = el('button', 'jellio-stream-picker-filter-chip jellio-stream-picker-filter-chip-active', t('stream_all'));
+  const isDefaultAll = !initialSelected;
+  const allChip = el(
+    'button',
+    'jellio-stream-picker-filter-chip' + (isDefaultAll ? ' jellio-stream-picker-filter-chip-active' : ''),
+    t('stream_all'),
+  );
   allChip.type = 'button';
   allChip.addEventListener('click', function () {
     setSelected(null, allChip);
@@ -386,7 +417,12 @@ function buildChipRow(entries, onSelect) {
   chips.push(allChip);
   filterRow.appendChild(allChip);
   entries.forEach(function (entry) {
-    const chip = el('button', 'jellio-stream-picker-filter-chip', entry.label);
+    const isActive = initialSelected === entry.value;
+    const chip = el(
+      'button',
+      'jellio-stream-picker-filter-chip' + (isActive ? ' jellio-stream-picker-filter-chip-active' : ''),
+      entry.label,
+    );
     chip.type = 'button';
     chip.addEventListener('click', function () {
       setSelected(entry.value, chip);
@@ -535,10 +571,11 @@ export async function openStreamPicker(item, options) {
     if (!opts.forceChoice && isRememberStreamEnabled()) {
       const remembered = readRememberedSources()[item.Id];
       const rememberedId = remembered && remembered.mediaSourceId;
-      const stillOffered = rememberedId && sources.some(function (source) {
+      const rememberedSource = rememberedId && sources.find(function (source) {
         return source.Id === rememberedId && !isBadSource(item.Id, source);
       });
-      if (stillOffered) {
+      const editionMatches = !opts.edition || (rememberedSource && detectSourceEdition(rememberedSource, sources) === opts.edition);
+      if (rememberedSource && editionMatches) {
         closeStreamPicker();
         navigateTo(playHash(item.Id, rememberedId));
         return;
@@ -586,7 +623,10 @@ export async function openStreamPicker(item, options) {
       const stillOffered = rememberedId && sources.some(function (source) {
         return source.Id === rememberedId;
       });
-      const targetId = stillOffered ? rememberedId : sources[0] && sources[0].Id;
+      const candidates = selectedEdition
+        ? sources.filter(function (s) { return detectSourceEdition(s, sources) === selectedEdition; })
+        : sources;
+      const targetId = stillOffered ? rememberedId : (candidates[0] && candidates[0].Id) || (sources[0] && sources[0].Id);
       closeStreamPicker();
       navigateTo(playHash(item.Id, targetId));
     });
@@ -597,6 +637,8 @@ export async function openStreamPicker(item, options) {
 
   let selectedLanguage = null;
   let selectedQuality = null;
+  const availableEditions = getAvailableEditions(sources);
+  let selectedEdition = opts.edition && availableEditions.includes(opts.edition) ? opts.edition : null;
   const list = el('div', 'jellio-stream-picker-list');
 
   if (!sources.length) {
@@ -619,7 +661,7 @@ export async function openStreamPicker(item, options) {
 
   function renderList() {
     list.textContent = '';
-    const filtered = filterSources(sources, selectedLanguage, selectedQuality);
+    const filtered = filterSources(sources, selectedLanguage, selectedQuality, selectedEdition);
     count.textContent = filtered.length
       ? filtered.length + ' stream' + (filtered.length === 1 ? '' : 's') + ' found'
       : 'No streams match these filters';
@@ -628,7 +670,7 @@ export async function openStreamPicker(item, options) {
         if (isRememberStreamEnabled()) rememberSourceChoice(item.Id, picked.Id);
         closeStreamPicker();
         navigateTo(playHash(item.Id, picked.Id));
-      });
+      }, false, sources);
       const judged = methods.get(source.Id);
       if (judged) card.appendChild(buildOutlookBadge(playbackOutlook(judged.classification)));
       if (warmSourceIds) {
@@ -649,6 +691,12 @@ export async function openStreamPicker(item, options) {
       }, 50);
     }
   }
+
+  const editionRow = buildEditionFilterRow(sources, function (edition) {
+    selectedEdition = edition;
+    renderList();
+  }, selectedEdition);
+  if (editionRow) panel.appendChild(editionRow);
 
   const filterRow = buildLanguageFilterRow(sources, function (code) {
     selectedLanguage = code;
