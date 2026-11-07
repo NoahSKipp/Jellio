@@ -57,7 +57,7 @@ public partial class NotificationsController(
         if (user != null)
         {
             var monitored = calendarService.GetMonitoredItems(user);
-            entries = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken!).ConfigureAwait(false);
+            entries = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken!, user).ConfigureAwait(false);
         }
 
         var shelfData = entries == null ? null : shelfStore.Load(userId);

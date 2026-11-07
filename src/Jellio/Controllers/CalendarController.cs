@@ -69,7 +69,7 @@ public class CalendarController(
         }
 
         var monitored = calendarService.GetMonitoredItems(user);
-        var results = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken).ConfigureAwait(false);
+        var results = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken, user).ConfigureAwait(false);
         return Ok(results);
     }
 

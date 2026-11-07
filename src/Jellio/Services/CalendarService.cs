@@ -149,7 +149,8 @@ public class CalendarService(
 
     public async Task<List<WatchlistCalendarItem>> GetWatchlistCalendarAsync(
         IReadOnlyList<BaseItem> watchlist,
-        string accessToken
+        string accessToken,
+        User? user = null
     )
     {
         using var throttle = new SemaphoreSlim(8);
@@ -164,10 +165,11 @@ public class CalendarService(
                 await throttle.WaitAsync().ConfigureAwait(false);
                 try
                 {
+                    var playedEpisodes = GetPlayedEpisodes(user, item);
                     var entry = item is Movie
                         ? await GetMovieEntryAsync(tmdbId, accessToken).ConfigureAwait(false)
                         : item is Series
-                            ? await GetSeriesEntryAsync(tmdbId, accessToken).ConfigureAwait(false)
+                            ? await GetSeriesEntryAsync(tmdbId, accessToken, playedEpisodes).ConfigureAwait(false)
                             : null;
                     if (entry == null)
                     {
@@ -185,6 +187,40 @@ public class CalendarService(
 
         var entries = await Task.WhenAll(entryTasks).ConfigureAwait(false);
         return entries.Where(entry => entry != null).Select(entry => entry!).OrderBy(entry => entry.Date).ToList();
+    }
+
+    private HashSet<(int Season, int Episode)>? GetPlayedEpisodes(User? user, BaseItem item)
+    {
+        if (user == null || item is not Series series)
+        {
+            return null;
+        }
+
+        try
+        {
+            var played = libraryManager.GetItemList(new InternalItemsQuery(user)
+            {
+                AncestorIds = [series.Id],
+                IncludeItemTypes = [BaseItemKind.Episode],
+                IsPlayed = true,
+            });
+
+            var set = new HashSet<(int Season, int Episode)>();
+            foreach (var ep in played.OfType<Episode>())
+            {
+                if (ep.ParentIndexNumber.HasValue && ep.IndexNumber.HasValue)
+                {
+                    set.Add((ep.ParentIndexNumber.Value, ep.IndexNumber.Value));
+                }
+            }
+
+            return set;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Jellio: could not query played episodes for series {SeriesId}", series.Id);
+            return null;
+        }
     }
 
     private HttpClient CreateClient(string accessToken)
@@ -225,12 +261,31 @@ public class CalendarService(
         return entry;
     }
 
-    public async Task<CalendarEntry?> GetSeriesEntryAsync(string tmdbId, string accessToken)
+    public void ForgetCachedSeries(string tmdbId) => _cache.TryRemove("tv:" + tmdbId, out _);
+
+    public async Task<CalendarEntry?> GetSeriesEntryAsync(
+        string tmdbId,
+        string accessToken,
+        ISet<(int Season, int Episode)>? playedEpisodes = null,
+        DateTime? nowUtc = null)
     {
+        var today = (nowUtc ?? DateTime.UtcNow).Date;
         var cacheKey = "tv:" + tmdbId;
         if (TryGetCached(cacheKey, out var cached))
         {
-            return cached;
+            if (cached != null)
+            {
+                var (s, e) = ParseSeasonEpisode(cached.Detail);
+                if (cached.Date >= today &&
+                    (!s.HasValue || !e.HasValue || playedEpisodes == null || !playedEpisodes.Contains((s.Value, e.Value))))
+                {
+                    return cached;
+                }
+            }
+            else
+            {
+                return null;
+            }
         }
 
         CalendarEntry? entry = null;
@@ -242,7 +297,22 @@ public class CalendarService(
             {
                 using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
-                entry = PickNextEpisode(doc);
+                entry = PickNextEpisode(doc, nowUtc, playedEpisodes);
+
+                if (entry == null)
+                {
+                    var seasonNumber = PickSeasonNumberToSearch(doc);
+                    if (seasonNumber.HasValue)
+                    {
+                        using var seasonResp = await client.GetAsync("tv/" + tmdbId + "/season/" + seasonNumber.Value).ConfigureAwait(false);
+                        if (seasonResp.IsSuccessStatusCode)
+                        {
+                            using var seasonStream = await seasonResp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                            using var seasonDoc = await JsonDocument.ParseAsync(seasonStream).ConfigureAwait(false);
+                            entry = PickNextEpisodeFromSeason(seasonDoc, nowUtc, playedEpisodes);
+                        }
+                    }
+                }
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
@@ -258,12 +328,193 @@ public class CalendarService(
     {
         if (_cache.TryGetValue(key, out var hit) && DateTime.UtcNow - hit.CachedAt < CacheTtl)
         {
-            entry = hit.Entry;
-            return true;
+            if (hit.Entry == null || hit.Entry.Date >= DateTime.UtcNow.Date)
+            {
+                entry = hit.Entry;
+                return true;
+            }
         }
 
         entry = null;
         return false;
+    }
+
+    internal static (int? Season, int? Episode) ParseSeasonEpisode(string? detail)
+    {
+        if (string.IsNullOrEmpty(detail) || !detail.StartsWith('S'))
+        {
+            return (null, null);
+        }
+
+        var eIndex = detail.IndexOf('E', StringComparison.OrdinalIgnoreCase);
+        if (eIndex <= 1)
+        {
+            return (null, null);
+        }
+
+        var sPart = detail.Substring(1, eIndex - 1);
+        var ePart = detail.Substring(eIndex + 1);
+        if (int.TryParse(sPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var s) &&
+            int.TryParse(ePart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var e))
+        {
+            return (s, e);
+        }
+
+        return (null, null);
+    }
+
+    internal static int? PickSeasonNumberToSearch(JsonDocument seriesDoc)
+    {
+        if (seriesDoc == null || seriesDoc.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (seriesDoc.RootElement.TryGetProperty("next_episode_to_air", out var next) &&
+            next.ValueKind == JsonValueKind.Object &&
+            next.TryGetProperty("season_number", out var nextSeason) &&
+            nextSeason.TryGetInt32(out var ns) && ns > 0)
+        {
+            return ns;
+        }
+
+        if (seriesDoc.RootElement.TryGetProperty("last_episode_to_air", out var last) &&
+            last.ValueKind == JsonValueKind.Object &&
+            last.TryGetProperty("season_number", out var lastSeason) &&
+            lastSeason.TryGetInt32(out var ls) && ls > 0)
+        {
+            return ls;
+        }
+
+        if (seriesDoc.RootElement.TryGetProperty("seasons", out var seasons) &&
+            seasons.ValueKind == JsonValueKind.Array)
+        {
+            int? maxSeason = null;
+            foreach (var season in seasons.EnumerateArray())
+            {
+                if (season.ValueKind == JsonValueKind.Object &&
+                    season.TryGetProperty("season_number", out var sProp) &&
+                    sProp.TryGetInt32(out var s) && s > 0)
+                {
+                    if (maxSeason == null || s > maxSeason.Value)
+                    {
+                        maxSeason = s;
+                    }
+                }
+            }
+
+            return maxSeason;
+        }
+
+        return null;
+    }
+
+    internal static CalendarEntry? PickNextEpisodeFromSeason(
+        JsonDocument seasonDoc,
+        DateTime? nowUtc = null,
+        ISet<(int Season, int Episode)>? playedEpisodes = null)
+    {
+        if (seasonDoc == null || seasonDoc.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!seasonDoc.RootElement.TryGetProperty("episodes", out var episodes) ||
+            episodes.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var today = (nowUtc ?? DateTime.UtcNow).Date;
+        foreach (var ep in episodes.EnumerateArray())
+        {
+            if (ep.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (!ep.TryGetProperty("air_date", out var dateProp) ||
+                dateProp.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var dateStr = dateProp.GetString();
+            if (string.IsNullOrEmpty(dateStr) ||
+                !DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var airDate))
+            {
+                continue;
+            }
+
+            if (airDate.Date < today)
+            {
+                continue;
+            }
+
+            int? seasonNumber = ep.TryGetProperty("season_number", out var sProp) && sProp.TryGetInt32(out var s) ? s : null;
+            int? episodeNumber = ep.TryGetProperty("episode_number", out var eProp) && eProp.TryGetInt32(out var e) ? e : null;
+
+            if (seasonNumber.HasValue && episodeNumber.HasValue &&
+                playedEpisodes != null && playedEpisodes.Contains((seasonNumber.Value, episodeNumber.Value)))
+            {
+                continue;
+            }
+
+            string? detail = null;
+            if (seasonNumber.HasValue && episodeNumber.HasValue)
+            {
+                detail = "S" + seasonNumber.Value + "E" + episodeNumber.Value;
+            }
+
+            return new CalendarEntry(airDate.Date, "episode", detail);
+        }
+
+        return null;
+    }
+
+    internal static CalendarEntry? PickNextEpisode(
+        JsonDocument doc,
+        DateTime? nowUtc = null,
+        ISet<(int Season, int Episode)>? playedEpisodes = null)
+    {
+        if (doc == null || doc.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!doc.RootElement.TryGetProperty("next_episode_to_air", out var next) || next.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!next.TryGetProperty("air_date", out var dateProp) ||
+            !DateTime.TryParse(dateProp.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var airDate))
+        {
+            return null;
+        }
+
+        var today = (nowUtc ?? DateTime.UtcNow).Date;
+        if (airDate.Date < today)
+        {
+            return null;
+        }
+
+        int? seasonNumber = next.TryGetProperty("season_number", out var seasonProp) && seasonProp.TryGetInt32(out var s) ? s : null;
+        int? episodeNumber = next.TryGetProperty("episode_number", out var episodeProp) && episodeProp.TryGetInt32(out var e) ? e : null;
+
+        if (seasonNumber.HasValue && episodeNumber.HasValue &&
+            playedEpisodes != null && playedEpisodes.Contains((seasonNumber.Value, episodeNumber.Value)))
+        {
+            return null;
+        }
+
+        string? detail = null;
+        if (seasonNumber.HasValue && episodeNumber.HasValue)
+        {
+            detail = "S" + seasonNumber.Value + "E" + episodeNumber.Value;
+        }
+
+        return new CalendarEntry(airDate.Date, "episode", detail);
     }
 
     internal static CalendarEntry? PickDigitalRelease(JsonDocument doc, DateTime? nowUtc = null)
@@ -349,33 +600,5 @@ public class CalendarService(
         return earliestFuture == null
             ? null
             : new CalendarEntry(earliestFuture.Value, "digital-release", "Digital release");
-    }
-
-    private static CalendarEntry? PickNextEpisode(JsonDocument doc)
-    {
-        if (!doc.RootElement.TryGetProperty("next_episode_to_air", out var next) || next.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        if (!next.TryGetProperty("air_date", out var dateProp) || !DateTime.TryParse(dateProp.GetString(), out var airDate))
-        {
-            return null;
-        }
-
-        if (airDate < DateTime.UtcNow.Date)
-        {
-            return null;
-        }
-
-        string? detail = null;
-        var hasSeason = next.TryGetProperty("season_number", out var seasonProp);
-        var hasEpisode = next.TryGetProperty("episode_number", out var episodeProp);
-        if (hasSeason && hasEpisode)
-        {
-            detail = "S" + seasonProp.GetInt32() + "E" + episodeProp.GetInt32();
-        }
-
-        return new CalendarEntry(airDate, "episode", detail);
     }
 }

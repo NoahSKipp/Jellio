@@ -182,6 +182,11 @@ public class WatchlistAutoRemoveService(
 
                 if (series != null)
                 {
+                    if (series.ProviderIds.TryGetValue("Tmdb", out var tmdbId) && !string.IsNullOrEmpty(tmdbId))
+                    {
+                        calendarService?.ForgetCachedSeries(tmdbId);
+                    }
+                    calendarService?.ForgetMonitored(userId);
                     TryRemoveSeriesIfCompleted(user, userId, series, justWatchedEpisodeId: episode.Id);
                 }
 
