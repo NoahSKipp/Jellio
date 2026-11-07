@@ -47,26 +47,35 @@ function buildToggleOption(label, checked, onToggle) {
   button.setAttribute('role', 'menuitemcheckbox');
   button.setAttribute('aria-checked', String(checked));
 
+  let currentChecked = !!checked;
+  let pending = false;
   function paint(isChecked) {
     button.setAttribute('aria-checked', String(isChecked));
     button.textContent = '';
     button.appendChild(el('span', 'material-icons ' + (isChecked ? 'check_box' : 'check_box_outline_blank')));
     button.appendChild(el('span', 'jellio-list-membership-row-label', label));
   }
-  paint(checked);
+  paint(currentChecked);
 
   button.addEventListener('click', function (event) {
     event.stopPropagation();
-    button.disabled = true;
+    if (pending) return;
+    pending = true;
+    const prevChecked = currentChecked;
+    currentChecked = !prevChecked;
+    paint(currentChecked);
     onToggle()
       .then(function (nowChecked) {
-        paint(nowChecked);
+        currentChecked = !!nowChecked;
+        paint(currentChecked);
       })
       .catch(function (err) {
+        currentChecked = prevChecked;
+        paint(currentChecked);
         console.warn('Jellio: could not update list membership', err);
       })
       .finally(function () {
-        button.disabled = false;
+        pending = false;
       });
   });
 

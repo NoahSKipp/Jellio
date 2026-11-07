@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.107.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.107.3",
+    "summary": "Instant action button responses, fast episode selector loading, and Coming Soon calendar optimizations.",
+    "highlights": [
+      {
+        "title": "Instant Action Button Feedback",
+        "description": "Watchlist, Mark as Seen, Like, and Dislike buttons now update their color and play their pop animation immediately on click while syncing in the background."
+      },
+      {
+        "title": "Fast In-Page Episode Selector",
+        "description": "Episode selectors on series and episode detail pages now load immediately without waiting on background stream checks."
+      },
+      {
+        "title": "Reliable Coming Soon Row",
+        "description": "Batched played-episode queries and lazy season schedule lookups make the Coming Soon row load much faster without timing out or caching transient TMDB errors."
+      }
+    ]
+  },
+  {
     "version": "1.107.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.2",

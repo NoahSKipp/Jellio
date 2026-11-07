@@ -140,6 +140,7 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
     watchlistButton.appendChild(el('span', 'material-icons ' + (isWatchlisted ? 'bookmark_added' : 'bookmark_add')));
   }
   paintWatchlist();
+  let watchlistPending = false;
   watchlistButton.addEventListener('click', function (event) {
     event.stopPropagation();
     if (isGrouplistEnabled()) {
@@ -149,18 +150,22 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
       });
       return;
     }
-    watchlistButton.disabled = true;
-    toggleWatchlist(item, onChanged)
+    if (watchlistPending) return;
+    watchlistPending = true;
+    const req = toggleWatchlist(item, onChanged);
+    paintWatchlist();
+    popConfirm(watchlistButton);
+    req
       .then(function () {
         paintWatchlist();
-        popConfirm(watchlistButton);
       })
       .catch(function (err) {
+        paintWatchlist();
         console.warn('Jellio: could not update watchlist state', err);
         showToast(t('toast_watchlist_error'));
       })
       .finally(function () {
-        watchlistButton.disabled = false;
+        watchlistPending = false;
       });
   });
 
@@ -175,10 +180,12 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
     watchedButton.appendChild(el('span', 'material-icons check'));
   }
   paintWatched();
+  let watchedPending = false;
   watchedButton.addEventListener('click', function (event) {
     event.stopPropagation();
-    watchedButton.disabled = true;
-    toggleWatched(
+    if (watchedPending) return;
+    watchedPending = true;
+    const req = toggleWatched(
       item,
       Object.assign({}, opts, {
         onRemoved: function () {
@@ -186,18 +193,23 @@ function buildCardActions(item, card, imageWrap, options, onChanged) {
         },
       }),
       onChanged,
-    )
+    );
+    paintWatched();
+    paintCardState(imageWrap, item);
+    popConfirm(watchedButton);
+    req
       .then(function () {
         paintWatched();
         paintCardState(imageWrap, item);
-        popConfirm(watchedButton);
       })
       .catch(function (err) {
+        paintWatched();
+        paintCardState(imageWrap, item);
         console.warn('Jellio: could not update watched state', err);
         showToast(t('toast_watched_error'));
       })
       .finally(function () {
-        watchedButton.disabled = false;
+        watchedPending = false;
       });
   });
 

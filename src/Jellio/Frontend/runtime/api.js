@@ -2079,7 +2079,7 @@ export function setUserAvatarFromFile(file) {
 }
 
 export function getCalendarEntries() {
-  return rowJson('/Jellio/calendar', 'watchlist');
+  return rowJson('/Jellio/calendar', 'watchlist', { timeout: 25000 });
 }
 
 // Remove from Upcoming (or put back): a series watched once is otherwise

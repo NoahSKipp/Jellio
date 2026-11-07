@@ -56,43 +56,85 @@ function positionMenu(menu, anchorRect) {
 
 export function toggleWatched(item, options, onChanged) {
   const opts = options || {};
+  const prevUserData = item.UserData ? Object.assign({}, item.UserData) : undefined;
   const isPlayed = !!(item.UserData && item.UserData.Played);
   if (opts.continueWatching) {
-    return setPlayed(item.Id, true).then(function (updated) {
-      item.UserData = updated;
-      if (opts.onRemoved) opts.onRemoved();
-      return updated;
-    });
+    item.UserData = Object.assign({}, item.UserData, { Played: true });
+    if (opts.onRemoved) opts.onRemoved();
+    return setPlayed(item.Id, true).then(
+      function (updated) {
+        if (updated && typeof updated === 'object') {
+          item.UserData = Object.assign({}, item.UserData, updated);
+        }
+        return item.UserData;
+      },
+      function (err) {
+        item.UserData = prevUserData;
+        throw err;
+      },
+    );
   }
   const willBePlayed = !isPlayed;
-  return setPlayed(item.Id, willBePlayed).then(function (updated) {
-    item.UserData = updated;
-    if (opts.upNext && willBePlayed && opts.onRemoved) {
-      opts.onRemoved();
-    } else if (onChanged) {
-      onChanged(item);
-    }
-    return updated;
-  });
+  item.UserData = Object.assign({}, item.UserData, { Played: willBePlayed });
+  if (opts.upNext && willBePlayed && opts.onRemoved) {
+    opts.onRemoved();
+  } else if (onChanged) {
+    onChanged(item);
+  }
+  return setPlayed(item.Id, willBePlayed).then(
+    function (updated) {
+      if (updated && typeof updated === 'object') {
+        item.UserData = Object.assign({}, item.UserData, updated);
+      }
+      return item.UserData;
+    },
+    function (err) {
+      item.UserData = prevUserData;
+      if (onChanged) onChanged(item);
+      throw err;
+    },
+  );
 }
 
 export function toggleWatchlist(item, onChanged) {
+  const prevUserData = item.UserData ? Object.assign({}, item.UserData) : undefined;
   const isWatchlisted = !!(item.UserData && item.UserData.IsFavorite);
-  return setWatchlist(item.Id, !isWatchlisted).then(function (updated) {
-    item.UserData = updated;
-    if (onChanged) onChanged(item);
-    return updated;
-  });
+  item.UserData = Object.assign({}, item.UserData, { IsFavorite: !isWatchlisted });
+  if (onChanged) onChanged(item);
+  return setWatchlist(item.Id, !isWatchlisted).then(
+    function (updated) {
+      if (updated && typeof updated === 'object') {
+        item.UserData = Object.assign({}, item.UserData, updated);
+      }
+      return item.UserData;
+    },
+    function (err) {
+      item.UserData = prevUserData;
+      if (onChanged) onChanged(item);
+      throw err;
+    },
+  );
 }
 
 export function toggleRating(item, likes, onChanged) {
+  const prevUserData = item.UserData ? Object.assign({}, item.UserData) : undefined;
   const current = item.UserData && item.UserData.Likes;
   const next = current === likes ? null : likes;
-  return setItemRating(item.Id, next).then(function (updated) {
-    item.UserData = updated;
-    if (onChanged) onChanged(item);
-    return updated;
-  });
+  item.UserData = Object.assign({}, item.UserData, { Likes: next });
+  if (onChanged) onChanged(item);
+  return setItemRating(item.Id, next).then(
+    function (updated) {
+      if (updated && typeof updated === 'object') {
+        item.UserData = Object.assign({}, item.UserData, updated);
+      }
+      return item.UserData;
+    },
+    function (err) {
+      item.UserData = prevUserData;
+      if (onChanged) onChanged(item);
+      throw err;
+    },
+  );
 }
 
 function restartFromBeginning(item) {

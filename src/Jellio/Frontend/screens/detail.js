@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
-import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, getResumeItems, audiobookTitle, getCachedItemSync, getMediaSources, getWarmSources } from '../runtime/api.js';
+import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, getResumeItems, audiobookTitle, getCachedItemSync, seedItemCache, getMediaSources, getWarmSources } from '../runtime/api.js';
 import { warmItem, warmSource } from '../runtime/warmQueue.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { normalizeId } from '../runtime/readySources.js';
@@ -602,11 +602,13 @@ function buildEpisodeCard(episode, context) {
     card.appendChild(el('div', 'jellio-episode-overview', episode.Overview));
   }
   card.addEventListener('click', function () {
+    seedItemCache(episode);
     navigateTo('#/item?id=' + episode.Id);
   });
   card.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      seedItemCache(episode);
       navigateTo('#/item?id=' + episode.Id);
     }
   });
@@ -742,7 +744,7 @@ async function resolveSeasonPlayTarget(item) {
   return { episode: episode, resume: resume };
 }
 
-async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
+async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, initialSeasonId, initialSeasonNumber) {
   let seasons;
   try {
     seasons = await getSeasons(seriesId);
@@ -751,22 +753,6 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
     return null;
   }
   if (!seasons || !seasons.length) return null;
-
-  let activeSeasonId = null;
-  if (targetPromise) {
-    try {
-      const target = await targetPromise;
-      if (target && target.episode) {
-        activeSeasonId = target.episode.SeasonId || null;
-        if (!activeSeasonId && typeof target.episode.ParentIndexNumber === 'number') {
-          const match = seasons.find(function (s) {
-            return s.IndexNumber === target.episode.ParentIndexNumber;
-          });
-          if (match) activeSeasonId = match.Id;
-        }
-      }
-    } catch (err) {}
-  }
 
   const orderedSeasons = seasons.slice().sort(function (a, b) {
     return (isSpecialsSeason(a) ? 1 : 0) - (isSpecialsSeason(b) ? 1 : 0);
@@ -808,7 +794,11 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
     window.requestAnimationFrame(refreshTrackArrows);
   }
 
+  let currentSelectionToken = 0;
   function selectSeason(season, tabButton) {
+    const token = ++currentSelectionToken;
+    selectedSeasonObj = season;
+    selectedTab = tabButton;
     Array.prototype.forEach.call(tabs.children, function (child) {
       child.classList.remove('jellio-season-tab-selected');
       child.setAttribute('aria-selected', 'false');
@@ -826,6 +816,7 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
     }
     getEpisodes(seriesId, season.Id)
       .then(function (episodes) {
+        if (token !== currentSelectionToken) return;
         renderTrack(season, episodes);
 
         const now = Date.now();
@@ -855,6 +846,7 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
                 });
             }),
           ).then(function (results) {
+            if (token !== currentSelectionToken) return;
             const anyVerified = results.some(function (has) {
               return has;
             });
@@ -865,6 +857,7 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
         }
       })
       .catch(function (err) {
+        if (token !== currentSelectionToken) return;
         console.warn('Jellio: could not load episodes', err);
         track.textContent = '';
       });
@@ -872,6 +865,7 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
 
   let selectedTab = null;
   let selectedSeasonObj = null;
+  let userSelectedTab = false;
 
   orderedSeasons.forEach(function (season, index) {
     const tab = el('button', 'jellio-season-tab', season.Name || '');
@@ -879,11 +873,16 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
     tab.setAttribute('role', 'tab');
     tab.setAttribute('aria-selected', 'false');
     tab.addEventListener('click', function () {
+      userSelectedTab = true;
       selectSeason(season, tab);
     });
     tabs.appendChild(tab);
 
-    const isMatch = activeSeasonId ? String(season.Id) === String(activeSeasonId) : index === 0;
+    const isMatch = initialSeasonId
+      ? String(season.Id) === String(initialSeasonId)
+      : typeof initialSeasonNumber === 'number'
+      ? season.IndexNumber === initialSeasonNumber
+      : index === 0;
     if (isMatch) {
       selectedTab = tab;
       selectedSeasonObj = season;
@@ -904,6 +903,35 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected) {
         } catch (e) {}
       }, 50);
     }
+  }
+
+  if (targetPromise) {
+    Promise.resolve(targetPromise)
+      .then(function (target) {
+        if (userSelectedTab || !target || !target.episode) return;
+        let activeSeasonId = target.episode.SeasonId || null;
+        if (!activeSeasonId && typeof target.episode.ParentIndexNumber === 'number') {
+          const match = orderedSeasons.find(function (s) {
+            return s.IndexNumber === target.episode.ParentIndexNumber;
+          });
+          if (match) activeSeasonId = match.Id;
+        }
+        if (!activeSeasonId) return;
+        if (selectedSeasonObj && String(selectedSeasonObj.Id) === String(activeSeasonId)) return;
+        const targetIndex = orderedSeasons.findIndex(function (s) {
+          return String(s.Id) === String(activeSeasonId);
+        });
+        if (targetIndex !== -1 && tabs.children[targetIndex]) {
+          const targetTab = tabs.children[targetIndex];
+          selectSeason(orderedSeasons[targetIndex], targetTab);
+          window.setTimeout(function () {
+            try {
+              targetTab.scrollIntoView({ block: 'nearest', inline: 'center' });
+            } catch (e) {}
+          }, 50);
+        }
+      })
+      .catch(function () {});
   }
 
   return section;
@@ -1295,6 +1323,19 @@ export async function renderDetail(root, params, signal) {
   const actionsIcons = el('div', 'jellio-detail-actions-icons');
   actions.appendChild(actionsIcons);
 
+  function playPop(button) {
+    button.classList.remove('jellio-detail-icon-action-pop');
+    button.classList.remove('jellio-card-action-pop');
+    void button.offsetWidth;
+    button.classList.add('jellio-detail-icon-action-pop');
+    button.classList.add('jellio-card-action-pop');
+    button.addEventListener('animationend', function handler() {
+      button.classList.remove('jellio-detail-icon-action-pop');
+      button.classList.remove('jellio-card-action-pop');
+      button.removeEventListener('animationend', handler);
+    });
+  }
+
   const watchlistButton = el('button', iconActionClass);
   watchlistButton.type = 'button';
   function paintWatchlist() {
@@ -1305,27 +1346,29 @@ export async function renderDetail(root, params, signal) {
     watchlistButton.appendChild(el('span', 'material-icons ' + (active ? 'bookmark_added' : 'bookmark_add')));
   }
   paintWatchlist();
+  let watchlistPending = false;
   watchlistButton.addEventListener('click', function (event) {
     event.stopPropagation();
     if (isGrouplistEnabled()) {
       openListMembershipMenu(item, watchlistButton.getBoundingClientRect(), paintWatchlist);
       return;
     }
-    watchlistButton.disabled = true;
-    toggleWatchlist(item)
+    if (watchlistPending) return;
+    watchlistPending = true;
+    const req = toggleWatchlist(item);
+    paintWatchlist();
+    playPop(watchlistButton);
+    req
       .then(function () {
         paintWatchlist();
-        watchlistButton.classList.remove('jellio-card-action-pop');
-        requestAnimationFrame(function () {
-          watchlistButton.classList.add('jellio-card-action-pop');
-        });
       })
       .catch(function (err) {
+        paintWatchlist();
         console.warn('Jellio: could not update watchlist state', err);
         showToast(t('toast_watchlist_error'));
       })
       .finally(function () {
-        watchlistButton.disabled = false;
+        watchlistPending = false;
       });
   });
   actionsIcons.appendChild(watchlistButton);
@@ -1340,23 +1383,25 @@ export async function renderDetail(root, params, signal) {
     watchedButton.appendChild(el('span', 'material-icons check'));
   }
   paintWatched();
+  let watchedPending = false;
   watchedButton.addEventListener('click', function (event) {
     event.stopPropagation();
-    watchedButton.disabled = true;
-    toggleWatched(item, {})
+    if (watchedPending) return;
+    watchedPending = true;
+    const req = toggleWatched(item, {});
+    paintWatched();
+    playPop(watchedButton);
+    req
       .then(function () {
         paintWatched();
-        watchedButton.classList.remove('jellio-card-action-pop');
-        requestAnimationFrame(function () {
-          watchedButton.classList.add('jellio-card-action-pop');
-        });
       })
       .catch(function (err) {
+        paintWatched();
         console.warn('Jellio: could not update watched state', err);
         showToast(t('toast_watched_error'));
       })
       .finally(function () {
-        watchedButton.disabled = false;
+        watchedPending = false;
       });
   });
   actionsIcons.appendChild(watchedButton);
@@ -1384,22 +1429,14 @@ export async function renderDetail(root, params, signal) {
     buildEpisodesDownloadButton(item, { className: iconActionClass });
   if (downloadButton) actionsIcons.appendChild(downloadButton);
 
-  function playPop(button) {
-    button.classList.remove('jellio-detail-icon-action-pop');
-    void button.offsetWidth;
-    button.classList.add('jellio-detail-icon-action-pop');
-    button.addEventListener('animationend', function handler() {
-      button.classList.remove('jellio-detail-icon-action-pop');
-      button.removeEventListener('animationend', handler);
-    });
-  }
-
   const thumbsUpButton = el('button', iconActionClass);
   thumbsUpButton.type = 'button';
   const thumbsDownButton = el('button', iconActionClass);
   thumbsDownButton.type = 'button';
 
   let ratingTarget = item;
+  let ratingTargetResolved = !(item.Type === 'Episode' && item.SeriesId);
+  let ratingEdited = false;
   const ratingTargetPromise =
     item.Type === 'Episode' && item.SeriesId
       ? getItem(item.SeriesId).catch(function (err) {
@@ -1423,48 +1460,71 @@ export async function renderDetail(root, params, signal) {
   paintThumbs();
   ratingTargetPromise.then(function (resolved) {
     ratingTarget = resolved;
-    paintThumbs();
+    ratingTargetResolved = true;
+    if (!ratingEdited) paintThumbs();
   });
 
-  thumbsUpButton.addEventListener('click', function (event) {
-    event.stopPropagation();
-    thumbsUpButton.disabled = true;
+  let ratingPending = false;
+  function handleThumbClick(likesValue, button) {
+    if (ratingPending) return;
+    ratingPending = true;
+    ratingEdited = true;
+    if (ratingTargetResolved) {
+      const req = toggleRating(ratingTarget, likesValue);
+      paintThumbs();
+      playPop(button);
+      req
+        .then(function () {
+          paintThumbs();
+        })
+        .catch(function (err) {
+          paintThumbs();
+          console.warn('Jellio: could not update rating', err);
+          showToast(t('toast_rating_error'));
+        })
+        .finally(function () {
+          ratingPending = false;
+        });
+      return;
+    }
+
+    const prevLikes = ratingTarget.UserData && ratingTarget.UserData.Likes;
+    const nextLikes = prevLikes === likesValue ? null : likesValue;
+    ratingTarget.UserData = Object.assign({}, ratingTarget.UserData, { Likes: nextLikes });
+    paintThumbs();
+    playPop(button);
+
     ratingTargetPromise
-      .then(function () {
-        return toggleRating(ratingTarget, true);
+      .then(function (resolved) {
+        if (resolved === ratingTarget) {
+          ratingTarget.UserData = Object.assign({}, ratingTarget.UserData, { Likes: prevLikes });
+        }
+        ratingTarget = resolved;
+        ratingTargetResolved = true;
+        return toggleRating(ratingTarget, likesValue);
       })
       .then(function () {
         paintThumbs();
-        playPop(thumbsUpButton);
       })
       .catch(function (err) {
+        paintThumbs();
         console.warn('Jellio: could not update rating', err);
         showToast(t('toast_rating_error'));
       })
       .finally(function () {
-        thumbsUpButton.disabled = false;
+        ratingPending = false;
       });
+  }
+
+  thumbsUpButton.addEventListener('click', function (event) {
+    event.stopPropagation();
+    handleThumbClick(true, thumbsUpButton);
   });
   actionsIcons.appendChild(thumbsUpButton);
 
   thumbsDownButton.addEventListener('click', function (event) {
     event.stopPropagation();
-    thumbsDownButton.disabled = true;
-    ratingTargetPromise
-      .then(function () {
-        return toggleRating(ratingTarget, false);
-      })
-      .then(function () {
-        paintThumbs();
-        playPop(thumbsDownButton);
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not update rating', err);
-        showToast(t('toast_rating_error'));
-      })
-      .finally(function () {
-        thumbsDownButton.disabled = false;
-      });
+    handleThumbClick(false, thumbsDownButton);
   });
   actionsIcons.appendChild(thumbsDownButton);
 
@@ -1668,6 +1728,8 @@ export async function renderDetail(root, params, signal) {
   }
   if (item.Type === 'Series') {
     seasonsPromise = buildSeasonsSection(canonicalId, seriesTargetPromise, showSeasonDetails);
+  } else if (item.Type === 'Episode' && item.SeriesId) {
+    seasonsPromise = buildSeasonsSection(item.SeriesId, null, null, item.SeasonId, item.ParentIndexNumber);
   }
 
   const castRow = buildCastRow(item.People);

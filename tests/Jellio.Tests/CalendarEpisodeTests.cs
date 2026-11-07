@@ -141,4 +141,20 @@ public class CalendarEpisodeTests
         Assert.Null(s3);
         Assert.Null(e3);
     }
+
+    [Fact]
+    public void ShouldSearchSeasonFallbackChecksNextRecentLastOrInProduction()
+    {
+        using var docNext = JsonDocument.Parse("""{ "next_episode_to_air": { "season_number": 2 } }""");
+        Assert.True(CalendarService.ShouldSearchSeasonFallback(docNext, Today));
+
+        using var docRecentLast = JsonDocument.Parse("""{ "last_episode_to_air": { "air_date": "2026-10-25", "season_number": 2 } }""");
+        Assert.True(CalendarService.ShouldSearchSeasonFallback(docRecentLast, Today));
+
+        using var docOldLast = JsonDocument.Parse("""{ "last_episode_to_air": { "air_date": "2024-05-10", "season_number": 2 }, "in_production": false }""");
+        Assert.False(CalendarService.ShouldSearchSeasonFallback(docOldLast, Today));
+
+        using var docInProd = JsonDocument.Parse("""{ "in_production": true }""");
+        Assert.True(CalendarService.ShouldSearchSeasonFallback(docInProd, Today));
+    }
 }

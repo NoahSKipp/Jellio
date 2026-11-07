@@ -254,21 +254,26 @@ export function buildHeroCarousel(options) {
     if (!items.length) return;
     navigateTo('#/item?id=' + items[index].Id);
   });
+  let watchlistPending = false;
   watchlistButton.addEventListener('click', function () {
-    if (!items.length) return;
+    if (!items.length || watchlistPending) return;
     const current = items[index];
-    watchlistButton.disabled = true;
-    toggleWatchlist(current)
+    watchlistPending = true;
+    const req = toggleWatchlist(current);
+    render();
+    watchlistButton.classList.remove('jellio-card-action-pop');
+    requestAnimationFrame(function () {
+      watchlistButton.classList.add('jellio-card-action-pop');
+    });
+    req
       .then(function () {
         render();
-        watchlistButton.classList.remove('jellio-card-action-pop');
-        requestAnimationFrame(function () {
-          watchlistButton.classList.add('jellio-card-action-pop');
-        });
       })
-      .catch(function () {})
+      .catch(function () {
+        render();
+      })
       .finally(function () {
-        watchlistButton.disabled = false;
+        watchlistPending = false;
       });
   });
   infoButton.addEventListener('click', function () {
