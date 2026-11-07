@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
-import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, audiobookTitle, getCachedItemSync, getMediaSources, getWarmSources } from '../runtime/api.js';
+import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, getResumeItems, audiobookTitle, getCachedItemSync, getMediaSources, getWarmSources } from '../runtime/api.js';
 import { warmItem, warmSource } from '../runtime/warmQueue.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { normalizeId } from '../runtime/readySources.js';
@@ -644,9 +644,20 @@ async function verifyItemHasStreamIfToday(item) {
 async function resolveSeriesPlayTarget(seriesId) {
   let episode = null;
   try {
-    episode = await getSeriesNextUp(seriesId);
+    const resumeItems = await getResumeItems(50);
+    episode = (resumeItems || []).find(function (it) {
+      return it.SeriesId === seriesId;
+    });
   } catch (err) {
-    console.warn('Jellio: could not load next up for series', err);
+    // continue to next up
+  }
+
+  if (!episode) {
+    try {
+      episode = await getSeriesNextUp(seriesId);
+    } catch (err) {
+      console.warn('Jellio: could not load next up for series', err);
+    }
   }
 
   if (episode) {

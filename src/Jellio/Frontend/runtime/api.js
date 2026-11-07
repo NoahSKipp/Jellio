@@ -1227,6 +1227,88 @@ export async function maybeRemoveFromWatchlistAfterWatching(itemId) {
   }
 }
 
+const KNOWN_ANTHOLOGIES = [
+  'black mirror',
+  'love, death & robots',
+  'love death and robots',
+  'love death & robots',
+  'love death + robots',
+  'twilight zone',
+  'cabinet of curiosities',
+  'electric dreams',
+  'room 104',
+  'star wars: visions',
+  'star wars visions',
+  'inside no. 9',
+  'inside no 9',
+  'modern love',
+  'oats studios',
+  'tales from the crypt',
+  'tales from the loop',
+  'american horror stories',
+];
+
+export function isEpisodicAnthology(series) {
+  if (!series) return false;
+  const genres = series.Genres || [];
+  if (genres.some(function (g) { return g && g.toLowerCase().includes('anthology'); })) return true;
+  const tags = series.Tags || [];
+  if (tags.some(function (t) { return t && t.toLowerCase().includes('anthology'); })) return true;
+  const overview = (series.Overview || '').toLowerCase();
+  if (overview.includes('anthology series') || overview.includes('anthology')) return true;
+  const name = (series.Name || '').toLowerCase();
+  return KNOWN_ANTHOLOGIES.some(function (title) { return name.includes(title); });
+}
+
+export async function autoCompletePreviousEpisodesIfSkipped(episode) {
+  if (!episode || episode.Type !== 'Episode') return;
+  const seriesId = episode.SeriesId;
+  const currentSeasonNum = episode.ParentIndexNumber;
+  const currentEpNum = episode.IndexNumber;
+  if (!seriesId || currentSeasonNum == null || currentEpNum == null || currentSeasonNum <= 0) {
+    return;
+  }
+
+  let series = null;
+  try {
+    series = await getItem(seriesId);
+  } catch (err) {
+    console.warn('Jellio: could not load series metadata for anthology check', err);
+  }
+
+  if (isEpisodicAnthology(series)) {
+    console.log('Jellio: Skipping auto-complete for anthology series:', series && series.Name);
+    return;
+  }
+
+  try {
+    const allEpisodes = await getSeriesEpisodes(seriesId);
+    const toMark = (allEpisodes || []).filter(function (ep) {
+      const sNum = ep.ParentIndexNumber || 0;
+      const eNum = ep.IndexNumber || 0;
+      if (sNum === 0) return false;
+      const isBefore = sNum < currentSeasonNum || (sNum === currentSeasonNum && eNum < currentEpNum);
+      const isUnfinished = !(ep.UserData && ep.UserData.Played) || (ep.UserData && ep.UserData.PlaybackPositionTicks > 0);
+      return isBefore && isUnfinished;
+    });
+
+    if (toMark.length > 0) {
+      console.info('Jellio: Auto-completing ' + toMark.length + ' previous skipped episodes for series', (series && series.Name) || seriesId);
+      for (let i = 0; i < toMark.length; i++) {
+        const prevEp = toMark[i];
+        try {
+          await setPlayed(prevEp.Id, true);
+        } catch (err) {
+          console.warn('Jellio: failed to mark previous episode played', prevEp.Id, err);
+        }
+      }
+      invalidateUserDataRows();
+    }
+  } catch (err) {
+    console.warn('Jellio: could not auto-complete previous episodes', err);
+  }
+}
+
 export async function setWatchlist(itemId, isWatchlisted) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));

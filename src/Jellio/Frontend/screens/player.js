@@ -20,7 +20,7 @@ import {
   isGoogleCastSupported,
   isAirPlaySupported,
 } from '../runtime/cast.js';
-import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, buildCastStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getSubtitleStreams, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, buildSubtitleUrl, getNextEpisode, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getSeasons, getEpisodes, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, maybeRemoveFromWatchlistAfterWatching, reportRealDuration, probeRealDuration, setPlayed, prefetchStreams, setPlaybackActive } from '../runtime/api.js';
+import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, buildCastStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getSubtitleStreams, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, buildSubtitleUrl, getNextEpisode, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getSeasons, getEpisodes, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, maybeRemoveFromWatchlistAfterWatching, reportRealDuration, probeRealDuration, setPlayed, prefetchStreams, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped } from '../runtime/api.js';
 import { getGroupWatchMessages, sendGroupWatchMessage, creditGroupWatchTogether, voteRankingSession, startJoinSync, clearJoinSync, getJoinSync } from '../runtime/apiSocial.js';
 import { syncTracker } from '../runtime/apiBooks.js';
 import { getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
@@ -4075,6 +4075,7 @@ export async function renderPlayer(root, params) {
   });
 
   const pauseGate = createPauseGate(PAUSE_IDLE_STOP_MS);
+  let hasCheckedPreviousEpisodes = false;
   const progressInterval = startProgressTimer(function () {
     if (screenTornDown) {
       stopProgressTimer(progressInterval);
@@ -4082,6 +4083,14 @@ export async function renderPlayer(root, params) {
     }
     if (!hasReportedStart) return;
     lastReportedTicks = currentPositionTicks();
+    if (!hasCheckedPreviousEpisodes && lastReportedTicks >= 5 * TICKS_PER_SECOND) {
+      hasCheckedPreviousEpisodes = true;
+      if (isEpisodeItem) {
+        autoCompletePreviousEpisodesIfSkipped(item).catch(function (err) {
+          console.warn('Jellio: could not check previous episodes', err);
+        });
+      }
+    }
     const action = pauseGate.tick(video.paused, Date.now());
     if (action === 'progress') {
       reportPlaybackProgress(itemId, mediaSource.Id, lastReportedTicks, video.paused);
