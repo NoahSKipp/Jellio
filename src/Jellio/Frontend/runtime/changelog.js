@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.106.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.106.2",
+    "summary": "Skipped episode auto-completion with anthology exemptions and active resume target priority.",
+    "highlights": [
+      {
+        "title": "Skipped Episode Progression",
+        "description": "Jumping forward to a later episode in a series automatically marks earlier unfinished episodes as watched, protecting your watch progress."
+      },
+      {
+        "title": "Episodic Anthology Exemption",
+        "description": "Anthology shows like Black Mirror, Love, Death & Robots, and The Twilight Zone are exempt from auto-completion so you can watch in any order."
+      },
+      {
+        "title": "Active Resume Target Priority",
+        "description": "Starting playback from a series detail page prioritizes your active in-progress episode from Continue Watching over Next Up."
+      }
+    ]
+  },
+  {
     "version": "1.106.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.106.1",
