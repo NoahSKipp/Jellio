@@ -1,16 +1,16 @@
 // Edition Recognition Engine for Jellio
 // Identifies monochrome treatments (Noir, B&W) and alternate cuts (Director's Cut, Extended, etc.)
 
-export const MONOCHROME_REGEX = /\b(noir|black\s*(?:and|&)\s*white|b[&/]w|black\s*(?:and|&)\s*chrome|minus\s*color|justice\s*is\s*gray|in\s*black\s*(?:and|&)\s*white)\b/i;
+export const MONOCHROME_REGEX = /\b(noir|black[._\s]*(?:and|&)[._\s]*white|b[&/]w|black[._\s]*(?:and|&)[._\s]*chrome|minus[._\s]*color|justice[._\s]*is[._\s]*gray|in[._\s]*black[._\s]*(?:and|&)[._\s]*white)\b/i;
 
 export const CUT_PATTERNS = [
-  { name: 'Final Cut', regex: /\b(final\s*cut)\b/i },
-  { name: "Director's Cut", regex: /\b(director(?:'s|\s*s)?\s*cut|\bdc\b)\b/i },
-  { name: 'Extended', regex: /\b(extended(?:\s*(?:cut|edition))?|special\s*edition)\b/i },
-  { name: 'Theatrical', regex: /\b(theatrical(?:\s*(?:cut|edition))?)\b/i },
+  { name: 'Final Cut', regex: /\b(final[._\s]*cut)\b/i },
+  { name: "Director's Cut", regex: /\b(director(?:'s|[._\s]*s)?[._\s]*cut|\bdc\b)\b/i },
+  { name: 'Extended', regex: /\b(extended(?:[._\s]*(?:cut|edition))?|special[._\s]*edition)\b/i },
+  { name: 'Theatrical', regex: /\b(theatrical(?:[._\s]*(?:cut|edition))?)\b/i },
   { name: 'Unrated', regex: /\b(unrated|uncut)\b/i },
   { name: 'Redux', regex: /\b(redux)\b/i },
-  { name: 'IMAX', regex: /\b(imax(?:\s*enhanced)?)\b/i },
+  { name: 'IMAX', regex: /\b(imax(?:[._\s]*enhanced)?)\b/i },
 ];
 
 export function sourceText(source) {
