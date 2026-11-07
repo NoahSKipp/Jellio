@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "Custom genre search and Home row management, moved configure button to Recommendations settings, and TMDB virtualization fallbacks.",
+        "checksum": "da1d02d66d398269db3de43dfaa678d6",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.4/jellio_1.107.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-07T14:58:55Z",
+        "version": "1.107.4"
+      },
+      {
         "changelog": "**Full Changelog**: https://github.com/NoahSKipp/Jellio/compare/1.107.2...1.107.3",
         "checksum": "397c02c4a647ee9d08e8b893a2363b93",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.3/jellio_1.107.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-29T07:11:31Z",
         "version": "1.100.0"
-      },
-      {
-        "changelog": "## [1.99.2] - 2026-10-28\n\n### 🐛 Bug Fixes\n\n- *(streams)* An unreachable player route no longer ends the whole search\n\n### 📚 Documentation\n\n- *(changelog)* Note the Add Stream timeout fix in 1.99.2\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.99.2\n",
-        "checksum": "08ea45d6183cacc29a76b2df7e1401e3",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.2/jellio_1.99.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T13:28:25Z",
-        "version": "1.99.2"
       }
     ]
   }
