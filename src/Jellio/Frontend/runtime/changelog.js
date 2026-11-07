@@ -15,9 +15,9 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
-    "version": "1.106.2",
+    "version": "1.107.0",
     "title": "What's New in Jellio",
-    "subtitle": "Version 1.106.2",
+    "subtitle": "Version 1.107.0",
     "summary": "Skipped episode auto-completion with anthology exemptions and active resume target priority.",
     "highlights": [
       {
