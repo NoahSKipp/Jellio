@@ -80,3 +80,48 @@ export function toggleSelectedGenre(genre) {
   setSelectedGenres(updated);
   return updated;
 }
+
+export function getCustomGenres() {
+  const settings = loadSettings();
+  return Array.isArray(settings.customGenres) ? settings.customGenres : [];
+}
+
+export function setCustomGenres(list) {
+  const settings = loadSettings();
+  settings.customGenres = Array.isArray(list) ? list : [];
+  saveSettings(settings);
+}
+
+export function addCustomGenre(genreObj) {
+  if (!genreObj || !genreObj.name) return getCustomGenres();
+  const current = getCustomGenres();
+  const trimmedName = String(genreObj.name).trim();
+  const index = current.findIndex(function (g) {
+    return (g.name || '').trim().toLowerCase() === trimmedName.toLowerCase();
+  });
+  const item = {
+    name: trimmedName,
+    category: genreObj.category || null,
+    enabled: genreObj.enabled !== undefined ? Boolean(genreObj.enabled) : true,
+  };
+  let updated;
+  if (index >= 0) {
+    updated = current.map(function (g, i) {
+      return i === index ? item : g;
+    });
+  } else {
+    updated = current.concat([item]);
+  }
+  setCustomGenres(updated);
+  return updated;
+}
+
+export function removeCustomGenre(name) {
+  const current = getCustomGenres();
+  const target = String(name || '').trim().toLowerCase();
+  const updated = current.filter(function (g) {
+    return (g.name || '').trim().toLowerCase() !== target;
+  });
+  setCustomGenres(updated);
+  return updated;
+}

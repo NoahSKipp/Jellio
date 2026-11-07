@@ -8,6 +8,7 @@ import {
   isCommunityRowEnabled,
   getCommunityExcludedUsers,
   getSelectedGenres,
+  getCustomGenres,
 } from '../runtime/recommendationSettings.js';
 import { streamRecommendationRows, titleKey } from '../runtime/recommend.js';
 import { buildCard } from '../components/card.js';
@@ -26,7 +27,7 @@ import {
   updateHomeCustomizeBar,
   resetHomeCustomization,
 } from '../components/homeCustomizer.js';
-import { navigateTo } from '../runtime/router.js';
+import { navigateTo, reflectStateInAddressBar } from '../runtime/router.js';
 import { attachCardOptionsTrigger, animateCardRemoval } from '../components/cardOptionsMenu.js';
 import { showToast } from '../components/toast.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
@@ -696,8 +697,27 @@ async function buildExpensiveSections() {
 
   const genres = chooseHomeGenres()
     .then(function (list) {
+      const custom = getCustomGenres()
+        .filter(function (g) { return g && g.enabled && g.name; })
+        .map(function (g) { return g.name; });
+      const seen = new Set();
+      const combined = [];
+      (list || []).forEach(function (genre) {
+        const key = (genre || '').trim().toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          combined.push(genre);
+        }
+      });
+      custom.forEach(function (genre) {
+        const key = (genre || '').trim().toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          combined.push(genre);
+        }
+      });
       return Promise.all(
-        list.map(function (genre, index) {
+        combined.map(function (genre, index) {
           const slot = EXPENSIVE_SLOTS.genres + index;
           return Promise.all([rowGate(slot, () => getGenreItems(null, 'Movie,Series', genre, GENRE_ROW_LIMIT)), animeIdsPromise])
             .then(function (results) {
@@ -812,11 +832,17 @@ export async function renderHome(root, params) {
     })
     .catch(function () {});
 
-  let editMode = false;
+  let editMode = Boolean(
+    (params && typeof params.get === 'function' && params.get('edit') === '1') ||
+    (typeof window !== 'undefined' && window.location && window.location.hash && window.location.hash.includes('edit=1'))
+  );
   const customizeBar = buildHomeCustomizeBar(
     function onToggleEdit() {
       editMode = !editMode;
       updateHomeCustomizeBar(customizeBar, editMode);
+      if (!editMode && typeof window !== 'undefined' && window.location && window.location.hash && window.location.hash.includes('edit=')) {
+        reflectStateInAddressBar('#/home');
+      }
       applyHomeCustomization(rows, editMode);
     },
     function onReset() {

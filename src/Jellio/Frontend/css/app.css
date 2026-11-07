@@ -7173,7 +7173,7 @@
 }
 
 .jellio-settings-nav {
-  flex: 0 0 clamp(180px, 16vw, 240px);
+  flex: 0 0 clamp(200px, 17vw, 260px);
   display: flex;
   flex-direction: column;
   gap: 0.2em;
@@ -7185,6 +7185,7 @@
   display: flex;
   align-items: center;
   gap: 0.8em;
+  min-width: 0;
   padding: 0.75em 1em;
   border: 0;
   border-radius: var(--jellio-card-radius);
@@ -7211,6 +7212,12 @@
 .jellio-settings-nav-icon {
   font-size: 1.2em;
   flex: 0 0 auto;
+}
+
+.jellio-settings-nav-label {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .jellio-settings-content {
@@ -7243,6 +7250,8 @@
 
   .jellio-settings-nav-label {
     white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 
@@ -7686,6 +7695,105 @@
   color: var(--jellio-text-secondary);
   font-style: italic;
   padding: 0.5em 0;
+}
+
+.jellio-custom-genre-search-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  margin-top: 1.2em;
+}
+
+.jellio-custom-genre-result {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  min-height: 2em;
+}
+
+.jellio-custom-genre-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.85em;
+  color: var(--jellio-text-secondary);
+  padding: 0.35em 0.8em;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid var(--jellio-border-color);
+}
+
+.jellio-custom-genre-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.45em 1em;
+  border: 1px solid var(--jellio-secondary-color);
+  border-radius: 999px;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 160ms ease;
+}
+
+.jellio-custom-genre-add-btn:hover {
+  opacity: 0.9;
+}
+
+.jellio-custom-genre-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  margin-top: 0.8em;
+}
+
+.jellio-custom-genre-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5em 0.8em;
+  border-radius: calc(var(--jellio-card-radius) / 2);
+  background: var(--jellio-bg-elevated);
+  transition: background-color 160ms var(--jellio-ease-out);
+}
+
+.jellio-custom-genre-row:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.jellio-custom-genre-name {
+  font-weight: 500;
+  color: var(--jellio-text-color);
+  flex: 1 1 auto;
+  font-size: 0.95em;
+}
+
+.jellio-custom-genre-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  flex: 0 0 auto;
+}
+
+.jellio-custom-genre-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--jellio-text-tertiary);
+  cursor: pointer;
+  padding: 0.3em;
+  border-radius: 4px;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.jellio-custom-genre-delete:hover {
+  color: #ff6b81;
+  background: rgb(255 107 129 / 0.1);
 }
 
 .jellio-sidebar-now-playing {

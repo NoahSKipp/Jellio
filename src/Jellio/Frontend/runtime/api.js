@@ -2539,6 +2539,10 @@ export function discoverGenres(parentId, itemType, limit) {
     });
 }
 
+export function searchGenreOrCategory(query) {
+  return getJson('/Jellio/genres/search?query=' + encodeURIComponent(query || ''));
+}
+
 // A genre row, from the server's few-minute cache of the same query
 // (Controllers/GenresController.cs), else asked of Jellyfin directly.
 export function getGenreItems(parentId, itemType, genre, limit) {

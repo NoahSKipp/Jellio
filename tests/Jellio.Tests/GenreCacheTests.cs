@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellio.Controllers;
 using Jellio.Services;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Dto;
@@ -14,6 +15,8 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
 namespace Jellio.Tests;
@@ -355,5 +358,282 @@ public class GenreCacheTests
         var virtuals = await cache.GetVirtualItemsAsync("Action", [BaseItemKind.Movie], 10);
         Assert.Single(virtuals);
         Assert.Equal("Already Released Movie", virtuals[0].Name);
+    }
+
+    [Fact]
+    public async Task SearchGenreOrCategoryAsync_MatchesStandardGenreCaseInsensitive()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+        var cache = new GenreCache(libProxy, dtoProxy, logger);
+
+        var actionResult = await cache.SearchGenreOrCategoryAsync("action");
+        Assert.True(actionResult.Found);
+        Assert.Equal("Action", actionResult.Name);
+        Assert.Equal("genre", actionResult.Category);
+        Assert.True(actionResult.IsStandard);
+        Assert.Equal(28, actionResult.TmdbGenreId);
+
+        var animeResult = await cache.SearchGenreOrCategoryAsync("ANIME");
+        Assert.True(animeResult.Found);
+        Assert.Equal("Anime", animeResult.Name);
+        Assert.Equal("genre", animeResult.Category);
+        Assert.True(animeResult.IsStandard);
+        Assert.Equal(16, animeResult.TmdbGenreId);
+    }
+
+    [Theory]
+    [InlineData("c-drama", "C-Drama", "zh")]
+    [InlineData("cdrama", "C-Drama", "zh")]
+    [InlineData("c drama", "C-Drama", "zh")]
+    [InlineData("chinese drama", "C-Drama", "zh")]
+    [InlineData("k-drama", "K-Drama", "ko")]
+    [InlineData("kdrama", "K-Drama", "ko")]
+    [InlineData("k drama", "K-Drama", "ko")]
+    [InlineData("korean drama", "K-Drama", "ko")]
+    [InlineData("j-drama", "J-Drama", "ja")]
+    [InlineData("jdrama", "J-Drama", "ja")]
+    [InlineData("j drama", "J-Drama", "ja")]
+    [InlineData("japanese drama", "J-Drama", "ja")]
+    public async Task SearchGenreOrCategoryAsync_MatchesAsianDramaKeywords(string query, string expectedName, string expectedLang)
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+        var cache = new GenreCache(libProxy, dtoProxy, logger);
+
+        var result = await cache.SearchGenreOrCategoryAsync(query);
+        Assert.True(result.Found);
+        Assert.Equal(expectedName, result.Name);
+        Assert.Equal("country_genre", result.Category);
+        Assert.False(result.IsStandard);
+        Assert.Equal(18, result.TmdbGenreId);
+        Assert.Equal(expectedLang, result.OriginalLanguage);
+    }
+
+    [Fact]
+    public async Task SearchGenreOrCategoryAsync_MatchesTmdbKeywordAndTitleCases()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+
+        const string keywordJson = """
+            {
+              "page": 1,
+              "total_pages": 1,
+              "total_results": 1,
+              "results": [
+                {
+                  "id": 9715,
+                  "name": "cyberpunk"
+                }
+              ]
+            }
+            """;
+
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            Assert.Contains("search/keyword", req.RequestUri?.ToString() ?? string.Empty);
+            Assert.Contains("query=cyberpunk", req.RequestUri?.ToString() ?? string.Empty);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(keywordJson, Encoding.UTF8, "application/json"),
+            };
+        });
+
+        var factory = new TestHttpClientFactory(handler);
+        var cache = new GenreCache(libProxy, dtoProxy, logger, factory);
+
+        var result = await cache.SearchGenreOrCategoryAsync("cyberpunk");
+        Assert.True(result.Found);
+        Assert.Equal("Cyberpunk", result.Name);
+        Assert.Equal("keyword", result.Category);
+        Assert.False(result.IsStandard);
+        Assert.Equal(9715, result.KeywordId);
+        Assert.Equal(1, result.MatchCount);
+    }
+
+    [Fact]
+    public async Task SearchGenreOrCategoryAsync_WhenNoTmdbMatch_ReturnsFoundFalse()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+
+        const string emptyJson = """
+            {
+              "page": 1,
+              "total_pages": 0,
+              "total_results": 0,
+              "results": []
+            }
+            """;
+
+        var handler = new TestHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(emptyJson, Encoding.UTF8, "application/json"),
+        });
+
+        var factory = new TestHttpClientFactory(handler);
+        var cache = new GenreCache(libProxy, dtoProxy, logger, factory);
+
+        var result = await cache.SearchGenreOrCategoryAsync("nonexistentgenre12345");
+        Assert.False(result.Found);
+
+        var blankResult = await cache.SearchGenreOrCategoryAsync("   ");
+        Assert.False(blankResult.Found);
+    }
+
+    [Fact]
+    public async Task GetVirtualItemsAsync_WithAsianDrama_AddsOriginalLanguageAndGenre()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+
+        const string tmdbTvJson = """
+            {
+              "page": 1,
+              "total_pages": 1,
+              "results": [
+                {
+                  "id": 501,
+                  "name": "Squid Game",
+                  "first_air_date": "2021-09-17",
+                  "vote_average": 8.0,
+                  "overview": "A mysterious survival game."
+                }
+              ]
+            }
+            """;
+
+        string? requestedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            requestedUri = req.RequestUri?.ToString();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(tmdbTvJson, Encoding.UTF8, "application/json"),
+            };
+        });
+
+        var factory = new TestHttpClientFactory(handler);
+        var cache = new GenreCache(libProxy, dtoProxy, logger, factory);
+
+        var items = await cache.GetVirtualItemsAsync("K-Drama", [BaseItemKind.Series], 10);
+        Assert.NotNull(requestedUri);
+        Assert.Contains("discover/tv", requestedUri);
+        Assert.Contains("with_genres=18", requestedUri);
+        Assert.Contains("with_original_language=ko", requestedUri);
+
+        Assert.Single(items);
+        Assert.Equal("Squid Game", items[0].Name);
+        Assert.Equal(["K-Drama"], items[0].Genres);
+    }
+
+    [Fact]
+    public async Task GetVirtualItemsAsync_WithKeyword_AddsKeywordsParam()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+
+        const string keywordSearchJson = """
+            {
+              "page": 1,
+              "total_pages": 1,
+              "total_results": 1,
+              "results": [
+                {
+                  "id": 9715,
+                  "name": "cyberpunk"
+                }
+              ]
+            }
+            """;
+
+        const string discoverJson = """
+            {
+              "page": 1,
+              "total_pages": 1,
+              "results": [
+                {
+                  "id": 601,
+                  "title": "Cyberpunk 2077 Film",
+                  "release_date": "2024-01-01",
+                  "vote_average": 8.2,
+                  "overview": "Night City."
+                }
+              ]
+            }
+            """;
+
+        var requestedUrls = new List<string>();
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            var url = req.RequestUri?.ToString() ?? string.Empty;
+            requestedUrls.Add(url);
+            if (url.Contains("search/keyword"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(keywordSearchJson, Encoding.UTF8, "application/json"),
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(discoverJson, Encoding.UTF8, "application/json"),
+            };
+        });
+
+        var factory = new TestHttpClientFactory(handler);
+        var cache = new GenreCache(libProxy, dtoProxy, logger, factory);
+
+        var items = await cache.GetVirtualItemsAsync("Cyberpunk", [BaseItemKind.Movie], 10);
+        Assert.Contains(requestedUrls, u => u.Contains("with_keywords=9715"));
+        Assert.Single(items);
+        Assert.Equal("Cyberpunk 2077 Film", items[0].Name);
+        Assert.Equal(["Cyberpunk"], items[0].Genres);
+    }
+
+    public class SimpleProxy : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => null;
+    }
+
+    [Fact]
+    public async Task GenresController_Search_ReturnsExpectedResults()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+        var userManager = DispatchProxy.Create<IUserManager, SimpleProxy>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+        var cache = new GenreCache(libProxy, dtoProxy, logger);
+        var controller = new GenresController(cache, userManager);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext(),
+        };
+
+        // 1. Empty / whitespace returns 400
+        var bad1 = await controller.Search(null);
+        Assert.IsType<BadRequestObjectResult>(bad1);
+
+        var bad2 = await controller.Search("   ");
+        Assert.IsType<BadRequestObjectResult>(bad2);
+
+        // 2. Valid search returns Ok with GenreSearchResult
+        var okResult = await controller.Search("k-drama");
+        var okObj = Assert.IsType<OkObjectResult>(okResult);
+        var payload = Assert.IsType<GenreSearchResult>(okObj.Value);
+        Assert.True(payload.Found);
+        Assert.Equal("K-Drama", payload.Name);
+        Assert.Equal("country_genre", payload.Category);
+        Assert.Equal("ko", payload.OriginalLanguage);
+        Assert.Equal(18, payload.TmdbGenreId);
+        Assert.False(payload.IsStandard);
     }
 }

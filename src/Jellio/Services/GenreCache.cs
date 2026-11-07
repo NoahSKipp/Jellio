@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -26,6 +27,18 @@ using Jellio.Extensions;
 namespace Jellio.Services;
 
 public record GenreCount(string Name, int Count);
+
+public record GenreSearchResult
+{
+    public bool Found { get; init; } = true;
+    public string? Name { get; init; }
+    public string? Category { get; init; }
+    public bool IsStandard { get; init; }
+    public int? TmdbGenreId { get; init; }
+    public int? KeywordId { get; init; }
+    public string? OriginalLanguage { get; init; }
+    public int? MatchCount { get; init; }
+}
 
 public class GenreCache(
     ILibraryManager libraryManager,
@@ -279,11 +292,55 @@ public class GenreCache(
         ["Faroeste"] = 37,
     };
 
+    private static readonly Dictionary<string, (string Name, string Lang, int GenreId)> RegionalKeywordMap =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["c-drama"] = ("C-Drama", "zh", 18),
+            ["cdrama"] = ("C-Drama", "zh", 18),
+            ["c drama"] = ("C-Drama", "zh", 18),
+            ["chinese drama"] = ("C-Drama", "zh", 18),
+            ["c-dramas"] = ("C-Drama", "zh", 18),
+            ["cdramas"] = ("C-Drama", "zh", 18),
+            ["c dramas"] = ("C-Drama", "zh", 18),
+            ["chinese dramas"] = ("C-Drama", "zh", 18),
+
+            ["k-drama"] = ("K-Drama", "ko", 18),
+            ["kdrama"] = ("K-Drama", "ko", 18),
+            ["k drama"] = ("K-Drama", "ko", 18),
+            ["korean drama"] = ("K-Drama", "ko", 18),
+            ["k-dramas"] = ("K-Drama", "ko", 18),
+            ["kdramas"] = ("K-Drama", "ko", 18),
+            ["k dramas"] = ("K-Drama", "ko", 18),
+            ["korean dramas"] = ("K-Drama", "ko", 18),
+
+            ["j-drama"] = ("J-Drama", "ja", 18),
+            ["jdrama"] = ("J-Drama", "ja", 18),
+            ["j drama"] = ("J-Drama", "ja", 18),
+            ["japanese drama"] = ("J-Drama", "ja", 18),
+            ["j-dramas"] = ("J-Drama", "ja", 18),
+            ["jdramas"] = ("J-Drama", "ja", 18),
+            ["j dramas"] = ("J-Drama", "ja", 18),
+            ["japanese dramas"] = ("J-Drama", "ja", 18),
+        };
+
+    private static readonly ConcurrentDictionary<string, int> KeywordMap = new(StringComparer.OrdinalIgnoreCase);
+
     private static readonly Lazy<MethodInfo?> GelatoDiscoverMethod = new(() =>
         Type.GetType("Gelato.GelatoPlugin, Gelato")?.GetMethod("DiscoverAsync", BindingFlags.Public | BindingFlags.Static));
 
     private static readonly Lazy<MethodInfo?> GelatoRegisterVirtualMethod = new(() =>
-        Type.GetType("Gelato.GelatoPlugin, Gelato")?.GetMethod("RegisterVirtualTitle", BindingFlags.Public | BindingFlags.Static));
+    {
+        var type = Type.GetType("Gelato.GelatoPlugin, Gelato");
+        if (type == null)
+        {
+            return null;
+        }
+
+        return type.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name == "RegisterVirtualTitle")
+            .OrderByDescending(m => m.GetParameters().Length)
+            .FirstOrDefault();
+    });
 
     private readonly ConcurrentDictionary<string, (DateTime At, IReadOnlyList<GenreCount> Counts)> _counts = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task<IReadOnlyList<GenreCount>>> _countsBuilding = new(StringComparer.Ordinal);
@@ -477,6 +534,272 @@ public class GenreCache(
         return (paged, totalCount);
     }
 
+    public async Task<GenreSearchResult> SearchGenreOrCategoryAsync(string query, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new GenreSearchResult { Found = false };
+        }
+
+        var trimmed = query.Trim();
+
+        // 1. Special-case popular Asian drama / regional keywords
+        if (RegionalKeywordMap.TryGetValue(trimmed, out var regional))
+        {
+            return new GenreSearchResult
+            {
+                Found = true,
+                Name = regional.Name,
+                Category = "country_genre",
+                IsStandard = false,
+                TmdbGenreId = regional.GenreId,
+                OriginalLanguage = regional.Lang,
+                MatchCount = GetLocalGenreCount(regional.Name),
+            };
+        }
+
+        // 2. Check local library genres and standard TMDB MovieGenreMap / TvGenreMap
+        string? standardName = null;
+        int? standardGenreId = null;
+
+        var movieKey = MovieGenreMap.Keys.FirstOrDefault(k => string.Equals(k, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (movieKey != null)
+        {
+            standardName = movieKey;
+            standardGenreId = MovieGenreMap[movieKey];
+        }
+        else
+        {
+            var tvKey = TvGenreMap.Keys.FirstOrDefault(k => string.Equals(k, trimmed, StringComparison.OrdinalIgnoreCase));
+            if (tvKey != null)
+            {
+                standardName = tvKey;
+                standardGenreId = TvGenreMap[tvKey];
+            }
+        }
+
+        var localName = GetLocalGenreName(trimmed);
+        var localCount = GetLocalGenreCount(trimmed);
+
+        if (standardName != null || localName != null)
+        {
+            var matchedName = standardName ?? localName!;
+            return new GenreSearchResult
+            {
+                Found = true,
+                Name = matchedName,
+                Category = "genre",
+                IsStandard = true,
+                TmdbGenreId = standardGenreId,
+                MatchCount = localCount ?? GetLocalGenreCount(matchedName),
+            };
+        }
+
+        // 3. Query TMDB API /search/keyword
+        if (httpClientFactory == null)
+        {
+            return new GenreSearchResult { Found = false };
+        }
+
+        try
+        {
+            var token = JellioPlugin.Instance?.Configuration.TmdbAccessToken;
+            var useDefaultKey = string.IsNullOrWhiteSpace(token);
+            var activeToken = useDefaultKey ? DefaultTmdbApiKey : token!.Trim();
+
+            var client = httpClientFactory.CreateClient("tmdb");
+            client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+            if (!useDefaultKey && (activeToken.Length > 40 || activeToken.StartsWith("ey", StringComparison.OrdinalIgnoreCase)))
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", activeToken);
+            }
+            client.Timeout = TimeSpan.FromSeconds(8);
+
+            var queryKey = (useDefaultKey || activeToken.Length <= 40)
+                ? $"&api_key={Uri.EscapeDataString(activeToken)}"
+                : string.Empty;
+
+            var path = $"search/keyword?query={Uri.EscapeDataString(trimmed)}{queryKey}";
+            using var response = await client.GetAsync(path, ct).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new GenreSearchResult { Found = false };
+            }
+
+            var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            var payload = await JsonSerializer.DeserializeAsync<TmdbKeywordSearchResponse>(stream, JsonOptions, ct).ConfigureAwait(false);
+            if (payload?.Results == null || payload.Results.Count == 0)
+            {
+                return new GenreSearchResult { Found = false };
+            }
+
+            var exactMatch = payload.Results.FirstOrDefault(r => string.Equals(r.Name?.Trim(), trimmed, StringComparison.OrdinalIgnoreCase));
+            var match = exactMatch ?? payload.Results.FirstOrDefault(r => !string.IsNullOrWhiteSpace(r.Name));
+            if (match == null || string.IsNullOrWhiteSpace(match.Name))
+            {
+                return new GenreSearchResult { Found = false };
+            }
+
+            var cleanName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(match.Name.Trim().ToLowerInvariant());
+            KeywordMap[cleanName] = match.Id;
+            KeywordMap[match.Name.Trim()] = match.Id;
+            KeywordMap[trimmed] = match.Id;
+
+            return new GenreSearchResult
+            {
+                Found = true,
+                Name = cleanName,
+                Category = "keyword",
+                IsStandard = false,
+                KeywordId = match.Id,
+                MatchCount = payload.TotalResults > 0 ? payload.TotalResults : null,
+            };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogWarning(ex, "Jellio: TMDB keyword search failed for {Query}", trimmed);
+            return new GenreSearchResult { Found = false };
+        }
+    }
+
+    private string? GetLocalGenreName(string query)
+    {
+        foreach (var entry in _counts.Values)
+        {
+            var hit = entry.Counts.FirstOrDefault(c => string.Equals(c.Name, query, StringComparison.OrdinalIgnoreCase));
+            if (hit != null)
+            {
+                return hit.Name;
+            }
+        }
+
+        try
+        {
+            var queryResult = libraryManager.GetGenres(new InternalItemsQuery { Recursive = true });
+            if (queryResult?.Items != null)
+            {
+                var hit = queryResult.Items.FirstOrDefault(g => string.Equals(g.Item?.Name, query, StringComparison.OrdinalIgnoreCase));
+                if (hit.Item?.Name != null)
+                {
+                    return hit.Item.Name;
+                }
+            }
+        }
+        catch
+        {
+            // Ignored if libraryManager is mocked or does not implement GetGenres
+        }
+
+        return null;
+    }
+
+    private int? GetLocalGenreCount(string query)
+    {
+        foreach (var entry in _counts.Values)
+        {
+            var hit = entry.Counts.FirstOrDefault(c => string.Equals(c.Name, query, StringComparison.OrdinalIgnoreCase));
+            if (hit != null)
+            {
+                return hit.Count;
+            }
+        }
+
+        try
+        {
+            var queryResult = libraryManager.GetGenres(new InternalItemsQuery { Recursive = true });
+            if (queryResult?.Items != null)
+            {
+                var hit = queryResult.Items.FirstOrDefault(g => string.Equals(g.Item?.Name, query, StringComparison.OrdinalIgnoreCase));
+                if (hit.ItemCounts != null)
+                {
+                    return hit.ItemCounts.ItemCount;
+                }
+            }
+        }
+        catch
+        {
+            // Ignored if libraryManager is mocked or does not implement GetGenres
+        }
+
+        return null;
+    }
+
+    private async Task<(int? MovieGenreId, int? TvGenreId, string? OriginalLanguage, int? KeywordId, string CanonicalName, bool IsStandard)> ResolveGenreSpecAsync(
+        string genre,
+        CancellationToken cancellationToken)
+    {
+        var trimmed = genre.Trim();
+
+        // 1. Regional Asian dramas
+        if (RegionalKeywordMap.TryGetValue(trimmed, out var regional))
+        {
+            return (regional.GenreId, regional.GenreId, regional.Lang, null, regional.Name, false);
+        }
+
+        // 2. Standard movie/tv genre maps
+        int? movieGenreId = null;
+        int? tvGenreId = null;
+        string? canonicalName = null;
+
+        var movieMatch = MovieGenreMap.Keys.FirstOrDefault(k => string.Equals(k, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (movieMatch != null)
+        {
+            movieGenreId = MovieGenreMap[movieMatch];
+            canonicalName = movieMatch;
+        }
+
+        var tvMatch = TvGenreMap.Keys.FirstOrDefault(k => string.Equals(k, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (tvMatch != null)
+        {
+            tvGenreId = TvGenreMap[tvMatch];
+            canonicalName ??= tvMatch;
+        }
+
+        if (movieGenreId.HasValue || tvGenreId.HasValue)
+        {
+            return (movieGenreId, tvGenreId, null, null, canonicalName ?? trimmed, true);
+        }
+
+        // 3. Keyword map
+        if (KeywordMap.TryGetValue(trimmed, out var kwId))
+        {
+            return (null, null, null, kwId, CultureInfo.CurrentCulture.TextInfo.ToTitleCase(trimmed.ToLowerInvariant()), false);
+        }
+
+        // Check if prefixed with keyword:
+        if (trimmed.StartsWith("keyword:", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = trimmed.Split(':');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out var parsedId))
+            {
+                var kwName = parts.Length >= 3 ? parts[2] : trimmed;
+                return (null, null, null, parsedId, CultureInfo.CurrentCulture.TextInfo.ToTitleCase(kwName.ToLowerInvariant()), false);
+            }
+        }
+
+        // Try searching TMDB keyword
+        var searchResult = await SearchGenreOrCategoryAsync(trimmed, cancellationToken).ConfigureAwait(false);
+        if (searchResult.Found)
+        {
+            if (searchResult.KeywordId.HasValue)
+            {
+                return (null, null, null, searchResult.KeywordId.Value, searchResult.Name ?? trimmed, false);
+            }
+
+            if (searchResult.OriginalLanguage != null)
+            {
+                return (searchResult.TmdbGenreId, searchResult.TmdbGenreId, searchResult.OriginalLanguage, null, searchResult.Name ?? trimmed, false);
+            }
+
+            if (searchResult.TmdbGenreId.HasValue)
+            {
+                return (searchResult.TmdbGenreId, searchResult.TmdbGenreId, null, null, searchResult.Name ?? trimmed, searchResult.IsStandard);
+            }
+        }
+
+        return (null, null, null, null, trimmed, false);
+    }
+
     public async Task<IReadOnlyList<BaseItemDto>> GetVirtualItemsAsync(
         string genre,
         BaseItemKind[] types,
@@ -496,12 +819,15 @@ public class GenreCache(
         var useDefaultKey = string.IsNullOrWhiteSpace(token);
         var activeToken = useDefaultKey ? DefaultTmdbApiKey : token!.Trim();
 
-        var cacheKey = genre + "|" + string.Join(',', types.OrderBy(t => t));
+        var (movieGenreId, tvGenreId, originalLanguage, keywordId, canonicalName, isStandard) =
+            await ResolveGenreSpecAsync(genre, cancellationToken).ConfigureAwait(false);
+
+        var cacheKey = canonicalName + "|" + string.Join(',', types.OrderBy(t => t));
         List<BaseItemDto> virtualItems;
         int lastMoviePage = 0;
         int lastTvPage = 0;
-        bool movieExhausted = !types.Contains(BaseItemKind.Movie) || !MovieGenreMap.ContainsKey(genre);
-        bool tvExhausted = !types.Contains(BaseItemKind.Series) || !TvGenreMap.ContainsKey(genre);
+        bool movieExhausted = !types.Contains(BaseItemKind.Movie) || (!movieGenreId.HasValue && !keywordId.HasValue);
+        bool tvExhausted = !types.Contains(BaseItemKind.Series) || (!tvGenreId.HasValue && !keywordId.HasValue);
 
         if (_virtualGenreCache.TryGetValue(cacheKey, out var hit) && DateTime.UtcNow - hit.At < VirtualTtl)
         {
@@ -522,54 +848,58 @@ public class GenreCache(
         }
 
         // Try delegating discovery to Gelato if Gelato is available in the AppDomain
-        try
+        // Only standard built-in genres are supported by Gelato's static genre dictionaries
+        if (isStandard && !keywordId.HasValue && string.IsNullOrEmpty(originalLanguage))
         {
-            var discoverMethod = GelatoDiscoverMethod.Value;
-            if (discoverMethod != null)
+            try
             {
-                var paramCount = discoverMethod.GetParameters().Length;
-                var typesParam = string.Join(',', types.Select(t => t == BaseItemKind.Movie ? "movie" : "tv"));
-                var seen = new HashSet<Guid>(virtualItems.Select(v => v.Id));
-                var nextPage = lastMoviePage + 1;
-
-                while (virtualItems.Count < targetCount && !movieExhausted && nextPage <= 25)
+                var discoverMethod = GelatoDiscoverMethod.Value;
+                if (discoverMethod != null)
                 {
-                    object?[] args = paramCount == 4
-                        ? [genre, nextPage, null, cancellationToken]
-                        : [genre, typesParam, nextPage, null, cancellationToken];
-                    var task = (Task<List<BaseItemDto>>)discoverMethod.Invoke(null, args)!;
-                    var gelatoItems = await task.ConfigureAwait(false);
-                    if (gelatoItems == null || gelatoItems.Count == 0)
-                    {
-                        movieExhausted = true;
-                        tvExhausted = true;
-                        break;
-                    }
+                    var paramCount = discoverMethod.GetParameters().Length;
+                    var typesParam = string.Join(',', types.Select(t => t == BaseItemKind.Movie ? "movie" : "tv"));
+                    var seen = new HashSet<Guid>(virtualItems.Select(v => v.Id));
+                    var nextPage = lastMoviePage + 1;
 
-                    lastMoviePage = nextPage;
-                    nextPage++;
-                    foreach (var dto in gelatoItems)
+                    while (virtualItems.Count < targetCount && !movieExhausted && nextPage <= 25)
                     {
-                        if (seen.Add(dto.Id))
+                        object?[] args = paramCount == 4
+                            ? [canonicalName, nextPage, null, cancellationToken]
+                            : [canonicalName, typesParam, nextPage, null, cancellationToken];
+                        var task = (Task<List<BaseItemDto>>)discoverMethod.Invoke(null, args)!;
+                        var gelatoItems = await task.ConfigureAwait(false);
+                        if (gelatoItems == null || gelatoItems.Count == 0)
                         {
-                            virtualItems.Add(dto);
+                            movieExhausted = true;
+                            tvExhausted = true;
+                            break;
+                        }
+
+                        lastMoviePage = nextPage;
+                        nextPage++;
+                        foreach (var dto in gelatoItems)
+                        {
+                            if (seen.Add(dto.Id))
+                            {
+                                virtualItems.Add(dto);
+                            }
                         }
                     }
-                }
 
-                if (virtualItems.Count > 0 || lastMoviePage > 0)
-                {
-                    _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems, lastMoviePage, lastTvPage, movieExhausted, tvExhausted);
-                    return virtualItems;
-                }
+                    if (virtualItems.Count > 0 || lastMoviePage > 0)
+                    {
+                        _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems, lastMoviePage, lastTvPage, movieExhausted, tvExhausted);
+                        return virtualItems;
+                    }
 
-                movieExhausted = !types.Contains(BaseItemKind.Movie) || !MovieGenreMap.ContainsKey(genre);
-                tvExhausted = !types.Contains(BaseItemKind.Series) || !TvGenreMap.ContainsKey(genre);
+                    movieExhausted = !types.Contains(BaseItemKind.Movie) || !movieGenreId.HasValue;
+                    tvExhausted = !types.Contains(BaseItemKind.Series) || !tvGenreId.HasValue;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Jellio: Gelato discovery delegation unavailable, falling back to direct TMDB");
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Jellio: Gelato discovery delegation unavailable, falling back to direct TMDB");
+            }
         }
 
         static async Task<(string MediaType, int Page, IReadOnlyList<BaseItemDto> Items, int TotalPages)> FetchPageAsync(
@@ -606,20 +936,20 @@ public class GenreCache(
                 iterations++;
                 var tasks = new List<Task<(string MediaType, int Page, IReadOnlyList<BaseItemDto> Items, int TotalPages)>>();
 
-                if (!movieExhausted && MovieGenreMap.TryGetValue(genre, out var movieGenreId))
+                if (!movieExhausted && (movieGenreId.HasValue || keywordId.HasValue))
                 {
                     var nextMoviePage = lastMoviePage + 1;
                     tasks.Add(FetchPageAsync(
-                        () => FetchTmdbDiscoverAsync(client, "movie", movieGenreId, genre, nextMoviePage, queryKey, cancellationToken),
+                        () => FetchTmdbDiscoverAsync(client, "movie", movieGenreId, keywordId, originalLanguage, canonicalName, nextMoviePage, queryKey, cancellationToken),
                         "movie",
                         nextMoviePage));
                 }
 
-                if (!tvExhausted && TvGenreMap.TryGetValue(genre, out var tvGenreId))
+                if (!tvExhausted && (tvGenreId.HasValue || keywordId.HasValue))
                 {
                     var nextTvPage = lastTvPage + 1;
                     tasks.Add(FetchPageAsync(
-                        () => FetchTmdbDiscoverAsync(client, "tv", tvGenreId, genre, nextTvPage, queryKey, cancellationToken),
+                        () => FetchTmdbDiscoverAsync(client, "tv", tvGenreId, keywordId, originalLanguage, canonicalName, nextTvPage, queryKey, cancellationToken),
                         "tv",
                         nextTvPage));
                 }
@@ -684,7 +1014,9 @@ public class GenreCache(
     private static async Task<(IReadOnlyList<BaseItemDto> Items, int TotalPages)> FetchTmdbDiscoverAsync(
         HttpClient client,
         string kind,
-        int genreId,
+        int? genreId,
+        int? keywordId,
+        string? originalLanguage,
         string genreName,
         int page,
         string queryKey,
@@ -693,9 +1025,11 @@ public class GenreCache(
         var isMovie = kind == "movie";
         var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
         var dateFilter = isMovie ? $"&primary_release_date.lte={today}" : $"&first_air_date.lte={today}";
-        var path = isMovie
-            ? $"discover/movie?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{dateFilter}{queryKey}"
-            : $"discover/tv?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{dateFilter}{queryKey}";
+        var genreFilter = genreId.HasValue ? $"&with_genres={genreId.Value}" : string.Empty;
+        var langFilter = !string.IsNullOrWhiteSpace(originalLanguage) ? $"&with_original_language={Uri.EscapeDataString(originalLanguage)}" : string.Empty;
+        var keywordFilter = keywordId.HasValue ? $"&with_keywords={keywordId.Value}" : string.Empty;
+
+        var path = $"discover/{kind}?include_adult=false&sort_by=popularity.desc&page={page}{genreFilter}{langFilter}{keywordFilter}{dateFilter}{queryKey}";
 
         using var response = await client.GetAsync(path, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
@@ -765,7 +1099,7 @@ public class GenreCache(
 
             var rating = result.VoteAverage.HasValue ? (float)result.VoteAverage.Value : (float?)null;
             var itemId = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr);
-            RegisterVirtualWithGelato(itemId, title, year, isMovie ? "movie" : "tv", tmdbIdStr, null, posterUrl, backdropUrl, rating, result.Overview);
+            RegisterVirtualWithGelato(itemId, title, year, isMovie ? "movie" : "tv", tmdbIdStr, null, posterUrl, backdropUrl, rating, result.Overview, [genreName]);
 
             list.Add(new BaseItemDto
             {
@@ -797,7 +1131,8 @@ public class GenreCache(
         string? posterUrl,
         string? backdropUrl,
         float? rating,
-        string? overview)
+        string? overview,
+        IReadOnlyList<string>? genres = null)
     {
         try
         {
@@ -805,7 +1140,15 @@ public class GenreCache(
             if (regMethod != null)
             {
                 var paramCount = regMethod.GetParameters().Length;
-                if (paramCount == 10)
+                if (paramCount == 8)
+                {
+                    regMethod.Invoke(null, [guid, mediaType, tmdbId, name, year, imdbId, posterUrl, genres]);
+                }
+                else if (paramCount == 11)
+                {
+                    regMethod.Invoke(null, [guid, name, year, mediaType, tmdbId, imdbId, posterUrl, backdropUrl, rating, overview, genres]);
+                }
+                else if (paramCount == 10)
                 {
                     regMethod.Invoke(null, [guid, name, year, mediaType, tmdbId, imdbId, posterUrl, backdropUrl, rating, overview]);
                 }
@@ -887,5 +1230,29 @@ public class GenreCache(
 
         [JsonPropertyName("backdrop_path")]
         public string? BackdropPath { get; set; }
+    }
+
+    private sealed class TmdbKeywordSearchResponse
+    {
+        [JsonPropertyName("page")]
+        public int Page { get; set; }
+
+        [JsonPropertyName("total_pages")]
+        public int TotalPages { get; set; }
+
+        [JsonPropertyName("total_results")]
+        public int TotalResults { get; set; }
+
+        [JsonPropertyName("results")]
+        public List<TmdbKeywordItem>? Results { get; set; }
+    }
+
+    private sealed class TmdbKeywordItem
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
     }
 }

@@ -1,5 +1,5 @@
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
-import { getCurrentUser, saveServerDisplayLanguage, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl } from '../runtime/api.js';
+import { getCurrentUser, saveServerDisplayLanguage, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl, searchGenreOrCategory } from '../runtime/api.js';
 import { getProfileSettings, setProfilePrivacy, setGrouplistEnabled, getCommunityUsers } from '../runtime/apiSocial.js';
 import { startMangaImport, getMangaImportStatus } from '../runtime/apiBooks.js';
 import {
@@ -10,6 +10,10 @@ import {
   getSelectedGenres,
   toggleSelectedGenre,
   setSelectedGenres,
+  getCustomGenres,
+  setCustomGenres,
+  addCustomGenre,
+  removeCustomGenre,
 } from '../runtime/recommendationSettings.js';
 import { LATEST_CHANGELOG, CHANGELOG_RELEASES, MACOS_CHANGELOG_RELEASES } from '../runtime/changelog.js';
 import { invalidateAllHomeSections } from './home.js';
@@ -994,6 +998,24 @@ function buildHomeCacheCard() {
 function buildRecommendationsCategory() {
   const wrap = el('div', 'jellio-settings-category');
 
+  // --- Card 0: Home Row Customization ---
+  const { card: homeCustomizeCard, body: homeCustomizeBody } = buildCard(
+    'tune',
+    t('home_customize') || 'Customize Home Rows',
+    'Reorder or hide rows on your home feed.',
+  );
+  homeCustomizeBody.appendChild(
+    buildActionRow(
+      'tune',
+      'Customize Rows',
+      null,
+      function () {
+        navigateTo('#/home?edit=1');
+      },
+    ),
+  );
+  wrap.appendChild(homeCustomizeCard);
+
   // --- Card 1: What Others Are Watching ---
   const { card: communityCard, body: communityBody } = buildCard(
     'group',
@@ -1170,7 +1192,205 @@ function buildRecommendationsCategory() {
       pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', t('settings_genres_load_error')));
     });
 
+  // --- Subcard: Custom & Discovered Genres ---
+  const customSubcard = el('div', 'jellio-settings-subcard');
+  const customSubcardHeader = el('div', 'jellio-settings-subcard-header');
+  customSubcardHeader.appendChild(el('h3', 'jellio-settings-subcard-title', 'Custom & Discovered Genres'));
+  customSubcardHeader.appendChild(
+    el(
+      'p',
+      'jellio-settings-subcard-description',
+      'Search and add custom categories, tropes, or TMDB genres to your home rows.',
+    ),
+  );
+  customSubcard.appendChild(customSubcardHeader);
+
+  const searchWrap = el('div', 'jellio-custom-genre-search-wrap');
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'jellio-settings-input';
+  searchInput.placeholder = 'Search for a genre or category (e.g. C-Drama, Cyberpunk, Martial Arts)...';
+  searchWrap.appendChild(searchInput);
+
+  const resultContainer = el('div', 'jellio-custom-genre-result');
+  searchWrap.appendChild(resultContainer);
+  customSubcard.appendChild(searchWrap);
+
+  const customList = el('div', 'jellio-custom-genre-list');
+  customSubcard.appendChild(customList);
+
+  function isGenreAlreadyInList(name) {
+    const norm = (name || '').trim().toLowerCase();
+    if (!norm) return false;
+    const standard = getSelectedGenres();
+    if (standard.some(function (g) { return (g || '').trim().toLowerCase() === norm; })) {
+      return true;
+    }
+    const custom = getCustomGenres();
+    if (custom.some(function (g) { return (g && g.name ? g.name.trim().toLowerCase() === norm : false); })) {
+      return true;
+    }
+    return false;
+  }
+
+  function resolveMatch(data) {
+    if (!data) return null;
+    if (typeof data === 'string' && data.trim()) return { name: data.trim() };
+    if (Array.isArray(data) && data.length > 0) return resolveMatch(data[0]);
+    if (typeof data === 'object') {
+      if (data.Found === false || data.found === false) return null;
+      const list = data.Genres || data.Results || data.Items;
+      if (Array.isArray(list) && list.length > 0) return resolveMatch(list[0]);
+      const name = data.Name || data.name || data.Genre || data.genre || data.Match || data.match || data.Title || data.title;
+      if (name) {
+        return {
+          name: String(name).trim(),
+          category: data.Category || data.category || null,
+        };
+      }
+    }
+    return null;
+  }
+
+  let searchTimer = null;
+  let activeSearchId = 0;
+
+  function checkSearchState(query) {
+    const currentId = ++activeSearchId;
+    resultContainer.textContent = '';
+    const trimmed = (query || '').trim();
+    if (!trimmed) return;
+
+    if (isGenreAlreadyInList(trimmed)) {
+      const badge = el('span', 'jellio-custom-genre-badge', 'This genre is already in your genre list');
+      resultContainer.appendChild(badge);
+      return;
+    }
+
+    resultContainer.appendChild(el('span', 'jellio-settings-empty-note', t('status_loading')));
+
+    searchGenreOrCategory(trimmed)
+      .then(function (res) {
+        if (currentId !== activeSearchId) return;
+        resultContainer.textContent = '';
+
+        const match = resolveMatch(res);
+        if (!match || !match.name) {
+          resultContainer.appendChild(el('span', 'jellio-settings-empty-note', 'No matching genre or category found.'));
+          return;
+        }
+
+        if (isGenreAlreadyInList(match.name)) {
+          const badge = el('span', 'jellio-custom-genre-badge', 'This genre is already in your genre list');
+          resultContainer.appendChild(badge);
+          return;
+        }
+
+        const addBtn = el('button', 'jellio-custom-genre-add-btn');
+        addBtn.type = 'button';
+        addBtn.appendChild(el('span', 'material-icons', 'add'));
+        addBtn.appendChild(el('span', '', 'Add ' + match.name));
+        addBtn.addEventListener('click', function () {
+          addCustomGenre({ name: match.name, category: match.category, enabled: true });
+          invalidateAllHomeSections();
+          clearCachedRows();
+          searchInput.value = '';
+          resultContainer.textContent = '';
+          renderCustomList();
+        });
+        resultContainer.appendChild(addBtn);
+      })
+      .catch(function () {
+        if (currentId !== activeSearchId) return;
+        resultContainer.textContent = '';
+        resultContainer.appendChild(el('span', 'jellio-settings-empty-note', 'No matching genre or category found.'));
+      });
+  }
+
+  searchInput.addEventListener('input', function () {
+    if (searchTimer) clearTimeout(searchTimer);
+    const val = searchInput.value.trim();
+    if (!val) {
+      resultContainer.textContent = '';
+      return;
+    }
+    searchTimer = setTimeout(function () {
+      checkSearchState(val);
+    }, 300);
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchTimer) clearTimeout(searchTimer);
+      checkSearchState(searchInput.value.trim());
+    }
+  });
+
+  function renderCustomList() {
+    customList.textContent = '';
+    const genres = getCustomGenres();
+    if (!genres || genres.length === 0) {
+      customList.appendChild(el('p', 'jellio-settings-empty-note', 'No custom genres added yet.'));
+      return;
+    }
+
+    genres.forEach(function (genreObj) {
+      const row = el('div', 'jellio-custom-genre-row');
+
+      const nameEl = el('span', 'jellio-custom-genre-name', genreObj.name);
+      if (genreObj.category) {
+        const catBadge = el('span', 'jellio-custom-genre-badge', genreObj.category);
+        catBadge.style.marginLeft = '0.6em';
+        nameEl.appendChild(catBadge);
+      }
+      row.appendChild(nameEl);
+
+      const actions = el('div', 'jellio-custom-genre-actions');
+
+      const toggleLabel = el('label', 'jellio-settings-toggle');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'jellio-settings-toggle-input';
+      checkbox.checked = genreObj.enabled !== false;
+      checkbox.addEventListener('change', function () {
+        const updated = getCustomGenres().map(function (g) {
+          if ((g.name || '').trim().toLowerCase() === (genreObj.name || '').trim().toLowerCase()) {
+            return Object.assign({}, g, { enabled: checkbox.checked });
+          }
+          return g;
+        });
+        setCustomGenres(updated);
+        invalidateAllHomeSections();
+        clearCachedRows();
+      });
+      toggleLabel.appendChild(checkbox);
+      toggleLabel.appendChild(el('span', 'jellio-settings-toggle-track'));
+      actions.appendChild(toggleLabel);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'jellio-custom-genre-delete';
+      deleteBtn.title = 'Remove ' + genreObj.name;
+      deleteBtn.appendChild(el('span', 'material-icons', 'delete_outline'));
+      deleteBtn.addEventListener('click', function () {
+        removeCustomGenre(genreObj.name);
+        invalidateAllHomeSections();
+        clearCachedRows();
+        renderCustomList();
+        checkSearchState(searchInput.value.trim());
+      });
+      actions.appendChild(deleteBtn);
+
+      row.appendChild(actions);
+      customList.appendChild(row);
+    });
+  }
+
+  renderCustomList();
+
   genreBody.appendChild(genresWrap);
+  genreBody.appendChild(customSubcard);
   wrap.appendChild(genreCard);
 
   return wrap;

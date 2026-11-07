@@ -229,6 +229,9 @@ export function buildHomeCustomizeBar(onToggleEdit, onReset) {
 }
 
 export function updateHomeCustomizeBar(elements, editMode) {
+  if (elements.bar) {
+    elements.bar.style.display = editMode ? '' : 'none';
+  }
   elements.editButton.classList.toggle('jellio-home-customize-toggle-active', editMode);
   elements.editButton.lastChild.textContent = editMode ? 'Done' : 'Customize';
   elements.resetButton.style.display = editMode ? '' : 'none';

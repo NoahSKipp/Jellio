@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.107.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.107.4",
+    "summary": "Custom genre search and Home row management, moved configure button to Recommendations settings, and TMDB virtualization fallbacks.",
+    "highlights": [
+      {
+        "title": "Custom Genre Search & Home Rows",
+        "description": "Search and add custom categories like C-Drama, K-Drama, or Cyberpunk directly from Recommendations settings, cross-referenced with TMDB and populated as Home rows."
+      },
+      {
+        "title": "Clean Home Screen Customization",
+        "description": "The home screen customize button has moved into Settings > Recommendations, navigating to Home in edit mode with a streamlined layout."
+      },
+      {
+        "title": "Robust Virtual Title Resolution",
+        "description": "Titles without IMDb IDs now cleanly fall back to TMDB metadata in Gelato instead of stalling or 404ing."
+      }
+    ]
+  },
+  {
     "version": "1.107.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.3",

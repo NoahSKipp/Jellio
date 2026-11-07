@@ -70,6 +70,18 @@ public class GenresController(GenreCache genres, IUserManager userManager) : Con
         return Ok(new { Items = items, TotalRecordCount = totalCount, StartIndex = offset });
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest("query is required");
+        }
+
+        var result = await genres.SearchGenreOrCategoryAsync(query, HttpContext.RequestAborted).ConfigureAwait(false);
+        return Ok(result);
+    }
+
     private Jellyfin.Database.Implementations.Entities.User? CurrentUser()
     {
         var id = User.TryGetJellyfinUserId(out var parsed) ? parsed : Guid.Empty;
