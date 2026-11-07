@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "- Isolate Coming Soon series schedules from per-user watch progress to prevent cross-user cache poisoning\n- Advance Coming Soon to the next upcoming episode in the season for currently airing shows\n- Fix multi-page Gelato Discover delegation, reflection signatures, and localized genre mappings in GenreCache\n- Fix full row modal and horizontal row pagination offsets, offline download byte progress persistence, and offline player arrow key seeking",
+        "checksum": "b906ed84febcf516dbe3fee9b3e62277",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.1/jellio_1.107.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-07T02:20:40Z",
+        "version": "1.107.1"
+      },
+      {
         "changelog": "## [1.107.0] - 2026-11-07\n\n### 🚀 Features\n\n- *(playback)* Auto-complete skipped previous episodes with anthology exemption\n\n### 🐛 Bug Fixes\n\n- *(modal)* Resolve missing posters and metadata in full row modals\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.2\n- *(changelog)* Update What's New for 1.107.0\n",
         "checksum": "4a7bb4bee4fe3d52220cdf0fa4374ff3",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.0/jellio_1.107.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T11:34:18Z",
         "version": "1.99.0"
-      },
-      {
-        "changelog": "## [1.98.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(now-playing)* Live TV check-ins and badges for hours watched\n- *(livetv)* Show live viewing in Now Playing and Live TV time on profiles\n\n### 📚 Documentation\n\n- *(changelog)* Note Live TV in Now Playing in 1.98.0\n",
-        "checksum": "49636ef3d1a68ac236e2050b01c79f09",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.98.0/jellio_1.98.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T10:18:14Z",
-        "version": "1.98.0"
       }
     ]
   }
