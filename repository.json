@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.107.0] - 2026-11-07\n\n### 🚀 Features\n\n- *(playback)* Auto-complete skipped previous episodes with anthology exemption\n\n### 🐛 Bug Fixes\n\n- *(modal)* Resolve missing posters and metadata in full row modals\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.2\n- *(changelog)* Update What's New for 1.107.0\n",
+        "checksum": "4a7bb4bee4fe3d52220cdf0fa4374ff3",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.0/jellio_1.107.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-07T00:36:55Z",
+        "version": "1.107.0"
+      },
+      {
         "changelog": "## [1.106.1] - 2026-11-06\n\n### 🐛 Bug Fixes\n\n- *(rows)* Support infinite pagination, poster rendering, and multi-page TMDB discovery\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.1\n",
         "checksum": "1c41a56fdc5d61d9bc0d8f7cefa6d516",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.106.1/jellio_1.106.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T10:18:14Z",
         "version": "1.98.0"
-      },
-      {
-        "changelog": "## [1.97.0] - 2026-10-28\n\n### 🚀 Features\n\n- *(livetv)* Track channels that fail to start and remove long-broken links\n- *(livetv)* Fold away channels that are not working and skip them when zapping\n- *(notifications)* Say when a broken stream link was removed\n\n### 📚 Documentation\n\n- *(changelog)* Note Not working channels in 1.97.0\n",
-        "checksum": "ab77092cddbd3250ca826ef60ba6a7c6",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.97.0/jellio_1.97.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T08:48:52Z",
-        "version": "1.97.0"
       }
     ]
   }
