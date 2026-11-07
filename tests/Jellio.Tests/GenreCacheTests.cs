@@ -313,5 +313,47 @@ public class GenreCacheTests
         Assert.Equal("https://image.tmdb.org/t/p/w1280/path_to_backdrop.jpg", item.BackdropImageTags[0]);
         Assert.NotNull(capturedQuery);
         Assert.Contains("api_key=4219e299c89411838049ab0dab19ebd5", capturedQuery);
+        Assert.Contains("primary_release_date.lte=", capturedQuery);
+    }
+
+    [Fact]
+    public async Task GetVirtualItemsAsync_FiltersUnreleasedFutureMedia()
+    {
+        var libProxy = DispatchProxy.Create<ILibraryManager, CustomLibraryProxy>();
+        var dtoProxy = DispatchProxy.Create<IDtoService, CustomDtoProxy>();
+
+        var tmdbJson = """
+            {
+              "page": 1,
+              "total_pages": 1,
+              "results": [
+                {
+                  "id": 901,
+                  "title": "Future Unreleased Movie",
+                  "release_date": "2099-12-31",
+                  "vote_average": 9.9
+                },
+                {
+                  "id": 902,
+                  "title": "Already Released Movie",
+                  "release_date": "2020-01-01",
+                  "vote_average": 8.5
+                }
+              ]
+            }
+            """;
+
+        var handler = new TestHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(tmdbJson, Encoding.UTF8, "application/json"),
+        });
+
+        var factory = new TestHttpClientFactory(handler);
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<GenreCache>.Instance;
+        var cache = new GenreCache(libProxy, dtoProxy, logger, factory);
+
+        var virtuals = await cache.GetVirtualItemsAsync("Action", [BaseItemKind.Movie], 10);
+        Assert.Single(virtuals);
+        Assert.Equal("Already Released Movie", virtuals[0].Name);
     }
 }

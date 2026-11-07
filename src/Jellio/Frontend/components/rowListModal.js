@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getImageUrl } from '../runtime/api.js';
+import { getImageUrl, seedItemCache } from '../runtime/api.js';
 import { getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
@@ -23,9 +23,9 @@ function itemSubtitle(item) {
   const bits = [];
   if (item.ProductionYear) bits.push(String(item.ProductionYear));
   if (item.Type === 'Series' || item.Type === 'Season') {
-    bits.push(t('type_series') || 'Series');
+    bits.push(t('type_series', null, 'Series'));
   } else if (item.Type === 'Movie') {
-    bits.push(t('type_movie') || 'Movie');
+    bits.push(t('type_movie', null, 'Movie'));
   }
   if (typeof item.CommunityRating === 'number' && item.CommunityRating > 0) {
     bits.push('★ ' + item.CommunityRating.toFixed(1));
@@ -114,6 +114,7 @@ function buildListItem(item, select) {
   row.appendChild(el('span', 'material-icons jellio-row-list-item-chevron', 'chevron_right'));
 
   row.addEventListener('click', function () {
+    seedItemCache(item);
     closeRowListModal();
     select(item);
   });

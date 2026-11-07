@@ -1,4 +1,6 @@
 export default {
+  type_series: "Serie",
+  type_movie: "Film",
   settings_signed_in_as: "Connesso come {name}",
   settings_view_profile: "Visualizza profilo",
   settings_view_profile_desc: "Banner, badge e attività.",

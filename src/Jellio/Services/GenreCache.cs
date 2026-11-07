@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -420,6 +421,41 @@ public class GenreCache(
             virtualItems = new List<BaseItemDto>();
         }
 
+        // Try delegating discovery to Gelato if Gelato is available in the AppDomain
+        try
+        {
+            var gelatoPluginType = Type.GetType("Gelato.GelatoPlugin, Gelato");
+            if (gelatoPluginType != null)
+            {
+                var discoverMethod = gelatoPluginType.GetMethod("DiscoverAsync", BindingFlags.Public | BindingFlags.Static);
+                if (discoverMethod != null)
+                {
+                    var typesParam = string.Join(',', types.Select(t => t == BaseItemKind.Movie ? "movie" : "tv"));
+                    var page = Math.Max(1, (virtualItems.Count / 20) + 1);
+                    var task = (Task<List<BaseItemDto>>)discoverMethod.Invoke(null, [genre, typesParam, page, null, cancellationToken])!;
+                    var gelatoDtos = await task.ConfigureAwait(false);
+                    if (gelatoDtos != null && gelatoDtos.Count > 0)
+                    {
+                        var seen = new HashSet<Guid>(virtualItems.Select(v => v.Id));
+                        foreach (var dto in gelatoDtos)
+                        {
+                            if (seen.Add(dto.Id))
+                            {
+                                virtualItems.Add(dto);
+                            }
+                        }
+
+                        _virtualGenreCache[cacheKey] = (DateTime.UtcNow, virtualItems, lastMoviePage, lastTvPage, movieExhausted, tvExhausted);
+                        return virtualItems;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Jellio: Gelato discovery delegation unavailable, falling back to direct TMDB");
+        }
+
         try
         {
             var client = httpClientFactory.CreateClient("tmdb");
@@ -526,9 +562,11 @@ public class GenreCache(
         CancellationToken cancellationToken)
     {
         var isMovie = kind == "movie";
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var dateFilter = isMovie ? $"&primary_release_date.lte={today}" : $"&first_air_date.lte={today}";
         var path = isMovie
-            ? $"discover/movie?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{queryKey}"
-            : $"discover/tv?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{queryKey}";
+            ? $"discover/movie?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{dateFilter}{queryKey}"
+            : $"discover/tv?include_adult=false&sort_by=popularity.desc&page={page}&with_genres={genreId}{dateFilter}{queryKey}";
 
         using var response = await client.GetAsync(path, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
@@ -564,6 +602,11 @@ public class GenreCache(
                 {
                     year = d.Year;
                 }
+
+                if (DateTime.TryParse(dateStr, out var releaseDate) && releaseDate > DateTime.UtcNow.AddDays(7))
+                {
+                    continue;
+                }
             }
 
             var tmdbIdStr = result.Id.ToString();
@@ -591,9 +634,12 @@ public class GenreCache(
                 providerIds["TmdbPoster"] = posterUrl;
             }
 
+            var itemId = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr);
+            RegisterVirtualWithGelato(itemId, isMovie ? "movie" : "tv", tmdbIdStr, title, year, posterUrl);
+
             list.Add(new BaseItemDto
             {
-                Id = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr),
+                Id = itemId,
                 Name = title,
                 ProductionYear = year,
                 CommunityRating = result.VoteAverage.HasValue ? (float)result.VoteAverage.Value : null,
@@ -609,6 +655,23 @@ public class GenreCache(
         }
 
         return (list, payload.TotalPages);
+    }
+
+    private static void RegisterVirtualWithGelato(Guid guid, string kind, string tmdbId, string? title, int? year, string? posterUrl)
+    {
+        try
+        {
+            var gelatoPluginType = Type.GetType("Gelato.GelatoPlugin, Gelato");
+            if (gelatoPluginType != null)
+            {
+                var regMethod = gelatoPluginType.GetMethod("RegisterVirtualTitle", BindingFlags.Public | BindingFlags.Static);
+                regMethod?.Invoke(null, [guid, kind, tmdbId, title, year, null, posterUrl]);
+            }
+        }
+        catch
+        {
+            // Best effort registration with Gelato
+        }
     }
 
     // One entry per title: the same film in several versions (or imported

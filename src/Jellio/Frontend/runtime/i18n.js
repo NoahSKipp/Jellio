@@ -16,6 +16,8 @@ export const DISPLAY_LANGUAGES = [
 
 const STRINGS = {
   en: {
+    type_series: "Series",
+    type_movie: "Movie",
     settings_signed_in_as: "Signed in as {name}",
     settings_view_profile: "View profile",
     settings_view_profile_desc: "Banner, badges and activity.",

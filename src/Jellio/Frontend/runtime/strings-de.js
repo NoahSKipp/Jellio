@@ -1,4 +1,6 @@
 export default {
+  type_series: "Serie",
+  type_movie: "Film",
   settings_signed_in_as: "Angemeldet als {name}",
   settings_view_profile: "Profil anzeigen",
   settings_view_profile_desc: "Banner, Abzeichen und Aktivitäten.",

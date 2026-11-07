@@ -515,3 +515,11 @@ test('getRemoteSessions: graceful error handling when network or API fails', asy
     clearSession();
   }
 });
+
+test('i18n: type_series and type_movie translate properly to readable strings', async () => {
+  const { t } = await import('../../src/Jellio/Frontend/runtime/i18n.js');
+  assert.equal(t('type_series'), 'Series');
+  assert.equal(t('type_movie'), 'Movie');
+  assert.notEqual(t('type_series'), 'type_series');
+  assert.notEqual(t('type_movie'), 'type_movie');
+});
