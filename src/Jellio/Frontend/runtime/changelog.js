@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.107.6",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.107.6",
+    "summary": "Multi-edition and cut recognition, version selector toggle, and stream picker filters.",
+    "highlights": [
+      {
+        "title": "Multi-Edition & Alternate Cut Recognition",
+        "description": "Automatically recognizes alternate versions including Noir / Black & White, Extended Edition, Director's Cut, Final Cut, and IMAX."
+      },
+      {
+        "title": "Interactive Version Selector",
+        "description": "Detail screens show a segmented version selector when multiple editions exist, automatically directing Play to the best stream of your selected cut."
+      },
+      {
+        "title": "Stream Picker Edition Badges & Filters",
+        "description": "Stream picker modal highlights detected editions and provides quick filter chips to browse sources by edition."
+      }
+    ]
+  },
+  {
     "version": "1.107.5",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.5",
