@@ -15,6 +15,26 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.107.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.107.5",
+    "summary": "Cross-device recommendation sync, one-click library genre enablement, and desktop settings alignment.",
+    "highlights": [
+      {
+        "title": "Profile Recommendations Sync",
+        "description": "Selected genre recommendations and custom genre rows now automatically synchronize with your Jellio user profile across Web, macOS, and TV."
+      },
+      {
+        "title": "One-Click Library Genre Enablement",
+        "description": "Searching for an existing library genre like Telenovela or Soap distinguishes enabled from available genres and offers a direct one-click button to activate it for Home."
+      },
+      {
+        "title": "Desktop Settings Alignment",
+        "description": "Cleaned up update card button alignment and section spacing in macOS desktop settings."
+      }
+    ]
+  },
+  {
     "version": "1.107.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.4",
