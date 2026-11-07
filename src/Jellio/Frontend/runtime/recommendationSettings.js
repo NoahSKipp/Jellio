@@ -1,4 +1,5 @@
 import { getCurrentUserId } from './auth.js';
+import { getProfileSettings, saveProfileRecommendations } from './apiSocial.js';
 
 function storageKey() {
   const userId = getCurrentUserId() || 'guest';
@@ -19,6 +20,46 @@ function saveSettings(settings) {
     localStorage.setItem(storageKey(), JSON.stringify(settings));
   } catch (err) {
     console.warn('Jellio: could not save recommendation settings', err);
+  }
+}
+
+function persistServerRecommendations() {
+  const settings = loadSettings();
+  try {
+    if (typeof saveProfileRecommendations === 'function') {
+      saveProfileRecommendations(settings.selectedGenres || [], settings.customGenres || []).catch(function () {});
+    }
+  } catch (err) {
+  }
+}
+
+export async function syncRecommendationsFromServer() {
+  try {
+    if (typeof getProfileSettings !== 'function') return loadSettings();
+    const settings = await getProfileSettings();
+    if (!settings) return loadSettings();
+    const current = loadSettings();
+    let changed = false;
+    if (Array.isArray(settings.SelectedGenres)) {
+      current.selectedGenres = settings.SelectedGenres;
+      changed = true;
+    }
+    if (Array.isArray(settings.CustomGenres)) {
+      current.customGenres = settings.CustomGenres.map(function (g) {
+        return {
+          name: g.Name || g.name,
+          category: g.Category || g.category || null,
+          enabled: g.Enabled !== undefined ? Boolean(g.Enabled) : g.enabled !== undefined ? Boolean(g.enabled) : true,
+        };
+      });
+      changed = true;
+    }
+    if (changed) {
+      saveSettings(current);
+    }
+    return current;
+  } catch (err) {
+    return loadSettings();
   }
 }
 
@@ -64,6 +105,7 @@ export function setSelectedGenres(genres) {
   const settings = loadSettings();
   settings.selectedGenres = Array.isArray(genres) ? genres : [];
   saveSettings(settings);
+  persistServerRecommendations();
 }
 
 export function toggleSelectedGenre(genre) {
@@ -90,6 +132,7 @@ export function setCustomGenres(list) {
   const settings = loadSettings();
   settings.customGenres = Array.isArray(list) ? list : [];
   saveSettings(settings);
+  persistServerRecommendations();
 }
 
 export function addCustomGenre(genreObj) {

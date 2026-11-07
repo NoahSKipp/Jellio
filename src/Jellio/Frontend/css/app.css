@@ -7309,6 +7309,10 @@
   border-top: 1px solid var(--jellio-border-color);
 }
 
+.jellio-settings-card-body:empty {
+  display: none;
+}
+
 .jellio-settings-card-body-form {
   padding: 1.2em 1.4em;
 }

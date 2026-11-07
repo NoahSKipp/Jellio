@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Jellio.Services.Achievements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +20,10 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
     public record GrouplistEnabledRequest(bool GrouplistEnabled);
 
     public record WatchlistAutoRemoveRequest(bool RemoveFromWatchlistAfterWatching);
+
+    public record RecommendationsRequest(
+        [property: JsonPropertyName("selectedGenres")] List<string>? SelectedGenres,
+        [property: JsonPropertyName("customGenres")] List<CustomGenreItemDto>? CustomGenres);
 
     [HttpGet("settings")]
     public IActionResult GetSettings()
@@ -94,6 +100,35 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
         var settings = store.Update(userId, s =>
             s.Bio = string.IsNullOrWhiteSpace(request.Bio) ? null : request.Bio.Trim()[..Math.Min(request.Bio.Trim().Length, 240)]);
         return Ok(settings);
+    }
+
+    [HttpPost("recommendations")]
+    public ActionResult<ProfileSettings> SetRecommendations([FromBody] RecommendationsRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        if (request == null)
+        {
+            return BadRequest();
+        }
+
+        var updated = store.Update(userId, s =>
+        {
+            if (request.SelectedGenres != null)
+            {
+                s.SelectedGenres = request.SelectedGenres;
+            }
+
+            if (request.CustomGenres != null)
+            {
+                s.CustomGenres = request.CustomGenres;
+            }
+        });
+        return Ok(updated);
     }
 
     private Guid GetUserId()

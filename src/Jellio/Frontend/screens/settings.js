@@ -14,6 +14,7 @@ import {
   setCustomGenres,
   addCustomGenre,
   removeCustomGenre,
+  syncRecommendationsFromServer,
 } from '../runtime/recommendationSettings.js';
 import { LATEST_CHANGELOG, CHANGELOG_RELEASES, MACOS_CHANGELOG_RELEASES } from '../runtime/changelog.js';
 import { invalidateAllHomeSections } from './home.js';
@@ -843,7 +844,8 @@ function buildAppUpdateCard(native) {
   const { card, body } = buildCard('laptop_mac', t('settings_macos_title'), t('settings_macos_desc'));
   const action = el('button', 'jellio-settings-button', t('settings_check_updates'));
   action.type = 'button';
-  const statusRow = buildRow(null, t('settings_version'), '', action);
+  action.style.alignSelf = 'center';
+  const statusRow = buildRow('laptop_mac', t('settings_version'), '', action);
   const description = el('span', 'jellio-settings-row-description');
   statusRow.querySelector('.jellio-settings-row-text').appendChild(description);
   body.appendChild(statusRow);
@@ -851,7 +853,7 @@ function buildAppUpdateCard(native) {
   let current = null;
   let toggleInput = null;
   body.appendChild(
-    buildToggleRow(null, t('settings_check_auto'), t('settings_check_auto_desc'), true, function (checked) {
+    buildToggleRow('sync', t('settings_check_auto'), t('settings_check_auto_desc'), true, function (checked) {
       native.setAutomatic(checked).catch(function (err) {
         console.warn('Jellio: could not save the update setting', err);
       });
@@ -893,6 +895,7 @@ function buildAppUpdateCard(native) {
     macWrap.style.paddingTop = '14px';
 
     const macHeader = el('div', 'jellio-settings-row-title', t('settings_macos_whats_new'));
+    macHeader.style.padding = '0 1.4em';
     macHeader.style.marginBottom = '8px';
     macWrap.appendChild(macHeader);
 
@@ -1135,8 +1138,12 @@ function buildRecommendationsCategory() {
   actionsWrap.appendChild(resetBtn);
   genresWrap.appendChild(actionsWrap);
 
+  let libraryGenres = [];
+  let updatePillsRef = null;
+
   getAllGenres(null, 'Movie,Series')
     .then(function (genres) {
+      libraryGenres = genres || [];
       pillsContainer.textContent = '';
       if (!genres || genres.length === 0) {
         pillsContainer.appendChild(el('p', 'jellio-settings-empty-note', t('settings_genres_empty')));
@@ -1184,6 +1191,7 @@ function buildRecommendationsCategory() {
         updatePills();
       });
 
+      updatePillsRef = updatePills;
       updatePills();
     })
     .catch(function (err) {
@@ -1219,18 +1227,24 @@ function buildRecommendationsCategory() {
   const customList = el('div', 'jellio-custom-genre-list');
   customSubcard.appendChild(customList);
 
-  function isGenreAlreadyInList(name) {
+  function checkGenreStatus(name) {
     const norm = (name || '').trim().toLowerCase();
-    if (!norm) return false;
+    if (!norm) return null;
     const standard = getSelectedGenres();
-    if (standard.some(function (g) { return (g || '').trim().toLowerCase() === norm; })) {
-      return true;
+    const matchedEnabled = standard.find(function (g) { return (g || '').trim().toLowerCase() === norm; });
+    if (matchedEnabled) {
+      return { status: 'enabled_standard', name: matchedEnabled };
     }
     const custom = getCustomGenres();
-    if (custom.some(function (g) { return (g && g.name ? g.name.trim().toLowerCase() === norm : false); })) {
-      return true;
+    const foundCustom = custom.find(function (g) { return (g && g.name ? g.name.trim().toLowerCase() === norm : false); });
+    if (foundCustom) {
+      return { status: 'custom', name: foundCustom.name };
     }
-    return false;
+    const matchedLib = (libraryGenres || []).find(function (g) { return (g || '').trim().toLowerCase() === norm; });
+    if (matchedLib) {
+      return { status: 'available_standard', name: matchedLib };
+    }
+    return null;
   }
 
   function resolveMatch(data) {
@@ -1246,6 +1260,7 @@ function buildRecommendationsCategory() {
         return {
           name: String(name).trim(),
           category: data.Category || data.category || null,
+          isStandard: Boolean(data.IsStandard || data.isStandard),
         };
       }
     }
@@ -1261,8 +1276,14 @@ function buildRecommendationsCategory() {
     const trimmed = (query || '').trim();
     if (!trimmed) return;
 
-    if (isGenreAlreadyInList(trimmed)) {
-      const badge = el('span', 'jellio-custom-genre-badge', 'This genre is already in your genre list');
+    const directStatus = checkGenreStatus(trimmed);
+    if (directStatus && directStatus.status === 'enabled_standard') {
+      const badge = el('span', 'jellio-custom-genre-badge', '"' + directStatus.name + '" is already enabled in your genre rows.');
+      resultContainer.appendChild(badge);
+      return;
+    }
+    if (directStatus && directStatus.status === 'custom') {
+      const badge = el('span', 'jellio-custom-genre-badge', '"' + directStatus.name + '" is already in your custom genres.');
       resultContainer.appendChild(badge);
       return;
     }
@@ -1280,16 +1301,49 @@ function buildRecommendationsCategory() {
           return;
         }
 
-        if (isGenreAlreadyInList(match.name)) {
-          const badge = el('span', 'jellio-custom-genre-badge', 'This genre is already in your genre list');
+        const status = checkGenreStatus(match.name);
+        if (status && status.status === 'enabled_standard') {
+          const badge = el('span', 'jellio-custom-genre-badge', '"' + status.name + '" is already enabled in your genre rows.');
           resultContainer.appendChild(badge);
+          return;
+        }
+
+        if (status && status.status === 'custom') {
+          const badge = el('span', 'jellio-custom-genre-badge', '"' + status.name + '" is already in your custom genres.');
+          resultContainer.appendChild(badge);
+          return;
+        }
+
+        const isStandard = Boolean(match.isStandard || (res && (res.IsStandard || res.isStandard)) || (status && status.status === 'available_standard'));
+        const standardName = (status && status.name) || match.name;
+
+        if (isStandard) {
+          const noteWrap = el('div', 'jellio-custom-genre-found-wrap');
+          noteWrap.style.display = 'flex';
+          noteWrap.style.flexDirection = 'column';
+          noteWrap.style.gap = '8px';
+          noteWrap.appendChild(el('span', 'jellio-settings-empty-note', '"' + standardName + '" is an available library genre.'));
+          const enableBtn = el('button', 'jellio-custom-genre-add-btn');
+          enableBtn.type = 'button';
+          enableBtn.appendChild(el('span', 'material-icons', 'check_circle'));
+          enableBtn.appendChild(el('span', '', 'Enable "' + standardName + '" for Home'));
+          enableBtn.addEventListener('click', function () {
+            toggleSelectedGenre(standardName);
+            invalidateAllHomeSections();
+            clearCachedRows();
+            if (updatePillsRef) updatePillsRef();
+            searchInput.value = '';
+            resultContainer.textContent = '';
+          });
+          noteWrap.appendChild(enableBtn);
+          resultContainer.appendChild(noteWrap);
           return;
         }
 
         const addBtn = el('button', 'jellio-custom-genre-add-btn');
         addBtn.type = 'button';
         addBtn.appendChild(el('span', 'material-icons', 'add'));
-        addBtn.appendChild(el('span', '', 'Add ' + match.name));
+        addBtn.appendChild(el('span', '', 'Add "' + match.name + '" to Home'));
         addBtn.addEventListener('click', function () {
           addCustomGenre({ name: match.name, category: match.category, enabled: true });
           invalidateAllHomeSections();

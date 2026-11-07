@@ -135,6 +135,13 @@ export function saveWatchlistAutoRemoveSetting(removeFromWatchlistAfterWatching)
   });
 }
 
+export function saveProfileRecommendations(selectedGenres, customGenres) {
+  return postJson('/Jellio/profile/recommendations', {
+    SelectedGenres: selectedGenres,
+    CustomGenres: customGenres,
+  });
+}
+
 export function getMyAchievements() {
   return getJson('/Jellio/achievements');
 }
