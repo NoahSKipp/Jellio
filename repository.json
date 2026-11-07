@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "**Full Changelog**: https://github.com/NoahSKipp/Jellio/compare/1.107.2...1.107.3",
+        "checksum": "397c02c4a647ee9d08e8b893a2363b93",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.3/jellio_1.107.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-07T14:35:18Z",
+        "version": "1.107.3"
+      },
+      {
         "changelog": "**Full Changelog**: https://github.com/NoahSKipp/Jellio/compare/1.107.1...1.107.2",
         "checksum": "e11b06a6e5e49c172aa0dfbf188999ad",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.2/jellio_1.107.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-10-28T13:28:25Z",
         "version": "1.99.2"
-      },
-      {
-        "changelog": "## [1.99.1] - 2026-10-28\n\n### 🐛 Bug Fixes\n\n- *(streams)* Skip pages already tried and allow 60 s to resolve a link\n\n### 📚 Documentation\n\n- *(changelog)* Note faster stream links in 1.99.1\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.99.1\n",
-        "checksum": "3d0a7eafd373578a37c91dcd58a0663b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.99.1/jellio_1.99.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-28T11:51:57Z",
-        "version": "1.99.1"
       }
     ]
   }
