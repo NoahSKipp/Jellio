@@ -15,6 +15,18 @@ function isBigRelease(version) {
 
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.108.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.108.0",
+    "summary": "Now Playing user identification and remote stream handoff protection.",
+    "highlights": [
+      {
+        "title": "Account-Aware Now Playing Sessions",
+        "description": "Now Playing active streams, reading sessions, and live TV broadcasts now return the owner's UserId to protect and restrict cross-device handoff."
+      }
+    ]
+  },
+  {
     "version": "1.107.6",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.107.6",
