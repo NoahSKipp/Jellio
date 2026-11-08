@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.108.0] - 2026-11-08\n\n### 🚀 Features\n\n- *(nowplaying)* Include UserId in Now Playing sessions endpoint\n\n### 📚 Documentation\n\n- Add 1.108.0 release notes to What's New changelog\n",
+        "checksum": "2592f65543727630fcdbca2ecefacc95",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.108.0/jellio_1.108.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-08T01:12:45Z",
+        "version": "1.108.0"
+      },
+      {
         "changelog": "## [1.107.7] - 2026-11-07\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.107.6 multi-edition support\n",
         "checksum": "f53ca8f945e411202608f5fd26fc82cb",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.107.7/jellio_1.107.7.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-01T00:34:01Z",
         "version": "1.102.1"
-      },
-      {
-        "changelog": "## [1.102.0] - 2026-10-31\n\n### 🚀 Features\n\n- *(parties)* Watch parties on top of Group Watch\n- *(groupwatch)* Watch parties on web\n\n### 🐛 Bug Fixes\n\n- *(groupwatch)* Only restore the group this browser joined\n- *(player)* Keep group playback from drifting into pause loops\n- *(groupwatch)* Let one person's devices watch in the same group\n\n### 📚 Documentation\n\n- *(changelog)* Watch parties in 1.102.0\n",
-        "checksum": "e89cf5dfaba70de67fa389d506a7613a",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.0/jellio_1.102.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-10-31T23:34:44Z",
-        "version": "1.102.0"
       }
     ]
   }
