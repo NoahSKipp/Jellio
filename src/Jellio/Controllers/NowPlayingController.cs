@@ -30,6 +30,7 @@ public class NowPlayingController(ISessionManager sessionManager, NowReadingServ
             .Select(s => new
             {
                 s.Id,
+                UserId = s.UserId.ToString("N"),
                 s.UserName,
                 s.DeviceName,
                 s.Client,
@@ -59,6 +60,7 @@ public class NowPlayingController(ISessionManager sessionManager, NowReadingServ
         var reading = nowReading.Current().Select(entry => new
         {
             Id = "reading-" + entry.UserId.ToString("N"),
+            UserId = entry.UserId.ToString("N"),
             entry.UserName,
             DeviceName = (string?)null,
             Client = (string?)null,
@@ -87,6 +89,7 @@ public class NowPlayingController(ISessionManager sessionManager, NowReadingServ
         var live = liveWatching.Current().Select(entry => new
         {
             Id = "live-" + entry.UserId.ToString("N"),
+            UserId = entry.UserId.ToString("N"),
             entry.UserName,
             entry.DeviceName,
             entry.Client,
