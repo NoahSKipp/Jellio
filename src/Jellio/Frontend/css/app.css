@@ -5337,6 +5337,7 @@
   flex: 1 1 auto;
   min-width: 0;
   accent-color: var(--jellio-secondary-color);
+  cursor: pointer;
 }
 
 .jellio-player-seek-wrap {
@@ -5344,6 +5345,60 @@
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.jellio-player-scrub-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgb(18 18 18 / 0.94);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.6);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  z-index: 10;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.jellio-player-scrub-tip-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.jellio-player-scrub-time {
+  font-family: var(--jellio-font-family);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.jellio-player-scrub-chapter {
+  font-family: var(--jellio-font-family);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--jellio-text-secondary);
+  line-height: 1.2;
+  margin-top: 2px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .jellio-player-pill {

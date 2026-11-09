@@ -970,6 +970,9 @@ export async function renderPlayer(root, params) {
   centerControls.appendChild(skipForwardButton);
 
   // === Full width seek bar ===
+  let seeking = false;
+  let isScrubHovering = false;
+
   const seekRow = el('div', 'jellio-player-seek-row');
   const currentTimeLabel = el('span', 'jellio-player-time', formatTime(startTicks / TICKS_PER_SECOND));
   const seekWrap = el('div', 'jellio-player-seek-wrap');
@@ -981,7 +984,94 @@ export async function renderPlayer(root, params) {
   seekBar.value = '0';
   seekBar.setAttribute('aria-label', t('player_seek'));
   const durationLabel = el('span', 'jellio-player-time', durationSeconds ? formatTime(durationSeconds) : '--:--');
+
+  const scrubTip = el('div', 'jellio-player-scrub-tip');
+  const scrubTime = el('span', 'jellio-player-scrub-time');
+  const scrubChapter = el('span', 'jellio-player-scrub-chapter');
+  scrubChapter.style.display = 'none';
+  scrubTip.appendChild(scrubTime);
+  scrubTip.appendChild(scrubChapter);
+
+  function getChapterNameAt(seconds) {
+    if (!item || !Array.isArray(item.Chapters) || !item.Chapters.length) return null;
+    const targetTicks = seconds * TICKS_PER_SECOND;
+    let candidate = null;
+    for (let i = 0; i < item.Chapters.length; i++) {
+      const ch = item.Chapters[i];
+      if (typeof ch.StartPositionTicks === 'number' && ch.StartPositionTicks <= targetTicks) {
+        if (!candidate || ch.StartPositionTicks >= candidate.StartPositionTicks) {
+          candidate = ch;
+        }
+      }
+    }
+    return candidate && candidate.Name ? candidate.Name.trim() : null;
+  }
+
+  function updateScrubTipAtClientX(clientX) {
+    if (!durationSeconds || durationSeconds <= 0) {
+      hideScrubTip();
+      return;
+    }
+    const rect = seekWrap.getBoundingClientRect();
+    if (!rect.width) return;
+    const clampedX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const ratio = clampedX / rect.width;
+    const hoverSeconds = ratio * durationSeconds;
+
+    scrubTime.textContent = formatTime(hoverSeconds);
+
+    const chapterName = getChapterNameAt(hoverSeconds);
+    if (chapterName) {
+      scrubChapter.textContent = chapterName;
+      scrubChapter.style.display = '';
+    } else {
+      scrubChapter.textContent = '';
+      scrubChapter.style.display = 'none';
+    }
+
+    scrubTip.classList.add('jellio-player-scrub-tip-visible');
+
+    const tipWidth = scrubTip.offsetWidth || 56;
+    const halfWidth = tipWidth / 2;
+    const minLeft = halfWidth;
+    const maxLeft = Math.max(minLeft, rect.width - halfWidth);
+    const tipLeft = Math.max(minLeft, Math.min(maxLeft, clampedX));
+    scrubTip.style.left = tipLeft + 'px';
+  }
+
+  function updateScrubTipForValue(sliderValue) {
+    if (!durationSeconds || durationSeconds <= 0) {
+      hideScrubTip();
+      return;
+    }
+    const rect = seekWrap.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = Math.max(0, Math.min(1, Number(sliderValue) / 100));
+    const clientX = rect.left + ratio * rect.width;
+    updateScrubTipAtClientX(clientX);
+  }
+
+  function hideScrubTip() {
+    scrubTip.classList.remove('jellio-player-scrub-tip-visible');
+  }
+
+  seekWrap.addEventListener('pointerenter', function (e) {
+    if (e.pointerType === 'touch') return;
+    isScrubHovering = true;
+    updateScrubTipAtClientX(e.clientX);
+  });
+  seekWrap.addEventListener('pointermove', function (e) {
+    if (e.pointerType === 'touch') return;
+    isScrubHovering = true;
+    updateScrubTipAtClientX(e.clientX);
+  });
+  seekWrap.addEventListener('pointerleave', function () {
+    isScrubHovering = false;
+    if (!seeking) hideScrubTip();
+  });
+
   seekWrap.appendChild(seekBar);
+  seekWrap.appendChild(scrubTip);
   seekRow.appendChild(currentTimeLabel);
   seekRow.appendChild(seekWrap);
   seekRow.appendChild(durationLabel);
@@ -2932,6 +3022,8 @@ export async function renderPlayer(root, params) {
   function hideControls() {
     const blocked =
       video.paused ||
+      seeking ||
+      isScrubHovering ||
       !hasReportedStart ||
       !shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden') ||
       popovers.some(function (entry) {
@@ -2943,6 +3035,7 @@ export async function renderPlayer(root, params) {
       idleTimer = window.setTimeout(hideControls, IDLE_HIDE_MS);
       return;
     }
+    hideScrubTip();
     shell.classList.add('jellio-player-shell-idle');
   }
   function wakeControls() {
@@ -3823,7 +3916,7 @@ export async function renderPlayer(root, params) {
       }
     }
   }
-  let seeking = false;
+  seeking = false;
   let lastReportedTicks = startTicks;
 
   function currentPositionTicks() {
@@ -4047,6 +4140,7 @@ export async function renderPlayer(root, params) {
     if (durationSeconds) {
       const target = (Number(seekBar.value) / 100) * durationSeconds;
       currentTimeLabel.textContent = formatTime(target);
+      updateScrubTipForValue(seekBar.value);
     }
   });
   seekBar.addEventListener('change', function () {
@@ -4054,6 +4148,9 @@ export async function renderPlayer(root, params) {
       performSeek((Number(seekBar.value) / 100) * durationSeconds);
     }
     seeking = false;
+    if (!isScrubHovering) {
+      hideScrubTip();
+    }
   });
 
   video.addEventListener('play', function () {

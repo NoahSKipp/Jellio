@@ -18,8 +18,12 @@ export const CHANGELOG_RELEASES = [
     "version": "1.108.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.108.0",
-    "summary": "Now Playing user identification and remote stream handoff protection.",
+    "summary": "Now Playing user identification, remote stream handoff protection, and video player scrubber hover timestamps.",
     "highlights": [
+      {
+        "title": "Player Scrubber Hover Preview",
+        "description": "Hovering over or dragging along the video scrubber displays a floating Netflix-style timestamp badge with dynamic chapter names."
+      },
       {
         "title": "Account-Aware Now Playing Sessions",
         "description": "Now Playing active streams, reading sessions, and live TV broadcasts now return the owner's UserId to protect and restrict cross-device handoff."
