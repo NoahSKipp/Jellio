@@ -232,7 +232,31 @@ function render(sessions) {
   });
 }
 
+let pollTimer = null;
+let visibilityBound = false;
+
+function scheduleNextPoll(delayMs) {
+  if (pollTimer) {
+    window.clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+  if (!started || document.visibilityState === 'hidden') return;
+  pollTimer = window.setTimeout(poll, delayMs != null ? delayMs : POLL_INTERVAL_MS);
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') {
+    if (pollTimer) {
+      window.clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+  } else if (started) {
+    poll();
+  }
+}
+
 function poll() {
+  if (!started || document.visibilityState === 'hidden') return;
   getNowPlayingSessions()
     .then(function (sessions) {
       render(sessions || []);
@@ -242,7 +266,7 @@ function poll() {
       // disrupting the panel over, it will try again on the next tick.
     })
     .then(function () {
-      window.setTimeout(poll, POLL_INTERVAL_MS);
+      scheduleNextPoll(POLL_INTERVAL_MS);
     });
 }
 
@@ -283,6 +307,10 @@ export function startNowPlaying() {
   if (started || !isAuthenticated()) return;
   started = true;
   createPanel();
+  if (!visibilityBound) {
+    visibilityBound = true;
+    document.addEventListener('visibilitychange', onVisibilityChange);
+  }
   poll();
 }
 
