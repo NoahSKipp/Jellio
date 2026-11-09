@@ -26,9 +26,10 @@ function setOffline(value) {
   if (changed) document.dispatchEvent(new CustomEvent('jellio:connectivity', { detail: { offline: value } }));
   window.clearTimeout(recheckTimer);
   if (value) {
-    // Keep trying while offline, so the app notices the server is back.
-    recheckTimer = window.setTimeout(checkServer, 15000);
+    // Check actively while offline so connection recovery is detected quickly (3s initial, then 10s).
+    recheckTimer = window.setTimeout(checkServer, 3000);
   } else {
+    networkFailureCount = 0;
     flushSyncQueue();
     resumeDownloads();
   }
@@ -51,14 +52,14 @@ export function checkServer() {
   if (inFlight) return inFlight;
   inFlight = (async function () {
     lastCheckAt = Date.now();
-    if (navigator.onLine === false) {
-      setOffline(true);
-      return false;
-    }
     let up = false;
-    for (let attempt = 0; attempt < 2 && !up; attempt++) {
+    // Multi-stage ping with progressive backoff to withstand transient wifi or network blips.
+    for (let attempt = 0; attempt < 3 && !up; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+      }
       try {
-        up = await ping(attempt === 0 ? PING_TIMEOUT_MS : PING_TIMEOUT_MS * 2);
+        up = await ping(attempt === 0 ? 3500 : 6000);
       } catch (err) {
         up = false;
       }
@@ -93,10 +94,23 @@ export function isNetworkError(err) {
   return !err || err.name === 'TypeError' || err.name === 'AbortError' || err.status === 0 || err.isNetworkError === true;
 }
 
+let networkFailureCount = 0;
+let lastNetworkFailureAt = 0;
+
 // Called by runtime/api.js when a request fails without an answer: the
 // server may have gone away mid-session.
 export function reportNetworkFailure() {
-  if (!offline) checkServer();
+  const now = Date.now();
+  if (now - lastNetworkFailureAt > 8000) {
+    networkFailureCount = 0;
+  }
+  lastNetworkFailureAt = now;
+  networkFailureCount++;
+  // Require at least 2 network failures within 8 seconds before triggering
+  // a server check, avoiding false offline states on an isolated slow request.
+  if (networkFailureCount >= 2 || offline) {
+    checkServer();
+  }
 }
 
 window.addEventListener('online', checkServer);
@@ -110,8 +124,9 @@ window.addEventListener('pageshow', function () {
 window.addEventListener('focus', function () {
   if (offline && Date.now() - lastCheckAt > 5000) checkServer();
 });
+// Transient browser offline event: verify with ping instead of blindly cutting off the UI.
 window.addEventListener('offline', function () {
-  setOffline(true);
+  checkServer();
 });
 
 // --- IndexedDB -------------------------------------------------------------

@@ -76,7 +76,15 @@ export function renderDownloads(root) {
     retry.type = 'button';
     retry.addEventListener('click', function () {
       retry.disabled = true;
-      checkServer().finally(() => {
+      checkServer().then(function (up) {
+        if (up) {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            navigateTo('#/home');
+          }
+        }
+      }).finally(() => {
         retry.disabled = false;
       });
     });

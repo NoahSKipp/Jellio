@@ -21,6 +21,10 @@ export const CHANGELOG_RELEASES = [
     "summary": "Now Playing user identification, remote stream handoff protection, and video player scrubber hover timestamps.",
     "highlights": [
       {
+        "title": "Resilient Connection & Auto-Recovery",
+        "description": "Multi-stage ping checks with backoff avoid false offline screens during transient network hiccups, and restore previous routes automatically on reconnection."
+      },
+      {
         "title": "Player Scrubber Hover Preview",
         "description": "Hovering over or dragging along the video scrubber displays a floating Netflix-style timestamp badge with dynamic chapter names."
       },

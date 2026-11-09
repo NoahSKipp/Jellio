@@ -134,6 +134,7 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 // Whether the server answers, settled before the first render so an
 // offline start goes straight to Downloads instead of failing screens.
 const connectivityReady = checkServer();
+let lastOnlineRoute = null;
 
 document.addEventListener('jellio:connectivity', function (event) {
   const offline = event.detail && event.detail.offline;
@@ -143,6 +144,13 @@ document.addEventListener('jellio:connectivity', function (event) {
   if (!offline) {
     lastNavLinksSignature = null;
     scheduleNavRecheck(2, 0);
+    // If redirected to downloads solely due to going offline, restore previous route on reconnection.
+    if (lastOnlineRoute && parseRoute().path === 'downloads') {
+      const restoreHash = lastOnlineRoute;
+      lastOnlineRoute = null;
+      navigateTo(restoreHash);
+      return;
+    }
   }
   const path = parseRoute().path;
   if (path === 'read' || path === 'listen' || path === 'play' || path === 'live') return;
@@ -512,7 +520,12 @@ async function runSync() {
 
     let route = parseRoute();
     if (offline && !OFFLINE_ROUTES.has(route.path)) {
+      if (!lastOnlineRoute) {
+        lastOnlineRoute = window.location.hash || '#/home';
+      }
       route = { path: 'downloads', params: new URLSearchParams() };
+    } else if (!offline && route.path !== 'downloads') {
+      lastOnlineRoute = null;
     }
     const screen = SCREENS[route.path];
 
