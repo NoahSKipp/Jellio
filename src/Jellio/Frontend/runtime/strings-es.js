@@ -754,6 +754,7 @@ export default {
   notifications_dismiss: "Descartar",
   now_playing_title: "Reproduciendo",
   now_playing_nothing: "No hay nada en reproducción",
+  now_playing_handoff: "Reproducir aquí",
   avatar_choose: "Elegir un avatar",
   avatar_upload_prompt: "Sube tu propia imagen o GIF",
   avatar_upload_btn: "Subir",

@@ -61,6 +61,30 @@ export function saveSubtitleStyle(style) {
     // A private/full storage quota is not worth surfacing here, the
     // style still applies for the rest of this playback session.
   }
+  try {
+    import('./api.js').then(function (api) {
+      if (api && typeof api.postJson === 'function') {
+        api.postJson('/Jellio/profile/subtitles', style).catch(function () {});
+      }
+    }).catch(function () {});
+  } catch (err) {}
+}
+
+export function applyServerSubtitleStyle(serverStyle) {
+  if (!serverStyle) return;
+  const current = loadSubtitleStyle();
+  const merged = {
+    size: SUBTITLE_SIZES.some((s) => s.value === serverStyle.size) ? serverStyle.size : current.size,
+    background: SUBTITLE_BACKGROUNDS.some((b) => b.value === serverStyle.background)
+      ? serverStyle.background
+      : current.background,
+  };
+  try {
+    window.localStorage.setItem(SUBTITLE_STYLE_KEY, JSON.stringify(merged));
+  } catch (err) {}
+  if (subtitleStyleTag) {
+    applySubtitleStyle(null, merged);
+  }
 }
 
 export let subtitleStyleTag = null;

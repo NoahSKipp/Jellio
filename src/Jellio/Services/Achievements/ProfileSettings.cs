@@ -30,4 +30,25 @@ public class ProfileSettings
 
     [JsonPropertyName("customGenres")]
     public List<CustomGenreItemDto>? CustomGenres { get; set; }
+
+    [JsonPropertyName("subtitleStyle")]
+    public SubtitleStyleDto? SubtitleStyle { get; set; }
+}
+
+public class SubtitleStyleDto
+{
+    [JsonPropertyName("size")]
+    public string? Size { get; set; }
+
+    [JsonPropertyName("background")]
+    public string? Background { get; set; }
+
+    [JsonPropertyName("color")]
+    public string? Color { get; set; }
+
+    [JsonPropertyName("edge")]
+    public string? Edge { get; set; }
+
+    [JsonPropertyName("position")]
+    public string? Position { get; set; }
 }

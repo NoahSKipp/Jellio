@@ -3,7 +3,7 @@ import { getNowPlayingSessions, getImageUrl } from '../runtime/api.js';
 import { getBookCoverUrl, getMangaSeriesCoverUrl, getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { getMangaShelfHash } from './navShared.js';
 import { mangaSeriesKey } from './mangaSeries.js';
-import { isAuthenticated } from '../runtime/auth.js';
+import { isAuthenticated, getCurrentUserId, getCurrentUser } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
@@ -149,6 +149,42 @@ function buildRow(session) {
   meta.appendChild(document.createTextNode(metaBits.filter(Boolean).join(' • ')));
   text.appendChild(meta);
   row.appendChild(text);
+
+  const currentUserId = getCurrentUserId();
+  const currentUser = getCurrentUser();
+  const isOwnSession = Boolean(
+    (currentUserId && session.UserId && currentUserId.replace(/-/g, '').toLowerCase() === session.UserId.replace(/-/g, '').toLowerCase()) ||
+    (session.UserName && currentUser && session.UserName.toLowerCase() === (currentUser.Name || '').toLowerCase())
+  );
+  const isReading = session.Activity === 'reading';
+  const canHandoff = Boolean(item && item.Id && !isReading && isOwnSession);
+
+  if (canHandoff) {
+    const handoffBtn = el('button', 'jellio-now-playing-handoff-btn');
+    handoffBtn.type = 'button';
+    handoffBtn.title = t('now_playing_handoff');
+    handoffBtn.setAttribute('aria-label', t('now_playing_handoff'));
+
+    const handoffIcon = el('span', 'material-icons', 'play_arrow');
+    const handoffLabel = el('span', 'jellio-now-playing-handoff-label', t('now_playing_handoff'));
+    handoffBtn.appendChild(handoffIcon);
+    handoffBtn.appendChild(handoffLabel);
+
+    handoffBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      hideNowPlayingPanel();
+      if (item.Type === 'TvChannel' || session.Activity === 'watching_live') {
+        navigateTo(item.Source !== 'link' && item.Id ? '#/live?id=' + encodeURIComponent(item.Id) : '#/livetv');
+        return;
+      }
+      const ticks = session.PositionTicks || 0;
+      const url = '#/play?id=' + encodeURIComponent(item.Id) + (ticks > 0 ? '&at=' + encodeURIComponent(ticks) : '');
+      navigateTo(url);
+    });
+
+    row.appendChild(handoffBtn);
+  }
 
   return row;
 }

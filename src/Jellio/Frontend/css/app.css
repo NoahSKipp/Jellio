@@ -7996,6 +7996,32 @@
   margin: 0;
 }
 
+.jellio-now-playing-handoff-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.35em 0.7em;
+  border-radius: calc(var(--jellio-card-radius) / 2);
+  background: var(--jellio-primary-color, #7028e4);
+  color: #fff;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.jellio-now-playing-handoff-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.04);
+}
+
+.jellio-now-playing-handoff-btn .material-icons {
+  font-size: 1.1rem;
+}
+
 .jellio-now-playing-empty {
   color: var(--jellio-text-secondary);
   text-align: center;

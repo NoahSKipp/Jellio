@@ -731,6 +731,7 @@ export default {
   notifications_dismiss: "Ignorer",
   now_playing_title: "En cours de lecture",
   now_playing_nothing: "Aucune lecture en cours",
+  now_playing_handoff: "Lire ici",
   avatar_choose: "Choisir un avatar",
   avatar_upload_prompt: "Téléversez votre propre image ou GIF",
   avatar_upload_btn: "Téléverser",

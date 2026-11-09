@@ -771,6 +771,7 @@ const STRINGS = {
     notifications_dismiss: "Dismiss",
     now_playing_title: "Now playing",
     now_playing_nothing: "Nothing playing right now",
+    now_playing_handoff: "Play here",
     avatar_choose: "Choose an avatar",
     avatar_upload_prompt: "Upload your own picture or gif",
     avatar_upload_btn: "Upload",

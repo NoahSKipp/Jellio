@@ -754,6 +754,7 @@ export default {
   notifications_dismiss: "Verwerfen",
   now_playing_title: "Wiedergabe",
   now_playing_nothing: "Gerade wird nichts wiedergegeben",
+  now_playing_handoff: "Hier abspielen",
   avatar_choose: "Avatar auswählen",
   avatar_upload_prompt: "Eigenes Bild oder GIF hochladen",
   avatar_upload_btn: "Hochladen",

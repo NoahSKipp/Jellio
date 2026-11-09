@@ -731,6 +731,7 @@ export default {
   notifications_dismiss: "Ignora",
   now_playing_title: "In riproduzione",
   now_playing_nothing: "Nessun contenuto in riproduzione",
+  now_playing_handoff: "Riproduci qui",
   avatar_choose: "Scegli un avatar",
   avatar_upload_prompt: "Carica la tua immagine o GIF",
   avatar_upload_btn: "Carica",

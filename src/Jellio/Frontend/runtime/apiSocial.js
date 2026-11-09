@@ -1,5 +1,6 @@
 import { getAccessToken, getAuthHeaders, getServerAddress } from './auth.js';
 import { deleteJson, getJson, postJson } from './api.js';
+import { applyServerSubtitleStyle } from './playerPrefs.js';
 
 export function getSyncPlayGroups() {
   return getJson('/SyncPlay/List');
@@ -118,7 +119,16 @@ export function sendGroupWatchInvite(groupId, groupName, toUserId) {
 }
 
 export function getProfileSettings() {
-  return getJson('/Jellio/profile/settings');
+  return getJson('/Jellio/profile/settings').then(function (settings) {
+    if (settings && settings.subtitleStyle) {
+      applyServerSubtitleStyle(settings.subtitleStyle);
+    }
+    return settings;
+  });
+}
+
+export function saveSubtitleStyleSetting(style) {
+  return postJson('/Jellio/profile/subtitles', style);
 }
 
 export function setProfilePrivacy(isPrivate) {

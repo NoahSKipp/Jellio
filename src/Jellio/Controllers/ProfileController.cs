@@ -131,6 +131,27 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
         return Ok(updated);
     }
 
+    [HttpPost("subtitles")]
+    public ActionResult<ProfileSettings> SetSubtitleStyle([FromBody] SubtitleStyleDto request)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        if (request == null)
+        {
+            return BadRequest();
+        }
+
+        var updated = store.Update(userId, s =>
+        {
+            s.SubtitleStyle = request;
+        });
+        return Ok(updated);
+    }
+
     private Guid GetUserId()
     {
         if (
