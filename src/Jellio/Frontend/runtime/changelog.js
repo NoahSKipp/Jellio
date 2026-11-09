@@ -4078,6 +4078,30 @@ export const LATEST_BIG_CHANGELOG = CHANGELOG_RELEASES.find((r) => isBigRelease(
 
 export const MACOS_CHANGELOG_RELEASES = [
   {
+    "version": "0.7.1",
+    "title": "What's New in Jellio for macOS",
+    "subtitle": "Version 0.7.1",
+    "summary": "Non-intrusive playback shortcuts, active media key scoping, deep link protocol packaging, and tray menu refinements.",
+    "highlights": [
+      {
+        "title": "Offline Screen Reconnection & Auto-Recovery",
+        "description": "Added active connection probing with real-time feedback to the offline screen, periodic auto-retry in the background, and automatic reconnection on network recovery."
+      },
+      {
+        "title": "Refined Playback Menu Shortcuts",
+        "description": "Updated Playback menu accelerators so standard macOS text editing shortcuts in search and login fields are never intercepted."
+      },
+      {
+        "title": "Scoped Hardware Media Keys",
+        "description": "Hardware media keys now register only while media is actively playing in Jellio, releasing control to other macOS media apps when idle."
+      },
+      {
+        "title": "Packaged Deep Link Protocols & Config Recovery",
+        "description": "Registered jellio:// and jellyfin:// schemes in the macOS app bundle Info.plist and improved atomic configuration recovery."
+      }
+    ]
+  },
+  {
     "version": "0.7.0",
     "title": "What's New in Jellio for macOS",
     "subtitle": "Version 0.7.0",
