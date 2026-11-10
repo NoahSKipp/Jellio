@@ -6,17 +6,12 @@ import { navigateTo } from '../runtime/router.js';
 import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
-// The release history is large; it loads after startup, not with it.
+import { LATEST_BIG_CHANGELOG_VERSION, markLatestChangelogSeen, shouldShowChangelogNotification } from '../runtime/changelogState.js';
+// The release history is large: it loads only when its notification is due.
 let changelogModule = null;
 function loadChangelog() {
   if (!changelogModule) changelogModule = import('../runtime/changelog.js');
   return changelogModule;
-}
-
-function markLatestChangelogSeen() {
-  loadChangelog().then(function (changelog) {
-    changelog.markLatestChangelogSeen();
-  });
 }
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -281,7 +276,7 @@ function clearAll() {
 }
 
 function poll() {
-  Promise.all([getNotifications(), loadChangelog()])
+  Promise.all([getNotifications(), shouldShowChangelogNotification() ? loadChangelog() : null])
     .then(function (results) {
       const items = results[0];
       const changelog = results[1];
@@ -291,14 +286,14 @@ function poll() {
             return !n.Id || !n.Id.startsWith('changelog:');
           })
         : [];
-      if (changelog.shouldShowChangelogNotification()) {
+      if (changelog && shouldShowChangelogNotification()) {
         merged.unshift(changelog.getChangelogNotification());
       }
       if (knownIds) {
         // Clear any previous changelog IDs from knownIds so that an update with a new big release
         // changelog triggers a toast cleanly instead of being masked.
         for (const id of Array.from(knownIds)) {
-          if (id.startsWith('changelog:') && id !== ('changelog:' + changelog.LATEST_BIG_CHANGELOG.version)) {
+          if (id.startsWith('changelog:') && id !== ('changelog:' + LATEST_BIG_CHANGELOG_VERSION)) {
             knownIds.delete(id);
           }
         }

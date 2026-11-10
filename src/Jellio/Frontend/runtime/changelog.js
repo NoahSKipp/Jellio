@@ -1,18 +1,8 @@
-import { getCurrentUserId } from './auth.js';
+import { isBigRelease } from './changelogState.js';
+export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChangelogSeen } from './changelogState.js';
 
-function isBigRelease(version) {
-  if (!version || typeof version !== 'string') return false;
-  const clean = version.trim().replace(/^v/i, '');
-  const parts = clean.split('.');
-  if (parts.length >= 3) {
-    const patch = parseInt(parts[2], 10);
-    const build = parts.length > 3 ? parseInt(parts[3], 10) : 0;
-    return !isNaN(patch) && patch === 0 && (!build || build === 0);
-  }
-  if (parts.length === 2) return true;
-  return false;
-}
-
+// Add new releases at the top. For a big release (X.Y.0), also bump
+// LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
     "version": "1.108.0",
@@ -4254,45 +4244,6 @@ export const MACOS_CHANGELOG_RELEASES = [
     ]
   }
 ];
-
-function storageKey() {
-  const userId = getCurrentUserId() || 'global';
-  return 'jellio_last_seen_changelog_' + userId;
-}
-
-export function shouldShowChangelogNotification() {
-  // Notifications and toasts are only triggered by big releases (1.4X.0)
-  if (!isBigRelease(LATEST_BIG_CHANGELOG.version)) {
-    return false;
-  }
-  return !hasSeenLatestChangelog();
-}
-
-export function hasSeenLatestChangelog() {
-  if (!isBigRelease(LATEST_BIG_CHANGELOG.version)) {
-    return true;
-  }
-  try {
-    const key = storageKey();
-    const seen = localStorage.getItem(key);
-    if (seen && seen !== LATEST_BIG_CHANGELOG.version) {
-      // Clear older version from storage so the new big release is fresh
-      localStorage.removeItem(key);
-      return false;
-    }
-    return seen === LATEST_BIG_CHANGELOG.version;
-  } catch (err) {
-    return false;
-  }
-}
-
-export function markLatestChangelogSeen() {
-  try {
-    localStorage.setItem(storageKey(), LATEST_BIG_CHANGELOG.version);
-  } catch (err) {
-    console.warn('Jellio: could not save changelog state', err);
-  }
-}
 
 export function getChangelogNotification() {
   const rel = LATEST_BIG_CHANGELOG;

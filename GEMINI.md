@@ -2,7 +2,7 @@
 
 ## Release and Changelog Guidelines
 - Do not cut or publish a new release after every addition or fix. Wait until explicitly instructed by the user to cut a release.
-- Always update What's New changelog entries whenever new features, major enhancements, or big releases are added across Jellio Web (`src/Jellio/Frontend/runtime/changelog.js`), Jellio TV (`app/src/main/java/com/jellio/tv/ui/changelog/Changelog.kt`), and Jellio macOS.
+- Always update What's New changelog entries whenever new features, major enhancements, or big releases are added across Jellio Web (`src/Jellio/Frontend/runtime/changelog.js`), Jellio TV (`app/src/main/java/com/jellio/tv/ui/changelog/Changelog.kt`), and Jellio macOS. When a big Jellio Web release is added, also bump `LATEST_BIG_CHANGELOG_VERSION` in `src/Jellio/Frontend/runtime/changelogState.js` (a frontend test fails until they match).
 - What's New notifications or popup dialogs are strictly restricted to big releases (`X.Y.0` where patch is 0, e.g. `1.80.0`, `0.43.0`). Small bugfix patch releases (e.g. `1.80.1`, `0.43.1`) must never trigger toast or modal notifications.
 - In Settings > About, "What's New" must always display the latest release notes, with past versions cleanly collapsed in expandable sections.
 - When new big releases arrive, always clear previous notifications, toasts, and dismiss state for older changelogs so stale alerts do not persist or duplicate.
