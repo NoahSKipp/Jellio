@@ -65,6 +65,7 @@ import { prefetchedPlayback, prewarmedPlayback, negotiationFits, pickPlaySource 
 import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, notePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
 import { normalizeId, isPreferReadyEnabled } from '../runtime/readySources.js';
 import { preferredAudioIndex } from '../components/playPrefetch.js';
+import { syncDriftSeconds as driftFromCommand } from '../runtime/syncDrift.js';
 import { rememberedSourceId } from '../components/streamPicker.js';
 
 const PROGRESS_REPORT_MS = 5000;
@@ -4377,8 +4378,7 @@ export async function renderPlayer(root, params) {
   }
 
   function syncDriftSeconds(command) {
-    const targetTicks = estimateCurrentTicks(command.PositionTicks || 0, command.When);
-    return Math.abs(currentPositionTicks() - targetTicks) / TICKS_PER_SECOND;
+    return driftFromCommand(currentPositionTicks(), command, estimateCurrentTicks, TICKS_PER_SECOND);
   }
 
   // Every command bumps this; work a command left waiting (a reload, a
