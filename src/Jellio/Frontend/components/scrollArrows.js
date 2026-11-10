@@ -17,10 +17,9 @@ function scrollByPage(track, direction) {
   track.scrollBy({ left: direction * track.clientWidth * 0.9, behavior: 'smooth' });
 }
 
-function updateArrowVisibility(track, prevArrow, nextArrow) {
-  const maxScroll = track.scrollWidth - track.clientWidth;
-  prevArrow.classList.toggle('jellio-row-arrow-visible', track.scrollLeft > 4);
-  nextArrow.classList.toggle('jellio-row-arrow-visible', track.scrollLeft < maxScroll - 4);
+function updateArrowVisibility(scrollLeft, maxScroll, prevArrow, nextArrow) {
+  prevArrow.classList.toggle('jellio-row-arrow-visible', scrollLeft > 4);
+  nextArrow.classList.toggle('jellio-row-arrow-visible', scrollLeft < maxScroll - 4);
 }
 
 export function attachScrollArrows(trackWrap, track) {
@@ -51,15 +50,32 @@ export function attachScrollArrows(trackWrap, track) {
   );
 
   let scrollListenerAttached = false;
+  // Measured in refresh (first frame, resizes, callers adding content), not
+  // on every scroll event.
+  let maxScroll = 0;
+  let scrollFrame = 0;
+
+  function onScrollFrame() {
+    scrollFrame = 0;
+    const scrollLeft = track.scrollLeft;
+    // Content may have grown since the last measure: check again at the end.
+    if (scrollLeft >= maxScroll - 4) maxScroll = track.scrollWidth - track.clientWidth;
+    updateArrowVisibility(scrollLeft, maxScroll, prevArrow, nextArrow);
+  }
 
   function refresh() {
-    if (track.scrollWidth > track.clientWidth + 4) {
-      updateArrowVisibility(track, prevArrow, nextArrow);
+    maxScroll = track.scrollWidth - track.clientWidth;
+    if (maxScroll > 4) {
+      updateArrowVisibility(track.scrollLeft, maxScroll, prevArrow, nextArrow);
       if (!scrollListenerAttached) {
         scrollListenerAttached = true;
-        track.addEventListener('scroll', function () {
-          updateArrowVisibility(track, prevArrow, nextArrow);
-        });
+        track.addEventListener(
+          'scroll',
+          function () {
+            if (!scrollFrame) scrollFrame = window.requestAnimationFrame(onScrollFrame);
+          },
+          { passive: true },
+        );
       }
     } else {
       prevArrow.classList.remove('jellio-row-arrow-visible');
