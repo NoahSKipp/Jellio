@@ -184,11 +184,6 @@ export async function saveServerDisplayPreferences(customPrefs) {
   }
 }
 
-// Sync display language preference to Jellyfin server DisplayPreferences
-export async function saveServerDisplayLanguage(lang) {
-  return saveServerDisplayPreferences({ language: lang || 'en' });
-}
-
 export async function loadServerPreferences() {
   const userId = getCurrentUserId();
   if (!userId) return null;

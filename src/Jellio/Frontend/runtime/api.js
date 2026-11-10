@@ -147,7 +147,6 @@ export {
   getCachedServerDisplayPreferences,
   getServerDisplayPreferences,
   saveServerDisplayPreferences,
-  saveServerDisplayLanguage,
   loadServerPreferences,
 } from './api/account.js';
 export {
