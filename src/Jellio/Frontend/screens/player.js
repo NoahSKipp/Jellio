@@ -58,6 +58,7 @@ import { buildSettingsMenu } from '../components/player/settingsMenu.js';
 import { buildSidePanels } from '../components/player/sidePanels.js';
 import { buildSubtitleControls } from '../components/player/subtitles.js';
 import { wireUpNext } from '../components/player/upNext.js';
+import * as skipRules from '../runtime/skipSegments.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -1956,63 +1957,26 @@ export async function renderPlayer(root, params) {
   let skipSegments = null;
   let skipTargetSeconds = 0;
 
+  function skipRuntimeSeconds() {
+    return (item.RunTimeTicks || 0) / TICKS_PER_SECOND;
+  }
+
   function chapterFallbackSegments(chapters, runTimeTicks) {
-    if (!chapters || !chapters.length) {
-      console.warn('Jellio: item has no Chapters to fall back on', itemId, chapters);
-      return null;
-    }
-    function ticksToSeconds(ticks) {
-      return (ticks || 0) / TICKS_PER_SECOND;
-    }
-    function findSegment(nameRegex) {
-      const index = chapters.findIndex(function (chapter) {
-        return chapter.Name && nameRegex.test(chapter.Name);
-      });
-      if (index === -1) return null;
-      const start = ticksToSeconds(chapters[index].StartPositionTicks);
-      const nextTicks = index + 1 < chapters.length ? chapters[index + 1].StartPositionTicks : runTimeTicks;
-      const end = ticksToSeconds(nextTicks);
-      return end > start ? { Start: start, End: end } : null;
-    }
-    const introduction = findSegment(/^(intro|introduction|opening)/i);
-    // "Opening Credits" is the intro, not the end credits.
-    const credits = findSegment(/^(?!.*open).*(credit|outro|ending)/i);
-    if (!introduction && !credits) {
-      console.warn(
-        'Jellio: item has Chapters but none matched an intro/credits name',
-        itemId,
-        chapters.map(function (chapter) {
-          return chapter.Name;
-        }),
-      );
-      return null;
-    }
-    return {
-      Introduction: introduction || { Start: 0, End: 0 },
-      Credits: credits || { Start: 0, End: 0 },
-    };
+    const result = skipRules.chapterFallbackSegments(chapters, runTimeTicks, TICKS_PER_SECOND);
+    if (!result) console.warn('Jellio: no intro/credits chapters to fall back on', itemId);
+    return result;
   }
 
   function activeSkipSegment(currentTime) {
-    if (!skipSegments) return null;
-    const intro = skipSegments.Introduction;
-    if (intro && intro.End > 0 && currentTime >= intro.Start && currentTime < intro.End) {
-      return { eyebrow: 'Introduction', label: 'Skip Intro', target: intro.End };
-    }
-    const credits = skipSegments.Credits;
-    if (credits && credits.End > 0 && currentTime >= credits.Start && currentTime < credits.End) {
-      return { eyebrow: 'Credits', label: 'Skip Credits', target: credits.End };
-    }
-    return null;
+    const active = skipRules.activeSkipSegment(skipSegments, currentTime);
+    if (!active) return null;
+    return active.kind === 'intro'
+      ? { eyebrow: 'Introduction', label: 'Skip Intro', target: active.target }
+      : { eyebrow: 'Credits', label: 'Skip Credits', target: active.target };
   }
 
   function shouldShowUpNextNow(currentTime, duration) {
-    if (!duration) return false;
-    const credits = skipSegments && skipSegments.Credits;
-    if (credits && credits.End > 0 && credits.Start >= 0) {
-      return currentTime >= credits.Start;
-    }
-    return false;
+    return skipRules.shouldShowUpNextNow(skipSegments, currentTime, duration);
   }
 
   let dismissedSkipKind = null;
@@ -2026,28 +1990,18 @@ export async function renderPlayer(root, params) {
     },
   );
 
-  function isValidSegment(segment) {
-    return !!(segment && segment.End > 0 && segment.End > segment.Start);
-  }
+  const isValidSegment = skipRules.isValidSegment;
 
   function isValidCredits(segment) {
-    if (!isValidSegment(segment)) return false;
-    const runtimeSeconds = (item.RunTimeTicks || 0) / TICKS_PER_SECOND;
-    return !runtimeSeconds || segment.Start >= runtimeSeconds * 0.5;
+    return skipRules.isValidCredits(segment, skipRuntimeSeconds());
   }
 
   function mergeSkipSegments(current, candidate) {
-    if (!candidate) return current;
-    return {
-      Introduction: isValidSegment(current && current.Introduction) ? current.Introduction : candidate.Introduction,
-      Credits: isValidCredits(current && current.Credits)
-        ? current.Credits
-        : isValidCredits(candidate.Credits) ? candidate.Credits : { Start: 0, End: 0 },
-    };
+    return skipRules.mergeSkipSegments(current, candidate, skipRuntimeSeconds());
   }
 
   function segmentsComplete(segments) {
-    return !!(segments && isValidSegment(segments.Introduction) && isValidCredits(segments.Credits));
+    return skipRules.skipSegmentsComplete(segments, skipRuntimeSeconds());
   }
 
   getCommunitySkipSegments(itemId).then(function (community) {

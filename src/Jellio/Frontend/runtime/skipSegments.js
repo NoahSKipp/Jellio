@@ -1,6 +1,5 @@
-// Intro and credits skip rules, the same as screens/player.js runs inline
-// (until the player split imports them from here). Segments are
-// { Introduction: { Start, End }, Credits: { Start, End } } in seconds;
+// Intro and credits skip rules shared by the player and the vector tests.
+// Segments are { Introduction: { Start, End }, Credits: { Start, End } } in seconds;
 // { Start: 0, End: 0 } stands for a missing range.
 
 const EMPTY = { Start: 0, End: 0 };
