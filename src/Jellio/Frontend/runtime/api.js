@@ -17,6 +17,7 @@ import {
   markTodayItemHasStream,
 } from './releaseDate.js';
 import { isRemoveFromWatchlistAfterWatchingEnabled } from './watchlistSettings.js';
+import { createSessionGuard, shouldConfirmUnauthorized } from './sessionCheck.js';
 
 export const DEFAULT_TIMEOUT_MS = 10000;
 const NEGOTIATION_TIMEOUT_MS = 30000;
@@ -183,8 +184,8 @@ export async function requestJson(url, options, path, timeoutMs, externalSignal,
     }
 
     if (!response.ok) {
-      if (response.status === 401) {
-        notifySessionExpired();
+      if (response.status === 401 && shouldConfirmUnauthorized(url, path, getServerAddress())) {
+        sessionGuard.report(getAccessToken());
       }
       const err = new Error('Request failed: ' + path);
       err.status = response.status;
@@ -206,6 +207,22 @@ export async function requestJson(url, options, path, timeoutMs, externalSignal,
 let sessionExpiredNotified = false;
 document.addEventListener('jellio:session-captured', function () {
   sessionExpiredNotified = false;
+});
+
+const sessionGuard = createSessionGuard({
+  probe: async function (token) {
+    const userId = getCurrentUserId();
+    if (!userId || getAccessToken() !== token) return 0;
+    const response = await fetchWithTimeout(
+      getServerAddress() + '/Users/' + encodeURIComponent(userId),
+      { headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()), cache: 'no-store' },
+      DEFAULT_TIMEOUT_MS,
+    );
+    return response.status;
+  },
+  onExpired: function (token) {
+    if (getAccessToken() === token) notifySessionExpired();
+  },
 });
 
 function notifySessionExpired() {
