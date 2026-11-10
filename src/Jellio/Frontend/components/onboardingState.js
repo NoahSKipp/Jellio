@@ -1,5 +1,6 @@
 import { getCurrentUserId, getCurrentUser as getSessionUser } from '../runtime/auth.js';
 import { getCachedServerDisplayPreferences, saveServerDisplayPreferences } from '../runtime/api.js';
+import { readString, storageReadable, writeString } from '../runtime/storage.js';
 
 // The first-run check, kept apart so startup can run it without loading the wizard.
 
@@ -9,35 +10,33 @@ export function shouldShowOnboarding(userId) {
   const uid = userId || getCurrentUserId();
   if (!uid) return false;
   try {
-    if (window.localStorage.getItem(STORAGE_PREFIX + uid)) {
+    if (!storageReadable() || readString(STORAGE_PREFIX + uid)) {
       return false;
     }
 
     const hasExistingUsage = Boolean(
-      window.localStorage.getItem('jellio_last_seen_changelog_' + uid) ||
-      window.localStorage.getItem('jellio_last_seen_changelog_global') ||
-      window.localStorage.getItem('jellio_display_language') ||
-      window.localStorage.getItem('jellio_player_volume') ||
-      window.localStorage.getItem('jellioPlayerSpeed') ||
-      window.localStorage.getItem('jellio_player_sub_style') ||
-      window.localStorage.getItem('jellio_player_autoskip') ||
-      window.localStorage.getItem('jellio_reader_settings') ||
-      window.localStorage.getItem('jellio_reader_study_lang') ||
-      window.localStorage.getItem('jellio_audiobook_default_speed') ||
-      window.localStorage.getItem('jellio_audiobook_volume') ||
-      window.localStorage.getItem('jellio_motion_level') ||
-      window.localStorage.getItem('jellio_buffer_seconds') ||
-      window.localStorage.getItem('jellio_pip_mode') ||
-      window.localStorage.getItem('jellio_up_next_countdown') ||
-      window.localStorage.getItem('jellio_recent_searches') ||
-      window.localStorage.getItem('jellio_home_genres')
+      readString('jellio_last_seen_changelog_' + uid) ||
+      readString('jellio_last_seen_changelog_global') ||
+      readString('jellio_display_language') ||
+      readString('jellio_player_volume') ||
+      readString('jellioPlayerSpeed') ||
+      readString('jellio_player_sub_style') ||
+      readString('jellio_player_autoskip') ||
+      readString('jellio_reader_settings') ||
+      readString('jellio_reader_study_lang') ||
+      readString('jellio_audiobook_default_speed') ||
+      readString('jellio_audiobook_volume') ||
+      readString('jellio_motion_level') ||
+      readString('jellio_buffer_seconds') ||
+      readString('jellio_pip_mode') ||
+      readString('jellio_up_next_countdown') ||
+      readString('jellio_recent_searches') ||
+      readString('jellio_home_genres')
     );
 
     const serverPrefs = getCachedServerDisplayPreferences();
     if (serverPrefs && serverPrefs.CustomPrefs && serverPrefs.CustomPrefs.onboarding_done === 'true') {
-      try {
-        window.localStorage.setItem(STORAGE_PREFIX + uid, 'true');
-      } catch (_) {}
+      writeString(STORAGE_PREFIX + uid, 'true');
       return false;
     }
 
@@ -66,8 +65,6 @@ export function shouldShowOnboarding(userId) {
 export function markOnboardingComplete(userId) {
   const uid = userId || getCurrentUserId();
   if (!uid) return;
-  try {
-    window.localStorage.setItem(STORAGE_PREFIX + uid, 'true');
-  } catch (err) {}
+  writeString(STORAGE_PREFIX + uid, 'true');
   saveServerDisplayPreferences({ onboarding_done: 'true' }).catch(function () {});
 }

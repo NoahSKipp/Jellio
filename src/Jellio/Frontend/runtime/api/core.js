@@ -3,6 +3,7 @@ import { getServerAddress, getAccessToken, getCurrentUserId, getAuthHeaders, cle
 import { createRowCache, pickStorage, createTabChannel, createReturnWatcher, USER_DATA_CLASSES } from '../rowcache.js';
 import { isOffline, stillOffline, reportNetworkFailure } from '../offline.js';
 import { shouldConfirmUnauthorized, createSessionGuard } from '../sessionCheck.js';
+import { readString, writeString, remove } from '../storage.js';
 
 export const DEFAULT_TIMEOUT_MS = 10000;
 export const NEGOTIATION_TIMEOUT_MS = 30000;
@@ -358,7 +359,7 @@ const ROW_CACHE_REPORT_MS = 6000;
 
 function readRowCacheFlag() {
   try {
-    return window.localStorage.getItem(ROW_CACHE_FLAG_KEY) !== '0';
+    return readString(ROW_CACHE_FLAG_KEY) !== '0';
   } catch (err) {
     return true;
   }
@@ -375,9 +376,7 @@ function setHomeRowCacheEnabled(enabled) {
   const next = !!enabled;
   if (next === rowCacheFlag) return;
   rowCacheFlag = next;
-  try {
-    window.localStorage.setItem(ROW_CACHE_FLAG_KEY, next ? '1' : '0');
-  } catch (err) {}
+  writeString(ROW_CACHE_FLAG_KEY, next ? '1' : '0');
   if (!next) clearCachedRows();
 }
 
@@ -415,11 +414,8 @@ function activeRowCache() {
     rowCache.setScope(scope);
     return rowCache;
   }
-  let wipeOnStart = false;
-  try {
-    wipeOnStart = window.localStorage.getItem(ROW_CACHE_WIPE_KEY) === '1';
-    window.localStorage.removeItem(ROW_CACHE_WIPE_KEY);
-  } catch (err) {}
+  const wipeOnStart = readString(ROW_CACHE_WIPE_KEY) === '1';
+  remove(ROW_CACHE_WIPE_KEY);
   rowCache = createRowCache({
     storage: pickStorage(window),
     channel: createTabChannel(window),
@@ -507,9 +503,7 @@ export function clearCachedRows() {
   if (rowCache) {
     rowCache.wipe();
   } else {
-    try {
-      window.localStorage.setItem(ROW_CACHE_WIPE_KEY, '1');
-    } catch (err) {}
+    writeString(ROW_CACHE_WIPE_KEY, '1');
   }
 }
 

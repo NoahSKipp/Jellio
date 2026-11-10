@@ -32,6 +32,7 @@ import { attachCardOptionsTrigger, animateCardRemoval } from '../components/card
 import { showToast } from '../components/toast.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeJson } from '../runtime/storage.js';
 
 const CATALOG_ROW_LIMIT = 24;
 const MAX_CATALOG_ROWS = 8;
@@ -148,7 +149,7 @@ const HOME_GENRES_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function storedHomeGenres() {
   try {
-    const stored = JSON.parse(window.localStorage.getItem(HOME_GENRES_KEY) || 'null');
+    const stored = JSON.parse(readString(HOME_GENRES_KEY) || 'null');
     if (stored && Array.isArray(stored.genres) && stored.genres.length && Date.now() - stored.at < HOME_GENRES_MAX_AGE_MS) {
       return stored.genres;
     }
@@ -163,11 +164,7 @@ function chooseHomeGenres() {
   if (Array.isArray(selected) && selected.length > 0) return Promise.resolve(selected);
   const discovered = discoverGenres(null, 'Movie,Series', GENRE_ROWS).then(function (genres) {
     if (genres.length) {
-      try {
-        window.localStorage.setItem(HOME_GENRES_KEY, JSON.stringify({ at: Date.now(), genres: genres }));
-      } catch (err) {
-        // Not kept; discovered again next time.
-      }
+      writeJson(HOME_GENRES_KEY, { at: Date.now(), genres: genres });
     }
     return genres;
   });

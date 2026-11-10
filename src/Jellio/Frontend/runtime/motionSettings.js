@@ -1,3 +1,5 @@
+import { readString, writeString, remove } from './storage.js';
+
 const KEY = 'jellioSeasonalMotion';
 const EVENT = 'jellio-motion-change';
 
@@ -13,7 +15,7 @@ const LEVELS = ['full', 'reduced', 'still', 'off'];
 
 export function getMotionPreference() {
   try {
-    const value = window.localStorage.getItem(KEY);
+    const value = readString(KEY);
     return LEVELS.indexOf(value) !== -1 ? value : 'auto';
   } catch (err) {
     return 'auto';
@@ -21,12 +23,8 @@ export function getMotionPreference() {
 }
 
 export function setMotionPreference(value) {
-  try {
-    if (value === 'auto') window.localStorage.removeItem(KEY);
-    else window.localStorage.setItem(KEY, value);
-  } catch (err) {
-    // Not persisted, this tab still uses it until reload.
-  }
+  if (value === 'auto') remove(KEY);
+  else writeString(KEY, value);
   window.dispatchEvent(new CustomEvent(EVENT));
 }
 

@@ -1,6 +1,7 @@
 import { setDisplayLanguage } from '../i18n.js';
 import { getCurrentUserId, updateSessionUser, getAccessToken, getServerAddress } from '../auth.js';
 import { authedFetch, cached, getJson, invalidateCache, postJson, rowJson } from './core.js';
+import { readString, writeString } from '../storage.js';
 
 export function getCurrentUser() {
   const userId = getCurrentUserId();
@@ -194,13 +195,11 @@ export async function loadServerPreferences() {
   const prefs = await getServerDisplayPreferences();
   if (prefs && prefs.CustomPrefs) {
     if (prefs.CustomPrefs.onboarding_done === 'true') {
-      try {
-        window.localStorage.setItem('jellio_onboarding_done_' + userId, 'true');
-      } catch (_) {}
+      writeString('jellio_onboarding_done_' + userId, 'true');
     }
     if (prefs.CustomPrefs.language) {
       try {
-        const localLang = window.localStorage.getItem('jellio_display_language');
+        const localLang = readString('jellio_display_language');
         if (!localLang && prefs.CustomPrefs.language) {
           setDisplayLanguage(prefs.CustomPrefs.language);
         }

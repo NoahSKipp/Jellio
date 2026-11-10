@@ -1,5 +1,6 @@
 import { t } from '../runtime/i18n.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeJson } from '../runtime/storage.js';
 
 const KEY = 'jellio-manga-library-view';
 const OVERLAY_ID = 'jellioLibraryView';
@@ -21,7 +22,7 @@ const DEFAULT_VIEW = { unread: '', started: '', completed: '', downloaded: '', d
 export function loadLibraryView(kind) {
   const key = 'jellio-' + (kind || 'manga') + '-library-view';
   try {
-    const saved = JSON.parse(localStorage.getItem(key) || 'null') || {};
+    const saved = JSON.parse(readString(key) || 'null') || {};
     const view = Object.assign({}, DEFAULT_VIEW);
     FILTERS.forEach((filter) => (view[filter.key] = saved[filter.key] === 'include' || saved[filter.key] === 'exclude' ? saved[filter.key] : ''));
     view.display = DISPLAYS.some((option) => option.value === saved.display) ? saved.display : DEFAULT_VIEW.display;
@@ -34,11 +35,7 @@ export function loadLibraryView(kind) {
 
 function saveLibraryView(view, kind) {
   const key = 'jellio-' + (kind || 'manga') + '-library-view';
-  try {
-    localStorage.setItem(key, JSON.stringify(view));
-  } catch (err) {
-    // Remembering is a convenience only.
-  }
+  writeJson(key, view);
 }
 
 export function activeFilterCount(view) {

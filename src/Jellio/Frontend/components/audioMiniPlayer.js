@@ -10,6 +10,7 @@ import {
 import { isDucking } from '../runtime/duck.js';
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeString } from '../runtime/storage.js';
 
 const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
@@ -22,7 +23,7 @@ const AUDIOBOOK_MUTED_KEY = 'jellio_audiobook_muted';
 
 function getSavedAudiobookVolume() {
   try {
-    const val = window.localStorage.getItem(AUDIOBOOK_VOLUME_KEY);
+    const val = readString(AUDIOBOOK_VOLUME_KEY);
     return val !== null ? Math.min(1, Math.max(0, Number(val))) : 1;
   } catch (err) {
     return 1;
@@ -30,10 +31,8 @@ function getSavedAudiobookVolume() {
 }
 
 function saveAudiobookVolume(volume, muted) {
-  try {
-    window.localStorage.setItem(AUDIOBOOK_VOLUME_KEY, String(volume));
-    window.localStorage.setItem(AUDIOBOOK_MUTED_KEY, muted ? '1' : '0');
-  } catch (err) {}
+  writeString(AUDIOBOOK_VOLUME_KEY, String(volume));
+  writeString(AUDIOBOOK_MUTED_KEY, muted ? '1' : '0');
 }
 
 export function attachScrubPreview(track, hoverFill) {
@@ -127,7 +126,7 @@ export function buildVolumeControl(extraClass) {
 
 function getSavedAudiobookMuted() {
   try {
-    return window.localStorage.getItem(AUDIOBOOK_MUTED_KEY) === '1';
+    return readString(AUDIOBOOK_MUTED_KEY) === '1';
   } catch (err) {
     return false;
   }
@@ -135,7 +134,7 @@ function getSavedAudiobookMuted() {
 
 export function getDefaultAudiobookSpeed() {
   try {
-    const val = Number(window.localStorage.getItem(DEFAULT_SPEED_KEY));
+    const val = Number(readString(DEFAULT_SPEED_KEY));
     return val > 0 ? val : 1;
   } catch (err) {
     return 1;
@@ -143,11 +142,7 @@ export function getDefaultAudiobookSpeed() {
 }
 
 export function setDefaultAudiobookSpeed(speed) {
-  try {
-    window.localStorage.setItem(DEFAULT_SPEED_KEY, String(speed));
-  } catch (err) {
-    // Storage unavailable
-  }
+  writeString(DEFAULT_SPEED_KEY, String(speed));
 }
 
 export function formatClock(totalSeconds) {
@@ -328,11 +323,7 @@ export function setAudioSpeed(newSpeed) {
   if (!activeSession) return;
   activeSession.speed = newSpeed;
   activeSession.audio.playbackRate = newSpeed;
-  try {
-    window.localStorage.setItem(activeSession.speedKey, String(newSpeed));
-  } catch (err) {
-    // Storage unavailable
-  }
+  writeString(activeSession.speedKey, String(newSpeed));
   notifySpeed();
 }
 

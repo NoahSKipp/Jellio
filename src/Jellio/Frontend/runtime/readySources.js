@@ -1,3 +1,5 @@
+import { readString, writeString } from './storage.js';
+
 // Which source Play starts with when some are ready (warm on the server)
 // and others are not. Never across quality tiers: a ready 720p must not
 // replace a 4K that is merely slower to start.
@@ -5,16 +7,14 @@ const PREFER_READY_KEY = 'jellio_prefer_ready_sources';
 
 export function isPreferReadyEnabled() {
   try {
-    return window.localStorage.getItem(PREFER_READY_KEY) !== '0';
+    return readString(PREFER_READY_KEY) !== '0';
   } catch (err) {
     return true;
   }
 }
 
 export function setPreferReadyEnabled(enabled) {
-  try {
-    window.localStorage.setItem(PREFER_READY_KEY, enabled ? '1' : '0');
-  } catch (err) {}
+  writeString(PREFER_READY_KEY, enabled ? '1' : '0');
 }
 
 // sources are already ordered (bad and re-encode ones last). Moves the

@@ -1,5 +1,6 @@
 import { getServerAddress, getAuthHeaders, getCurrentUserId } from './auth.js';
 import { idKey } from './util.js';
+import { readString, writeString } from './storage.js';
 
 const DB_NAME = 'jellio-offline';
 const DB_VERSION = 1;
@@ -811,10 +812,10 @@ function getAutoDeletePref(baseKey) {
   try {
     const userId = idKey(getCurrentUserId());
     if (userId) {
-      const userVal = window.localStorage.getItem(baseKey + '_' + userId);
+      const userVal = readString(baseKey + '_' + userId);
       if (userVal !== null) return userVal !== '0';
     }
-    const globalVal = window.localStorage.getItem(baseKey);
+    const globalVal = readString(baseKey);
     if (globalVal !== null) return globalVal !== '0';
     return true;
   } catch (err) {
@@ -827,9 +828,9 @@ function setAutoDeletePref(baseKey, enabled) {
     const val = enabled ? '1' : '0';
     const userId = idKey(getCurrentUserId());
     if (userId) {
-      window.localStorage.setItem(baseKey + '_' + userId, val);
+      writeString(baseKey + '_' + userId, val);
     }
-    window.localStorage.setItem(baseKey, val);
+    writeString(baseKey, val);
   } catch (err) {}
 }
 

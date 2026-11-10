@@ -1,4 +1,5 @@
 import { getCurrentUserId } from './auth.js';
+import { readString, writeString, remove } from './storage.js';
 
 // The newest big release (X.Y.0) in runtime/changelog.js. Bump it whenever a big
 // release is added there; tests/frontend/changelog.test.mjs fails until they match.
@@ -37,10 +38,10 @@ export function hasSeenLatestChangelog() {
   }
   try {
     const key = storageKey();
-    const seen = localStorage.getItem(key);
+    const seen = readString(key);
     if (seen && seen !== LATEST_BIG_CHANGELOG_VERSION) {
       // Clear older version from storage so the new big release is fresh
-      localStorage.removeItem(key);
+      remove(key);
       return false;
     }
     return seen === LATEST_BIG_CHANGELOG_VERSION;
@@ -50,9 +51,7 @@ export function hasSeenLatestChangelog() {
 }
 
 export function markLatestChangelogSeen() {
-  try {
-    localStorage.setItem(storageKey(), LATEST_BIG_CHANGELOG_VERSION);
-  } catch (err) {
-    console.warn('Jellio: could not save changelog state', err);
+  if (!writeString(storageKey(), LATEST_BIG_CHANGELOG_VERSION)) {
+    console.warn('Jellio: could not save changelog state');
   }
 }

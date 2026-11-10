@@ -18,6 +18,7 @@ import {
 import { el } from '../runtime/dom.js';
 import { loadShelf, saveSeriesPrefs, seriesShelfKey, ensureInLibrary } from '../runtime/shelf.js';
 import { mangaSeriesTitle, mangaSeriesKey, chapterNeighbors } from '../components/mangaSeries.js';
+import { readString, writeString, writeJson } from '../runtime/storage.js';
 
 const SETTINGS_KEY = 'jellio-reader-settings';
 const SAVE_DEBOUNCE_MS = 2000;
@@ -160,7 +161,7 @@ function pick(options, value, fallback) {
 
 function loadSettings() {
   try {
-    const saved = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || 'null') || {};
+    const saved = JSON.parse(readString(SETTINGS_KEY) || 'null') || {};
     return {
       theme: THEMES.indexOf(saved.theme) !== -1 ? saved.theme : DEFAULT_SETTINGS.theme,
       fontSize: Math.min(200, Math.max(70, Number(saved.fontSize) || DEFAULT_SETTINGS.fontSize)),
@@ -197,12 +198,7 @@ function loadSettings() {
 }
 
 function storeSettings(settings) {
-  try {
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch (err) {
-    // Private mode or storage blocked: the reader still works, it just
-    // won't remember these next time.
-  }
+  writeJson(SETTINGS_KEY, settings);
 }
 
 function iconButton(icon, label, className) {
@@ -705,7 +701,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
 
   let savedDirection = null;
   try {
-    savedDirection = localStorage.getItem(comicDirectionKey(itemId));
+    savedDirection = readString(comicDirectionKey(itemId));
   } catch (err) {
     savedDirection = null;
   }
@@ -1310,11 +1306,7 @@ async function openComic(stage, source, savedLocator, settings, handlers, itemId
     },
     setDirection: function (value) {
       direction = value;
-      try {
-        localStorage.setItem(comicDirectionKey(itemId), value);
-      } catch (err) {
-        // Only this volume's preference; the default still applies.
-      }
+      writeString(comicDirectionKey(itemId), value);
       render();
     },
     onSelect: function () {},

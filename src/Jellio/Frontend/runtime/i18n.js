@@ -1,4 +1,5 @@
 import { requestRowCacheWipe } from './rowcache.js';
+import { readString, writeString } from './storage.js';
 // Display language and internationalization (i18n) for Jellio Web.
 
 const STORAGE_KEY = 'jellio_display_language';
@@ -1226,7 +1227,7 @@ export function loadDisplayLanguage(lang) {
 
 function readStoredLanguage() {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    const saved = readString(STORAGE_KEY);
     if (saved && LANGUAGE_CODES.indexOf(saved) !== -1) return saved;
   } catch (err) {
     // Ignore localStorage access failures
@@ -1265,11 +1266,7 @@ export function setDisplayLanguage(lang) {
   const code = (lang || '').toLowerCase();
   const valid = LANGUAGE_CODES.indexOf(code) !== -1 ? code : 'en';
   currentLanguage = valid;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, valid);
-  } catch (err) {
-    // Ignore localStorage failure
-  }
+  writeString(STORAGE_KEY, valid);
   try {
     if (typeof window !== 'undefined') requestRowCacheWipe(window);
   } catch (err) {}
@@ -1653,7 +1650,7 @@ export function translateGenre(name, lang) {
   // User/dynamic stored translations in localStorage
   try {
     const dynamicKey = 'jellio_genre_translations_' + code;
-    const stored = window.localStorage.getItem(dynamicKey);
+    const stored = readString(dynamicKey);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed && parsed[name]) return parsed[name];

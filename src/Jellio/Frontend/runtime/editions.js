@@ -1,3 +1,5 @@
+import { readString, writeString } from './storage.js';
+
 // Edition Recognition Engine for Jellio
 // Identifies monochrome treatments (Noir, B&W) and alternate cuts (Director's Cut, Extended, etc.)
 
@@ -115,7 +117,7 @@ const EDITION_PREF_PREFIX = 'jellioEditionPref_';
 export function getPreferredEdition(itemId, availableEditions) {
   if (!availableEditions || availableEditions.length < 2) return null;
   try {
-    const saved = window.localStorage.getItem(EDITION_PREF_PREFIX + itemId);
+    const saved = readString(EDITION_PREF_PREFIX + itemId);
     if (saved && availableEditions.includes(saved)) {
       return saved;
     }
@@ -124,7 +126,5 @@ export function getPreferredEdition(itemId, availableEditions) {
 }
 
 export function setPreferredEdition(itemId, edition) {
-  try {
-    window.localStorage.setItem(EDITION_PREF_PREFIX + itemId, edition);
-  } catch (err) {}
+  writeString(EDITION_PREF_PREFIX + itemId, edition);
 }

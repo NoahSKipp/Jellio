@@ -68,6 +68,7 @@ import { normalizeId, isPreferReadyEnabled } from '../runtime/readySources.js';
 import { preferredAudioIndex } from '../components/playPrefetch.js';
 import { syncDriftSeconds as driftFromCommand } from '../runtime/syncDrift.js';
 import { rememberedSourceId } from '../components/streamPicker.js';
+import { readString, writeString, remove } from '../runtime/storage.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -1338,14 +1339,12 @@ export async function renderPlayer(root, params) {
   registerPopover(volumeButton, volumeMenu);
 
   // === Speed popover ===
-  const savedSpeed = parseFloat(window.localStorage.getItem('jellioPlayerSpeed')) || 1;
+  const savedSpeed = parseFloat(readString('jellioPlayerSpeed')) || 1;
   const speedMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
 
   function applyPlaybackSpeed(speed) {
     video.playbackRate = speed;
-    try {
-      window.localStorage.setItem('jellioPlayerSpeed', String(speed));
-    } catch (err) {}
+    writeString('jellioPlayerSpeed', String(speed));
     const label = speedButton.querySelector('.jellio-player-pill-btn-label');
     if (label) label.textContent = speed + 'x';
     Array.prototype.forEach.call(speedMenu.children, function (child) {
@@ -1435,7 +1434,7 @@ export async function renderPlayer(root, params) {
   const SUB_OFFSET_STORAGE_PREFIX = 'jellio_sub_offset_';
   let subtitleOffsetSec = 0;
   try {
-    const savedOffset = parseFloat(localStorage.getItem(SUB_OFFSET_STORAGE_PREFIX + itemId));
+    const savedOffset = parseFloat(readString(SUB_OFFSET_STORAGE_PREFIX + itemId));
     if (Number.isFinite(savedOffset)) {
       subtitleOffsetSec = Math.round(savedOffset * 10) / 10;
     }
@@ -1743,9 +1742,9 @@ export async function renderPlayer(root, params) {
     }
     try {
       if (subtitleOffsetSec !== 0) {
-        localStorage.setItem(SUB_OFFSET_STORAGE_PREFIX + itemId, String(subtitleOffsetSec));
+        writeString(SUB_OFFSET_STORAGE_PREFIX + itemId, String(subtitleOffsetSec));
       } else {
-        localStorage.removeItem(SUB_OFFSET_STORAGE_PREFIX + itemId);
+        remove(SUB_OFFSET_STORAGE_PREFIX + itemId);
       }
     } catch (e) {}
     syncDisplay.textContent = (subtitleOffsetSec > 0 ? '+' : '') + subtitleOffsetSec.toFixed(1) + 's';
@@ -2364,7 +2363,7 @@ export async function renderPlayer(root, params) {
   const AUTOSKIP_KEY = 'jellio_player_autoskip';
   let autoSkipEnabled = false;
   try {
-    autoSkipEnabled = localStorage.getItem(AUTOSKIP_KEY) === 'true';
+    autoSkipEnabled = readString(AUTOSKIP_KEY) === 'true';
   } catch (e) {}
 
   const settingsMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
@@ -2378,9 +2377,7 @@ export async function renderPlayer(root, params) {
   syncAutoSkipUI();
   autoSkipOption.addEventListener('click', function () {
     autoSkipEnabled = !autoSkipEnabled;
-    try {
-      localStorage.setItem(AUTOSKIP_KEY, String(autoSkipEnabled));
-    } catch (e) {}
+    writeString(AUTOSKIP_KEY, String(autoSkipEnabled));
     syncAutoSkipUI();
     showPlayerToast(t(autoSkipEnabled ? 'player_autoskip_on' : 'player_autoskip_off'));
   });

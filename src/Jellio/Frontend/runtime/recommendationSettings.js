@@ -1,5 +1,6 @@
 import { getCurrentUserId } from './auth.js';
 import { getProfileSettings, saveProfileRecommendations } from './apiSocial.js';
+import { readString, writeJson } from './storage.js';
 
 function storageKey() {
   const userId = getCurrentUserId() || 'guest';
@@ -8,7 +9,7 @@ function storageKey() {
 
 function loadSettings() {
   try {
-    const raw = localStorage.getItem(storageKey());
+    const raw = readString(storageKey());
     return raw ? JSON.parse(raw) : {};
   } catch (err) {
     return {};
@@ -16,10 +17,8 @@ function loadSettings() {
 }
 
 function saveSettings(settings) {
-  try {
-    localStorage.setItem(storageKey(), JSON.stringify(settings));
-  } catch (err) {
-    console.warn('Jellio: could not save recommendation settings', err);
+  if (!writeJson(storageKey(), settings)) {
+    console.warn('Jellio: could not save recommendation settings');
   }
 }
 

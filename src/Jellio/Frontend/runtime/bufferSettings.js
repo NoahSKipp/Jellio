@@ -1,3 +1,5 @@
+import { readString, writeString } from './storage.js';
+
 const KEY = 'jellio_prebuffer';
 
 const PREBUFFER_LEVELS = {
@@ -14,16 +16,14 @@ export const PREBUFFER_OPTIONS = [
 
 export function getPrebufferLevel() {
   try {
-    const value = window.localStorage.getItem(KEY);
+    const value = readString(KEY);
     if (value && PREBUFFER_LEVELS[value]) return value;
   } catch (err) {}
   return 'standard';
 }
 
 export function setPrebufferLevel(value) {
-  try {
-    window.localStorage.setItem(KEY, PREBUFFER_LEVELS[value] ? value : 'standard');
-  } catch (err) {}
+  writeString(KEY, PREBUFFER_LEVELS[value] ? value : 'standard');
 }
 
 export function prebufferSettings() {
@@ -61,14 +61,12 @@ const BUFFER_SWITCH_VALUES = ['ask', 'auto', 'off'];
 // What to do when a stream keeps stopping to buffer.
 export function getBufferSwitchMode() {
   try {
-    const value = window.localStorage.getItem(BUFFER_SWITCH_KEY);
+    const value = readString(BUFFER_SWITCH_KEY);
     if (BUFFER_SWITCH_VALUES.indexOf(value) !== -1) return value;
   } catch (err) {}
   return 'ask';
 }
 
 export function setBufferSwitchMode(value) {
-  try {
-    window.localStorage.setItem(BUFFER_SWITCH_KEY, BUFFER_SWITCH_VALUES.indexOf(value) !== -1 ? value : 'ask');
-  } catch (err) {}
+  writeString(BUFFER_SWITCH_KEY, BUFFER_SWITCH_VALUES.indexOf(value) !== -1 ? value : 'ask');
 }

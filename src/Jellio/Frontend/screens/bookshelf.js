@@ -27,6 +27,7 @@ import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 import { coverSrc, idKey, normalizeTitle } from '../runtime/util.js';
+import { readString, writeString, writeJson, remove } from '../runtime/storage.js';
 
 const KINDS = {
   ebook: {
@@ -94,7 +95,7 @@ function sortStorageKey(kind) {
 // { sort, desc }
 function readSort(kind) {
   try {
-    const saved = localStorage.getItem(sortStorageKey(kind));
+    const saved = readString(sortStorageKey(kind));
     if (LEGACY_SORTS[saved]) return LEGACY_SORTS[saved];
     if (SORTS.some((sort) => sort.value === saved)) return { sort: saved, desc: false };
     const parsed = JSON.parse(saved || 'null');
@@ -106,11 +107,7 @@ function readSort(kind) {
 }
 
 function writeSort(kind, value) {
-  try {
-    localStorage.setItem(sortStorageKey(kind), JSON.stringify(value));
-  } catch (err) {
-    // Not worth surfacing; the sort still applies for this visit.
-  }
+  writeJson(sortStorageKey(kind), value);
 }
 
 function categoryStorageKey(kind) {
@@ -119,19 +116,15 @@ function categoryStorageKey(kind) {
 
 function readCategory(kind) {
   try {
-    return localStorage.getItem(categoryStorageKey(kind)) || '';
+    return readString(categoryStorageKey(kind)) || '';
   } catch (err) {
     return '';
   }
 }
 
 function writeCategory(kind, id) {
-  try {
-    if (id) localStorage.setItem(categoryStorageKey(kind), id);
-    else localStorage.removeItem(categoryStorageKey(kind));
-  } catch (err) {
-    // Only remembered for this visit.
-  }
+  if (id) writeString(categoryStorageKey(kind), id);
+  else remove(categoryStorageKey(kind));
 }
 
 function authorKey(name) {

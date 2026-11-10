@@ -9,6 +9,7 @@ import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
 import { LANGUAGES, languageLabel, readTargetLanguage, writeTargetLanguage } from './readerStudy.js';
 import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from './audioMiniPlayer.js';
 import { markOnboardingComplete, shouldShowOnboarding } from './onboardingState.js';
+import { readString, writeString } from '../runtime/storage.js';
 export { shouldShowOnboarding };
 
 const MODAL_ID = 'jellioOnboardingModal';
@@ -97,9 +98,9 @@ export async function openOnboardingModal(options) {
       readingEnabled = custom.reading_enabled === 'true';
     } else {
       readingEnabled = Boolean(
-        window.localStorage.getItem('jellio_reading_enabled') === 'true' ||
-        window.localStorage.getItem('jellio_reader_settings') ||
-        window.localStorage.getItem('jellio_reader_study_lang')
+        readString('jellio_reading_enabled') === 'true' ||
+        readString('jellio_reader_settings') ||
+        readString('jellio_reader_study_lang')
       );
     }
 
@@ -163,9 +164,7 @@ export async function openOnboardingModal(options) {
     // Persist stream choice memory
     setRememberStreamEnabled(rememberStream);
     // Persist reading enabled state locally
-    try {
-      window.localStorage.setItem('jellio_reading_enabled', readingEnabled ? 'true' : 'false');
-    } catch (_) {}
+    writeString('jellio_reading_enabled', readingEnabled ? 'true' : 'false');
     // Persist study & audiobook settings if reading enabled
     if (readingEnabled) {
       writeTargetLanguage(targetStudyLang);

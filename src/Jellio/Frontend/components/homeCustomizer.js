@@ -1,6 +1,7 @@
 import { t } from '../runtime/i18n.js';
 
 import { el } from '../runtime/dom.js';
+import { readString, writeJson } from '../runtime/storage.js';
 
 const STORAGE_KEY = 'jellioHomeCustomization';
 
@@ -10,7 +11,7 @@ function defaultCustomization() {
 
 function getHomeCustomization() {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = readString(STORAGE_KEY);
     if (!raw) return defaultCustomization();
     const parsed = JSON.parse(raw);
     return {
@@ -23,12 +24,7 @@ function getHomeCustomization() {
 }
 
 function saveHomeCustomization(customization) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
-  } catch (err) {
-    // Client only preference: a write that fails leaves the in-memory
-    // choice acting for this session, nothing further to recover here.
-  }
+  writeJson(STORAGE_KEY, customization);
 }
 
 export function resetHomeCustomization() {

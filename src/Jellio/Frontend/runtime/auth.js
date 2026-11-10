@@ -1,5 +1,6 @@
 import { requestRowCacheWipe } from './rowcache.js';
 import { getAcceptLanguageHeader } from './i18n.js';
+import { readString, writeString, readJson, writeJson, remove } from './storage.js';
 
 export const Jellio = window.Jellio || (window.Jellio = {});
 
@@ -70,24 +71,6 @@ function getDeviceName() {
   return headerSafe((typeof window !== 'undefined' && window.jellioNative && window.jellioNative.deviceName) || describeBrowser());
 }
 
-function readJson(key) {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    return null;
-  }
-}
-
-function writeJson(key, value) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (err) {
-    // A full or blocked localStorage means the session does not survive a
-    // reload, not that the app is broken for the rest of this tab's life.
-  }
-}
-
 // Same origin as the page this script is injected into; Jellio has no
 // concept of a separate server address the way a standalone app would.
 export function getServerAddress() {
@@ -95,18 +78,14 @@ export function getServerAddress() {
 }
 
 export function getDeviceId() {
-  let id = window.localStorage.getItem(DEVICE_ID_KEY);
+  let id = readString(DEVICE_ID_KEY);
   if (!id) {
     id =
       'jellio-' +
       Date.now().toString(36) +
       '-' +
       Math.random().toString(36).slice(2, 10);
-    try {
-      window.localStorage.setItem(DEVICE_ID_KEY, id);
-    } catch (err) {
-      // Falls back to a fresh id every load, functional, just not stable.
-    }
+    writeString(DEVICE_ID_KEY, id);
   }
   return id;
 }
@@ -332,11 +311,7 @@ export async function quickSignIn(userId) {
 }
 
 export function clearSession() {
-  try {
-    window.localStorage.removeItem(SESSION_KEY);
-  } catch (err) {
-    // Nothing left to clear if this fails, the key is simply stale.
-  }
+  remove(SESSION_KEY);
 }
 
 function buildAuthHeader() {
@@ -471,11 +446,7 @@ export async function redeemPasswordResetPin(pin) {
 export function logout() {
   requestRowCacheWipe(window);
   clearSession();
-  try {
-    window.localStorage.removeItem('jellyfin_credentials');
-  } catch (err) {
-    // Nothing left to clear if this fails, the key is simply stale.
-  }
+  remove('jellyfin_credentials');
   window.location.reload();
 }
 

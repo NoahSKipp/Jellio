@@ -8,6 +8,7 @@ import { buildSkeletonRow } from '../components/homeSkeleton.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { reflectStateInAddressBar } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeJson, remove } from '../runtime/storage.js';
 
 const DEBOUNCE_MS = 300;
 const RECENT_SEARCHES_KEY = 'jellio_recent_searches';
@@ -15,7 +16,7 @@ const MAX_RECENT_SEARCHES = 8;
 
 function getRecentSearches() {
   try {
-    const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+    const raw = readString(RECENT_SEARCHES_KEY);
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     // Prune invalid entries and fragments saved by previous rapid-typing sessions
@@ -61,18 +62,14 @@ function saveRecentSearch(term) {
     });
     list.unshift(clean);
     if (list.length > MAX_RECENT_SEARCHES) list.length = MAX_RECENT_SEARCHES;
-    window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(list));
+    writeJson(RECENT_SEARCHES_KEY, list);
   } catch (err) {
     // Storage blocked
   }
 }
 
 function clearRecentSearches() {
-  try {
-    window.localStorage.removeItem(RECENT_SEARCHES_KEY);
-  } catch (err) {
-    // Storage blocked
-  }
+  remove(RECENT_SEARCHES_KEY);
 }
 
 export async function renderSearch(root, params) {

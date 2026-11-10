@@ -14,6 +14,7 @@ import { languageName } from '../runtime/languages.js';
 import { renderLoading, renderRetry } from './networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeString, writeJson } from '../runtime/storage.js';
 
 const OVERLAY_ID = 'jellioStreamPicker';
 const READY_INFO_WAIT_MS = 1200;
@@ -24,23 +25,19 @@ const REMEMBER_TTL_MS = 4 * 24 * 60 * 60 * 1000;
 
 export function isRememberStreamEnabled() {
   try {
-    return window.localStorage.getItem(REMEMBER_ENABLED_KEY) !== '0';
+    return readString(REMEMBER_ENABLED_KEY) !== '0';
   } catch (err) {
     return true;
   }
 }
 
 export function setRememberStreamEnabled(enabled) {
-  try {
-    window.localStorage.setItem(REMEMBER_ENABLED_KEY, enabled ? '1' : '0');
-  } catch (err) {
-    // Not persisted, this tab still behaves as asked until reload.
-  }
+  writeString(REMEMBER_ENABLED_KEY, enabled ? '1' : '0');
 }
 
 function readRememberedSources() {
   try {
-    const raw = window.localStorage.getItem(REMEMBERED_SOURCES_KEY);
+    const raw = readString(REMEMBERED_SOURCES_KEY);
     const map = raw ? JSON.parse(raw) : {};
     const now = Date.now();
     let changed = false;
@@ -52,10 +49,7 @@ function readRememberedSources() {
       }
     });
     if (changed) {
-      try {
-        window.localStorage.setItem(REMEMBERED_SOURCES_KEY, JSON.stringify(map));
-      } catch (err) {
-      }
+      writeJson(REMEMBERED_SOURCES_KEY, map);
     }
     return map;
   } catch (err) {
@@ -73,7 +67,7 @@ function rememberSourceChoice(itemId, mediaSourceId) {
   try {
     const map = readRememberedSources();
     map[itemId] = { mediaSourceId: mediaSourceId, ts: Date.now() };
-    window.localStorage.setItem(REMEMBERED_SOURCES_KEY, JSON.stringify(map));
+    writeJson(REMEMBERED_SOURCES_KEY, map);
   } catch (err) {
     // A choice not remembered just asks again next time, not fatal.
   }

@@ -7,6 +7,7 @@ import { toggleWatchlist } from './cardOptionsMenu.js';
 import { el } from '../runtime/dom.js';
 import { transitionsAllowed } from '../runtime/motionSettings.js';
 import { cssUrl } from '../runtime/safeUrl.js';
+import { writeJson } from '../runtime/storage.js';
 
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
@@ -216,9 +217,7 @@ export function buildHeroCarousel(options) {
     // The first backdrop on this page, for the next load: index.html's
     // early script starts downloading it before any of Jellio's code runs.
     if (backdropUrl && !shownOnce) {
-      try {
-        localStorage.setItem(HERO_PRELOAD_KEY, JSON.stringify({ route: location.hash || '', url: backdropUrl }));
-      } catch (err) {}
+      writeJson(HERO_PRELOAD_KEY, { route: location.hash || '', url: backdropUrl });
     }
     if (backdropUrl) {
       const currentId = item.Id;

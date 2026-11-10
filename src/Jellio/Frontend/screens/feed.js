@@ -9,6 +9,7 @@ import { navigateTo } from '../runtime/router.js';
 import { openActivity } from '../components/activityLink.js';
 import { formatRelativeTime, isReadingActivity, describeReading } from '../runtime/format.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeJson } from '../runtime/storage.js';
 
 function appendPartyDescription(container, entry) {
   const title = entry.ItemType === 'Episode' && entry.SeriesName ? entry.SeriesName : entry.ItemName;
@@ -196,7 +197,7 @@ function feedType(entry) {
 
 function readHiddenTypes() {
   try {
-    const saved = JSON.parse(localStorage.getItem(FEED_HIDDEN_KEY) || '[]');
+    const saved = JSON.parse(readString(FEED_HIDDEN_KEY) || '[]');
     return new Set(Array.isArray(saved) ? saved : []);
   } catch (err) {
     return new Set();
@@ -204,11 +205,7 @@ function readHiddenTypes() {
 }
 
 function saveHiddenTypes(hidden) {
-  try {
-    localStorage.setItem(FEED_HIDDEN_KEY, JSON.stringify(Array.from(hidden)));
-  } catch (err) {
-    // Kept for this visit only.
-  }
+  writeJson(FEED_HIDDEN_KEY, Array.from(hidden));
 }
 
 export async function renderFeed(root) {

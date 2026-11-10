@@ -1,6 +1,7 @@
 import { getCurrentUserId } from './auth.js';
 import { getSyncPlayGroups } from './apiSocial.js';
 import { getCurrentUser } from './api.js';
+import { readString, writeString, remove } from './storage.js';
 
 const TicksPerMillisecond = 10000;
 const MaxMeasurements = 6;
@@ -21,17 +22,15 @@ let pendingCreateUntil = 0;
 
 function readMyGroupId() {
   try {
-    return window.localStorage.getItem(MY_GROUP_KEY) || null;
+    return readString(MY_GROUP_KEY) || null;
   } catch (err) {
     return null;
   }
 }
 
 function writeMyGroupId(groupId) {
-  try {
-    if (groupId) window.localStorage.setItem(MY_GROUP_KEY, groupId);
-    else window.localStorage.removeItem(MY_GROUP_KEY);
-  } catch (err) {}
+  if (groupId) writeString(MY_GROUP_KEY, groupId);
+  else remove(MY_GROUP_KEY);
 }
 
 export function sameId(a, b) {

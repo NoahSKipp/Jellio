@@ -2,6 +2,7 @@ import { t } from '../runtime/i18n.js';
 import { getAnnotations, addAnnotation, updateAnnotation, deleteAnnotation, translateText, defineWord, addVocabulary } from '../runtime/apiBooks.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
+import { readString, writeString, writeJson, remove } from '../runtime/storage.js';
 
 const HIGHLIGHT_COLORS = [
   { value: 'yellow', label: 'Yellow', hex: '#ffd400' },
@@ -39,7 +40,7 @@ function bookLangKey(itemId) {
 
 function readBookLanguage(itemId) {
   try {
-    const saved = localStorage.getItem(bookLangKey(itemId));
+    const saved = readString(bookLangKey(itemId));
     return saved && (saved === 'auto' || LANGUAGES.indexOf(saved) !== -1) ? saved : readDefaultBookLanguage();
   } catch (err) {
     return 'auto';
@@ -50,7 +51,7 @@ const DEFAULT_BOOK_LANG_KEY = 'jellio-reader-default-lang';
 
 export function readDefaultBookLanguage() {
   try {
-    const saved = localStorage.getItem(DEFAULT_BOOK_LANG_KEY);
+    const saved = readString(DEFAULT_BOOK_LANG_KEY);
     return saved && LANGUAGES.indexOf(saved) !== -1 ? saved : 'auto';
   } catch (err) {
     return 'auto';
@@ -58,19 +59,15 @@ export function readDefaultBookLanguage() {
 }
 
 export function writeDefaultBookLanguage(lang) {
-  try {
-    if (lang && lang !== 'auto') localStorage.setItem(DEFAULT_BOOK_LANG_KEY, lang);
-    else localStorage.removeItem(DEFAULT_BOOK_LANG_KEY);
-  } catch (err) {
-    // Only a convenience.
-  }
+  if (lang && lang !== 'auto') writeString(DEFAULT_BOOK_LANG_KEY, lang);
+  else remove(DEFAULT_BOOK_LANG_KEY);
 }
 
 const READER_SETTINGS_KEY = 'jellio-reader-settings';
 
 export function readTargetLanguage() {
   try {
-    const saved = JSON.parse(localStorage.getItem(READER_SETTINGS_KEY) || 'null') || {};
+    const saved = JSON.parse(readString(READER_SETTINGS_KEY) || 'null') || {};
     return LANGUAGES.indexOf(saved.targetLang) !== -1 ? saved.targetLang : defaultTargetLanguage();
   } catch (err) {
     return defaultTargetLanguage();
@@ -79,20 +76,16 @@ export function readTargetLanguage() {
 
 export function writeTargetLanguage(lang) {
   try {
-    const saved = JSON.parse(localStorage.getItem(READER_SETTINGS_KEY) || 'null') || {};
+    const saved = JSON.parse(readString(READER_SETTINGS_KEY) || 'null') || {};
     saved.targetLang = lang;
-    localStorage.setItem(READER_SETTINGS_KEY, JSON.stringify(saved));
+    writeJson(READER_SETTINGS_KEY, saved);
   } catch (err) {
     // Only a convenience.
   }
 }
 
 function writeBookLanguage(itemId, lang) {
-  try {
-    localStorage.setItem(bookLangKey(itemId), lang);
-  } catch (err) {
-    // Only a convenience; lookups still work on "auto".
-  }
+  writeString(bookLangKey(itemId), lang);
 }
 
 export function defaultTargetLanguage() {

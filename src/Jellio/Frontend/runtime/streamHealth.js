@@ -1,3 +1,5 @@
+import { readString, writeJson, remove } from './storage.js';
+
 const KEY = 'jellio_bad_streams_v2';
 // Marks recorded on 2026-10-17, when a stalled stream cache made every stream
 // time out, flagged working releases bad for two days. The key bump drops them.
@@ -11,9 +13,9 @@ const MAX_PLACEHOLDER_SECONDS = 180;
 function load() {
   try {
     LEGACY_KEYS.forEach(function (legacy) {
-      if (window.localStorage.getItem(legacy) !== null) window.localStorage.removeItem(legacy);
+      if (readString(legacy) !== null) remove(legacy);
     });
-    const parsed = JSON.parse(window.localStorage.getItem(KEY) || '{}');
+    const parsed = JSON.parse(readString(KEY) || '{}');
     if (!parsed || typeof parsed !== 'object') return {};
     let dirty = false;
     Object.keys(parsed).forEach(function (id) {
@@ -44,9 +46,7 @@ function load() {
 }
 
 function save(map) {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(map));
-  } catch (err) {}
+  writeJson(KEY, map);
 }
 
 function keysFor(source) {

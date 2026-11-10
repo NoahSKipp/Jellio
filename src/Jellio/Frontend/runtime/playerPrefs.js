@@ -1,8 +1,10 @@
+import { readString, writeJson } from './storage.js';
+
 const VOLUME_KEY = 'jellioPlayerVolume';
 
 export function loadVolumePreference() {
   try {
-    const raw = window.localStorage.getItem(VOLUME_KEY);
+    const raw = readString(VOLUME_KEY);
     if (!raw) return { volume: 1, muted: false };
     const parsed = JSON.parse(raw);
     const volume = typeof parsed.volume === 'number' && parsed.volume >= 0 && parsed.volume <= 1 ? parsed.volume : 1;
@@ -13,12 +15,7 @@ export function loadVolumePreference() {
 }
 
 export function saveVolumePreference(volume, muted) {
-  try {
-    window.localStorage.setItem(VOLUME_KEY, JSON.stringify({ volume: volume, muted: muted }));
-  } catch (err) {
-    // A private/full storage quota is not worth surfacing here, the
-    // chosen volume still applies for the rest of this playback session.
-  }
+  writeJson(VOLUME_KEY, { volume: volume, muted: muted });
 }
 
 const SUBTITLE_STYLE_KEY = 'jellioSubtitleStyle';
@@ -40,7 +37,7 @@ const DEFAULT_SUBTITLE_STYLE = { size: 'medium', background: 'semi' };
 
 export function loadSubtitleStyle() {
   try {
-    const raw = window.localStorage.getItem(SUBTITLE_STYLE_KEY);
+    const raw = readString(SUBTITLE_STYLE_KEY);
     if (!raw) return Object.assign({}, DEFAULT_SUBTITLE_STYLE);
     const parsed = JSON.parse(raw);
     return {
@@ -55,12 +52,7 @@ export function loadSubtitleStyle() {
 }
 
 export function saveSubtitleStyle(style) {
-  try {
-    window.localStorage.setItem(SUBTITLE_STYLE_KEY, JSON.stringify(style));
-  } catch (err) {
-    // A private/full storage quota is not worth surfacing here, the
-    // style still applies for the rest of this playback session.
-  }
+  writeJson(SUBTITLE_STYLE_KEY, style);
   try {
     import('./api.js').then(function (api) {
       if (api && typeof api.postJson === 'function') {
@@ -79,9 +71,7 @@ export function applyServerSubtitleStyle(serverStyle) {
       ? serverStyle.background
       : current.background,
   };
-  try {
-    window.localStorage.setItem(SUBTITLE_STYLE_KEY, JSON.stringify(merged));
-  } catch (err) {}
+  writeJson(SUBTITLE_STYLE_KEY, merged);
   if (subtitleStyleTag) {
     applySubtitleStyle(null, merged);
   }

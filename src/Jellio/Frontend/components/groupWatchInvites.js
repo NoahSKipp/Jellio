@@ -4,6 +4,7 @@ import { isAuthenticated, getCurrentUserId } from '../runtime/auth.js';
 const loadSyncPlay = () => import('../runtime/syncPlay.js');
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { showGroupWatchNotice } from './groupWatchNotice.js';
+import { readString, writeString } from '../runtime/storage.js';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -18,18 +19,14 @@ function seenKey() {
 
 function loadLastInviteId() {
   try {
-    return Number(window.localStorage.getItem(seenKey())) || 0;
+    return Number(readString(seenKey())) || 0;
   } catch (err) {
     return 0;
   }
 }
 
 function saveLastInviteId() {
-  try {
-    window.localStorage.setItem(seenKey(), String(lastInviteId));
-  } catch (err) {
-    // Not persisted: invites may show once more after a reload.
-  }
+  writeString(seenKey(), String(lastInviteId));
 }
 let myUserName = '';
 

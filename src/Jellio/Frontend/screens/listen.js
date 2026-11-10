@@ -27,6 +27,7 @@ import {
   setAudiobookVolume,
 } from '../components/audioMiniPlayer.js';
 import { cssUrl } from '../runtime/safeUrl.js';
+import { readString } from '../runtime/storage.js';
 
 const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
@@ -48,7 +49,7 @@ function iconButton(icon, label, className) {
 
 function readNumber(key, fallback) {
   try {
-    const value = Number(window.localStorage.getItem(key));
+    const value = Number(readString(key));
     return value > 0 ? value : fallback;
   } catch (err) {
     return fallback;

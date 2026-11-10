@@ -1,3 +1,5 @@
+import { readString, writeString } from './storage.js';
+
 // Up Next countdown length, a client only display preference.
 const COUNTDOWN_KEY = 'jellioUpNextCountdownSeconds';
 const DEFAULT_COUNTDOWN_SECONDS = 15;
@@ -14,7 +16,7 @@ export const UPNEXT_COUNTDOWN_OPTIONS = [
 
 export function getUpNextCountdownSeconds() {
   try {
-    const raw = window.localStorage.getItem(COUNTDOWN_KEY);
+    const raw = readString(COUNTDOWN_KEY);
     if (raw === null || raw === undefined) return DEFAULT_COUNTDOWN_SECONDS;
     const parsed = Number(raw);
     return UPNEXT_COUNTDOWN_OPTIONS.some((option) => Number(option.value) === parsed) ? parsed : DEFAULT_COUNTDOWN_SECONDS;
@@ -24,9 +26,5 @@ export function getUpNextCountdownSeconds() {
 }
 
 export function setUpNextCountdownSeconds(seconds) {
-  try {
-    window.localStorage.setItem(COUNTDOWN_KEY, String(seconds));
-  } catch (err) {
-    // Not persisted, this tab still uses the chosen value until reload.
-  }
+  writeString(COUNTDOWN_KEY, String(seconds));
 }

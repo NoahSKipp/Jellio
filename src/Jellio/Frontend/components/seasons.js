@@ -2,6 +2,7 @@ import { t } from '../runtime/i18n.js';
 import { getJellioConfig } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
 import { getMotionLevel, onMotionChange } from '../runtime/motionSettings.js';
+import { readString, writeString } from '../runtime/storage.js';
 
 const THEME_ORDER = ['halloween', 'newyear', 'valentine', 'christmas'];
 
@@ -509,16 +510,12 @@ function mountNewYear(container, level) {
   if (today.getMonth() === 0 && today.getDate() === 1) {
     let seen = null;
     try {
-      seen = window.localStorage.getItem(NY_MIDNIGHT_KEY);
+      seen = readString(NY_MIDNIGHT_KEY);
     } catch (err) {
       seen = null;
     }
     if (seen !== String(today.getFullYear())) {
-      try {
-        window.localStorage.setItem(NY_MIDNIGHT_KEY, String(today.getFullYear()));
-      } catch (err) {
-        // Without storage it just plays on every load of the day.
-      }
+      writeString(NY_MIDNIGHT_KEY, String(today.getFullYear()));
       later(finale, 2500);
     }
   }
