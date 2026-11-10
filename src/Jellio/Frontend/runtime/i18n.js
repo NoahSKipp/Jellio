@@ -1177,7 +1177,7 @@ export function loadDisplayLanguage(lang) {
     });
 }
 
-export function getDisplayLanguage() {
+function readStoredLanguage() {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (saved && LANGUAGE_CODES.indexOf(saved) !== -1) return saved;
@@ -1185,6 +1185,22 @@ export function getDisplayLanguage() {
     // Ignore localStorage access failures
   }
   return 'en';
+}
+
+// Read once; setDisplayLanguage and other tabs' changes keep it current.
+let currentLanguage = null;
+
+export function getDisplayLanguage() {
+  if (currentLanguage === null) currentLanguage = readStoredLanguage();
+  return currentLanguage;
+}
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('storage', function (event) {
+    if (event.key !== STORAGE_KEY && event.key !== null) return;
+    currentLanguage = readStoredLanguage();
+    loadDisplayLanguage(currentLanguage);
+  });
 }
 
 export function getDisplayCulture() {
@@ -1201,6 +1217,7 @@ export function getDisplayCulture() {
 export function setDisplayLanguage(lang) {
   const code = (lang || '').toLowerCase();
   const valid = LANGUAGE_CODES.indexOf(code) !== -1 ? code : 'en';
+  currentLanguage = valid;
   try {
     window.localStorage.setItem(STORAGE_KEY, valid);
   } catch (err) {
@@ -1230,12 +1247,31 @@ export function t(key, params, fallback) {
   const lang = getDisplayLanguage();
   const dict = STRINGS[lang] || STRINGS.en;
   let text = dict[key] || STRINGS.en[key] || fallback || key;
-  if (params && typeof params === 'object') {
-    Object.keys(params).forEach(function (paramKey) {
-      text = text.replace(new RegExp('\\{' + paramKey + '\\}', 'g'), params[paramKey]);
-    });
+  if (params && typeof params === 'object' && text.indexOf('{') !== -1) {
+    text = fillPlaceholders(text, params);
   }
   return text;
+}
+
+// Same result as replacing every {name} with String(params[name]), in one pass.
+export function fillPlaceholders(text, params) {
+  let out = '';
+  let pos = 0;
+  while (pos < text.length) {
+    const open = text.indexOf('{', pos);
+    if (open === -1) break;
+    const close = text.indexOf('}', open + 1);
+    if (close === -1) break;
+    const name = text.slice(open + 1, close);
+    if (Object.prototype.hasOwnProperty.call(params, name)) {
+      out += text.slice(pos, open) + String(params[name]);
+      pos = close + 1;
+    } else {
+      out += text.slice(pos, open + 1);
+      pos = open + 1;
+    }
+  }
+  return out + text.slice(pos);
 }
 
 const GENRE_TRANSLATIONS = {
