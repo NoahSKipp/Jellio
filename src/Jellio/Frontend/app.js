@@ -437,11 +437,28 @@ function runTrackedTasks(tasks) {
   );
 }
 
-async function preloadInitialData() {
+// The first data requests (answered from the row cache where it can) start
+// with the server ping instead of after it. Offline, they fail fast and the
+// preload runs again once the server answers.
+async function preloadAlongsideConnectivity() {
+  preloaded = true;
   showSplash();
-
   try {
-    await preloadInitialDataTasks();
+    const preload = preloadInitialDataTasks();
+    preload.catch(function () {});
+    await connectivityReady;
+    if (isOffline()) {
+      preloaded = false;
+      return;
+    }
+    await preload;
+    getPrimaryNavLinks()
+      .then(function (links) {
+        lastNavLinksSignature = navLinksSignature(links);
+      })
+      .catch(function () {
+      });
+    scheduleNavRecheck();
   } finally {
     hideSplash();
   }
@@ -547,20 +564,12 @@ async function runSync() {
       return;
     }
 
-    await connectivityReady;
-    const offline = isOffline();
-
-    if (!preloaded && !offline) {
-      preloaded = true;
-      await preloadInitialData();
-      getPrimaryNavLinks()
-        .then(function (links) {
-          lastNavLinksSignature = navLinksSignature(links);
-        })
-        .catch(function () {
-        });
-      scheduleNavRecheck();
+    if (!preloaded && !isOffline()) {
+      await preloadAlongsideConnectivity();
+    } else {
+      await connectivityReady;
     }
+    const offline = isOffline();
 
     let route = parseRoute();
     if (offline && !OFFLINE_ROUTES.has(route.path)) {
