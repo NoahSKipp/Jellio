@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Security.Claims;
+using Jellio.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -112,6 +113,81 @@ public class PlaybackLogController(ILogger<PlaybackLogController> logger) : Cont
             userId);
         return NoContent();
     }
+
+    public record PlayStartStages(int? DetailsMs, int? PlaybackInfoMs, int? PlayerReadyMs, int? FirstByteMs, int? FirstFrameMs);
+
+    public record PlayStartBody(
+        string? ItemId,
+        string? MediaSourceId,
+        string? Client,
+        string? Trigger,
+        string? From,
+        bool? WarmAtPlay,
+        bool? DirectPlay,
+        PlayStartStages? Stages,
+        int TotalMs);
+
+    private static readonly string[] PlayClients = ["web", "tv", "macos"];
+    private static readonly string[] PlayTriggers = ["detail", "resume", "next-episode", "failover", "other"];
+    private static readonly string[] PlayFroms = ["prewarmed", "prefetched", "early", "fresh"];
+    private const int MaxStageMs = 10 * 60 * 1000;
+
+    private static readonly PlayStartStats PlayStarts = new(1000);
+
+    // One line per play: how long it took from Play to the first frame, by stage.
+    [HttpPost("start")]
+    public IActionResult Start([FromBody] PlayStartBody body)
+    {
+        var userId = HttpContext.User.Identity is ClaimsIdentity identity ? identity.FindFirst("Jellyfin-UserId")?.Value : null;
+        var client = OneOf(body.Client, PlayClients, "web");
+        var from = OneOf(body.From, PlayFroms, "fresh");
+        var stages = body.Stages ?? new PlayStartStages(null, null, null, null, null);
+        var total = ClampMs(body.TotalMs) ?? 0;
+        var firstFrame = ClampMs(stages.FirstFrameMs);
+        PlayStarts.Add(new PlayStartEntry(client, from, body.WarmAtPlay, total, firstFrame));
+        logger.LogInformation(
+            "Jellio play start: item {ItemId} source {MediaSourceId}, client {Client}, trigger {Trigger}, from {From}, warm {Warm}, direct {Direct}; details {DetailsMs} ms, playback info {PlaybackInfoMs} ms, player ready {PlayerReadyMs} ms, first byte {FirstByteMs} ms, first frame {FirstFrameMs} ms, total {TotalMs} ms, user {UserId}",
+            SafeId(body.ItemId),
+            SafeId(body.MediaSourceId),
+            client,
+            OneOf(body.Trigger, PlayTriggers, "other"),
+            from,
+            body.WarmAtPlay?.ToString() ?? "-",
+            body.DirectPlay?.ToString() ?? "-",
+            Ms(stages.DetailsMs),
+            Ms(stages.PlaybackInfoMs),
+            Ms(stages.PlayerReadyMs),
+            Ms(stages.FirstByteMs),
+            Ms(firstFrame),
+            total,
+            userId);
+        return NoContent();
+    }
+
+    [HttpGet("start/stats")]
+    [Authorize(Policy = "RequiresElevation")]
+    public ActionResult<PlayStartSummary> StartStats() => PlayStarts.Summarize();
+
+    private static string OneOf(string? value, string[] allowed, string fallback)
+    {
+        var lower = value?.Trim().ToLowerInvariant();
+        return lower is not null && allowed.Contains(lower) ? lower : fallback;
+    }
+
+    // Ids only: anything that is not a short token (a URL, say) is dropped.
+    private static string SafeId(string? value)
+    {
+        if (Guid.TryParse(value, out var id))
+        {
+            return id.ToString("N");
+        }
+
+        return !string.IsNullOrEmpty(value) && value.Length <= 64 && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_') ? value : "-";
+    }
+
+    private static int? ClampMs(int? value) => value is null ? null : Math.Clamp(value.Value, 0, MaxStageMs);
+
+    private static string Ms(int? value) => ClampMs(value)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-";
 
     // Keeps a client-sent value to one short line in the log.
     private static string Clean(string? value)
