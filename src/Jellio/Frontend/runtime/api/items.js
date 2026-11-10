@@ -1,9 +1,9 @@
 import { getDisplayCulture } from '../i18n.js';
 import { loadItemInfo } from '../itemInfo.js';
-import { getCurrentUserId, getServerAddress, getAuthHeaders } from '../auth.js';
+import { getCurrentUserId } from '../auth.js';
 import { isNetworkError, findDownload } from '../offline.js';
 import { isReleasedToday, isTodayItemStreamVerified, markTodayItemHasStream, isUnreleasedItem, filterReleasedItems } from '../releaseDate.js';
-import { ITEM_DETAILS_TIMEOUT_MS, SHORT_CACHE_TTL_MS, cache, cached, cachedRecent, getJson, invalidateCache, invalidateUserDataRows, rowJson } from './core.js';
+import { ITEM_DETAILS_TIMEOUT_MS, SHORT_CACHE_TTL_MS, authedFetch, cache, cached, cachedRecent, getJson, invalidateCache, invalidateUserDataRows, rowJson } from './core.js';
 import { getMediaSources } from './playback.js';
 
 export function getItem(itemId) {
@@ -205,9 +205,8 @@ function getHiddenNextUpSeries() {
 
 export function hideSeriesFromNextUp(seriesId) {
   invalidateCache('next-up-hidden');
-  return fetch(getServerAddress() + '/Jellio/next-up-hidden/' + encodeURIComponent(seriesId), {
+  return authedFetch('/Jellio/next-up-hidden/' + encodeURIComponent(seriesId), {
     method: 'POST',
-    headers: getAuthHeaders(),
   }).then(function (response) {
     if (!response.ok) throw new Error('Failed to hide series from Up Next');
     invalidateUserDataRows();

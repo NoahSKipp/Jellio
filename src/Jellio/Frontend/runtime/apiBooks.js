@@ -1,7 +1,7 @@
 import { getAccessToken, getAuthHeaders, getCurrentUserId, getDeviceId, getServerAddress } from './auth.js';
 import { getDisplayCulture } from './i18n.js';
 import { findDownload, getDownload, getLocalProgress, getOfflineBlob, isOffline, queueSync, setLocalProgress, updateDownload } from './offline.js';
-import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, requestJson, rowJson } from './api.js';
+import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, authedFetch, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, requestJson, rowJson } from './api.js';
 
 // The home screen's personal rows: small, fast, and what a reader is
 // waiting for, so they skip ahead of background lookups.
@@ -457,8 +457,8 @@ export async function streamMangaSources(query, onProgress, signal) {
   };
   let response;
   try {
-    response = await fetch(getServerAddress() + '/Jellio/manga/search/stream?q=' + encodeURIComponent(query), {
-      headers: Object.assign({ Accept: 'application/x-ndjson' }, getAuthHeaders()),
+    response = await authedFetch('/Jellio/manga/search/stream?q=' + encodeURIComponent(query), {
+      headers: { Accept: 'application/x-ndjson' },
       cache: 'no-store',
       signal: signal,
     });
@@ -527,9 +527,9 @@ export function bestMangaMatch(source) {
 }
 
 export async function startMangaImport(file) {
-  const response = await fetch(getServerAddress() + '/Jellio/manga/import', {
+  const response = await authedFetch('/Jellio/manga/import', {
     method: 'POST',
-    headers: Object.assign({ 'Content-Type': 'application/octet-stream', Accept: 'application/json' }, getAuthHeaders()),
+    headers: { 'Content-Type': 'application/octet-stream', Accept: 'application/json' },
     body: file,
   });
   const text = await response.text();
@@ -592,9 +592,7 @@ export async function fetchBookFile(itemId) {
     offlineErr.isNetworkError = true;
     throw offlineErr;
   }
-  const response = await fetch(getServerAddress() + '/Jellio/reading/file/' + itemId, {
-    headers: getAuthHeaders(),
-  });
+  const response = await authedFetch('/Jellio/reading/file/' + itemId);
   if (!response.ok) {
     const err = new Error('Could not load book file');
     err.status = response.status;
@@ -714,9 +712,7 @@ export function deleteVocabulary(id) {
 
 // A file download that needs the auth header, so it can't be a plain link.
 export async function downloadVocabularyExport(format) {
-  const response = await fetch(getServerAddress() + '/Jellio/vocab/export?format=' + encodeURIComponent(format), {
-    headers: getAuthHeaders(),
-  });
+  const response = await authedFetch('/Jellio/vocab/export?format=' + encodeURIComponent(format));
   if (!response.ok) throw new Error('Export failed');
   const disposition = response.headers.get('Content-Disposition') || '';
   const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);

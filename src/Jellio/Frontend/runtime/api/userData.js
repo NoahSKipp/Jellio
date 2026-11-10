@@ -1,17 +1,17 @@
 import { getDisplayCulture } from '../i18n.js';
-import { getCurrentUserId, getServerAddress, getAuthHeaders } from '../auth.js';
+import { getCurrentUserId } from '../auth.js';
 import { isUnreleasedItem } from '../releaseDate.js';
-import { invalidateCache, invalidateUserDataRows, postJson } from './core.js';
+import { authedFetch, invalidateCache, invalidateUserDataRows, postJson } from './core.js';
 import { getItem, getSeriesEpisodes } from './items.js';
 
 export async function setPlayed(itemId, isPlayed) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const response = await fetch(
-    getServerAddress() + '/Users/' + userId + '/PlayedItems/' + itemId,
+  const response = await authedFetch(
+    '/Users/' + userId + '/PlayedItems/' + itemId,
     {
       method: isPlayed ? 'POST' : 'DELETE',
-      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+      headers: { Accept: 'application/json' },
     },
   );
   if (!response.ok) {
@@ -96,11 +96,11 @@ export async function autoCompletePreviousEpisodesIfSkipped(episode) {
       for (let i = 0; i < toMark.length; i++) {
         const prevEp = toMark[i];
         try {
-          await fetch(
-            getServerAddress() + '/Users/' + userId + '/PlayedItems/' + prevEp.Id,
+          await authedFetch(
+            '/Users/' + userId + '/PlayedItems/' + prevEp.Id,
             {
               method: 'POST',
-              headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+              headers: { Accept: 'application/json' },
             },
           );
           invalidateCache('item:' + prevEp.Id);
@@ -120,9 +120,9 @@ export async function setItemRating(itemId, likes) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const path = '/Users/' + userId + '/Items/' + itemId + '/Rating' + (likes == null ? '' : '?likes=' + likes);
-  const response = await fetch(getServerAddress() + path, {
+  const response = await authedFetch(path, {
     method: likes == null ? 'DELETE' : 'POST',
-    headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+    headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
     const err = new Error('Request failed: Rating');

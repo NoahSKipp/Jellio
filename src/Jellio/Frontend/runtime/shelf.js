@@ -1,4 +1,4 @@
-import { getServerAddress, getAuthHeaders } from './auth.js';
+import { authedFetch } from './api.js';
 import { idKey } from './util.js';
 
 const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [], LibraryRemoved: [], SeriesDefaults: null };
@@ -13,9 +13,9 @@ export function seriesShelfKey(seriesKey) {
 }
 
 async function send(method, path, body) {
-  const response = await fetch(getServerAddress() + '/Jellio/shelf' + path, {
+  const response = await authedFetch('/Jellio/shelf' + path, {
     method: method,
-    headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store',
   });

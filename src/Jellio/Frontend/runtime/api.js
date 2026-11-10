@@ -6,6 +6,7 @@ export {
   getJson,
   postJson,
   deleteJson,
+  authedFetch,
   SHORT_CACHE_TTL_MS,
   cache,
   cached,

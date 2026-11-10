@@ -1,6 +1,6 @@
 import { setDisplayLanguage } from '../i18n.js';
-import { getCurrentUserId, updateSessionUser, getAccessToken, getServerAddress, getAuthHeaders } from '../auth.js';
-import { cached, getJson, invalidateCache, postJson, rowJson } from './core.js';
+import { getCurrentUserId, updateSessionUser, getAccessToken, getServerAddress } from '../auth.js';
+import { authedFetch, cached, getJson, invalidateCache, postJson, rowJson } from './core.js';
 
 export function getCurrentUser() {
   const userId = getCurrentUserId();
@@ -44,9 +44,9 @@ async function uploadUserAvatarBlob(blob) {
     reader.readAsDataURL(blob);
   });
 
-  const response = await fetch(getServerAddress() + '/Users/' + userId + '/Images/Primary', {
+  const response = await authedFetch('/Users/' + userId + '/Images/Primary', {
     method: 'POST',
-    headers: Object.assign({ 'Content-Type': contentType }, getAuthHeaders()),
+    headers: { 'Content-Type': contentType },
     body: base64,
   });
   if (!response.ok) {
@@ -87,9 +87,9 @@ export async function updateLanguagePreferences(audioLanguage, subtitleLanguage,
     newConfig.SubtitleMode = 'Default';
   }
   const configuration = Object.assign({}, user && user.Configuration, newConfig);
-  const response = await fetch(getServerAddress() + '/Users/' + userId + '/Configuration', {
+  const response = await authedFetch('/Users/' + userId + '/Configuration', {
     method: 'POST',
-    headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(configuration),
   });
   if (!response.ok) {
@@ -107,9 +107,9 @@ export function isQuickConnectEnabled() {
 }
 
 export async function authorizeQuickConnect(code) {
-  const response = await fetch(getServerAddress() + '/QuickConnect/Authorize?code=' + encodeURIComponent(code), {
+  const response = await authedFetch('/QuickConnect/Authorize?code=' + encodeURIComponent(code), {
     method: 'POST',
-    headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+    headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
     const err = new Error('Request failed: QuickConnect/Authorize');
@@ -146,8 +146,8 @@ export async function getServerDisplayPreferences() {
     return cachedDisplayPreferences;
   }
   try {
-    const res = await fetch(getServerAddress() + '/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
-      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+    const res = await authedFetch('/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
+      headers: { Accept: 'application/json' },
     });
     if (res.ok) {
       cachedDisplayPreferences = await res.json();
@@ -173,9 +173,9 @@ export async function saveServerDisplayPreferences(customPrefs) {
       CustomPrefs: merged,
     };
     cachedDisplayPreferences = Object.assign({}, existing, body, { UserId: userId });
-    await fetch(getServerAddress() + '/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
+    await authedFetch('/DisplayPreferences/usersettings?userId=' + encodeURIComponent(userId) + '&client=Jellio', {
       method: 'POST',
-      headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(body),
     });
   } catch (err) {

@@ -1,5 +1,5 @@
 import { getAuthHeaders, getCurrentUserId, getDeviceId, getServerAddress } from './auth.js';
-import { cache, cached, getJson, invalidateCache, postJson, setWatchlist } from './api.js';
+import { authedFetch, cache, cached, getJson, invalidateCache, postJson, setWatchlist } from './api.js';
 
 const LIVE_OPEN_TIMEOUT_MS = 30000;
 
@@ -118,9 +118,9 @@ async function streamLinkRequest(method, path, body, timeoutMs) {
     controller.abort();
   }, timeoutMs || 20000);
   try {
-    const headers = Object.assign({ Accept: 'application/json' }, getAuthHeaders());
+    const headers = { Accept: 'application/json' };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    const response = await fetch(getServerAddress() + '/Jellio/StreamLinks' + path, {
+    const response = await authedFetch('/Jellio/StreamLinks' + path, {
       method: method,
       headers: headers,
       body: body === undefined ? undefined : JSON.stringify(body),

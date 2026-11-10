@@ -1,5 +1,5 @@
-import { getCurrentUserId, getServerAddress, getAuthHeaders } from '../auth.js';
-import { SHORT_CACHE_TTL_MS, cached, getJson, invalidateCache, invalidateUserDataRows, postJson, rowJson } from './core.js';
+import { getCurrentUserId } from '../auth.js';
+import { SHORT_CACHE_TTL_MS, authedFetch, cached, getJson, invalidateCache, invalidateUserDataRows, postJson, rowJson } from './core.js';
 
 export function getWatchlistItems(limit) {
   const userId = getCurrentUserId();
@@ -50,11 +50,11 @@ export function addToGrouplist(itemId) {
 }
 
 export async function removeFromGrouplist(itemId) {
-  const response = await fetch(
-    getServerAddress() + '/Jellio/grouplist/' + itemId,
+  const response = await authedFetch(
+    '/Jellio/grouplist/' + itemId,
     {
       method: 'DELETE',
-      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+      headers: { Accept: 'application/json' },
     },
   );
   if (!response.ok) {
@@ -69,11 +69,11 @@ export async function removeFromGrouplist(itemId) {
 export async function setWatchlist(itemId, isWatchlisted) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const response = await fetch(
-    getServerAddress() + '/Users/' + userId + '/FavoriteItems/' + itemId,
+  const response = await authedFetch(
+    '/Users/' + userId + '/FavoriteItems/' + itemId,
     {
       method: isWatchlisted ? 'POST' : 'DELETE',
-      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+      headers: { Accept: 'application/json' },
     },
   );
   if (!response.ok) {
@@ -95,9 +95,8 @@ export function getCalendarEntries() {
 // Remove from Upcoming (or put back): a series watched once is otherwise
 // followed for years.
 export async function setUpcomingHidden(itemId, hidden) {
-  const response = await fetch(getServerAddress() + '/Jellio/calendar/hidden/' + encodeURIComponent(itemId), {
+  const response = await authedFetch('/Jellio/calendar/hidden/' + encodeURIComponent(itemId), {
     method: hidden ? 'POST' : 'DELETE',
-    headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Request failed: calendar/hidden');
   invalidateUserDataRows();

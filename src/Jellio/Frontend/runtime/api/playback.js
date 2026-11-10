@@ -1,9 +1,9 @@
 import { markPlaybackStarted, canReportProgress, markPlaybackStopped } from '../playbackGuard.js';
 import { setVideoTranscodePolicy, getVideoTranscodePolicy } from '../transcodePolicy.js';
 import { hasStreamInfo, filterPlayableSources } from '../quality.js';
-import { getCurrentUserId, getServerAddress, getAuthHeaders } from '../auth.js';
+import { getCurrentUserId } from '../auth.js';
 import { isOffline, queueSync } from '../offline.js';
-import { NEGOTIATION_TIMEOUT_MS, getJellioConfig, getJson, invalidateUserDataRows, invalidateUserDataRowsThrottled, postJson } from './core.js';
+import { NEGOTIATION_TIMEOUT_MS, authedFetch, getJellioConfig, getJson, invalidateUserDataRows, invalidateUserDataRowsThrottled, postJson } from './core.js';
 
 export { filterPlayableSources };
 
@@ -77,9 +77,8 @@ const prefetchedItemIds = new Set();
 export function prefetchStreams(itemId) {
   if (!itemId || prefetchedItemIds.has(itemId)) return Promise.resolve();
   prefetchedItemIds.add(itemId);
-  return fetch(getServerAddress() + '/gelato/prefetch/' + itemId, {
+  return authedFetch('/gelato/prefetch/' + itemId, {
     method: 'POST',
-    headers: getAuthHeaders(),
   })
     .then(function () {})
     .catch(function () {
@@ -90,9 +89,9 @@ export function prefetchStreams(itemId) {
 // Syncs the stream lists of a few titles on the server, one after another;
 // answers which were queued and which were already warm.
 export function prefetchStreamsBatch(itemIds, probe) {
-  return fetch(getServerAddress() + '/gelato/prefetch-batch', {
+  return authedFetch('/gelato/prefetch-batch', {
     method: 'POST',
-    headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeaders()),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ItemIds: itemIds, Probe: !!probe }),
   })
     .then(function (response) {
@@ -114,7 +113,7 @@ const WARM_CACHE_MS = 30 * 1000;
 export function getWarmSources(itemId, options) {
   const hit = warmCache.get(itemId);
   if (hit && Date.now() - hit.at < WARM_CACHE_MS && !(options && options.forceFresh)) return hit.promise;
-  const promise = fetch(getServerAddress() + '/gelato/warm/' + itemId, { headers: getAuthHeaders(), cache: 'no-store' })
+  const promise = authedFetch('/gelato/warm/' + itemId, { cache: 'no-store' })
     .then(function (response) {
       return response.ok ? response.json() : null;
     })
@@ -133,7 +132,7 @@ const tierCache = new Map();
 // { sourceId: qualityTier }, e.g. "2160p-dv"; empty when the server can't say.
 export function getQualityTiers(itemId) {
   if (tierCache.has(itemId)) return tierCache.get(itemId);
-  const promise = fetch(getServerAddress() + '/gelato/tiers/' + itemId, { headers: getAuthHeaders() })
+  const promise = authedFetch('/gelato/tiers/' + itemId)
     .then(function (response) {
       return response.ok ? response.json() : {};
     })
@@ -252,9 +251,8 @@ export function startSleepTimer(minutes) {
 }
 
 export async function cancelSleepTimer() {
-  const response = await fetch(getServerAddress() + '/Jellio/sleep-timer/cancel', {
+  const response = await authedFetch('/Jellio/sleep-timer/cancel', {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
   return response.ok;
 }

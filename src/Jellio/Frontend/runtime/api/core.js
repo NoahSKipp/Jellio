@@ -172,9 +172,7 @@ export async function requestJson(url, options, path, timeoutMs, externalSignal,
     }
 
     if (!response.ok) {
-      if (response.status === 401 && shouldConfirmUnauthorized(url, path, getServerAddress())) {
-        sessionGuard.report(getAccessToken());
-      }
+      confirmIfUnauthorized(response, url, path);
       const err = new Error('Request failed: ' + path);
       err.status = response.status;
       if (response.status === 503) {
@@ -258,6 +256,35 @@ export async function deleteJson(path, timeoutMs) {
     path,
     timeoutMs || DEFAULT_TIMEOUT_MS,
   );
+}
+
+function confirmIfUnauthorized(response, url, path) {
+  if (response.status === 401 && shouldConfirmUnauthorized(url, path, getServerAddress())) {
+    sessionGuard.report(getAccessToken());
+  }
+}
+
+// A plain fetch against the server for callers that need the Response
+// itself (blobs, streams, status checks). Adds the auth headers and, on a
+// 401, the same session confirmation as requestJson. options.slot waits
+// for a request slot like requestJson does.
+export async function authedFetch(path, init, options) {
+  const url = getServerAddress() + path;
+  const request = Object.assign({}, init, {
+    headers: Object.assign({}, init && init.headers, getAuthHeaders()),
+  });
+  const release = options && options.slot ? await acquireRequestSlot(!!options.priority) : null;
+  let response;
+  try {
+    response = await fetch(url, request);
+  } finally {
+    if (release) {
+      release();
+      checkMultiplexUpgrade();
+    }
+  }
+  confirmIfUnauthorized(response, url, path);
+  return response;
 }
 
 const CACHE_TTL_MS = 60000;

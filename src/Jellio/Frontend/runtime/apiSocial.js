@@ -1,5 +1,5 @@
-import { getAccessToken, getAuthHeaders, getServerAddress } from './auth.js';
-import { deleteJson, getJson, postJson } from './api.js';
+import { getAccessToken, getServerAddress } from './auth.js';
+import { authedFetch, deleteJson, getJson, postJson } from './api.js';
 import { applyServerSubtitleStyle } from './playerPrefs.js';
 
 export function getSyncPlayGroups() {
@@ -221,9 +221,9 @@ export async function setProfileBannerFromFile(file) {
     reader.readAsDataURL(file);
   });
 
-  const response = await fetch(getServerAddress() + '/Jellio/profile/banner', {
+  const response = await authedFetch('/Jellio/profile/banner', {
     method: 'POST',
-    headers: Object.assign({ 'Content-Type': contentType }, getAuthHeaders()),
+    headers: { 'Content-Type': contentType },
     body: base64,
   });
   if (!response.ok) {
