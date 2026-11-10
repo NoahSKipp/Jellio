@@ -164,8 +164,8 @@ function renderFailoverEnd(root, itemId, outcome, tried, language, reason) {
     root,
     itemId,
     tried.length > 1
-      ? 'None of the ' + tried.length + ' streams tried for this title worked. Try again later or pick one from Change Stream.'
-      : 'This stream could not be played and there is no other one to try. Pick one from Change Stream or try again later.',
+      ? t('player_failover_none_worked', { count: tried.length })
+      : t('player_failover_no_other'),
   );
 }
 
@@ -178,7 +178,7 @@ export async function renderPlayer(root, params) {
 
   const itemId = params.get('id');
   if (!itemId) {
-    renderPlaybackError(root, null, 'Nothing to play.');
+    renderPlaybackError(root, null, t('player_nothing_to_play'));
     return undefined;
   }
 
@@ -349,7 +349,7 @@ export async function renderPlayer(root, params) {
     box.appendChild(el('div', 'jellio-player-failover-spinner'));
     box.appendChild(el('div', 'jellio-player-failover-title', t('player_stream_error')));
     box.appendChild(
-      el('div', 'jellio-player-failover-text', 'Trying the next one (attempt ' + (failoverTried.length + 1) + ')…'),
+      el('div', 'jellio-player-failover-text', t('player_failover_trying_next', { n: failoverTried.length + 1 })),
     );
     const stop = el('button', 'jellio-player-failover-stop', t('action_stop'));
     stop.type = 'button';
@@ -462,8 +462,8 @@ export async function renderPlayer(root, params) {
       root,
       itemId,
       preferredMediaSourceId
-        ? 'That stream is no longer available. Pick a different one.'
-        : 'No playable stream was found for this title.',
+        ? t('player_stream_gone_pick')
+        : t('player_no_playable_stream'),
       function () {
         renderPlayer(root, params);
       },
@@ -1356,7 +1356,7 @@ export async function renderPlayer(root, params) {
     const newSpeed = PLAYBACK_SPEEDS[newIndex];
     if (newSpeed !== curSpeed) {
       applyPlaybackSpeed(newSpeed);
-      showPlayerToast(newSpeed + 'x Speed');
+      showPlayerToast(t('player_toast_speed', { speed: newSpeed }));
     }
   }
 
@@ -1476,8 +1476,8 @@ export async function renderPlayer(root, params) {
     }
     showPlayerToast(
       attempt === 0
-        ? 'Loading subtitles… this can take a moment for some sources.'
-        : 'Still loading subtitles… (attempt ' + (attempt + 1) + ' of ' + MAX_SUBTITLE_LOAD_ATTEMPTS + ')',
+        ? t('player_subtitles_loading')
+        : t('player_subtitles_loading_retry', { n: attempt + 1, total: MAX_SUBTITLE_LOAD_ATTEMPTS }),
     );
     const track = document.createElement('track');
     track.kind = 'subtitles';
@@ -1505,7 +1505,7 @@ export async function renderPlayer(root, params) {
         }, SUBTITLE_RETRY_DELAY_MS);
         return;
       }
-      showPlayerToast('That subtitle track could not be loaded.');
+      showPlayerToast(t('player_subtitle_load_failed'));
     });
   }
 
@@ -1526,7 +1526,7 @@ export async function renderPlayer(root, params) {
       const info = await getPlaybackInfo(itemId, resumeTicks, mediaSource.Id, currentAudioStreamIndex, stream.Index);
       const negotiated = info && info.MediaSources && info.MediaSources[0];
       if (!negotiated) {
-        showPlayerToast('That subtitle track is no longer available.');
+        showPlayerToast(t('player_subtitle_gone'));
         return;
       }
       mediaSource = negotiated;
@@ -1551,10 +1551,10 @@ export async function renderPlayer(root, params) {
       rebuildAudioMenu();
       rebuildSubtitleMenu();
       closePopovers(null);
-      showPlayerToast('Requested ' + (stream.DisplayTitle || stream.Language || 'subtitle') + ' (burned in), reloading…');
+      showPlayerToast(t('player_subtitle_burn_in', { name: stream.DisplayTitle || stream.Language || 'subtitle' }));
     } catch (err) {
       console.warn('Jellio: selectBurnedInSubtitle failed', err);
-      showPlayerToast('Subtitle switch failed: ' + (err && err.message ? err.message : err));
+      showPlayerToast(t('player_subtitle_switch_failed', { error: err && err.message ? err.message : err }));
     }
   }
 
@@ -1742,7 +1742,7 @@ export async function renderPlayer(root, params) {
     if (activeTrack && activeTrack.track) {
       applyCuesOffset(activeTrack.track, subtitleOffsetSec);
     }
-    showPlayerToast('Subtitle sync: ' + syncDisplay.textContent);
+    showPlayerToast(t('player_toast_subtitle_sync', { value: syncDisplay.textContent }));
   }
 
   minusHalf.addEventListener('click', function () { updateSubtitleOffset(-0.5); });
@@ -1825,7 +1825,7 @@ export async function renderPlayer(root, params) {
         );
         option.type = 'button';
         option.addEventListener('click', function () {
-          showPlayerToast('Switching to ' + audioStreamLabel(stream) + '…');
+          showPlayerToast(t('player_audio_switching', { name: audioStreamLabel(stream) }));
           if (isActive && currentAudioStreamIndex != null) {
             closePopovers(null);
             return;
@@ -1847,10 +1847,10 @@ export async function renderPlayer(root, params) {
       boostOption.textContent = t('player_dialogue_boost', { status: dialogueBoostEnabled ? t('state_on') : t('state_off') });
       if (dialogueBoostEnabled) {
         boostOption.classList.add('jellio-player-popover-option-active');
-        showPlayerToast('Dialogue Boost enabled (night mode dynamic compression)');
+        showPlayerToast(t('player_dialogue_boost_on'));
       } else {
         boostOption.classList.remove('jellio-player-popover-option-active');
-        showPlayerToast('Dialogue Boost disabled');
+        showPlayerToast(t('player_dialogue_boost_off'));
       }
     });
     audioMenu.appendChild(boostOption);
@@ -1865,7 +1865,7 @@ export async function renderPlayer(root, params) {
       const info = await getPlaybackInfo(itemId, resumeTicks, mediaSource.Id, stream.Index);
       const negotiated = pickNegotiatedSource(info, mediaSource.Id);
       if (!negotiated) {
-        showPlayerToast('That audio track is no longer available.');
+        showPlayerToast(t('player_audio_gone'));
         return;
       }
       mediaSource = negotiated;
@@ -1892,10 +1892,10 @@ export async function renderPlayer(root, params) {
       rebuildSubtitleMenu();
       rebuildAudioMenu();
       closePopovers(null);
-      showPlayerToast('Requested ' + audioStreamLabel(stream) + ', reloading…');
+      showPlayerToast(t('player_audio_requested', { name: audioStreamLabel(stream) }));
     } catch (err) {
       console.warn('Jellio: switchAudioTrack failed', err);
-      showPlayerToast('Audio switch failed: ' + (err && err.message ? err.message : err));
+      showPlayerToast(t('player_audio_switch_failed', { error: err && err.message ? err.message : err }));
     }
   }
   rebuildAudioMenu();
@@ -2132,13 +2132,13 @@ export async function renderPlayer(root, params) {
                   posterUrl: getImageUrl(itemId, 'Primary', { maxWidth: 800 }),
                 });
                 video.pause();
-                showPlayerToast('Streaming via Google Cast');
+                showPlayerToast(t('player_cast_google'));
               } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
                 // A Media Source stream cannot be handed to a cast device, so the
                 // picker would list nothing; route a plain stream URL instead.
                 useDirectSourceForRemote(castStreamUrl, false);
                 await promptRemotePlayback(video);
-                showPlayerToast('Streaming via Wireless Display');
+                showPlayerToast(t('player_cast_wireless'));
               } else {
                 await castToGoogleCast(castStreamUrl, item, currentSec, {
                   mediaSource: mediaSource,
@@ -2146,7 +2146,7 @@ export async function renderPlayer(root, params) {
                   posterUrl: getImageUrl(itemId, 'Primary', { maxWidth: 800 }),
                 });
                 video.pause();
-                showPlayerToast('Streaming via Google Cast');
+                showPlayerToast(t('player_cast_google'));
               }
             } catch (err) {
               if (
@@ -2160,7 +2160,7 @@ export async function renderPlayer(root, params) {
                 return;
               }
               console.warn('Jellio: Google Cast failed', err);
-              showPlayerToast('Cast could not connect: ' + (err && err.message ? err.message : 'no device selected'));
+              showPlayerToast(t('player_cast_connect_failed', { error: err && err.message ? err.message : t('player_cast_no_device') }));
             }
           });
           castBody.appendChild(gcastBtn);
@@ -2189,7 +2189,7 @@ export async function renderPlayer(root, params) {
               }), true);
               promptAirPlay(video);
             } catch (err) {
-              showPlayerToast('AirPlay not available');
+              showPlayerToast(t('player_airplay_unavailable'));
             }
           });
           castBody.appendChild(airplayBtn);
@@ -2241,12 +2241,12 @@ export async function renderPlayer(root, params) {
         const currentTicks = Math.round((streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0)) * TICKS_PER_SECOND);
         video.pause();
         castMenu.classList.add('jellio-player-popover-hidden');
-        showPlayerToast('Streaming to ' + target.name + '...');
+        showPlayerToast(t('player_cast_streaming_to', { name: target.name }));
         await castToJellyfinSession(target, itemId, currentTicks, mediaSource, currentAudioStreamIndex, activeSubtitleStreamIndex);
-        showPlayerToast('Casting on ' + target.name);
+        showPlayerToast(t('player_cast_casting_on', { name: target.name }));
       } catch (err) {
         console.warn('Jellio: failed to cast to ' + target.name, err);
-        showPlayerToast('Could not cast to ' + target.name);
+        showPlayerToast(t('player_cast_failed', { name: target.name }));
       }
     });
 
@@ -2372,7 +2372,7 @@ export async function renderPlayer(root, params) {
       localStorage.setItem(AUTOSKIP_KEY, String(autoSkipEnabled));
     } catch (e) {}
     syncAutoSkipUI();
-    showPlayerToast(autoSkipEnabled ? 'Auto-skip enabled' : 'Auto-skip disabled');
+    showPlayerToast(t(autoSkipEnabled ? 'player_autoskip_on' : 'player_autoskip_off'));
   });
   settingsMenu.appendChild(autoSkipOption);
 
@@ -2603,7 +2603,7 @@ export async function renderPlayer(root, params) {
         source,
         function (picked) {
           if (verdict && blocking && picked.Id !== mediaSource.Id) {
-            showPlayerToast('This stream needs the server to re-encode the video, which is turned off on this server.');
+            showPlayerToast(t('player_reencode_blocked'));
             return;
           }
           closeSidePanels();
@@ -2810,7 +2810,7 @@ export async function renderPlayer(root, params) {
         if (hasReportedStart) {
           hideLoadingLogo();
         }
-        showPlayerToast('Could not start playback. Try pressing play again.');
+        showPlayerToast(t('player_start_failed'));
       });
     }
   }
@@ -2876,7 +2876,7 @@ export async function renderPlayer(root, params) {
       const info = await getPlaybackInfo(itemId, targetTicks, mediaSource.Id, currentAudioStreamIndex, burnedInSubtitleIndex);
       const negotiated = pickNegotiatedSource(info, mediaSource.Id);
       if (!negotiated) {
-        showPlayerToast('Could not seek, that stream is no longer available.');
+        showPlayerToast(t('player_seek_gone'));
         return;
       }
       mediaSource = negotiated;
@@ -2898,7 +2898,7 @@ export async function renderPlayer(root, params) {
       if (wasPlaying) waitForPlayableBuffer(attemptPlay);
     } catch (err) {
       console.warn('Jellio: seek failed', err);
-      showPlayerToast('Seek failed: ' + (err && err.message ? err.message : err));
+      showPlayerToast(t('player_seek_failed', { error: err && err.message ? err.message : err }));
     }
   }
 
@@ -2993,7 +2993,7 @@ export async function renderPlayer(root, params) {
       const negotiated = pickNegotiatedSource(info, source.Id);
       if (!negotiated) {
         closeSwitchCard();
-        showPlayerToast('That stream is no longer available.');
+        showPlayerToast(t('player_stream_gone'));
         return;
       }
       mediaSource = negotiated;
@@ -3057,7 +3057,7 @@ export async function renderPlayer(root, params) {
     } catch (err) {
       console.warn('Jellio: could not switch source', err);
       closeSwitchCard();
-      showPlayerToast('Could not switch streams. Check your connection and try again.');
+      showPlayerToast(t('player_switch_failed'));
     } finally {
       switchingSource = false;
     }
@@ -3216,18 +3216,18 @@ export async function renderPlayer(root, params) {
       video.volume = newVol / 100;
       sendRemoteVolume(newVol).catch(function () {});
       syncVolumeUI();
-      showPlayerToast('TV Volume ' + newVol + '%');
+      showPlayerToast(t('player_tv_volume', { percent: newVol }));
       return;
     }
     video.muted = false;
     video.volume = Math.min(1, Math.max(0, video.volume + delta));
     syncVolumeUI();
-    showPlayerToast('Volume ' + Math.round(video.volume * 100) + '%');
+    showPlayerToast(t('player_toast_volume', { percent: Math.round(video.volume * 100) }));
   }
   function toggleMute() {
     video.muted = !video.muted;
     syncVolumeUI();
-    showPlayerToast(video.muted ? 'Muted' : 'Unmuted');
+    showPlayerToast(t(video.muted ? 'player_muted' : 'player_unmuted'));
   }
   function onPlayerKeydown(event) {
     if (screenTornDown || isTypingTarget(event.target)) return;
@@ -3568,7 +3568,7 @@ export async function renderPlayer(root, params) {
           .then(function (info) {
             const negotiated = pickNegotiatedSource(info, mediaSource.Id);
             if (!negotiated) {
-              showPlayerToast('Could not start over, that stream is no longer available.');
+              showPlayerToast(t('player_start_over_gone'));
               return;
             }
             mediaSource = negotiated;
@@ -3587,7 +3587,7 @@ export async function renderPlayer(root, params) {
           })
           .catch(function (err) {
             console.warn('Jellio: could not start over', err);
-            showPlayerToast('Could not start over: ' + (err && err.message ? err.message : err));
+            showPlayerToast(t('player_start_over_failed', { error: err && err.message ? err.message : err }));
           });
       },
     );
@@ -3953,7 +3953,7 @@ export async function renderPlayer(root, params) {
     if (!failoverOverlay) return;
     failoverOverlay.remove();
     failoverOverlay = null;
-    showPlayerToast('Now playing: ' + sourceLabel(mediaSource));
+    showPlayerToast(t('player_now_playing', { name: sourceLabel(mediaSource) }));
   }
 
   // No picture within START_TIMEOUT_MS of the first play attempt.
@@ -4142,7 +4142,7 @@ export async function renderPlayer(root, params) {
       'src=' + video.currentSrc,
     );
     if (hasReportedStart) {
-      showPlayerToast('Playback stopped unexpectedly. Try a different stream.');
+      showPlayerToast(t('player_stopped_unexpectedly'));
       return;
     }
     if (!streamIsTranscoded && !retriedWithTranscode && !failoverStarted && getVideoTranscodePolicy() !== 'Block') {
@@ -4182,7 +4182,7 @@ export async function renderPlayer(root, params) {
             renderPlaybackError(
               root,
               itemId,
-              'This stream could not be played. Try a different one from Change Stream.',
+              t('player_stream_failed_change'),
             );
           });
         });
@@ -4194,7 +4194,7 @@ export async function renderPlayer(root, params) {
       renderPlaybackError(
         root,
         itemId,
-        'This stream could not be played. Try a different one from Change Stream.',
+        t('player_stream_failed_change'),
       );
     });
   });
@@ -4293,7 +4293,7 @@ export async function renderPlayer(root, params) {
         dismissedSkipKind = activeSegment.eyebrow;
         skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
         performSeek(activeSegment.target);
-        showPlayerToast('Skipped Intro');
+        showPlayerToast(t('player_skipped_intro'));
         return;
       }
       skipTargetSeconds = activeSegment.target;
@@ -4492,7 +4492,7 @@ export async function renderPlayer(root, params) {
         }
         window.setTimeout(function () {
           if (!syncPlaylistItemId) {
-            showPlayerToast('Group Watch could not sync this. Check everyone in the group has library access to this title.');
+            showPlayerToast(t('player_sync_no_access'));
           }
         }, 6000);
       })
