@@ -74,7 +74,10 @@ function inStartupWindow() {
 
 function startupRequestCap() {
   if (!rowCacheFlag || !inStartupWindow()) return Infinity;
-  return rowCache && rowCache.isPlayingElsewhere() ? 1 : 3;
+  if (rowCache && rowCache.isPlayingElsewhere()) return 1;
+  // HTTP/2+ multiplexes on one connection, so the HTTP/1.1 cap only adds queueing.
+  if (!isMultiplexedProtocol) detectMultiplexing();
+  return isMultiplexedProtocol ? 8 : 3;
 }
 
 function pumpRequestQueue() {
