@@ -82,13 +82,6 @@ public class GroupWatchRankingController(GroupWatchRankingService rankingService
         return Ok(session);
     }
 
-    [HttpPost("{groupId}/ranking/cancel")]
-    public IActionResult Cancel([FromRoute] Guid groupId)
-    {
-        rankingService.Cancel(groupId);
-        return Ok();
-    }
-
     private Guid GetUserId()
     {
         if (

@@ -60,15 +60,6 @@ public class VocabularyStore(IApplicationPaths applicationPaths)
         }
     }
 
-    public IReadOnlyList<VocabEntry> GetDue(Guid userId, int limit)
-    {
-        lock (_lock)
-        {
-            var now = DateTimeOffset.UtcNow;
-            return LoadLocked(userId).Where(e => e.DueAt <= now).OrderBy(e => e.DueAt).Take(limit).ToList();
-        }
-    }
-
     // Saving a word already in the deck (same word, same language) keeps
     // its review history and just refreshes what's missing.
     public VocabEntry? Add(Guid userId, VocabEntry entry)

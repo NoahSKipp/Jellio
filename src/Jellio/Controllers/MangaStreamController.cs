@@ -20,7 +20,6 @@ namespace Jellio.Controllers;
 public class MangaStreamController(
     MangaStreamService stream,
     MangaUpdatesService updates,
-    SuwayomiClient suwayomi,
     ReadingProgressStore progressStore,
     ShelfStore shelfStore,
     ILogger<MangaStreamController> logger) : ControllerBase
@@ -42,8 +41,6 @@ public class MangaStreamController(
         DateTimeOffset? LastReadAt,
         ChapterRef? Resume,
         string? FirstChapterId);
-
-    public record SaveBody(List<int>? ChapterIds);
 
     [HttpGet("library")]
     public async Task<IActionResult> Library(CancellationToken cancellationToken)
@@ -239,31 +236,6 @@ public class MangaStreamController(
         }
 
         await buffer.DrainAsync(Response.Body, cancellationToken).ConfigureAwait(false);
-    }
-
-    // Downloads the series (or some chapters) into the library through
-    // Suwayomi, for keeping on the server.
-    [HttpPost("series/{mangaId:int}/save")]
-    public async Task<IActionResult> Save(int mangaId, [FromBody] SaveBody? body, CancellationToken cancellationToken)
-    {
-        var series = await stream.GetSeriesAsync(mangaId, cancellationToken).ConfigureAwait(false);
-        if (series is null)
-        {
-            return NotFound();
-        }
-
-        var wanted = body?.ChapterIds is { Count: > 0 } ids ? ids.ToHashSet() : null;
-        var queue = series.Chapters
-            .Where(chapter => !chapter.IsDownloaded && (wanted is null || wanted.Contains(chapter.ChapterId)))
-            .Select(chapter => chapter.ChapterId)
-            .ToList();
-        if (!await suwayomi.EnqueueDownloadsAsync(queue, cancellationToken).ConfigureAwait(false))
-        {
-            return StatusCode(502, "Suwayomi couldn't queue the downloads");
-        }
-
-        stream.Invalidate();
-        return Ok(new { Queued = queue.Count });
     }
 
     private static SeriesSummary Summarize(StreamSeries series, Dictionary<string, ReadingProgressRecord> progress, SeriesPrefs? prefs)

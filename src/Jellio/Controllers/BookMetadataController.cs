@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,11 +7,8 @@ using Jellio.Services.Chaptarr;
 using Jellio.Services.Manga;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Enums;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Dto;
-using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Jellio.Extensions;
@@ -22,7 +18,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/books/item")]
 [Authorize]
-public class BookMetadataController(BookMetadataService metadataService, ChaptarrClient chaptarrClient, ILibraryManager libraryManager, IUserManager userManager, IDtoService dtoService, MangaCoverService coverService) : ControllerBase
+public class BookMetadataController(BookMetadataService metadataService, ChaptarrClient chaptarrClient, ILibraryManager libraryManager, IUserManager userManager, MangaCoverService coverService) : ControllerBase
 {
     public record BookMetadataResponse(
         string Title,
@@ -112,118 +108,6 @@ public class BookMetadataController(BookMetadataService metadataService, Chaptar
         }
 
         return Ok(result);
-    }
-
-    private record CachedAudiobookGroup(
-        AudioBook Representative,
-        string Title,
-        string? Author,
-        IReadOnlyList<string>? Artists,
-        IReadOnlyList<string>? AlbumArtists,
-        string? Series,
-        List<string> TrackNames,
-        string Path,
-        long TotalRunTimeTicks
-    );
-
-    private static readonly ConcurrentDictionary<Guid, (DateTime CachedAt, List<CachedAudiobookGroup> Groups)> AudiobookGroupsCache = new();
-    private static readonly TimeSpan AudiobookCacheTtl = TimeSpan.FromMinutes(5);
-
-    [HttpGet("~/Jellio/audiobooks/search")]
-    public IActionResult SearchAudiobooks([FromQuery] string searchTerm, [FromQuery] int limit = 50)
-    {
-        var user = GetUser();
-        if (user is null)
-        {
-            return BadRequest("Invalid user session");
-        }
-
-        var term = searchTerm?.Trim();
-        if (string.IsNullOrEmpty(term))
-        {
-            return Ok(new { Items = Array.Empty<object>() });
-        }
-
-        if (!AudiobookGroupsCache.TryGetValue(user.Id, out var cached) || (DateTime.UtcNow - cached.CachedAt) > AudiobookCacheTtl)
-        {
-            var allAudioBooks = libraryManager.GetItemList(new InternalItemsQuery(user)
-            {
-                Recursive = true,
-                IncludeItemTypes = [BaseItemKind.AudioBook],
-            });
-
-            var groups = allAudioBooks
-                .OfType<AudioBook>()
-                .GroupBy(item => (item.ParentId, item.Album ?? string.Empty));
-
-            var builtGroups = new List<CachedAudiobookGroup>();
-            foreach (var group in groups)
-            {
-                var representative = group.FirstOrDefault(item => item.HasImage(MediaBrowser.Model.Entities.ImageType.Primary)) ?? group.First();
-                var title = BookMetadataService.AudiobookTitle(representative);
-                var author = metadataService.KnownAuthor(representative)
-                    ?? (representative.AlbumArtists is { Count: > 0 } aa ? aa[0] : null)
-                    ?? (representative.Artists is { Count: > 0 } a ? a[0] : null);
-                var series = (representative as IHasSeries)?.SeriesName;
-                var trackNames = group.Select(item => item.Name).Where(name => !string.IsNullOrEmpty(name)).ToList();
-                var totalRunTime = group.Sum(item => item.RunTimeTicks ?? 0L);
-
-                builtGroups.Add(new CachedAudiobookGroup(
-                    representative,
-                    title,
-                    author,
-                    representative.Artists,
-                    representative.AlbumArtists,
-                    series,
-                    trackNames,
-                    representative.Path ?? string.Empty,
-                    totalRunTime
-                ));
-            }
-
-            cached = (DateTime.UtcNow, builtGroups);
-            AudiobookGroupsCache[user.Id] = cached;
-        }
-
-        var dtoOptions = new DtoOptions
-        {
-            Fields = [ItemFields.PrimaryImageAspectRatio, ItemFields.DateCreated, ItemFields.Genres, ItemFields.Path],
-            EnableUserData = true,
-        };
-
-        var matches = new List<BaseItemDto>();
-        var maxResults = limit <= 0 ? 50 : Math.Min(limit, 100);
-
-        foreach (var group in cached.Groups)
-        {
-            var matchesTitle = !string.IsNullOrEmpty(group.Title) && group.Title.Contains(term, StringComparison.OrdinalIgnoreCase);
-            var matchesAuthor = (!string.IsNullOrEmpty(group.Author) && group.Author.Contains(term, StringComparison.OrdinalIgnoreCase))
-                || (group.Artists is not null && group.Artists.Any(a => !string.IsNullOrEmpty(a) && a.Contains(term, StringComparison.OrdinalIgnoreCase)))
-                || (group.AlbumArtists is not null && group.AlbumArtists.Any(a => !string.IsNullOrEmpty(a) && a.Contains(term, StringComparison.OrdinalIgnoreCase)));
-            var matchesSeries = !string.IsNullOrEmpty(group.Series) && group.Series.Contains(term, StringComparison.OrdinalIgnoreCase);
-            var matchesTrack = group.TrackNames.Any(name => name.Contains(term, StringComparison.OrdinalIgnoreCase));
-            var matchesPath = !string.IsNullOrEmpty(group.Path) && group.Path.Contains(term, StringComparison.OrdinalIgnoreCase);
-
-            if (matchesTitle || matchesAuthor || matchesSeries || matchesTrack || matchesPath)
-            {
-                var dto = dtoService.GetBaseItemDto(group.Representative, dtoOptions, user);
-                dto.Name = group.Title;
-                dto.SortName = group.Title;
-                if (group.TotalRunTimeTicks > 0)
-                {
-                    dto.RunTimeTicks = group.TotalRunTimeTicks;
-                }
-
-                matches.Add(dto);
-
-                if (matches.Count >= maxResults)
-                {
-                    break;
-                }
-            }
-        }
-
-        return Ok(new { Items = matches });
     }
 
     [HttpGet("{itemId}/metadata")]

@@ -145,26 +145,6 @@ public class StreamLinkStore(IApplicationPaths applicationPaths)
         return turnedFailing;
     }
 
-    public bool Rename(Guid userId, string id, string name)
-    {
-        var found = false;
-        _store.UpdateIfChanged(userId, links =>
-        {
-            var link = links.FirstOrDefault(l => l.Id == id);
-            if (link == null || link.Name == name)
-            {
-                found = link != null;
-                return false;
-            }
-
-            link.Name = name;
-            found = true;
-            return true;
-        });
-
-        return found;
-    }
-
     // Links that have been failing since before the cutoff, taken out.
     public List<StreamLink> RemoveFailingSince(Guid userId, DateTime cutoff)
     {

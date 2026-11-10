@@ -45,13 +45,6 @@ public class VocabularyController(VocabularyStore store) : ControllerBase
         return userId == Guid.Empty ? BadRequest("Invalid user session") : Ok(store.GetAll(userId));
     }
 
-    [HttpGet("due")]
-    public IActionResult GetDue([FromQuery] int limit)
-    {
-        var userId = GetUserId();
-        return userId == Guid.Empty ? BadRequest("Invalid user session") : Ok(store.GetDue(userId, limit <= 0 ? 50 : Math.Min(limit, 500)));
-    }
-
     [HttpPost]
     public IActionResult Add([FromBody] VocabBody body)
     {

@@ -119,14 +119,6 @@ public class GroupWatchRankingService(GroupWatchChatService chatService)
         }
     }
 
-    public void Cancel(Guid groupId)
-    {
-        lock (_lock)
-        {
-            _sessionsByGroup.TryRemove(groupId, out _);
-        }
-    }
-
     private void SweepStaleSessions()
     {
         var cutoff = DateTime.UtcNow - StaleSessionAge;

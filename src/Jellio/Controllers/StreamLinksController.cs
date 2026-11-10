@@ -17,8 +17,6 @@ namespace Jellio.Controllers;
 
 public sealed record StreamLinkRequest(string? Url, string? Name);
 
-public sealed record StreamLinkRenameRequest(string? Name);
-
 public sealed record StreamLinkPlayReport(bool Ok);
 
 /// <summary>
@@ -97,18 +95,6 @@ public class StreamLinksController(
 
     [HttpDelete("{id}/entries/{index:int}")]
     public IActionResult RemoveEntry(string id, int index) => store.RemoveEntry(GetUserId(), id, index) ? Ok() : NotFound();
-
-    [HttpPost("{id}/rename")]
-    public IActionResult Rename(string id, [FromBody] StreamLinkRenameRequest body)
-    {
-        var name = CleanName(body.Name);
-        if (name == null)
-        {
-            return BadRequest();
-        }
-
-        return store.Rename(GetUserId(), id, name) ? Ok() : NotFound();
-    }
 
     [HttpDelete("{id}")]
     public IActionResult Remove(string id) => store.Remove(GetUserId(), id) ? Ok() : NotFound();
