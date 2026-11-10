@@ -5,6 +5,23 @@ import { getMotionLevel, onMotionChange } from '../runtime/motionSettings.js';
 
 const THEME_ORDER = ['halloween', 'newyear', 'valentine', 'christmas'];
 
+// At most one call per frame however fast resize events arrive.
+function perFrame(fn) {
+  let frame = 0;
+  function scheduled() {
+    if (frame) return;
+    frame = window.requestAnimationFrame(function () {
+      frame = 0;
+      fn();
+    });
+  }
+  scheduled.cancel = function () {
+    if (frame) window.cancelAnimationFrame(frame);
+    frame = 0;
+  };
+  return scheduled;
+}
+
 function inRange(month, day, range) {
   if (!range) return false;
   const now = month * 100 + day;
@@ -103,7 +120,8 @@ function mountHalloweenSky() {
     canvas.height = window.innerHeight;
   }
   fit();
-  window.addEventListener('resize', fit);
+  const onResize = perFrame(fit);
+  window.addEventListener('resize', onResize);
 
   function fork(x1, y1, x2, y2, spread, out) {
     if (spread < 3) {
@@ -176,7 +194,8 @@ function mountHalloweenSky() {
   return function cleanup() {
     window.clearTimeout(strikeTimer);
     timers.forEach((id) => window.clearTimeout(id));
-    window.removeEventListener('resize', fit);
+    window.removeEventListener('resize', onResize);
+    onResize.cancel();
     sky.remove();
   };
 }
@@ -320,8 +339,16 @@ function fullCanvas(container) {
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
   fit();
-  window.addEventListener('resize', fit);
-  return { ctx: ctx, size: size, dispose: () => window.removeEventListener('resize', fit) };
+  const onResize = perFrame(fit);
+  window.addEventListener('resize', onResize);
+  return {
+    ctx: ctx,
+    size: size,
+    dispose: function () {
+      window.removeEventListener('resize', onResize);
+      onResize.cancel();
+    },
+  };
 }
 
 function pickOne(list) {
