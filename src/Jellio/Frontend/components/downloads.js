@@ -21,6 +21,7 @@ import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 import { idKey } from '../runtime/util.js';
 import { canDownload, downloadKindFor } from './downloadSupport.js';
+import { formatBytes } from '../runtime/format.js';
 export { canDownload };
 
 // The reader's libraries, fetched once so the service worker keeps them
@@ -89,18 +90,6 @@ export function formatTimeLeft(seconds) {
   if (minutes < 90) return 'about ' + minutes + ' min left';
   const hours = Math.floor(minutes / 60);
   return 'about ' + hours + ' h ' + (minutes % 60) + ' min left';
-}
-
-export function formatBytes(bytes) {
-  if (!bytes) return '0 MB';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return (value >= 10 || unit < 2 ? Math.round(value) : value.toFixed(1)) + ' ' + units[unit];
 }
 
 // Books and manga chapters: the file the reader opens, its cover, and

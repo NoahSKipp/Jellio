@@ -11,6 +11,7 @@ import { isDucking } from '../runtime/duck.js';
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 import { readString, writeString } from '../runtime/storage.js';
+import { formatClock } from '../runtime/format.js';
 
 const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
@@ -143,15 +144,6 @@ export function getDefaultAudiobookSpeed() {
 
 export function setDefaultAudiobookSpeed(speed) {
   writeString(DEFAULT_SPEED_KEY, String(speed));
-}
-
-export function formatClock(totalSeconds) {
-  const seconds = Math.max(0, Math.floor(totalSeconds || 0));
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const mm = h ? String(m).padStart(2, '0') : String(m);
-  return (h ? h + ':' : '') + mm + ':' + String(s).padStart(2, '0');
 }
 
 let activeSession = null;

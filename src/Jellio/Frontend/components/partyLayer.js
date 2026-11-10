@@ -7,11 +7,11 @@ import {
   COUNTDOWN_SECONDS,
   READY_WAIT_MS,
   splitTimestamps,
-  formatClock,
   clockSkewMs,
   countdownSecondsLeft,
   readyCount,
 } from '../runtime/parties.js';
+import { formatClock } from '../runtime/format.js';
 
 const STATE_POLL_MS = 2000;
 const CHAT_POLL_MS = 3000;

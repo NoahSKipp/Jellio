@@ -69,6 +69,7 @@ import { preferredAudioIndex } from '../components/playPrefetch.js';
 import { syncDriftSeconds as driftFromCommand } from '../runtime/syncDrift.js';
 import { rememberedSourceId } from '../components/streamPicker.js';
 import { readString, writeString, remove } from '../runtime/storage.js';
+import { formatClock } from '../runtime/format.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -80,17 +81,6 @@ const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60, 90];
 const EPISODE_SLEEP_TIMER_OPTIONS = [1, 2, 3, 5];
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const IDLE_HIDE_MS = 3000;
-
-function formatTime(seconds) {
-  if (!isFinite(seconds) || seconds < 0) seconds = 0;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const pad = function (n) {
-    return n < 10 ? '0' + n : String(n);
-  };
-  return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
-}
 
 function willUseHls(source, forceTranscode) {
   const directPlay = !forceTranscode && canBrowserDirectPlay(source);
@@ -570,7 +560,7 @@ export async function renderPlayer(root, params) {
     return !videoDurationGrowing && (!streamIsTranscoded || supportsNativeHls());
   }
   function paintDuration() {
-    durationLabel.textContent = durationSeconds ? formatTime(durationSeconds) : '--:--';
+    durationLabel.textContent = durationSeconds ? formatClock(durationSeconds) : '--:--';
   }
 
   // A buffering switch carries the position over and plays straight on.
@@ -1115,7 +1105,7 @@ export async function renderPlayer(root, params) {
   let isScrubHovering = false;
 
   const seekRow = el('div', 'jellio-player-seek-row');
-  const currentTimeLabel = el('span', 'jellio-player-time', formatTime(startTicks / TICKS_PER_SECOND));
+  const currentTimeLabel = el('span', 'jellio-player-time', formatClock(startTicks / TICKS_PER_SECOND));
   const seekWrap = el('div', 'jellio-player-seek-wrap');
   const seekBar = document.createElement('input');
   seekBar.type = 'range';
@@ -1124,7 +1114,7 @@ export async function renderPlayer(root, params) {
   seekBar.max = '100';
   seekBar.value = '0';
   seekBar.setAttribute('aria-label', t('player_seek'));
-  const durationLabel = el('span', 'jellio-player-time', durationSeconds ? formatTime(durationSeconds) : '--:--');
+  const durationLabel = el('span', 'jellio-player-time', durationSeconds ? formatClock(durationSeconds) : '--:--');
 
   const scrubTip = el('div', 'jellio-player-scrub-tip');
   const scrubTime = el('span', 'jellio-player-scrub-time');
@@ -1159,7 +1149,7 @@ export async function renderPlayer(root, params) {
     const ratio = clampedX / rect.width;
     const hoverSeconds = ratio * durationSeconds;
 
-    scrubTime.textContent = formatTime(hoverSeconds);
+    scrubTime.textContent = formatClock(hoverSeconds);
 
     const chapterName = getChapterNameAt(hoverSeconds);
     if (chapterName) {
@@ -2347,7 +2337,7 @@ export async function renderPlayer(root, params) {
 
       if (castState.positionTicks != null && !seeking) {
         const sec = castState.positionTicks / TICKS_PER_SECOND;
-        currentTimeLabel.textContent = formatTime(sec);
+        currentTimeLabel.textContent = formatClock(sec);
         if (durationSeconds > 0) {
           seekBar.value = String(Math.min(100, Math.max(0, (sec / durationSeconds) * 100)));
         }
@@ -4237,7 +4227,7 @@ export async function renderPlayer(root, params) {
     if (durationSeconds) {
       seekBar.value = String((positionSeconds / durationSeconds) * 100);
     }
-    currentTimeLabel.textContent = formatTime(positionSeconds);
+    currentTimeLabel.textContent = formatClock(positionSeconds);
     syncMediaPosition();
 
     if (!hasReportedStart) {
@@ -4316,7 +4306,7 @@ export async function renderPlayer(root, params) {
     seeking = true;
     if (durationSeconds) {
       const target = (Number(seekBar.value) / 100) * durationSeconds;
-      currentTimeLabel.textContent = formatTime(target);
+      currentTimeLabel.textContent = formatClock(target);
       updateScrubTipForValue(seekBar.value);
     }
   });

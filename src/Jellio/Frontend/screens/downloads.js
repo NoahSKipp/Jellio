@@ -14,7 +14,8 @@ import {
   isAutoDeleteReadEnabled,
   setAutoDeleteReadEnabled,
 } from '../runtime/offline.js';
-import { formatBytes, formatTimeLeft } from '../components/downloads.js';
+import { formatTimeLeft } from '../components/downloads.js';
+import { formatBytes } from '../runtime/format.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 

@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getMediaSources, getImageUrl, TICKS_PER_SECOND, canBrowserDirectPlay, loadVideoTranscodePolicy, getWarmSources, getQualityTiers } from '../runtime/api.js';
+import { getMediaSources, getImageUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, getWarmSources, getQualityTiers } from '../runtime/api.js';
 import { isPreferReadyEnabled, preferReadySource, normalizeId } from '../runtime/readySources.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
@@ -15,6 +15,7 @@ import { renderLoading, renderRetry } from './networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { el } from '../runtime/dom.js';
 import { readString, writeString, writeJson } from '../runtime/storage.js';
+import { formatFileSize, formatTicksClock } from '../runtime/format.js';
 
 const OVERLAY_ID = 'jellioStreamPicker';
 const READY_INFO_WAIT_MS = 1200;
@@ -122,14 +123,6 @@ function sourceBitrateLabel(source) {
   return (video.BitRate / 1000000).toFixed(1) + ' Mbps';
 }
 
-function formatFileSize(bytes) {
-  if (!bytes) return '';
-  const gb = bytes / (1024 * 1024 * 1024);
-  if (gb >= 1) return gb.toFixed(1) + ' GB';
-  const mb = Math.round(bytes / (1024 * 1024));
-  return mb > 0 ? mb + ' MB' : '';
-}
-
 function sourceAudioLabel(source) {
   const audio = (source.MediaStreams || []).filter(function (stream) {
     return stream.Type === 'Audio';
@@ -215,16 +208,6 @@ export function sourceAudioLanguages(source) {
 
 export function playHash(itemId, mediaSourceId) {
   return '#/play?id=' + itemId + (mediaSourceId ? '&mediaSourceId=' + mediaSourceId : '');
-}
-
-function formatResumeLabel(ticks) {
-  const totalSeconds = Math.floor(ticks / TICKS_PER_SECOND);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const ss = String(seconds).padStart(2, '0');
-  if (hours > 0) return hours + ':' + String(minutes).padStart(2, '0') + ':' + ss;
-  return minutes + ':' + ss;
 }
 
 const OUTLOOK_ICONS = { good: 'check_circle', warn: 'warning', block: 'block' };
@@ -616,7 +599,7 @@ export async function openStreamPicker(item, options) {
 
   const resumeTicks = sources.length && item.UserData && item.UserData.PlaybackPositionTicks;
   if (resumeTicks) {
-    const resumeButton = el('button', 'jellio-stream-picker-resume', 'Resume from ' + formatResumeLabel(resumeTicks));
+    const resumeButton = el('button', 'jellio-stream-picker-resume', 'Resume from ' + formatTicksClock(resumeTicks));
     resumeButton.type = 'button';
     resumeButton.addEventListener('click', function () {
       const remembered = readRememberedSources()[item.Id];

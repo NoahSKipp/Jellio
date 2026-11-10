@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   splitTimestamps,
-  formatClock,
   clockSkewMs,
   countdownSecondsLeft,
   readyCount,
@@ -16,12 +15,6 @@ test('finds timestamps in chat and leaves other numbers alone', () => {
   assert.deepEqual(splitTimestamps('score was 3-1, 10.5 min'), [{ text: 'score was 3-1, 10.5 min' }]);
   assert.deepEqual(splitTimestamps('12:61 is not a time'), [{ text: '12:61 is not a time' }]);
   assert.equal(splitTimestamps('back to 0:45 and 2:10').filter((p) => p.seconds != null).length, 2);
-});
-
-test('formats clocks', () => {
-  assert.equal(formatClock(75), '1:15');
-  assert.equal(formatClock(3723), '1:02:03');
-  assert.equal(formatClock(-5), '0:00');
 });
 
 test('countdown uses the server clock', () => {

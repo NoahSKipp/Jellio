@@ -68,6 +68,48 @@ export function formatRelativeTime(isoString) {
   return t('time_years_ago', { count: years });
 }
 
+const TICKS_PER_SECOND = 10000000;
+
+// "1:02:03" or "2:03". Anything that is not a positive finite number
+// reads as 0:00.
+export function formatClock(seconds) {
+  const value = Number(seconds);
+  const total = isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = function (n) {
+    return n < 10 ? '0' + n : String(n);
+  };
+  return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
+}
+
+export function formatTicksClock(ticks) {
+  return formatClock(Math.floor(ticks / TICKS_PER_SECOND));
+}
+
+// Downloads: "0 MB", "512 KB", "3.4 GB", "12 GB".
+export function formatBytes(bytes) {
+  if (!bytes) return '0 MB';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return (value >= 10 || unit < 2 ? Math.round(value) : value.toFixed(1)) + ' ' + units[unit];
+}
+
+// Stream lists: "2.3 GB", "700 MB", or nothing when unknown or under 1 MB.
+export function formatFileSize(bytes) {
+  if (!bytes) return '';
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return gb.toFixed(1) + ' GB';
+  const mb = Math.round(bytes / (1024 * 1024));
+  return mb > 0 ? mb + ' MB' : '';
+}
+
 export function formatClockTime(ms) {
   return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }

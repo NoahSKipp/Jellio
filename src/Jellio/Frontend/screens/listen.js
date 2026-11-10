@@ -18,7 +18,6 @@ import {
   setAudioSleep,
   getBookTime,
   chapterIndexAt,
-  formatClock,
   loadTrack,
   getDefaultAudiobookSpeed,
   syncMiniPlayer,
@@ -28,6 +27,7 @@ import {
 } from '../components/audioMiniPlayer.js';
 import { cssUrl } from '../runtime/safeUrl.js';
 import { readString } from '../runtime/storage.js';
+import { formatClock } from '../runtime/format.js';
 
 const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;

@@ -1,6 +1,8 @@
 // Watch parties: pure helpers shared by the Group Watch panel and the
 // player (components/groupWatch.js, screens/player.js).
 
+import { formatClock } from './format.js';
+
 export const PARTY_REACTIONS = ['❤️', '👍', '👎', '😂', '😮', '😢', '🔥', '🎉'];
 export const COUNTDOWN_SECONDS = 5;
 // The host starts the countdown once everyone is ready, or after this.
@@ -27,17 +29,6 @@ export function splitTimestamps(text) {
   }
   if (last < value.length) parts.push({ text: value.slice(last) });
   return parts;
-}
-
-export function formatClock(seconds) {
-  const total = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = function (n) {
-    return n < 10 ? '0' + n : String(n);
-  };
-  return h ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
 }
 
 // The server's clock against this one, from a response's ServerNow.
