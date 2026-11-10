@@ -39,12 +39,15 @@ export async function syncRecommendationsFromServer() {
     if (!settings) return loadSettings();
     const current = loadSettings();
     let changed = false;
-    if (Array.isArray(settings.SelectedGenres)) {
-      current.selectedGenres = settings.SelectedGenres;
+    // ProfileSettings names these two in camelCase (JsonPropertyName).
+    const selectedGenres = settings.selectedGenres || settings.SelectedGenres;
+    const customGenres = settings.customGenres || settings.CustomGenres;
+    if (Array.isArray(selectedGenres)) {
+      current.selectedGenres = selectedGenres;
       changed = true;
     }
-    if (Array.isArray(settings.CustomGenres)) {
-      current.customGenres = settings.CustomGenres.map(function (g) {
+    if (Array.isArray(customGenres)) {
+      current.customGenres = customGenres.map(function (g) {
         return {
           name: g.Name || g.name,
           category: g.Category || g.category || null,
@@ -60,6 +63,17 @@ export async function syncRecommendationsFromServer() {
   } catch (err) {
     return loadSettings();
   }
+}
+
+let startupSyncUserId = null;
+
+// On app start, once per signed-in user, like the display preferences:
+// a fresh browser gets the genres saved from another one.
+export function syncRecommendationsOnStart() {
+  const userId = getCurrentUserId();
+  if (!userId || startupSyncUserId === userId) return;
+  startupSyncUserId = userId;
+  syncRecommendationsFromServer();
 }
 
 export function isCommunityRowEnabled() {

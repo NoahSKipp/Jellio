@@ -32,6 +32,7 @@ import { buildLibraryCoverflow } from './components/libraryCoverflow.js';
 import { getHeroBackdropUrl, getHeroLogoUrl } from './components/heroCarousel.js';
 import { onRouteChange, parseRoute, setTitle, navigateTo } from './runtime/router.js';
 import { shouldShowOnboarding } from './components/onboardingState.js';
+import { syncRecommendationsOnStart } from './runtime/recommendationSettings.js';
 
 const ROOT_ID = 'jellioRoot';
 
@@ -611,6 +612,7 @@ async function runSync() {
     loadAdminStatus();
     loadSkipIntroCreditsMenuSetting();
     loadServerPreferences().catch(function () {});
+    syncRecommendationsOnStart();
     setTitle('Jellio');
 
     root.classList.add('jellio-root-visible');

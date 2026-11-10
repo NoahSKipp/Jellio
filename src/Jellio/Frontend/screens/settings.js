@@ -14,6 +14,7 @@ import {
   setCustomGenres,
   addCustomGenre,
   removeCustomGenre,
+  syncRecommendationsFromServer,
 } from '../runtime/recommendationSettings.js';
 import { LATEST_CHANGELOG, CHANGELOG_RELEASES, MACOS_CHANGELOG_RELEASES } from '../runtime/changelog.js';
 import { invalidateHome } from '../runtime/homeInvalidate.js';
@@ -1441,6 +1442,11 @@ function buildRecommendationsCategory() {
   }
 
   renderCustomList();
+  // Picked in another browser or on the TV: shown once the server answers.
+  syncRecommendationsFromServer().then(function () {
+    renderCustomList();
+    if (updatePillsRef) updatePillsRef();
+  });
 
   genreBody.appendChild(genresWrap);
   genreBody.appendChild(customSubcard);
