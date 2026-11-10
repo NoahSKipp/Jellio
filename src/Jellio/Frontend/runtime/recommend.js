@@ -1,5 +1,6 @@
 import { t } from './i18n.js';
 import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems, getGenreItemsPage } from './api.js';
+import { dedupe, titleKey } from './dedupe.js';
 // Loaded on first use: it pulls in components/seasons.js, which startup does not need.
 function getSeasonalRecommendationRow(exclude) {
   return import('./seasonalRecommendations.js').then(
@@ -81,10 +82,6 @@ function notPlayed(item) {
   return !(item.UserData && item.UserData.Played);
 }
 
-export function titleKey(item) {
-  return String(item.Name || '').trim().toLowerCase() + '|' + (item.ProductionYear || '');
-}
-
 function nameKey(name) {
   return String(name || '').trim().toLowerCase();
 }
@@ -134,17 +131,6 @@ function pick(seed, entries, exclude, count) {
 function markSeen(exclude, item) {
   exclude[item.Id] = true;
   exclude[titleKey(item)] = true;
-}
-
-export function dedupe(items, exclude) {
-  const kept = [];
-  items.forEach(function (item) {
-    if (exclude[item.Id] || exclude[titleKey(item)]) return;
-    exclude[item.Id] = true;
-    exclude[titleKey(item)] = true;
-    kept.push(item);
-  });
-  return kept;
 }
 
 const seedCandidatesCache = new Map();

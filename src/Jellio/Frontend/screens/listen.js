@@ -4,7 +4,7 @@ import { getAudiobookTracks, getBookCoverUrl } from '../runtime/apiBooks.js';
 import { findDownload, getOfflineObjectUrl, getLocalProgress } from '../runtime/offline.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
-import { invalidateHomeSections } from './home.js';
+import { invalidateHome } from '../runtime/homeInvalidate.js';
 import { el } from '../runtime/dom.js';
 import { showToast } from '../components/toast.js';
 import {
@@ -630,7 +630,7 @@ export async function renderListen(root, params) {
   return function cleanup() {
     setAudioSessionListeners(null);
     document.removeEventListener('keydown', handleKey);
-    invalidateHomeSections();
+    invalidateHome();
     syncMiniPlayer();
   };
 }

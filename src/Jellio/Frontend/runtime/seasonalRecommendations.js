@@ -1,6 +1,6 @@
 import { getJellioConfig, getSeasonalItems } from './api.js';
 import { activeSeasonalTheme } from '../components/seasons.js';
-import { dedupe } from './recommend.js';
+import { dedupe } from './dedupe.js';
 import { t } from './i18n.js';
 
 const ROW_SIZE = 24;

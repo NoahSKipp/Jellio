@@ -10,7 +10,8 @@ import {
   getSelectedGenres,
   getCustomGenres,
 } from '../runtime/recommendationSettings.js';
-import { streamRecommendationRows, titleKey } from '../runtime/recommend.js';
+import { streamRecommendationRows } from '../runtime/recommend.js';
+import { dedupe, titleKey } from '../runtime/dedupe.js';
 import { buildCard } from '../components/card.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { buildRow } from '../components/row.js';
@@ -33,6 +34,7 @@ import { showToast } from '../components/toast.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { el } from '../runtime/dom.js';
 import { readString, writeJson } from '../runtime/storage.js';
+import { onHomeInvalidate } from '../runtime/homeInvalidate.js';
 
 const CATALOG_ROW_LIMIT = 24;
 const MAX_CATALOG_ROWS = 8;
@@ -87,17 +89,6 @@ export function dedupeRow(items, recentRows, limit) {
   }
 
   return { items: kept, keys: rowSeen };
-}
-
-function dedupe(items, seen) {
-  const kept = [];
-  items.forEach(function (item) {
-    if (seen[item.Id] || seen[titleKey(item)]) return;
-    seen[item.Id] = true;
-    seen[titleKey(item)] = true;
-    kept.push(item);
-  });
-  return kept;
 }
 
 function titleFor(name, kind) {
@@ -461,17 +452,22 @@ let expensiveBuilt = [];
 
 const EXPENSIVE_ORDER_BASE = 1000;
 
-export function invalidateHomeSections() {
+function invalidateHomeSections() {
   cheapSectionsPromise = null;
   cheapBuilt = [];
 }
 
-export function invalidateAllHomeSections() {
+function invalidateAllHomeSections() {
   invalidateHomeSections();
   invalidateCommunityWatchingCache();
   expensiveSectionsPromise = null;
   expensiveBuilt = [];
 }
+
+onHomeInvalidate(function (all) {
+  if (all) invalidateAllHomeSections();
+  else invalidateHomeSections();
+});
 
 const PERSONAL_ROW_CLASSES = ['personal', 'user', 'latest', 'watchlist'];
 const rowCacheRefreshers = new Set();

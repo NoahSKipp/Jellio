@@ -25,7 +25,7 @@ import { getGroupWatchMessages, sendGroupWatchMessage, creditGroupWatchTogether,
 import { syncTracker } from '../runtime/apiBooks.js';
 import { getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
-import { invalidateHomeSections } from './home.js';
+import { invalidateHome } from '../runtime/homeInvalidate.js';
 import { markBadSource, unmarkBadSource, isBadSource, badSourceKind, looksLikePlaceholder, hasNoAudio, looksLikeSilentSlideshow, stoppedTooEarly, PLACEHOLDER_STALL_MS } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
@@ -4784,7 +4784,7 @@ export async function renderPlayer(root, params) {
     if (idleTimer) window.clearTimeout(idleTimer);
     if (hasReportedStart) {
       await reportPlaybackStopped(itemId, mediaSource.Id, hasCreditedRealWatch ? 0 : currentPositionTicks());
-      invalidateHomeSections();
+      invalidateHome();
     }
     video.pause();
     video.removeAttribute('src');

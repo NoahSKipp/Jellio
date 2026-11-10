@@ -6,7 +6,7 @@ import { navigateTo, setTitle } from '../runtime/router.js';
 import { findAnyDownload, removeDownload, isAutoDeleteReadEnabled } from '../runtime/offline.js';
 import { loadVendorScript, vendorUrl } from '../runtime/vendorScript.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
-import { invalidateHomeSections } from './home.js';
+import { invalidateHome } from '../runtime/homeInvalidate.js';
 import {
   createStudyLayer,
   highlightHex,
@@ -3475,6 +3475,6 @@ export async function renderReader(root, params) {
     } catch (err) {
       console.warn('Jellio: reader cleanup failed', err);
     }
-    invalidateHomeSections();
+    invalidateHome();
   };
 }

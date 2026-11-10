@@ -16,7 +16,7 @@ import {
   removeCustomGenre,
 } from '../runtime/recommendationSettings.js';
 import { LATEST_CHANGELOG, CHANGELOG_RELEASES, MACOS_CHANGELOG_RELEASES } from '../runtime/changelog.js';
-import { invalidateAllHomeSections } from './home.js';
+import { invalidateHome } from '../runtime/homeInvalidate.js';
 
 import { logout } from '../runtime/auth.js';
 import { setGrouplistEnabledLocal } from '../runtime/grouplistSettings.js';
@@ -1034,7 +1034,7 @@ function buildRecommendationsCategory() {
     isCommunityRowEnabled(),
     function (enabled) {
       setCommunityRowEnabled(enabled);
-      invalidateAllHomeSections();
+      invalidateHome(true);
       clearCachedRows();
       if (usersSubcard) {
         usersSubcard.style.display = enabled ? 'block' : 'none';
@@ -1098,7 +1098,7 @@ function buildRecommendationsCategory() {
         checkbox.addEventListener('change', function () {
           toggleCommunityExcludedUser(user.Id);
           excludedSet = new Set(getCommunityExcludedUsers());
-          invalidateAllHomeSections();
+          invalidateHome(true);
           clearCachedRows();
         });
         toggleLabel.appendChild(checkbox);
@@ -1175,7 +1175,7 @@ function buildRecommendationsCategory() {
 
         pill.addEventListener('click', function () {
           toggleSelectedGenre(genre);
-          invalidateAllHomeSections();
+          invalidateHome(true);
           clearCachedRows();
           updatePills();
         });
@@ -1185,7 +1185,7 @@ function buildRecommendationsCategory() {
 
       resetBtn.addEventListener('click', function () {
         setSelectedGenres([]);
-        invalidateAllHomeSections();
+        invalidateHome(true);
         clearCachedRows();
         updatePills();
       });
@@ -1328,7 +1328,7 @@ function buildRecommendationsCategory() {
           enableBtn.appendChild(el('span', '', 'Enable "' + standardName + '" for Home'));
           enableBtn.addEventListener('click', function () {
             toggleSelectedGenre(standardName);
-            invalidateAllHomeSections();
+            invalidateHome(true);
             clearCachedRows();
             if (updatePillsRef) updatePillsRef();
             searchInput.value = '';
@@ -1345,7 +1345,7 @@ function buildRecommendationsCategory() {
         addBtn.appendChild(el('span', '', 'Add "' + match.name + '" to Home'));
         addBtn.addEventListener('click', function () {
           addCustomGenre({ name: match.name, category: match.category, enabled: true });
-          invalidateAllHomeSections();
+          invalidateHome(true);
           clearCachedRows();
           searchInput.value = '';
           resultContainer.textContent = '';
@@ -1414,7 +1414,7 @@ function buildRecommendationsCategory() {
           return g;
         });
         setCustomGenres(updated);
-        invalidateAllHomeSections();
+        invalidateHome(true);
         clearCachedRows();
       });
       toggleLabel.appendChild(checkbox);
@@ -1428,7 +1428,7 @@ function buildRecommendationsCategory() {
       deleteBtn.appendChild(el('span', 'material-icons', 'delete_outline'));
       deleteBtn.addEventListener('click', function () {
         removeCustomGenre(genreObj.name);
-        invalidateAllHomeSections();
+        invalidateHome(true);
         clearCachedRows();
         renderCustomList();
         checkSearchState(searchInput.value.trim());
