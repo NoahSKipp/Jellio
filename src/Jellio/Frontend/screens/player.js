@@ -60,10 +60,12 @@ import { el } from '../runtime/dom.js';
 import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode, startBufferTarget } from '../runtime/bufferSettings.js';
 import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
-import { logPlayStart, getWarmSources, getCachedItemSync } from '../runtime/api.js';
-import { prefetchedPlayback, prewarmedPlayback, negotiationFits } from '../runtime/playbackPrefetch.js';
-import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
-import { normalizeId } from '../runtime/readySources.js';
+import { logPlayStart, getWarmSources, getCachedItemSync, getQualityTiers, seedItemCache } from '../runtime/api.js';
+import { prefetchedPlayback, prewarmedPlayback, negotiationFits, pickPlaySource } from '../runtime/playbackPrefetch.js';
+import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, notePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
+import { normalizeId, isPreferReadyEnabled } from '../runtime/readySources.js';
+import { preferredAudioIndex } from '../components/playPrefetch.js';
+import { rememberedSourceId } from '../components/streamPicker.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -3620,40 +3622,70 @@ export async function renderPlayer(root, params) {
   let preloadedNextVideoEl = null;
   let hasInitiatedNextPreload = false;
 
+  // Negotiates the next episode ahead (T-55 s) and keeps the answer for its
+  // player (From: prewarmed); a stream played as is is also buffered.
   function preloadNextEpisodeStream() {
     if (hasInitiatedNextPreload || !nextEpisode || screenTornDown) return;
     hasInitiatedNextPreload = true;
     const target = nextEpisode;
     const languageCode = activeAudioLanguageCode();
-    getMediaSources(target.Id)
-      .then(async function (sources) {
+    Promise.all([
+      getMediaSources(target.Id),
+      getWarmSources(target.Id),
+      getQualityTiers(target.Id),
+      currentUserPromise.catch(function () {
+        return null;
+      }),
+    ])
+      .then(async function (results) {
+        const sources = results[0];
         if (screenTornDown || !sources || !sources.length) return;
-        let matched = null;
-        if (languageCode) {
-          matched = sources.find(function (source) {
-            return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
-          });
-        }
-        const source = matched || sources[0];
-        if (source) {
-          preloadedNextMediaSourceId = source.Id;
-          try {
-            const info = await getPlaybackInfo(target.Id, 0, source.Id);
-            if (!screenTornDown && info && info.MediaSources && info.MediaSources[0]) {
-              const nextSource = info.MediaSources[0];
-              if (!preloadedNextVideoEl) {
-                preloadedNextVideoEl = document.createElement('video');
-                preloadedNextVideoEl.preload = 'auto';
-                preloadedNextVideoEl.muted = true;
-                preloadedNextVideoEl.playsInline = true;
-                preloadedNextVideoEl.src = buildStreamUrl(target.Id, nextSource, 0, {
-                  playSessionId: info.PlaySessionId,
-                });
+        const warm = new Set(Object.keys(results[1] || {}).map(normalizeId));
+        const tiers = {};
+        Object.keys(results[2] || {}).forEach(function (id) {
+          tiers[normalizeId(id)] = results[2][id];
+        });
+        const source = pickPlaySource(sources, {
+          rememberedId: rememberedSourceId(target.Id),
+          isBad: function (candidate) {
+            return isBadSource(target.Id, candidate);
+          },
+          byLanguage: languageCode
+            ? function (list) {
+                return orderByLanguage(list, languageCode, sourceAudioLanguages);
               }
-            }
-          } catch (e) {
-            // Silently ignore preload network failures
+            : null,
+          preferReady: isPreferReadyEnabled(),
+          isReady: function (candidate) {
+            return warm.has(normalizeId(candidate.Id));
+          },
+          tierOf: function (candidate) {
+            return tiers[normalizeId(candidate.Id)];
+          },
+        });
+        if (!source || isPlaceholderSource(source)) return;
+        preloadedNextMediaSourceId = source.Id;
+        const ticks = (target.UserData && target.UserData.PlaybackPositionTicks) || 0;
+        const audioIndex = preferredAudioIndex(source, results[3]);
+        const promise = getPlaybackInfo(target.Id, ticks, source.Id, audioIndex);
+        promise.catch(function () {});
+        prewarmedPlayback.put(target.Id, source.Id, ticks, { promise: promise, audioIndex: audioIndex });
+        try {
+          const info = await promise;
+          const nextSource = pickNegotiatedSource(info, source.Id);
+          // A transcode would start a server job only to throw it away.
+          const asIs = nextSource && ticks === 0 && audioIndex == null && canBrowserDirectPlay(nextSource);
+          if (!screenTornDown && asIs && !preloadedNextVideoEl) {
+            preloadedNextVideoEl = document.createElement('video');
+            preloadedNextVideoEl.preload = 'auto';
+            preloadedNextVideoEl.muted = true;
+            preloadedNextVideoEl.playsInline = true;
+            preloadedNextVideoEl.src = buildStreamUrl(target.Id, nextSource, 0, {
+              playSessionId: info.PlaySessionId,
+            });
           }
+        } catch (e) {
+          // A failed preload leaves the next player to negotiate itself.
         }
       })
       .catch(function () {});
@@ -3698,6 +3730,10 @@ export async function renderPlayer(root, params) {
       preloadedNextVideoEl = null;
     }
 
+    // Its known resume point lets the next player take the prewarmed answer
+    // without waiting for the details.
+    if (target.UserData) seedItemCache(target);
+    notePlayTrigger(target.Id, 'next-episode');
     navigateTo(playHash(target.Id, mediaSourceId));
   }
 
