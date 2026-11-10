@@ -19,11 +19,22 @@ export function isOffline() {
   return offline;
 }
 
+// sw.js only routes cover images through itself (for downloaded covers)
+// while the server is unreachable. Sent on every check so a restarted
+// worker learns it again.
+function tellServiceWorker(value) {
+  try {
+    const worker = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (worker) worker.postMessage({ type: 'jellio-connectivity', offline: value });
+  } catch (err) {}
+}
+
 function setOffline(value) {
   const changed = value !== offline || !checked;
   offline = value;
   checked = true;
   if (changed) document.dispatchEvent(new CustomEvent('jellio:connectivity', { detail: { offline: value } }));
+  tellServiceWorker(value);
   window.clearTimeout(recheckTimer);
   if (value) {
     // Check actively while offline so connection recovery is detected quickly (3s initial, then 10s).
