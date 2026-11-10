@@ -52,6 +52,12 @@ public class FrontendController : ControllerBase
             Response.Headers["Service-Worker-Allowed"] = "/";
         }
 
+        var compressible = CompressibleExtensions.Contains(extension);
+        if (compressible)
+        {
+            Response.Headers.Vary = "Accept-Encoding";
+        }
+
         var hasVersionParam = Request.Query.ContainsKey("v");
         var cacheable = hasVersionParam || extension.Equals(".woff2", StringComparison.OrdinalIgnoreCase);
 
@@ -70,7 +76,7 @@ public class FrontendController : ControllerBase
         }
 
         var acceptEncoding = Request.Headers.AcceptEncoding.ToString();
-        if (CompressibleExtensions.Contains(extension))
+        if (compressible)
         {
             var encoding =
                 acceptEncoding.Contains("br", StringComparison.OrdinalIgnoreCase) ? "br" :
@@ -102,9 +108,10 @@ public class FrontendController : ControllerBase
         }
 
         using var output = new MemoryStream();
+        // Compressed once per path and cached, so the slowest level costs nothing per request.
         using (Stream compressor = encoding == "br"
-            ? new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true)
-            : new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+            ? new BrotliStream(output, CompressionLevel.SmallestSize, leaveOpen: true)
+            : new GZipStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
         {
             compressor.Write(content);
         }
