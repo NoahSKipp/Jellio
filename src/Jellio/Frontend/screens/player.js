@@ -6,71 +6,58 @@ import { isOffline, findAnyDownload, removeDownload, isAutoDeleteWatchedEnabled 
 import { renderOfflinePlayer } from './offlinePlayer.js';
 import {
   initGoogleCast,
-  getAvailableCastTargets,
-  castToJellyfinSession,
-  castToGoogleCast,
-  promptRemotePlayback,
-  promptAirPlay,
   sendRemotePlayPause,
   sendRemoteSeek,
   sendRemoteVolume,
   disconnectCast,
   getActiveCast,
-  addCastListener,
-  isGoogleCastSupported,
-  isAirPlaySupported,
 } from '../runtime/cast.js';
-import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, buildCastStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getSubtitleStreams, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, buildSubtitleUrl, getNextEpisode, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getSeasons, getEpisodes, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, prefetchStreams, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped } from '../runtime/api.js';
-import { getGroupWatchMessages, sendGroupWatchMessage, creditGroupWatchTogether, voteRankingSession, startJoinSync, clearJoinSync, getJoinSync } from '../runtime/apiSocial.js';
+import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped } from '../runtime/api.js';
+import { creditGroupWatchTogether, startJoinSync, clearJoinSync } from '../runtime/apiSocial.js';
 import { syncTracker } from '../runtime/apiBooks.js';
-import { getUpNextCountdownSeconds } from '../runtime/upNextSettings.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { invalidateHome } from '../runtime/homeInvalidate.js';
 import { markBadSource, unmarkBadSource, isBadSource, badSourceKind, looksLikePlaceholder, hasNoAudio, looksLikeSilentSlideshow, stoppedTooEarly, PLACEHOLDER_STALL_MS } from '../runtime/streamHealth.js';
-import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
+import { avoidingVideoTranscodes, classifySource, describeTranscodeReason, getVideoTranscodePolicy } from '../runtime/transcodePolicy.js';
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { loadFailoverSources, planFailover, failoverOutcome, describeFailover, isSourceNotReady } from '../runtime/failoverSources.js';
-import { sourceLabel, buildOutlookBadge, buildSourceCard, buildLanguageFilterRow, buildQualityFilterRow, filterSources, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
+import { sourceLabel, sourceAudioLanguages, playHash } from '../components/streamPicker.js';
 import { renderLoading } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
-import { languageName } from '../runtime/languages.js';
 import { buildRatingBadge } from '../components/ratingBadge.js';
 import {
   getCurrentGroup,
   getCurrentPlaylistTarget,
-  onGroupChange as onSyncGroupChange,
-  onCommand as onSyncCommand,
-  remoteToLocal,
-  estimateCurrentTicks,
   notifyBuffering,
   notifyReady,
   requestSeek as requestSyncSeek,
   requestUnpause as requestSyncUnpause,
   requestPause as requestSyncPause,
-  publishQueue as publishSyncQueue,
-  getSyncUserId,
-  getLastCommand as getLastSyncCommand,
   sameId as sameSyncId,
-  leaveGroup as leaveSyncGroup,
 } from '../runtime/syncPlay.js';
-import { createPartyLayer, askCatchUp } from '../components/partyLayer.js';
-import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
-import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
-import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode, startBufferTarget } from '../runtime/bufferSettings.js';
+import { prebufferSettings, startBufferTarget } from '../runtime/bufferSettings.js';
 import { cssUrl } from '../runtime/safeUrl.js';
-import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
-import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
-import { logPlayStart, getWarmSources, getCachedItemSync, getQualityTiers, seedItemCache } from '../runtime/api.js';
-import { prefetchedPlayback, prewarmedPlayback, negotiationFits, pickPlaySource } from '../runtime/playbackPrefetch.js';
-import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, notePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
-import { normalizeId, isPreferReadyEnabled } from '../runtime/readySources.js';
-import { preferredAudioIndex } from '../components/playPrefetch.js';
-import { syncDriftSeconds as driftFromCommand } from '../runtime/syncDrift.js';
-import { rememberedSourceId } from '../components/streamPicker.js';
-import { readString, writeString, remove } from '../runtime/storage.js';
+import { loadVolumePreference, saveVolumePreference, loadSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
+import { buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
+import { logPlayStart, getWarmSources, getCachedItemSync } from '../runtime/api.js';
+import { prefetchedPlayback, prewarmedPlayback, negotiationFits } from '../runtime/playbackPrefetch.js';
+import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
+import { normalizeId } from '../runtime/readySources.js';
+import { readString, writeString } from '../runtime/storage.js';
 import { formatClock } from '../runtime/format.js';
 import { createScope } from '../runtime/teardown.js';
+import { buildAudioMenu } from '../components/player/audioMenu.js';
+import { wireBufferPrompt } from '../components/player/bufferPrompt.js';
+import { buildCastControls } from '../components/player/castControls.js';
+import { startSyncWaitPoll, wireGroupSync } from '../components/player/groupSync.js';
+import { createPlayerKeydown } from '../components/player/keyboard.js';
+import { wireMediaSession } from '../components/player/mediaSession.js';
+import { buildPartyChat } from '../components/player/partyChat.js';
+import { buildSettingsMenu } from '../components/player/settingsMenu.js';
+import { buildSidePanels } from '../components/player/sidePanels.js';
+import { buildSubtitleControls } from '../components/player/subtitles.js';
+import { wireUpNext } from '../components/player/upNext.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -166,6 +153,98 @@ export async function renderPlayer(root, params) {
   let screenTornDown = false;
   // Listeners, timers and observers that live as long as this screen.
   const scope = createScope();
+  // Live views of this screen's changing state, for components/player.
+  const playerLive = {
+    get activeSubtitleStreamIndex() { return activeSubtitleStreamIndex; },
+    set activeSubtitleStreamIndex(value) { activeSubtitleStreamIndex = value; },
+    get activeTrack() { return activeTrack; },
+    set activeTrack(value) { activeTrack = value; },
+    get audioCtx() { return audioCtx; },
+    set audioCtx(value) { audioCtx = value; },
+    get autoSkipEnabled() { return autoSkipEnabled; },
+    set autoSkipEnabled(value) { autoSkipEnabled = value; },
+    get bufferStallStartedAt() { return bufferStallStartedAt; },
+    set bufferStallStartedAt(value) { bufferStallStartedAt = value; },
+    get bufferStallTimer() { return bufferStallTimer; },
+    set bufferStallTimer(value) { bufferStallTimer = value; },
+    get closeChatPanel() { return closeChatPanel; },
+    set closeChatPanel(value) { closeChatPanel = value; },
+    get closeShortcutsModal() { return closeShortcutsModal; },
+    set closeShortcutsModal(value) { closeShortcutsModal = value; },
+    get currentAudioStreamIndex() { return currentAudioStreamIndex; },
+    set currentAudioStreamIndex(value) { currentAudioStreamIndex = value; },
+    get deferredAutoSubtitleStream() { return deferredAutoSubtitleStream; },
+    set deferredAutoSubtitleStream(value) { deferredAutoSubtitleStream = value; },
+    get durationSeconds() { return durationSeconds; },
+    get endScreenModalInstance() { return endScreenModalInstance; },
+    set endScreenModalInstance(value) { endScreenModalInstance = value; },
+    get fullscreenButton() { return fullscreenButton; },
+    get hasInitiatedNextPreload() { return hasInitiatedNextPreload; },
+    set hasInitiatedNextPreload(value) { hasInitiatedNextPreload = value; },
+    get hasReportedStart() { return hasReportedStart; },
+    set hasReportedStart(value) { hasReportedStart = value; },
+    get item() { return item; },
+    get joinSyncActive() { return joinSyncActive; },
+    set joinSyncActive(value) { joinSyncActive = value; },
+    get joinSyncGroupId() { return joinSyncGroupId; },
+    set joinSyncGroupId(value) { joinSyncGroupId = value; },
+    get lastUserSeekAt() { return lastUserSeekAt; },
+    get mediaSource() { return mediaSource; },
+    set mediaSource(value) { mediaSource = value; },
+    get needsStartOffset() { return needsStartOffset; },
+    set needsStartOffset(value) { needsStartOffset = value; },
+    get nextEpisode() { return nextEpisode; },
+    set nextEpisode(value) { nextEpisode = value; },
+    get openShortcutsModal() { return openShortcutsModal; },
+    set openShortcutsModal(value) { openShortcutsModal = value; },
+    get partyLayer() { return partyLayer; },
+    set partyLayer(value) { partyLayer = value; },
+    get pendingNativeSeekSeconds() { return pendingNativeSeekSeconds; },
+    set pendingNativeSeekSeconds(value) { pendingNativeSeekSeconds = value; },
+    get playSessionId() { return playSessionId; },
+    set playSessionId(value) { playSessionId = value; },
+    get preloadedNextVideoEl() { return preloadedNextVideoEl; },
+    set preloadedNextVideoEl(value) { preloadedNextVideoEl = value; },
+    get rebuildAudioMenu() { return rebuildAudioMenu; },
+    get screenTornDown() { return screenTornDown; },
+    get seeking() { return seeking; },
+    get selectedSubtitleLanguage() { return selectedSubtitleLanguage; },
+    set selectedSubtitleLanguage(value) { selectedSubtitleLanguage = value; },
+    get skipOverlay() { return skipOverlay; },
+    get skipTargetSeconds() { return skipTargetSeconds; },
+    get sleepOption() { return sleepOption; },
+    set sleepOption(value) { sleepOption = value; },
+    get sourceOptions() { return sourceOptions; },
+    get startTicks() { return startTicks; },
+    get stopChatOnCleanup() { return stopChatOnCleanup; },
+    set stopChatOnCleanup(value) { stopChatOnCleanup = value; },
+    get streamIsTranscoded() { return streamIsTranscoded; },
+    set streamIsTranscoded(value) { streamIsTranscoded = value; },
+    get streamOffsetTicks() { return streamOffsetTicks; },
+    set streamOffsetTicks(value) { streamOffsetTicks = value; },
+    get subtitleStyle() { return subtitleStyle; },
+    set subtitleStyle(value) { subtitleStyle = value; },
+    get syncMediaPosition() { return syncMediaPosition; },
+    set syncMediaPosition(value) { syncMediaPosition = value; },
+    get syncMediaSession() { return syncMediaSession; },
+    set syncMediaSession(value) { syncMediaSession = value; },
+    get syncPlaylistItemId() { return syncPlaylistItemId; },
+    set syncPlaylistItemId(value) { syncPlaylistItemId = value; },
+    get toggleCastMenu() { return toggleCastMenu; },
+    set toggleCastMenu(value) { toggleCastMenu = value; },
+    get toggleShortcutsModal() { return toggleShortcutsModal; },
+    set toggleShortcutsModal(value) { toggleShortcutsModal = value; },
+    get unsubscribeSyncCommand() { return unsubscribeSyncCommand; },
+    set unsubscribeSyncCommand(value) { unsubscribeSyncCommand = value; },
+    get unsubscribeSyncGroupChange() { return unsubscribeSyncGroupChange; },
+    set unsubscribeSyncGroupChange(value) { unsubscribeSyncGroupChange = value; },
+    get upNextCountdownInterval() { return upNextCountdownInterval; },
+    set upNextCountdownInterval(value) { upNextCountdownInterval = value; },
+    get upNextDismissed() { return upNextDismissed; },
+    set upNextDismissed(value) { upNextDismissed = value; },
+    get upNextShown() { return upNextShown; },
+    set upNextShown(value) { upNextShown = value; },
+  };
   const playerToken = {};
   mediaSessionOwner = playerToken;
   root.textContent = '';
@@ -913,142 +992,10 @@ export async function renderPlayer(root, params) {
     topbarActions.appendChild(fullscreenButton);
   }
 
-  const CHAT_POLL_MS = 3000;
   let stopChatOnCleanup = function () {};
   let closeChatPanel = function () {};
   const currentSyncGroup = getCurrentGroup();
-  if (currentSyncGroup) {
-    const chatToggleButton = el('button', 'jellio-player-back jellio-player-chat-toggle');
-    chatToggleButton.type = 'button';
-    chatToggleButton.setAttribute('aria-label', t('gw_chat_title'));
-    chatToggleButton.setAttribute('aria-expanded', 'false');
-    const chatToggleIcon = el('span', 'material-icons chat_bubble_outline');
-    chatToggleIcon.setAttribute('aria-hidden', 'true');
-    chatToggleButton.appendChild(chatToggleIcon);
-    topbarActions.appendChild(chatToggleButton);
-
-    const chatPanel = el('div', 'jellio-player-chat-panel');
-    const chatMessages = el('div', 'jellio-player-chat-messages');
-    const chatRankingContainer = el('div', 'jellio-pick-container');
-    const chatInputRow = el('div', 'jellio-player-chat-input-row');
-    const chatInput = document.createElement('input');
-    chatInput.type = 'text';
-    chatInput.className = 'jellio-player-chat-input';
-    chatInput.placeholder = t('gw_message_placeholder');
-    chatInput.maxLength = 500;
-    const chatSendButton = el('button', 'jellio-player-chat-send');
-    chatSendButton.type = 'button';
-    chatSendButton.setAttribute('aria-label', t('action_send'));
-    const chatSendIcon = el('span', 'material-icons send');
-    chatSendIcon.setAttribute('aria-hidden', 'true');
-    chatSendButton.appendChild(chatSendIcon);
-    chatInputRow.appendChild(chatInput);
-    chatInputRow.appendChild(chatSendButton);
-    chatPanel.appendChild(chatMessages);
-    chatPanel.appendChild(chatRankingContainer);
-    chatPanel.appendChild(chatInputRow);
-    root.appendChild(chatPanel);
-
-    let chatLastMessageId = 0;
-    let chatPollTimer = null;
-    let chatOpen = false;
-
-    const MAX_CHAT_DOM_MESSAGES = 200;
-
-    function appendChatMessages(messages) {
-      messages.forEach(function (message) {
-        const row = el('div', 'jellio-player-chat-message');
-        if (message.ItemId) {
-          row.classList.add('jellio-player-chat-message-watch-card');
-          row.setAttribute('role', 'button');
-          row.setAttribute('tabindex', '0');
-          row.addEventListener('click', function () {
-            navigateTo('#/play?id=' + message.ItemId + '&groupJoin=1');
-          });
-        }
-        row.appendChild(el('span', 'jellio-player-chat-message-author', (message.UserName || 'Someone') + ':'));
-        row.appendChild(el('span', 'jellio-player-chat-message-text', message.Text));
-        if (message.ItemId) row.appendChild(el('span', 'jellio-player-chat-message-cta', t('gw_click_to_join')));
-        chatMessages.appendChild(row);
-        chatLastMessageId = Math.max(chatLastMessageId, message.Id);
-      });
-      while (chatMessages.children.length > MAX_CHAT_DOM_MESSAGES) {
-        chatMessages.removeChild(chatMessages.firstChild);
-      }
-      if (messages.length) chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function onVote(itemId) {
-      voteRankingSession(currentSyncGroup.GroupId, itemId)
-        .then(function (updated) {
-          renderRankingSession(chatRankingContainer, updated, getSyncUserId(), onVote);
-        })
-        .catch(function (err) {
-          console.warn('Jellio: could not cast a Group Watch pick vote', err);
-        });
-    }
-
-    function pollRanking() {
-      if (!isGrouplistEnabled()) return;
-      fetchRankingSession(currentSyncGroup.GroupId).then(function (session) {
-        renderRankingSession(chatRankingContainer, session, getSyncUserId(), onVote);
-      });
-    }
-
-    function pollChat() {
-      getGroupWatchMessages(currentSyncGroup.GroupId, chatLastMessageId)
-        .then(function (messages) {
-          if (messages.length) appendChatMessages(messages);
-        })
-        .catch(function () {
-        });
-      pollRanking();
-    }
-
-    function sendChatMessage() {
-      const text = chatInput.value.trim();
-      if (!text) return;
-      chatInput.value = '';
-      sendGroupWatchMessage(currentSyncGroup.GroupId, text)
-        .then(function (message) {
-          if (message) appendChatMessages([message]);
-        })
-        .catch(function (err) {
-          console.warn('Jellio: could not send Group Watch message', err);
-        });
-    }
-
-    chatSendButton.addEventListener('click', sendChatMessage);
-    chatInput.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') sendChatMessage();
-    });
-    chatInput.addEventListener('focus', wakeControls);
-
-    chatToggleButton.addEventListener('click', function () {
-      chatOpen = !chatOpen;
-      if (partyLayer) partyLayer.setChatPanelOpen(chatOpen);
-      chatPanel.classList.toggle('jellio-player-chat-panel-visible', chatOpen);
-      chatToggleButton.setAttribute('aria-expanded', String(chatOpen));
-      if (chatOpen) {
-        pollChat();
-        chatPollTimer = window.setInterval(pollChat, CHAT_POLL_MS);
-        wakeControls();
-      } else if (chatPollTimer) {
-        window.clearInterval(chatPollTimer);
-        chatPollTimer = null;
-        stopRankingCountdown(chatRankingContainer);
-      }
-    });
-
-    closeChatPanel = function () {
-      if (chatOpen) chatToggleButton.click();
-    };
-
-    stopChatOnCleanup = function () {
-      if (chatPollTimer) window.clearInterval(chatPollTimer);
-      stopRankingCountdown(chatRankingContainer);
-    };
-  }
+  buildPartyChat({ currentSyncGroup, root, topbarActions, wakeControls }, playerLive);
 
   topbarActions.appendChild(backButton);
   topbar.appendChild(topbarActions);
@@ -1379,527 +1326,27 @@ export async function renderPlayer(root, params) {
   }
   registerPopover(speedButton, speedMenu);
 
-  const subtitleMenu = el('div', 'jellio-player-popover jellio-player-popover-large jellio-player-popover-hidden');
-  const subtitleColumns = el('div', 'jellio-player-popover-columns');
-  const subtitleLanguageList = el('div', 'jellio-player-popover-list jellio-player-popover-languages');
-  const subtitleList = el('div', 'jellio-player-popover-list jellio-player-popover-tracks');
-  subtitleColumns.appendChild(subtitleLanguageList);
-  subtitleColumns.appendChild(subtitleList);
-  subtitleMenu.appendChild(subtitleColumns);
   let activeTrack = null;
   let selectedSubtitleLanguage = null;
   let activeSubtitleStreamIndex = null;
-
-  let reentrant = false;
-  function enforceSubtitleTrackModes() {
-    if (reentrant) return;
-    reentrant = true;
-    try {
-      for (let i = 0; i < video.textTracks.length; i++) {
-        const tt = video.textTracks[i];
-        const desired = activeTrack && activeTrack.track === tt ? 'showing' : 'disabled';
-        if (tt.mode !== desired) tt.mode = desired;
-      }
-    } finally {
-      reentrant = false;
-    }
-  }
-  scope.listen(video.textTracks, 'change', enforceSubtitleTrackModes);
-
-  function normalizeCuePositions(textTrack) {
-    const cues = textTrack.cues;
-    if (!cues) return;
-    for (let i = 0; i < cues.length; i++) {
-      const cue = cues[i];
-      if (typeof VTTCue === 'undefined' || !(cue instanceof VTTCue)) continue;
-      try {
-        cue.align = 'center';
-        cue.position = 'auto';
-        cue.snapToLines = false;
-        cue.line = 82;
-        cue.size = 100;
-      } catch (err) {
-      }
-    }
-  }
-
-  const SUB_OFFSET_STORAGE_PREFIX = 'jellio_sub_offset_';
-  let subtitleOffsetSec = 0;
-  try {
-    const savedOffset = parseFloat(readString(SUB_OFFSET_STORAGE_PREFIX + itemId));
-    if (Number.isFinite(savedOffset)) {
-      subtitleOffsetSec = Math.round(savedOffset * 10) / 10;
-    }
-  } catch (e) {}
-
-  function applyCuesOffset(textTrack, offset) {
-    if (!textTrack || !textTrack.cues) return;
-    const cues = textTrack.cues;
-    for (let i = 0; i < cues.length; i++) {
-      const cue = cues[i];
-      if (cue._origStart === undefined) {
-        cue._origStart = cue.startTime;
-        cue._origEnd = cue.endTime;
-      }
-      cue.startTime = Math.max(0, cue._origStart + offset);
-      cue.endTime = Math.max(0, cue._origEnd + offset);
-    }
-  }
-
-  function selectSubtitle(stream, optionButton) {
-    if (activeTrack) {
-      if (activeTrack.track) activeTrack.track.mode = 'disabled';
-      activeTrack.remove();
-      activeTrack = null;
-    }
-    activeSubtitleStreamIndex = stream ? stream.Index : null;
-    Array.prototype.forEach.call(subtitleList.children, function (child) {
-      child.classList.remove('jellio-player-popover-option-active');
-    });
-    if (optionButton) optionButton.classList.add('jellio-player-popover-option-active');
-    subtitleButton.classList.toggle('jellio-player-pill-btn-active', !!stream);
-    if (!stream) {
-      enforceSubtitleTrackModes();
-      return;
-    }
-    attachSubtitleTrack(stream, 0);
-  }
-
-  const MAX_SUBTITLE_LOAD_ATTEMPTS = 4;
-  const SUBTITLE_RETRY_DELAY_MS = 4000;
-
-  function attachSubtitleTrack(stream, attempt) {
-    if (activeSubtitleStreamIndex !== stream.Index) return;
-    if (activeTrack) {
-      if (activeTrack.track) activeTrack.track.mode = 'disabled';
-      activeTrack.remove();
-      activeTrack = null;
-    }
-    showPlayerToast(
-      attempt === 0
-        ? t('player_subtitles_loading')
-        : t('player_subtitles_loading_retry', { n: attempt + 1, total: MAX_SUBTITLE_LOAD_ATTEMPTS }),
-    );
-    const track = document.createElement('track');
-    track.kind = 'subtitles';
-    track.label = stream.DisplayTitle || stream.Language || 'Subtitle';
-    track.srclang = stream.Language || '';
-    track.src = buildSubtitleUrl(itemId, mediaSource.Id, stream);
-    track.default = true;
-    video.appendChild(track);
-    activeTrack = track;
-    track.addEventListener('load', function () {
-      if (activeTrack !== track) return;
-      if (!track.track) return;
-      normalizeCuePositions(track.track);
-      if (subtitleOffsetSec !== 0) {
-        applyCuesOffset(track.track, subtitleOffsetSec);
-      }
-      track.track.mode = 'showing';
-      enforceSubtitleTrackModes();
-    });
-    track.addEventListener('error', function () {
-      if (activeTrack !== track) return;
-      if (attempt + 1 < MAX_SUBTITLE_LOAD_ATTEMPTS) {
-        window.setTimeout(function () {
-          if (activeSubtitleStreamIndex === stream.Index) attachSubtitleTrack(stream, attempt + 1);
-        }, SUBTITLE_RETRY_DELAY_MS);
-        return;
-      }
-      showPlayerToast(t('player_subtitle_load_failed'));
-    });
-  }
-
-  async function selectBurnedInSubtitle(stream, optionButton) {
-    if (activeTrack) {
-      if (activeTrack.track) activeTrack.track.mode = 'disabled';
-      activeTrack.remove();
-      activeTrack = null;
-    }
-    Array.prototype.forEach.call(subtitleList.children, function (child) {
-      child.classList.remove('jellio-player-popover-option-active');
-    });
-    if (optionButton) optionButton.classList.add('jellio-player-popover-option-active');
-    const resumeTicks = currentPositionTicks();
-    const wasPlaying = !video.paused;
-    try {
-      reportPlaybackStopped(itemId, mediaSource.Id, resumeTicks);
-      const info = await getPlaybackInfo(itemId, resumeTicks, mediaSource.Id, currentAudioStreamIndex, stream.Index);
-      const negotiated = info && info.MediaSources && info.MediaSources[0];
-      if (!negotiated) {
-        showPlayerToast(t('player_subtitle_gone'));
-        return;
-      }
-      mediaSource = negotiated;
-      playSessionId = info.PlaySessionId;
-      activeSubtitleStreamIndex = stream.Index;
-      streamIsTranscoded = true;
-      const subtitleUsesHls = willUseHls(mediaSource, true);
-      needsStartOffset = !subtitleUsesHls;
-      streamOffsetTicks = needsStartOffset ? resumeTicks : 0;
-      pendingNativeSeekSeconds = subtitleUsesHls ? resumeTicks / TICKS_PER_SECOND : null;
-      hasReportedStart = false;
-      video.src = buildStreamUrl(itemId, mediaSource, resumeTicks, {
-        audioStreamIndex: currentAudioStreamIndex,
-        burnInSubtitleStreamIndex: stream.Index,
-        forceTranscode: true,
-        playSessionId: playSessionId,
-      });
-      video.load();
-      showLoadingLogo();
-      if (wasPlaying) waitForPlayableBuffer(attemptPlay);
-      subtitleButton.classList.add('jellio-player-pill-btn-active');
-      rebuildAudioMenu();
-      rebuildSubtitleMenu();
-      closePopovers(null);
-      showPlayerToast(t('player_subtitle_burn_in', { name: stream.DisplayTitle || stream.Language || 'subtitle' }));
-    } catch (err) {
-      console.warn('Jellio: selectBurnedInSubtitle failed', err);
-      showPlayerToast(t('player_subtitle_switch_failed', { error: err && err.message ? err.message : err }));
-    }
-  }
-
-  function renderSubtitleTrackList(subtitleStreams) {
-    subtitleList.textContent = '';
-    const offOption = el(
-      'button',
-      'jellio-player-popover-option' + (activeSubtitleStreamIndex == null ? ' jellio-player-popover-option-active' : ''),
-      'Off',
-    );
-    offOption.type = 'button';
-    offOption.addEventListener('click', function () {
-      selectSubtitle(null, offOption);
-    });
-    subtitleList.appendChild(offOption);
-    subtitleStreams
-      .filter(function (stream) {
-        return !selectedSubtitleLanguage || (stream.Language || '').toLowerCase() === selectedSubtitleLanguage;
-      })
-      .forEach(function (stream) {
-        const label =
-          (stream.DisplayTitle || stream.Language || 'Subtitle') +
-          (stream.IsTextSubtitleStream ? '' : avoidingVideoTranscodes() ? ' (slow: burns into video)' : ' (image)');
-        const option = el(
-          'button',
-          'jellio-player-popover-option' +
-            (stream.Index === activeSubtitleStreamIndex ? ' jellio-player-popover-option-active' : ''),
-          label,
-        );
-        option.type = 'button';
-        option.addEventListener('click', function () {
-          if (stream.IsTextSubtitleStream) {
-            selectSubtitle(stream, option);
-          } else {
-            selectBurnedInSubtitle(stream, option);
-          }
-        });
-        subtitleList.appendChild(option);
-      });
-  }
-
-  function rebuildSubtitleMenu() {
-    subtitleLanguageList.textContent = '';
-    // Video transcode policy Block: image subtitles would need a re-encode,
-    // so they aren't offered.
-    const subtitleStreams = getSubtitleStreams(mediaSource).filter(function (stream) {
-      return getVideoTranscodePolicy() !== 'Block' || stream.IsTextSubtitleStream;
-    });
-    if (!subtitleStreams.length) {
-      subtitleButton.disabled = true;
-      return;
-    }
-    subtitleButton.disabled = false;
-    selectedSubtitleLanguage = null;
-
-    const noneOption = el('button', 'jellio-player-popover-option jellio-player-popover-option-active', t('vocab_all_languages'));
-    noneOption.type = 'button';
-    noneOption.addEventListener('click', function () {
-      selectedSubtitleLanguage = null;
-      Array.prototype.forEach.call(subtitleLanguageList.children, function (child) {
-        child.classList.remove('jellio-player-popover-option-active');
-      });
-      noneOption.classList.add('jellio-player-popover-option-active');
-      renderSubtitleTrackList(subtitleStreams);
-    });
-    subtitleLanguageList.appendChild(noneOption);
-
-    const languages = [];
-    subtitleStreams.forEach(function (stream) {
-      const code = (stream.Language || '').toLowerCase();
-      if (code && languages.indexOf(code) === -1) languages.push(code);
-    });
-    languages.forEach(function (code) {
-      const option = el('button', 'jellio-player-popover-option', languageName(code));
-      option.type = 'button';
-      option.addEventListener('click', function () {
-        selectedSubtitleLanguage = code;
-        Array.prototype.forEach.call(subtitleLanguageList.children, function (child) {
-          child.classList.remove('jellio-player-popover-option-active');
-        });
-        option.classList.add('jellio-player-popover-option-active');
-        renderSubtitleTrackList(subtitleStreams);
-      });
-      subtitleLanguageList.appendChild(option);
-    });
-
-    renderSubtitleTrackList(subtitleStreams);
-  }
   let deferredAutoSubtitleStream = null;
-  (async function () {
-    let matched = null;
-    try {
-      const user = await currentUserPromise;
-      const subtitleMode = user && user.Configuration && user.Configuration.SubtitleMode;
-      const preferredLanguage = user && user.Configuration && user.Configuration.SubtitleLanguagePreference;
-      const isSubtitlesDisabled = subtitleMode === 'None' || preferredLanguage === 'off' || preferredLanguage === 'none' || !preferredLanguage;
-      matched = isSubtitlesDisabled ? null : matchSubtitleStream(mediaSource, preferredLanguage);
-    } catch (err) {
-      console.warn('Jellio: could not match preferred subtitle language', err);
-    }
-    if (matched) activeSubtitleStreamIndex = matched.Index;
-    rebuildSubtitleMenu();
-    if (matched) {
-      if (matched.DeliveryMethod === 'External' || hasReportedStart) {
-        attachSubtitleTrack(matched, 0);
-      } else {
-        deferredAutoSubtitleStream = matched;
-      }
-    }
-  })();
-
-  registerPopover(subtitleButton, subtitleMenu);
-
-  const styleSection = el('div', 'jellio-player-popover-style');
-  subtitleMenu.appendChild(styleSection);
-
-  function buildStyleGroup(label, options, currentValue, onPick) {
-    const group = el('div', 'jellio-player-style-group');
-    group.appendChild(el('div', 'jellio-player-style-group-label', label));
-    const optionRow = el('div', 'jellio-player-style-group-options');
-    options.forEach(function (option) {
-      const optionButton = el(
-        'button',
-        'jellio-player-popover-option' + (option.value === currentValue ? ' jellio-player-popover-option-active' : ''),
-        option.label,
-      );
-      optionButton.type = 'button';
-      optionButton.addEventListener('click', function () {
-        onPick(option.value);
-        Array.prototype.forEach.call(optionRow.children, function (child) {
-          child.classList.remove('jellio-player-popover-option-active');
-        });
-        optionButton.classList.add('jellio-player-popover-option-active');
-      });
-      optionRow.appendChild(optionButton);
-    });
-    group.appendChild(optionRow);
-    return group;
-  }
-
-  styleSection.appendChild(
-    buildStyleGroup('Size', SUBTITLE_SIZES, subtitleStyle.size, function (value) {
-      subtitleStyle = Object.assign({}, subtitleStyle, { size: value });
-      applySubtitleStyle(video, subtitleStyle);
-      saveSubtitleStyle(subtitleStyle);
-    }),
-  );
-  styleSection.appendChild(
-    buildStyleGroup('Background', SUBTITLE_BACKGROUNDS, subtitleStyle.background, function (value) {
-      subtitleStyle = Object.assign({}, subtitleStyle, { background: value });
-      applySubtitleStyle(video, subtitleStyle);
-      saveSubtitleStyle(subtitleStyle);
-    }),
+  const { rebuildSubtitleMenu, subtitleMenu, updateSubtitleOffset, attachSubtitleTrack } = buildSubtitleControls(
+    {
+      attemptPlay, closePopovers, currentPositionTicks, currentUserPromise, itemId, registerPopover, scope,
+      showLoadingLogo, showPlayerToast, subtitleButton, video, waitForPlayableBuffer, willUseHls,
+    },
+    playerLive,
   );
 
-  const syncSection = el('div', 'jellio-player-style-group');
-  syncSection.appendChild(el('div', 'jellio-player-style-group-label', t('player_delay_sync')));
-  const syncRow = el('div', 'jellio-player-subtitle-sync-row');
-  const minusHalf = el('button', 'jellio-player-popover-option', '-0.5s');
-  minusHalf.type = 'button';
-  const minusTenth = el('button', 'jellio-player-popover-option', '-0.1s');
-  minusTenth.type = 'button';
-  const syncDisplay = el('span', 'jellio-player-subtitle-sync-value', (subtitleOffsetSec > 0 ? '+' : '') + subtitleOffsetSec.toFixed(1) + 's');
-  const plusTenth = el('button', 'jellio-player-popover-option', '+0.1s');
-  plusTenth.type = 'button';
-  const plusHalf = el('button', 'jellio-player-popover-option', '+0.5s');
-  plusHalf.type = 'button';
-  const resetBtn = el('button', 'jellio-player-popover-option', t('action_reset'));
-  resetBtn.type = 'button';
-
-  function updateSubtitleOffset(delta, isReset) {
-    if (isReset) {
-      subtitleOffsetSec = 0;
-    } else {
-      subtitleOffsetSec = Math.round((subtitleOffsetSec + delta) * 10) / 10;
-    }
-    try {
-      if (subtitleOffsetSec !== 0) {
-        writeString(SUB_OFFSET_STORAGE_PREFIX + itemId, String(subtitleOffsetSec));
-      } else {
-        remove(SUB_OFFSET_STORAGE_PREFIX + itemId);
-      }
-    } catch (e) {}
-    syncDisplay.textContent = (subtitleOffsetSec > 0 ? '+' : '') + subtitleOffsetSec.toFixed(1) + 's';
-    if (activeTrack && activeTrack.track) {
-      applyCuesOffset(activeTrack.track, subtitleOffsetSec);
-    }
-    showPlayerToast(t('player_toast_subtitle_sync', { value: syncDisplay.textContent }));
-  }
-
-  minusHalf.addEventListener('click', function () { updateSubtitleOffset(-0.5); });
-  minusTenth.addEventListener('click', function () { updateSubtitleOffset(-0.1); });
-  plusTenth.addEventListener('click', function () { updateSubtitleOffset(0.1); });
-  plusHalf.addEventListener('click', function () { updateSubtitleOffset(0.5); });
-  resetBtn.addEventListener('click', function () { updateSubtitleOffset(0, true); });
-
-  syncRow.appendChild(minusHalf);
-  syncRow.appendChild(minusTenth);
-  syncRow.appendChild(syncDisplay);
-  syncRow.appendChild(plusTenth);
-  syncRow.appendChild(plusHalf);
-  syncRow.appendChild(resetBtn);
-  syncSection.appendChild(syncRow);
-  styleSection.appendChild(syncSection);
-
-  // === Audio track popover ===
   let audioCtx = null;
-  let sourceNode = null;
-  let compressorNode = null;
-  let dialogueBoostEnabled = false;
-
-  function setDialogueBoost(enabled) {
-    dialogueBoostEnabled = enabled;
-    try {
-      if (!audioCtx) {
-        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtxClass) {
-          audioCtx = new AudioCtxClass();
-          sourceNode = audioCtx.createMediaElementSource(video);
-          compressorNode = audioCtx.createDynamicsCompressor();
-          compressorNode.threshold.setValueAtTime(-24, audioCtx.currentTime);
-          compressorNode.knee.setValueAtTime(30, audioCtx.currentTime);
-          compressorNode.ratio.setValueAtTime(12, audioCtx.currentTime);
-          compressorNode.attack.setValueAtTime(0.003, audioCtx.currentTime);
-          compressorNode.release.setValueAtTime(0.25, audioCtx.currentTime);
-        }
-      }
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      if (sourceNode && compressorNode && audioCtx) {
-        sourceNode.disconnect();
-        compressorNode.disconnect();
-        if (dialogueBoostEnabled) {
-          sourceNode.connect(compressorNode);
-          compressorNode.connect(audioCtx.destination);
-        } else {
-          sourceNode.connect(audioCtx.destination);
-        }
-      }
-    } catch (err) {
-      console.warn('Jellio: dialogue boost error', err);
-    }
-  }
-
-  const audioMenu = el('div', 'jellio-player-popover jellio-player-popover-large jellio-player-popover-hidden');
-
-  function audioStreamLabel(stream) {
-    const language = stream.Language ? stream.Language.toUpperCase() : stream.DisplayTitle || 'Unknown';
-    const parts = [stream.Codec ? stream.Codec.toUpperCase() : '', stream.ChannelLayout || ''].filter(Boolean);
-    return parts.length ? language + ' · ' + parts.join(' ') : language;
-  }
-
-  function rebuildAudioMenu() {
-    audioMenu.textContent = '';
-    const streams = getAudioStreams(mediaSource);
-    audioButton.disabled = false;
-    if (streams.length > 0) {
-      streams.forEach(function (stream) {
-        const isActive =
-          currentAudioStreamIndex == null
-            ? stream.Index === mediaSource.DefaultAudioStreamIndex
-            : stream.Index === currentAudioStreamIndex;
-        const option = el(
-          'button',
-          'jellio-player-popover-option' + (isActive ? ' jellio-player-popover-option-active' : ''),
-          audioStreamLabel(stream),
-        );
-        option.type = 'button';
-        option.addEventListener('click', function () {
-          showPlayerToast(t('player_audio_switching', { name: audioStreamLabel(stream) }));
-          if (isActive && currentAudioStreamIndex != null) {
-            closePopovers(null);
-            return;
-          }
-          switchAudioTrack(stream);
-        });
-        audioMenu.appendChild(option);
-      });
-    }
-
-    const boostOption = el(
-      'button',
-      'jellio-player-popover-option jellio-player-boost-option' + (dialogueBoostEnabled ? ' jellio-player-popover-option-active' : ''),
-      'Dialogue Boost / Night Mode: ' + (dialogueBoostEnabled ? 'On' : 'Off'),
-    );
-    boostOption.type = 'button';
-    boostOption.addEventListener('click', function () {
-      setDialogueBoost(!dialogueBoostEnabled);
-      boostOption.textContent = t('player_dialogue_boost', { status: dialogueBoostEnabled ? t('state_on') : t('state_off') });
-      if (dialogueBoostEnabled) {
-        boostOption.classList.add('jellio-player-popover-option-active');
-        showPlayerToast(t('player_dialogue_boost_on'));
-      } else {
-        boostOption.classList.remove('jellio-player-popover-option-active');
-        showPlayerToast(t('player_dialogue_boost_off'));
-      }
-    });
-    audioMenu.appendChild(boostOption);
-  }
-  registerPopover(audioButton, audioMenu);
-
-  async function switchAudioTrack(stream) {
-    const resumeTicks = currentPositionTicks();
-    const wasPlaying = !video.paused;
-    try {
-      reportPlaybackStopped(itemId, mediaSource.Id, resumeTicks);
-      const info = await getPlaybackInfo(itemId, resumeTicks, mediaSource.Id, stream.Index);
-      const negotiated = pickNegotiatedSource(info, mediaSource.Id);
-      if (!negotiated) {
-        showPlayerToast(t('player_audio_gone'));
-        return;
-      }
-      mediaSource = negotiated;
-      playSessionId = info.PlaySessionId;
-      if (activeTrack) {
-        activeTrack.remove();
-        activeTrack = null;
-      }
-      currentAudioStreamIndex = stream.Index;
-      streamIsTranscoded = true;
-      const switchUsesHls = willUseHls(mediaSource, true);
-      needsStartOffset = !switchUsesHls;
-      streamOffsetTicks = needsStartOffset ? resumeTicks : 0;
-      pendingNativeSeekSeconds = switchUsesHls ? resumeTicks / TICKS_PER_SECOND : null;
-      hasReportedStart = false;
-      video.src = buildStreamUrl(itemId, mediaSource, resumeTicks, {
-        audioStreamIndex: currentAudioStreamIndex,
-        forceTranscode: true,
-        playSessionId: playSessionId,
-      });
-      video.load();
-      showLoadingLogo();
-      if (wasPlaying) waitForPlayableBuffer(attemptPlay);
-      rebuildSubtitleMenu();
-      rebuildAudioMenu();
-      closePopovers(null);
-      showPlayerToast(t('player_audio_requested', { name: audioStreamLabel(stream) }));
-    } catch (err) {
-      console.warn('Jellio: switchAudioTrack failed', err);
-      showPlayerToast(t('player_audio_switch_failed', { error: err && err.message ? err.message : err }));
-    }
-  }
-  rebuildAudioMenu();
+  const { audioMenu, rebuildAudioMenu } = buildAudioMenu(
+    {
+      attemptPlay, audioButton, closePopovers, currentPositionTicks, itemId, pickNegotiatedSource,
+      rebuildSubtitleMenu, registerPopover, showLoadingLogo, showPlayerToast, video, waitForPlayableBuffer,
+      willUseHls,
+    },
+    playerLive,
+  );
 
   let sleepTimerEpisodesRemaining = null;
   let sleepOption = null;
@@ -1957,826 +1404,41 @@ export async function renderPlayer(root, params) {
       // No status yet is not an error worth surfacing here.
     });
 
-  // === Cast to Smart TV popover ===
-  const castMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden jellio-player-cast-popover');
-  const castHeader = el('div', 'jellio-player-cast-header');
-  const castTitle = el('div', 'jellio-player-cast-title');
-  const castTitleIcon = el('span', 'material-icons cast');
-  castTitleIcon.setAttribute('aria-hidden', 'true');
-  castTitle.appendChild(castTitleIcon);
-  castTitle.appendChild(el('span', null, t('player_cast_to_device')));
-  castHeader.appendChild(castTitle);
+  const { castMenu, castBanner, unsubscribeCast } = buildCastControls(
+    {
+      castButton, currentTimeLabel, itemId, playPauseButton, playPauseIcon, positionPopover, registerPopover,
+      seekBar, seekToAbsoluteSeconds, showPlayerToast, skipBackButton, skipForwardButton, video,
+    },
+    playerLive,
+  );
 
-  const castRefreshBtn = el('button', 'jellio-player-cast-refresh');
-  castRefreshBtn.type = 'button';
-  castRefreshBtn.setAttribute('aria-label', t('player_refresh_devices'));
-  const castRefreshIcon = el('span', 'material-icons refresh');
-  castRefreshIcon.setAttribute('aria-hidden', 'true');
-  castRefreshBtn.appendChild(castRefreshIcon);
-  castHeader.appendChild(castRefreshBtn);
-  castMenu.appendChild(castHeader);
-
-  const castBody = el('div', 'jellio-player-cast-body');
-  castMenu.appendChild(castBody);
-
-  let isScanningCast = false;
-  async function refreshCastMenu() {
-    if (isScanningCast) return;
-    isScanningCast = true;
-    castRefreshBtn.classList.add('spinning');
-    castBody.innerHTML = '';
-
-    const currentCast = getActiveCast();
-    if (currentCast) {
-      const activeBox = el('div', 'jellio-player-cast-active-box');
-      const activeRow = el('div', 'jellio-player-cast-active-row');
-      const info = el('div', 'jellio-player-cast-device-info');
-      info.appendChild(el('div', 'jellio-player-cast-device-name', currentCast.name || 'Connected TV'));
-      info.appendChild(el('div', 'jellio-player-cast-device-sub', currentCast.type === 'jellyfin' ? (currentCast.client || 'Jellyfin Client') : 'Wireless Stream'));
-      activeRow.appendChild(info);
-
-      const disconnectBtn = el('button', 'jellio-player-cast-disconnect-btn');
-      disconnectBtn.type = 'button';
-      const disIcon = el('span', 'material-icons cast_connected');
-      disIcon.setAttribute('aria-hidden', 'true');
-      disconnectBtn.appendChild(disIcon);
-      disconnectBtn.appendChild(el('span', null, t('player_disconnect')));
-      disconnectBtn.addEventListener('click', async function (e) {
-        e.stopPropagation();
-        const res = await disconnectCast();
-        if (res && res.resumePositionTicks != null) {
-          seekToAbsoluteSeconds(res.resumePositionTicks / TICKS_PER_SECOND);
-          video.play().catch(function () {});
-        }
-        refreshCastMenu();
-      });
-      activeRow.appendChild(disconnectBtn);
-      activeBox.appendChild(activeRow);
-      castBody.appendChild(activeBox);
-    }
-
-    const loadingBox = el('div', 'jellio-player-cast-loading');
-    const loadingSpinner = el('div', 'jellio-player-cast-loading-spinner');
-    const spinIcon = el('span', 'material-icons', 'sync');
-    spinIcon.setAttribute('aria-hidden', 'true');
-    loadingSpinner.appendChild(spinIcon);
-    loadingBox.appendChild(loadingSpinner);
-
-    const loadingText = el('div', 'jellio-player-cast-loading-text');
-    loadingText.appendChild(el('div', 'jellio-player-cast-loading-title', t('player_looking_devices')));
-    loadingText.appendChild(el('div', 'jellio-player-cast-loading-sub', t('player_scanning_network')));
-    loadingBox.appendChild(loadingText);
-    castBody.appendChild(loadingBox);
-
-    if (!castMenu.classList.contains('jellio-player-popover-hidden')) {
-      positionPopover(castButton, castMenu);
-    }
-
-    try {
-      const [targets] = await Promise.all([
-        getAvailableCastTargets(),
-        new Promise(function (resolve) { setTimeout(resolve, 350); }),
-      ]);
-      loadingBox.remove();
-
-      const tvTargets = targets.filter(function (t) { return t.isTv; });
-      const otherTargets = targets.filter(function (t) { return !t.isTv; });
-
-      if (tvTargets.length > 0) {
-        castBody.appendChild(el('div', 'jellio-player-cast-section-title', t('player_smart_tvs')));
-        tvTargets.forEach(function (target) {
-          castBody.appendChild(buildCastDeviceButton(target, 'tv'));
-        });
-      }
-
-      if (otherTargets.length > 0) {
-        castBody.appendChild(el('div', 'jellio-player-cast-section-title', t('player_other_clients')));
-        otherTargets.forEach(function (target) {
-          castBody.appendChild(buildCastDeviceButton(target, 'devices'));
-        });
-      }
-
-      const googleCastAvailable = isGoogleCastSupported();
-      const airplayAvailable = isAirPlaySupported(video);
-      const hasWireless = googleCastAvailable || airplayAvailable;
-
-      if (targets.length === 0) {
-        const emptyBox = el('div', 'jellio-player-cast-empty');
-        const emptyIconWrap = el('div', 'jellio-player-cast-empty-icon');
-        const emptyIcon = el('span', 'material-icons', 'tv_off');
-        emptyIcon.setAttribute('aria-hidden', 'true');
-        emptyIconWrap.appendChild(emptyIcon);
-        emptyBox.appendChild(emptyIconWrap);
-
-        const emptyTitle = el('div', 'jellio-player-cast-empty-title', t('player_no_devices'));
-        emptyBox.appendChild(emptyTitle);
-
-        const emptySub = el('div', 'jellio-player-cast-empty-sub', hasWireless
-          ? 'No Smart TVs or Jellyfin apps were detected on your local network. You can still stream via the wireless options below.'
-          : 'Make sure your Smart TV or Chromecast is turned on and connected to the same Wi-Fi network.');
-        emptyBox.appendChild(emptySub);
-        castBody.appendChild(emptyBox);
-      }
-
-      function useDirectSourceForRemote(url, asHls) {
-        const positionSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
-        let next = url;
-        if (asHls) {
-          next = url.replace('/stream.mp4?', '/master.m3u8?').replace(/&?StartTimeTicks=\d+/, '');
-        }
-        if (video.currentSrc === next) return;
-        streamOffsetTicks = asHls ? 0 : Math.round(positionSec * TICKS_PER_SECOND);
-        video.src = next;
-        if (asHls) {
-          video.addEventListener('loadedmetadata', function () {
-            try { video.currentTime = positionSec; } catch (_) {}
-          }, { once: true });
-        }
-        video.load();
-        video.play().catch(function () {});
-      }
-
-      if (hasWireless) {
-        const wirelessTitle = el('div', 'jellio-player-cast-section-title', t('player_wireless_display'));
-        castBody.appendChild(wirelessTitle);
-
-        if (googleCastAvailable) {
-          const gcastBtn = el('button', 'jellio-player-cast-device-btn');
-          gcastBtn.type = 'button';
-          const iconWrap = el('div', 'jellio-player-cast-device-icon');
-          const icon = el('span', 'material-icons cast');
-          icon.setAttribute('aria-hidden', 'true');
-          iconWrap.appendChild(icon);
-          gcastBtn.appendChild(iconWrap);
-
-          const info = el('div', 'jellio-player-cast-device-info');
-          info.appendChild(el('div', 'jellio-player-cast-device-name', 'Google Cast / Chromecast'));
-          info.appendChild(el('div', 'jellio-player-cast-device-sub', t('player_cast_browser_desc')));
-          gcastBtn.appendChild(info);
-
-          gcastBtn.addEventListener('click', async function () {
-            try {
-              castMenu.classList.add('jellio-player-popover-hidden');
-              const currentSec = (streamOffsetTicks / TICKS_PER_SECOND) + (video.currentTime || 0);
-              const currentTicks = Math.round(currentSec * TICKS_PER_SECOND);
-              const castStreamUrl = buildCastStreamUrl(itemId, mediaSource, currentTicks, {
-                audioStreamIndex: currentAudioStreamIndex,
-                subtitleStreamIndex: activeSubtitleStreamIndex,
-              });
-
-              const preferRemotePlayback = /Android/i.test(navigator.userAgent) &&
-                typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function';
-              if (window.cast && window.cast.framework && !preferRemotePlayback) {
-                await castToGoogleCast(castStreamUrl, item, currentSec, {
-                  mediaSource: mediaSource,
-                  startOffsetTicks: currentTicks,
-                  posterUrl: getImageUrl(itemId, 'Primary', { maxWidth: 800 }),
-                });
-                video.pause();
-                showPlayerToast(t('player_cast_google'));
-              } else if (typeof video.remote !== 'undefined' && typeof video.remote.prompt === 'function') {
-                // A Media Source stream cannot be handed to a cast device, so the
-                // picker would list nothing; route a plain stream URL instead.
-                useDirectSourceForRemote(castStreamUrl, false);
-                await promptRemotePlayback(video);
-                showPlayerToast(t('player_cast_wireless'));
-              } else {
-                await castToGoogleCast(castStreamUrl, item, currentSec, {
-                  mediaSource: mediaSource,
-                  startOffsetTicks: currentTicks,
-                  posterUrl: getImageUrl(itemId, 'Primary', { maxWidth: 800 }),
-                });
-                video.pause();
-                showPlayerToast(t('player_cast_google'));
-              }
-            } catch (err) {
-              if (
-                err &&
-                (err.name === 'AbortError' ||
-                 err.name === 'NotAllowedError' ||
-                 err.name === 'NotFoundError' ||
-                 (err.message && (err.message.includes('dismissed') || err.message.includes('cancel') || err.message.includes('not selected'))))
-              ) {
-                // User simply dismissed or closed the browser's native Cast dialog
-                return;
-              }
-              console.warn('Jellio: Google Cast failed', err);
-              showPlayerToast(t('player_cast_connect_failed', { error: err && err.message ? err.message : t('player_cast_no_device') }));
-            }
-          });
-          castBody.appendChild(gcastBtn);
-        }
-
-        if (airplayAvailable) {
-          const airplayBtn = el('button', 'jellio-player-cast-device-btn');
-          airplayBtn.type = 'button';
-          const iconWrap = el('div', 'jellio-player-cast-device-icon');
-          const icon = el('span', 'material-icons airplay');
-          icon.setAttribute('aria-hidden', 'true');
-          iconWrap.appendChild(icon);
-          airplayBtn.appendChild(iconWrap);
-
-          const info = el('div', 'jellio-player-cast-device-info');
-          info.appendChild(el('div', 'jellio-player-cast-device-name', t('player_airplay')));
-          info.appendChild(el('div', 'jellio-player-cast-device-sub', t('player_airplay_desc')));
-          airplayBtn.appendChild(info);
-
-          airplayBtn.addEventListener('click', function () {
-            castMenu.classList.add('jellio-player-popover-hidden');
-            try {
-              useDirectSourceForRemote(buildCastStreamUrl(itemId, mediaSource, 0, {
-                audioStreamIndex: currentAudioStreamIndex,
-                subtitleStreamIndex: activeSubtitleStreamIndex,
-              }), true);
-              promptAirPlay(video);
-            } catch (err) {
-              showPlayerToast(t('player_airplay_unavailable'));
-            }
-          });
-          castBody.appendChild(airplayBtn);
-        }
-      }
-    } catch (err) {
-      console.warn('Jellio: error populating cast menu', err);
-      loadingBox.remove();
-      const errBox = el('div', 'jellio-player-cast-empty');
-      const errIconWrap = el('div', 'jellio-player-cast-empty-icon');
-      const errIcon = el('span', 'material-icons', 'error_outline');
-      errIcon.setAttribute('aria-hidden', 'true');
-      errIconWrap.appendChild(errIcon);
-      errBox.appendChild(errIconWrap);
-      errBox.appendChild(el('div', 'jellio-player-cast-empty-title', t('player_search_devices_error')));
-      errBox.appendChild(el('div', 'jellio-player-cast-empty-sub', t('player_check_connection_retry')));
-      castBody.appendChild(errBox);
-    } finally {
-      isScanningCast = false;
-      castRefreshBtn.classList.remove('spinning');
-      if (!castMenu.classList.contains('jellio-player-popover-hidden')) {
-        positionPopover(castButton, castMenu);
-      }
-    }
-  }
-
-  function buildCastDeviceButton(target, defaultIconName) {
-    const btn = el('button', 'jellio-player-cast-device-btn');
-    btn.type = 'button';
-
-    const iconWrap = el('div', 'jellio-player-cast-device-icon');
-    const icon = el('span', 'material-icons ' + defaultIconName);
-    icon.setAttribute('aria-hidden', 'true');
-    iconWrap.appendChild(icon);
-    btn.appendChild(iconWrap);
-
-    const info = el('div', 'jellio-player-cast-device-info');
-    info.appendChild(el('div', 'jellio-player-cast-device-name', target.name));
-    const subText = target.nowPlaying ? ('Playing: ' + target.nowPlaying) : (target.client || 'Ready to stream');
-    info.appendChild(el('div', 'jellio-player-cast-device-sub', subText));
-    btn.appendChild(info);
-
-    if (target.isTv) {
-      btn.appendChild(el('span', 'jellio-player-cast-device-badge', t('player_smart_tv_label')));
-    }
-
-    btn.addEventListener('click', async function () {
-      try {
-        const currentTicks = Math.round((streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0)) * TICKS_PER_SECOND);
-        video.pause();
-        castMenu.classList.add('jellio-player-popover-hidden');
-        showPlayerToast(t('player_cast_streaming_to', { name: target.name }));
-        await castToJellyfinSession(target, itemId, currentTicks, mediaSource, currentAudioStreamIndex, activeSubtitleStreamIndex);
-        showPlayerToast(t('player_cast_casting_on', { name: target.name }));
-      } catch (err) {
-        console.warn('Jellio: failed to cast to ' + target.name, err);
-        showPlayerToast(t('player_cast_failed', { name: target.name }));
-      }
-    });
-
-    return btn;
-  }
-
-  registerPopover(castButton, castMenu);
-  castButton.addEventListener('click', function () {
-    if (!castMenu.classList.contains('jellio-player-popover-hidden')) {
-      refreshCastMenu();
-    }
-  });
-  castRefreshBtn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    refreshCastMenu();
-  });
-
-  toggleCastMenu = function () {
-    castButton.click();
-  };
-
-  // === In-player floating Cast Banner ===
-  const castBanner = el('div', 'jellio-player-cast-banner');
-  castBanner.style.display = 'none';
-
-  const castBannerIcon = el('span', 'material-icons cast_connected jellio-player-cast-banner-icon');
-  castBannerIcon.setAttribute('aria-hidden', 'true');
-  const castBannerText = el('span', 'jellio-player-cast-banner-text', t('player_streaming_to_smart_tv'));
-
-  const castBannerControls = el('div', 'jellio-player-cast-banner-controls');
-  const bannerSkipBack = el('button', 'jellio-player-cast-banner-btn');
-  bannerSkipBack.type = 'button';
-  bannerSkipBack.setAttribute('aria-label', t('player_skip_back_10s'));
-  bannerSkipBack.appendChild(el('span', 'material-icons replay_10'));
-  bannerSkipBack.addEventListener('click', function () {
-    skipBackButton.click();
-  });
-
-  const bannerPlayPause = el('button', 'jellio-player-cast-banner-btn');
-  bannerPlayPause.type = 'button';
-  bannerPlayPause.setAttribute('aria-label', t('player_play_pause_tv'));
-  const bannerPlayPauseIcon = el('span', 'material-icons pause');
-  bannerPlayPause.appendChild(bannerPlayPauseIcon);
-  bannerPlayPause.addEventListener('click', function () {
-    playPauseButton.click();
-  });
-
-  const bannerSkipForward = el('button', 'jellio-player-cast-banner-btn');
-  bannerSkipForward.type = 'button';
-  bannerSkipForward.setAttribute('aria-label', t('player_skip_fwd_30s'));
-  bannerSkipForward.appendChild(el('span', 'material-icons forward_30'));
-  bannerSkipForward.addEventListener('click', function () {
-    skipForwardButton.click();
-  });
-
-  const bannerDisconnect = el('button', 'jellio-player-cast-banner-disconnect', t('player_resume_here'));
-  bannerDisconnect.type = 'button';
-  bannerDisconnect.setAttribute('aria-label', t('player_stop_casting'));
-  bannerDisconnect.addEventListener('click', async function () {
-    const res = await disconnectCast();
-    if (res && res.resumePositionTicks != null) {
-      seekToAbsoluteSeconds(res.resumePositionTicks / TICKS_PER_SECOND);
-      video.play().catch(function () {});
-    }
-  });
-
-  castBannerControls.appendChild(bannerSkipBack);
-  castBannerControls.appendChild(bannerPlayPause);
-  castBannerControls.appendChild(bannerSkipForward);
-  castBannerControls.appendChild(bannerDisconnect);
-
-  castBanner.appendChild(castBannerIcon);
-  castBanner.appendChild(castBannerText);
-  castBanner.appendChild(castBannerControls);
-
-  const unsubscribeCast = addCastListener(function (castState) {
-    const isCasting = Boolean(castState);
-    castButton.classList.toggle('jellio-player-pill-btn-active', isCasting);
-    const iconName = isCasting ? 'cast_connected' : 'cast';
-    const pillIcon = castButton.querySelector('.material-icons');
-    if (pillIcon) pillIcon.className = 'material-icons ' + iconName;
-
-    if (isCasting) {
-      castBanner.style.display = 'flex';
-      castBannerText.textContent = t('player_streaming_to', { name: castState.name || t('player_smart_tvs') });
-      bannerPlayPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
-      playPauseIcon.className = 'material-icons ' + (castState.isPaused ? 'play_arrow' : 'pause');
-      playPauseButton.setAttribute('aria-label', castState.isPaused ? 'Play' : 'Pause');
-
-      if (castState.positionTicks != null && !seeking) {
-        const sec = castState.positionTicks / TICKS_PER_SECOND;
-        currentTimeLabel.textContent = formatClock(sec);
-        if (durationSeconds > 0) {
-          seekBar.value = String(Math.min(100, Math.max(0, (sec / durationSeconds) * 100)));
-        }
-      }
-    } else {
-      castBanner.style.display = 'none';
-      playPauseIcon.className = 'material-icons ' + (video.paused ? 'play_arrow' : 'pause');
-      playPauseButton.setAttribute('aria-label', video.paused ? 'Play' : 'Pause');
-    }
-  });
-
-  // === Settings popover: Auto-skip Intros toggle and Keyboard Shortcuts modal trigger ===
-  const AUTOSKIP_KEY = 'jellio_player_autoskip';
   let autoSkipEnabled = false;
-  try {
-    autoSkipEnabled = readString(AUTOSKIP_KEY) === 'true';
-  } catch (e) {}
+  const { settingsMenu, shortcutsModal } = buildSettingsMenu(
+    {
+      closePopovers, positionPopover, registerPopover, settingsButton, showPlayerToast, sleepButton,
+      sleepMenu, wakeControls,
+    },
+    playerLive,
+  );
 
-  const settingsMenu = el('div', 'jellio-player-popover jellio-player-popover-hidden');
-  const autoSkipOption = el('button', 'jellio-player-popover-option');
-  autoSkipOption.type = 'button';
-  const autoSkipLabel = el('span', '', t('player_autoskip'));
-  autoSkipOption.appendChild(autoSkipLabel);
-  function syncAutoSkipUI() {
-    autoSkipOption.classList.toggle('jellio-player-popover-option-active', autoSkipEnabled);
-  }
-  syncAutoSkipUI();
-  autoSkipOption.addEventListener('click', function () {
-    autoSkipEnabled = !autoSkipEnabled;
-    writeString(AUTOSKIP_KEY, String(autoSkipEnabled));
-    syncAutoSkipUI();
-    showPlayerToast(t(autoSkipEnabled ? 'player_autoskip_on' : 'player_autoskip_off'));
-  });
-  settingsMenu.appendChild(autoSkipOption);
-
-  sleepOption = el('button', 'jellio-player-popover-option jellio-player-settings-sleep');
-  sleepOption.type = 'button';
-  const sleepOptionLabel = el('span', 'jellio-player-settings-sleep-label');
-  const sleepOptionIcon = el('span', 'material-icons bedtime');
-  sleepOptionIcon.setAttribute('aria-hidden', 'true');
-  sleepOptionLabel.appendChild(sleepOptionIcon);
-  sleepOptionLabel.appendChild(el('span', '', t('player_sleep_timer')));
-  sleepOption.appendChild(sleepOptionLabel);
-  sleepOption.addEventListener('click', function () {
-    closePopovers(sleepMenu);
-    const nowHidden = sleepMenu.classList.toggle('jellio-player-popover-hidden');
-    settingsButton.setAttribute('aria-expanded', 'false');
-    sleepButton.setAttribute('aria-expanded', String(!nowHidden));
-    if (!nowHidden) {
-      sleepMenu.style.top = '';
-      sleepMenu.style.bottom = '';
-      positionPopover(settingsButton, sleepMenu);
-    }
-    wakeControls();
-  });
-  settingsMenu.appendChild(sleepOption);
-
-  const shortcutsOption = el('button', 'jellio-player-popover-option jellio-player-popover-shortcuts-option');
-  shortcutsOption.type = 'button';
-  shortcutsOption.appendChild(el('span', '', t('player_keyboard_shortcuts')));
-  const shortcutHint = el('span', 'jellio-player-shortcut-badge', '?');
-  shortcutsOption.appendChild(shortcutHint);
-  shortcutsOption.addEventListener('click', function () {
-    closePopovers(null);
-    openShortcutsModal();
-  });
-  settingsMenu.appendChild(shortcutsOption);
-
-  registerPopover(settingsButton, settingsMenu);
-
-  // === Keyboard Shortcuts Modal ===
-  const shortcutsModal = el('div', 'jellio-player-shortcuts-modal jellio-player-shortcuts-modal-hidden');
-  const shortcutsBackdrop = el('div', 'jellio-player-shortcuts-backdrop');
-  const shortcutsCard = el('div', 'jellio-player-shortcuts-card');
-  const shortcutsHeader = el('div', 'jellio-player-shortcuts-header');
-  shortcutsHeader.appendChild(el('h3', 'jellio-player-shortcuts-title', t('player_keyboard_shortcuts')));
-  const shortcutsClose = el('button', 'jellio-player-shortcuts-close', '×');
-  shortcutsClose.type = 'button';
-  shortcutsClose.setAttribute('aria-label', t('player_close_shortcuts'));
-  shortcutsHeader.appendChild(shortcutsClose);
-  shortcutsCard.appendChild(shortcutsHeader);
-
-  const shortcutsList = el('div', 'jellio-player-shortcuts-list');
-  const SHORTCUTS = [
-    { key: 'Space / K', desc: 'Play / Pause' },
-    { key: '← / → / J / L', desc: 'Seek 10 seconds' },
-    { key: '↑ / ↓ / Wheel', desc: 'Volume up / down' },
-    { key: 'M', desc: 'Mute / Unmute' },
-    { key: 'F / DblClick', desc: 'Toggle Fullscreen' },
-    { key: 'C', desc: 'Subtitles & styling' },
-    { key: 'Z / X', desc: 'Subtitle sync (-0.1s / +0.1s)' },
-    { key: ', / .', desc: 'Frame step (when paused)' },
-    { key: '< / >', desc: 'Playback speed' },
-    { key: 'S', desc: 'Skip Intro / Credits' },
-    { key: 'Alt + C', desc: 'Cast to Smart TV / device' },
-    { key: '?', desc: 'Toggle cheat sheet' },
-    { key: 'Esc', desc: 'Close dialog / panel' },
-  ];
-  SHORTCUTS.forEach(function (sc) {
-    const row = el('div', 'jellio-player-shortcut-row');
-    const badge = el('kbd', 'jellio-player-shortcut-badge', sc.key);
-    const desc = el('span', 'jellio-player-shortcut-desc', sc.desc);
-    row.appendChild(badge);
-    row.appendChild(desc);
-    shortcutsList.appendChild(row);
-  });
-  shortcutsCard.appendChild(shortcutsList);
-  shortcutsModal.appendChild(shortcutsBackdrop);
-  shortcutsModal.appendChild(shortcutsCard);
-
-  openShortcutsModal = function () {
-    shortcutsModal.classList.remove('jellio-player-shortcuts-modal-hidden');
-    wakeControls();
-  };
-  closeShortcutsModal = function () {
-    shortcutsModal.classList.add('jellio-player-shortcuts-modal-hidden');
-  };
-  toggleShortcutsModal = function () {
-    if (shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
-      openShortcutsModal();
-    } else {
-      closeShortcutsModal();
-    }
-  };
-
-  shortcutsBackdrop.addEventListener('click', closeShortcutsModal);
-  shortcutsClose.addEventListener('click', closeShortcutsModal);
-
-  // === MediaSession API: OS lock screen, media keys, Bluetooth headset controls ===
-  syncMediaSession = function () {
-    if (!('mediaSession' in navigator)) return;
-    try {
-      const artwork = [];
-      const poster = seriesAwareArtworkUrl(800) || seriesAwareArtworkUrl(1600);
-      if (poster) {
-        artwork.push({ src: poster, sizes: '800x450', type: 'image/jpeg' });
-      }
-      navigator.mediaSession.metadata = new window.MediaMetadata({
-        title: isEpisodeItem ? (item.Name || 'Episode') : (item.Name || 'Video'),
-        artist: isEpisodeItem ? item.SeriesName : '',
-        album: isEpisodeItem && typeof item.ParentIndexNumber === 'number' && typeof item.IndexNumber === 'number'
-          ? ('Season ' + item.ParentIndexNumber + ' · Episode ' + item.IndexNumber)
-          : '',
-        artwork: artwork,
-      });
-
-      navigator.mediaSession.setActionHandler('play', function () {
-        attemptPlay();
-      });
-      navigator.mediaSession.setActionHandler('pause', function () {
-        video.pause();
-      });
-      navigator.mediaSession.setActionHandler('seekbackward', function (details) {
-        const offset = (details && details.seekOffset) || 10;
-        performSeek(Math.max(0, video.currentTime - offset));
-      });
-      navigator.mediaSession.setActionHandler('seekforward', function (details) {
-        const offset = (details && details.seekOffset) || 10;
-        performSeek(Math.min(durationSeconds || video.duration || 0, video.currentTime + offset));
-      });
-      navigator.mediaSession.setActionHandler('seekto', function (details) {
-        if (details && typeof details.seekTime === 'number') {
-          performSeek(details.seekTime);
-        }
-      });
-      navigator.mediaSession.setActionHandler('stop', function () {
-        backButton.click();
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', function () {
-        skipBackButton.click();
-      });
-      if (nextEpisode) {
-        navigator.mediaSession.setActionHandler('nexttrack', function () {
-          navigateTo('#/item?id=' + nextEpisode.Id);
-        });
-      }
-    } catch (e) {
-      console.warn('Jellio: could not initialize MediaSession', e);
-    }
-  };
-
-  syncMediaPosition = function () {
-    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-    if (durationSeconds > 0 && !isNaN(video.currentTime)) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: durationSeconds,
-          playbackRate: video.playbackRate || 1,
-          position: Math.min(durationSeconds, Math.max(0, video.currentTime)),
-        });
-      } catch (e) {}
-    }
-  };
+  wireMediaSession(
+    {
+      attemptPlay, backButton, isEpisodeItem, performSeek, seriesAwareArtworkUrl, skipBackButton, video,
+    },
+    playerLive,
+  );
 
   syncMediaSession();
 
-  const sourcePanel = el('div', 'jellio-player-sidepanel jellio-player-sidepanel-hidden');
-  const sourcePanelHeader = el('div', 'jellio-player-sidepanel-header');
-  sourcePanelHeader.appendChild(el('div', 'jellio-player-sidepanel-title', t('player_sources')));
-  const sourceCloseButton = el('button', 'jellio-player-sidepanel-close', t('action_close'));
-  sourceCloseButton.type = 'button';
-  sourcePanelHeader.appendChild(sourceCloseButton);
-  sourcePanel.appendChild(sourcePanelHeader);
-  const sourceFilterContainer = el('div', 'jellio-player-sidepanel-filters');
-  sourcePanel.appendChild(sourceFilterContainer);
-  const sourceList = el('div', 'jellio-player-sidepanel-list');
-  sourcePanel.appendChild(sourceList);
-
   let sourceOptions = [mediaSource];
-  let selectedSourceLanguage = null;
-  let selectedSourceQuality = null;
   let switchingSource = false;
-
-  function closeSidePanels() {
-    sourcePanel.classList.add('jellio-player-sidepanel-hidden');
-    episodesPanel.classList.add('jellio-player-sidepanel-hidden');
-    sourceButton.setAttribute('aria-expanded', 'false');
-    episodesButton.setAttribute('aria-expanded', 'false');
-    if (shell) shell.scrollLeft = 0;
-    if (root) root.scrollLeft = 0;
-    wakeControls();
-  }
-
-  function rebuildSourceFilter() {
-    sourceFilterContainer.textContent = '';
-    selectedSourceLanguage = null;
-    const filterRow = buildLanguageFilterRow(sourceOptions, function (code) {
-      selectedSourceLanguage = code;
-      rebuildSourceMenu();
-    });
-    if (filterRow) sourceFilterContainer.appendChild(filterRow);
-    selectedSourceQuality = null;
-    const qualityRow = buildQualityFilterRow(sourceOptions, function (quality) {
-      selectedSourceQuality = quality;
-      rebuildSourceMenu();
-    });
-    if (qualityRow) sourceFilterContainer.appendChild(qualityRow);
-  }
-
-  function rebuildSourceMenu() {
-    sourceList.textContent = '';
-    const blocking = getVideoTranscodePolicy() === 'Block';
-    const filtered = filterSources(sourceOptions, selectedSourceLanguage, selectedSourceQuality)
-      .map(function (source, index) {
-        const judged = avoidingVideoTranscodes() && videoInfoOf(source) ? classifySource(source, canBrowserDirectPlay(source)) : null;
-        return {
-          source: source,
-          verdict: judged && judged.needsVideoTranscode ? judged : null,
-          outlook: judged ? playbackOutlook(judged) : null,
-          index: index,
-        };
-      })
-      .sort(function (a, b) {
-        return (a.verdict ? 1 : 0) - (b.verdict ? 1 : 0) || a.index - b.index;
-      });
-    filtered.forEach(function (entry) {
-      const source = entry.source;
-      const verdict = entry.verdict;
-      const card = buildSourceCard(
-        source,
-        function (picked) {
-          if (verdict && blocking && picked.Id !== mediaSource.Id) {
-            showPlayerToast(t('player_reencode_blocked'));
-            return;
-          }
-          closeSidePanels();
-          if (picked.Id !== mediaSource.Id) switchSource(picked);
-        },
-        source.Id === mediaSource.Id,
-      );
-      const outlook = entry.outlook;
-      if (outlook) card.insertBefore(buildOutlookBadge(outlook), card.children[1] || null);
-      if (verdict) {
-        card.classList.add(blocking ? 'jellio-player-source-blocked' : 'jellio-player-source-warn');
-        if (blocking) card.setAttribute('aria-disabled', 'true');
-      }
-      sourceList.appendChild(card);
-    });
-  }
-
-  sourceButton.addEventListener('click', function () {
-    closePopovers(null);
-    const willOpen = sourcePanel.classList.contains('jellio-player-sidepanel-hidden');
-    episodesPanel.classList.add('jellio-player-sidepanel-hidden');
-    episodesButton.setAttribute('aria-expanded', 'false');
-    if (willOpen) {
-      sourcePanel.classList.remove('jellio-player-sidepanel-hidden');
-      sourceButton.setAttribute('aria-expanded', 'true');
-    } else {
-      sourcePanel.classList.add('jellio-player-sidepanel-hidden');
-      sourceButton.setAttribute('aria-expanded', 'false');
-    }
-    wakeControls();
-  });
-  sourceCloseButton.addEventListener('click', function (e) {
-    e.stopPropagation();
-    closeSidePanels();
-  });
-
-  const episodesPanel = el('div', 'jellio-player-sidepanel jellio-player-sidepanel-hidden');
-  const episodesPanelHeader = el('div', 'jellio-player-sidepanel-header');
-  episodesPanelHeader.appendChild(el('div', 'jellio-player-sidepanel-title', t('player_episodes')));
-  const episodesCloseButton = el('button', 'jellio-player-sidepanel-close', t('action_close'));
-  episodesCloseButton.type = 'button';
-  episodesPanelHeader.appendChild(episodesCloseButton);
-  episodesPanel.appendChild(episodesPanelHeader);
-  const seasonTabs = el('div', 'jellio-player-sidepanel-tabs');
-  episodesPanel.appendChild(seasonTabs);
-  const episodeList = el('div', 'jellio-player-sidepanel-list');
-  episodesPanel.appendChild(episodeList);
-  episodesCloseButton.addEventListener('click', function (e) {
-    e.stopPropagation();
-    closeSidePanels();
-  });
-
-  function buildEpisodeRow(episode) {
-    const row = el('button', 'jellio-player-episode-row' + (episode.Id === itemId ? ' jellio-player-episode-row-active' : ''));
-    row.type = 'button';
-    const thumbTag = (episode.ImageTags && episode.ImageTags.Primary) || episode.ParentThumbImageTag;
-    const thumb = el('div', 'jellio-player-episode-thumb');
-    if (thumbTag) {
-      thumb.style.backgroundImage = cssUrl(getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }));
-    }
-    if (episode.CommunityRating) {
-      thumb.appendChild(buildRatingBadge(episode.CommunityRating, 'jellio-player-episode-rating'));
-    }
-    const hasCode = typeof episode.ParentIndexNumber === 'number' && typeof episode.IndexNumber === 'number';
-    if (hasCode) {
-      thumb.appendChild(el('span', 'jellio-player-episode-code', 'S' + episode.ParentIndexNumber + 'E' + episode.IndexNumber));
-    }
-    row.appendChild(thumb);
-    const body = el('div', 'jellio-player-episode-body');
-    body.appendChild(el('div', 'jellio-player-episode-title', episode.Name || ''));
-    if (episode.Overview) {
-      body.appendChild(el('p', 'jellio-player-episode-overview', episode.Overview));
-    }
-    row.appendChild(body);
-    row.addEventListener('click', function () {
-      if (episode.Id === itemId) {
-        closeSidePanels();
-        return;
-      }
-      navigateTo('#/play?id=' + episode.Id);
-    });
-    return row;
-  }
-
-  // Only the latest season asked for fills the list: an earlier answer
-  // arriving late used to be appended to it as well.
-  let episodeListRequest = 0;
-  function loadSeasonEpisodes(seriesId, season, tabButton) {
-    Array.prototype.forEach.call(seasonTabs.children, function (child) {
-      child.classList.remove('jellio-player-sidepanel-tab-active');
-    });
-    if (tabButton) tabButton.classList.add('jellio-player-sidepanel-tab-active');
-    episodeList.textContent = '';
-    const request = ++episodeListRequest;
-    getEpisodes(seriesId, season.Id)
-      .then(function (episodes) {
-        if (request !== episodeListRequest) return;
-        episodeList.textContent = '';
-        episodes.forEach(function (episode) {
-          episodeList.appendChild(buildEpisodeRow(episode));
-        });
-        revealCurrentEpisode();
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not load episodes for player episode panel', err);
-      });
-  }
-
-  function isSpecialsSeason(season) {
-    if (season.IndexNumber === 0) return true;
-    return /special/i.test(season.Name || '');
-  }
-
-  if (isEpisodeItem && item.SeriesId) {
-    getSeasons(item.SeriesId)
-      .then(function (seasons) {
-        if (!seasons.length) return;
-        episodesButton.disabled = false;
-        const orderedSeasons = seasons.slice().sort(function (a, b) {
-          return (isSpecialsSeason(a) ? 1 : 0) - (isSpecialsSeason(b) ? 1 : 0);
-        });
-        let currentSeasonLoaded = false;
-        orderedSeasons.forEach(function (season) {
-          const tab = el('button', 'jellio-player-sidepanel-tab', season.Name || '');
-          tab.type = 'button';
-          tab.addEventListener('click', function () {
-            loadSeasonEpisodes(item.SeriesId, season, tab);
-          });
-          seasonTabs.appendChild(tab);
-          if (season.Id === item.SeasonId) {
-            currentSeasonLoaded = true;
-            loadSeasonEpisodes(item.SeriesId, season, tab);
-          }
-        });
-        if (!currentSeasonLoaded && orderedSeasons[0]) {
-          loadSeasonEpisodes(item.SeriesId, orderedSeasons[0], seasonTabs.firstChild);
-        }
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not load seasons for player episode panel', err);
-      });
-  }
-
-  // The playing episode (highlighted) and its season tab scrolled into
-  // view whenever the panel is open.
-  function revealCurrentEpisode() {
-    if (episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) return;
-    const activeTab = seasonTabs.querySelector('.jellio-player-sidepanel-tab-active');
-    if (activeTab && seasonTabs) {
-      const targetLeft = activeTab.offsetLeft - (seasonTabs.clientWidth / 2) + (activeTab.offsetWidth / 2);
-      seasonTabs.scrollTo({ left: Math.max(0, targetLeft), behavior: 'auto' });
-    }
-    const activeRow = episodeList.querySelector('.jellio-player-episode-row-active');
-    if (activeRow && episodeList) {
-      const targetTop = activeRow.offsetTop - (episodeList.clientHeight / 2) + (activeRow.offsetHeight / 2);
-      episodeList.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
-    }
-  }
-
-  episodesButton.addEventListener('click', function () {
-    closePopovers(null);
-    const willOpen = episodesPanel.classList.contains('jellio-player-sidepanel-hidden');
-    sourcePanel.classList.add('jellio-player-sidepanel-hidden');
-    sourceButton.setAttribute('aria-expanded', 'false');
-    if (willOpen) {
-      episodesPanel.classList.remove('jellio-player-sidepanel-hidden');
-      episodesButton.setAttribute('aria-expanded', 'true');
-      window.requestAnimationFrame(revealCurrentEpisode);
-    } else {
-      episodesPanel.classList.add('jellio-player-sidepanel-hidden');
-      episodesButton.setAttribute('aria-expanded', 'false');
-    }
-    wakeControls();
-  });
+  const { sourcePanel, episodesPanel, closeSidePanels, rebuildSourceMenu, rebuildSourceFilter } = buildSidePanels(
+    {
+      closePopovers, episodesButton, isEpisodeItem, itemId, root, shell, showPlayerToast, sourceButton,
+      switchSource, wakeControls,
+    },
+    playerLive,
+  );
 
   let toastTimer = null;
   function showPlayerToast(message) {
@@ -3228,146 +1890,14 @@ export async function renderPlayer(root, params) {
     syncVolumeUI();
     showPlayerToast(t(video.muted ? 'player_muted' : 'player_unmuted'));
   }
-  function onPlayerKeydown(event) {
-    if (screenTornDown || isTypingTarget(event.target)) return;
-    if (endScreenModalInstance) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        endScreenModalInstance.cleanup();
-        endScreenModalInstance = null;
-        return;
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        if (endScreenModalInstance.primaryBtn) {
-          endScreenModalInstance.primaryBtn.click();
-        }
-        return;
-      }
-      return;
-    }
-    if (event.altKey && (event.key === 'c' || event.key === 'C')) {
-      event.preventDefault();
-      toggleCastMenu();
-      return;
-    }
-    if (event.key === 'MediaPlayPause') {
-      event.preventDefault();
-      playPauseButton.click();
-      return;
-    }
-    if (event.key === 'MediaTrackNext' || event.key === 'MediaNextTrack') {
-      event.preventDefault();
-      skipForwardButton.click();
-      return;
-    }
-    if (event.key === 'MediaTrackPrevious' || event.key === 'MediaPreviousTrack') {
-      event.preventDefault();
-      skipBackButton.click();
-      return;
-    }
-    if (event.ctrlKey || event.altKey || event.metaKey) return;
-    switch (event.key) {
-      case ' ':
-      case 'Spacebar':
-      case 'k':
-      case 'K':
-        event.preventDefault();
-        playPauseButton.click();
-        break;
-      case 'ArrowLeft':
-      case 'j':
-      case 'J':
-        event.preventDefault();
-        skipBackButton.click();
-        break;
-      case 'ArrowRight':
-      case 'l':
-      case 'L':
-        event.preventDefault();
-        skipForwardButton.click();
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        adjustVolume(0.1);
-        break;
-      case 'ArrowDown':
-        event.preventDefault();
-        adjustVolume(-0.1);
-        break;
-      case 'f':
-      case 'F':
-        if (fullscreenButton) fullscreenButton.click();
-        break;
-      case 'm':
-      case 'M':
-        toggleMute();
-        break;
-      case 'c':
-      case 'C':
-        subtitleButton.click();
-        break;
-      case 'z':
-      case 'Z':
-        event.preventDefault();
-        updateSubtitleOffset(-0.1);
-        break;
-      case 'x':
-      case 'X':
-        event.preventDefault();
-        updateSubtitleOffset(0.1);
-        break;
-      case ',':
-        if (video.paused) {
-          event.preventDefault();
-          video.currentTime = Math.max(0, video.currentTime - 0.04);
-        }
-        break;
-      case '.':
-        if (video.paused) {
-          event.preventDefault();
-          video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 0.04);
-        }
-        break;
-      case '>':
-        event.preventDefault();
-        stepPlaybackSpeed(1);
-        break;
-      case '<':
-        event.preventDefault();
-        stepPlaybackSpeed(-1);
-        break;
-      case 's':
-      case 'S':
-        if (!skipOverlay.overlay.classList.contains('jellio-player-skip-hidden')) {
-          performSeek(skipTargetSeconds);
-        }
-        break;
-      case '?':
-        event.preventDefault();
-        toggleShortcutsModal();
-        break;
-      case 'Escape': {
-        if (!shortcutsModal.classList.contains('jellio-player-shortcuts-modal-hidden')) {
-          closeShortcutsModal();
-          break;
-        }
-        const openPopover = popovers.find(function (entry) {
-          return !entry.menu.classList.contains('jellio-player-popover-hidden');
-        });
-        if (openPopover) {
-          openPopover.menu.classList.add('jellio-player-popover-hidden');
-        } else if (!sourcePanel.classList.contains('jellio-player-sidepanel-hidden') || !episodesPanel.classList.contains('jellio-player-sidepanel-hidden')) {
-          closeSidePanels();
-        } else {
-          closeChatPanel();
-        }
-        break;
-      }
-      default:
-        break;
-    }
-  }
+  const { onPlayerKeydown } = createPlayerKeydown(
+    {
+      adjustVolume, closeSidePanels, episodesPanel, isTypingTarget, performSeek, playPauseButton, popovers,
+      shortcutsModal, skipBackButton, skipForwardButton, sourcePanel, stepPlaybackSpeed, subtitleButton,
+      toggleMute, updateSubtitleOffset, video,
+    },
+    playerLive,
+  );
   scope.listen(document, 'keydown', onPlayerKeydown);
 
   const syncWaitBanner = el('div', 'jellio-player-sync-wait');
@@ -3597,304 +2127,20 @@ export async function renderPlayer(root, params) {
   }
 
   let nextEpisode = null;
-  let upNextOverlay = null;
-  let upNextPlayButton = null;
   let upNextShown = false;
   let upNextDismissed = false;
   let upNextCountdownInterval = null;
-  let upNextCountdownRemaining = getUpNextCountdownSeconds();
-  let isNavigatingNext = false;
   let endScreenModalInstance = null;
-
-  function activeAudioLanguageCode() {
-    if (!mediaSource) return null;
-    const audioStreams = (mediaSource.MediaStreams || []).filter(function (stream) {
-      return stream.Type === 'Audio';
-    });
-    const wantedIndex = currentAudioStreamIndex != null ? currentAudioStreamIndex : mediaSource.DefaultAudioStreamIndex;
-    const active = audioStreams.find(function (stream) {
-      return stream.Index === wantedIndex;
-    });
-    return active && active.Language ? active.Language.toLowerCase() : null;
-  }
-
-  let preloadedNextMediaSourceId = null;
   let preloadedNextVideoEl = null;
   let hasInitiatedNextPreload = false;
-
-  // Negotiates the next episode ahead (T-55 s) and keeps the answer for its
-  // player (From: prewarmed); a stream played as is is also buffered.
-  function preloadNextEpisodeStream() {
-    if (hasInitiatedNextPreload || !nextEpisode || screenTornDown) return;
-    hasInitiatedNextPreload = true;
-    const target = nextEpisode;
-    const languageCode = activeAudioLanguageCode();
-    Promise.all([
-      getMediaSources(target.Id),
-      getWarmSources(target.Id),
-      getQualityTiers(target.Id),
-      currentUserPromise.catch(function () {
-        return null;
-      }),
-    ])
-      .then(async function (results) {
-        const sources = results[0];
-        if (screenTornDown || !sources || !sources.length) return;
-        const warm = new Set(Object.keys(results[1] || {}).map(normalizeId));
-        const tiers = {};
-        Object.keys(results[2] || {}).forEach(function (id) {
-          tiers[normalizeId(id)] = results[2][id];
-        });
-        const source = pickPlaySource(sources, {
-          rememberedId: rememberedSourceId(target.Id),
-          isBad: function (candidate) {
-            return isBadSource(target.Id, candidate);
-          },
-          byLanguage: languageCode
-            ? function (list) {
-                return orderByLanguage(list, languageCode, sourceAudioLanguages);
-              }
-            : null,
-          preferReady: isPreferReadyEnabled(),
-          isReady: function (candidate) {
-            return warm.has(normalizeId(candidate.Id));
-          },
-          tierOf: function (candidate) {
-            return tiers[normalizeId(candidate.Id)];
-          },
-        });
-        if (!source || isPlaceholderSource(source)) return;
-        preloadedNextMediaSourceId = source.Id;
-        const ticks = (target.UserData && target.UserData.PlaybackPositionTicks) || 0;
-        const audioIndex = preferredAudioIndex(source, results[3]);
-        const promise = getPlaybackInfo(target.Id, ticks, source.Id, audioIndex);
-        promise.catch(function () {});
-        prewarmedPlayback.put(target.Id, source.Id, ticks, { promise: promise, audioIndex: audioIndex });
-        try {
-          const info = await promise;
-          const nextSource = pickNegotiatedSource(info, source.Id);
-          // A transcode would start a server job only to throw it away.
-          const asIs = nextSource && ticks === 0 && audioIndex == null && canBrowserDirectPlay(nextSource);
-          if (!screenTornDown && asIs && !preloadedNextVideoEl) {
-            preloadedNextVideoEl = document.createElement('video');
-            preloadedNextVideoEl.preload = 'auto';
-            preloadedNextVideoEl.muted = true;
-            preloadedNextVideoEl.playsInline = true;
-            preloadedNextVideoEl.src = buildStreamUrl(target.Id, nextSource, 0, {
-              playSessionId: info.PlaySessionId,
-            });
-          }
-        } catch (e) {
-          // A failed preload leaves the next player to negotiate itself.
-        }
-      })
-      .catch(function () {});
-  }
-
-  async function playNextEpisode() {
-    if (isNavigatingNext) return;
-    isNavigatingNext = true;
-    if (upNextCountdownInterval) {
-      window.clearInterval(upNextCountdownInterval);
-      upNextCountdownInterval = null;
-    }
-    if (endScreenModalInstance) {
-      endScreenModalInstance.cleanup();
-      endScreenModalInstance = null;
-    }
-    const target = nextEpisode;
-    if (!target) return;
-    nextEpisode = null;
-
-    let mediaSourceId = preloadedNextMediaSourceId;
-    if (!mediaSourceId) {
-      const languageCode = activeAudioLanguageCode();
-      if (languageCode) {
-        try {
-          const sources = await getMediaSources(target.Id);
-          const matched = sources.find(function (source) {
-            return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
-          });
-          if (matched) mediaSourceId = matched.Id;
-        } catch (err) {
-          console.warn('Jellio: could not check next episode sources for a matching audio language', err);
-        }
-      }
-    }
-
-    if (preloadedNextVideoEl) {
-      try {
-        preloadedNextVideoEl.src = '';
-        preloadedNextVideoEl.load();
-      } catch (e) {}
-      preloadedNextVideoEl = null;
-    }
-
-    // Its known resume point lets the next player take the prewarmed answer
-    // without waiting for the details.
-    if (target.UserData) seedItemCache(target);
-    notePlayTrigger(target.Id, 'next-episode');
-    navigateTo(playHash(target.Id, mediaSourceId));
-  }
-
-  function replayCurrentItem() {
-    if (endScreenModalInstance) {
-      endScreenModalInstance.cleanup();
-      endScreenModalInstance = null;
-    }
-    hasReportedStart = false;
-    if (streamOffsetTicks > 0 || needsStartOffset) {
-      getPlaybackInfo(itemId, 0, mediaSource ? mediaSource.Id : null, currentAudioStreamIndex)
-        .then(function (info) {
-          const negotiated = info && info.MediaSources && info.MediaSources[0];
-          if (negotiated) {
-            mediaSource = negotiated;
-            playSessionId = info.PlaySessionId;
-            streamOffsetTicks = 0;
-            needsStartOffset = false;
-            pendingNativeSeekSeconds = null;
-            video.src = buildStreamUrl(itemId, mediaSource, 0, {
-              audioStreamIndex: currentAudioStreamIndex,
-              forceTranscode: true,
-              playSessionId: playSessionId,
-            });
-            video.load();
-            showLoadingLogo();
-            waitForPlayableBuffer(attemptPlay);
-            return;
-          }
-          performSeek(0);
-          attemptPlay();
-        })
-        .catch(function () {
-          performSeek(0);
-          attemptPlay();
-        });
-    } else {
-      performSeek(0);
-      attemptPlay();
-    }
-  }
-
-  function showEndScreenModal() {
-    if (endScreenModalInstance || isNavigatingNext) return;
-    hideUpNext();
-
-    const countdownSetting = getUpNextCountdownSeconds();
-    const shouldCountdown = !upNextDismissed && countdownSetting > 0;
-    const initialCountdown = shouldCountdown
-      ? (upNextShown && upNextCountdownRemaining > 0 ? upNextCountdownRemaining : countdownSetting)
-      : null;
-
-    endScreenModalInstance = buildEndScreenModal({
-      item: item,
-      nextEpisode: nextEpisode,
-      onPlayNext: function () {
-        if (endScreenModalInstance) {
-          endScreenModalInstance.cleanup();
-          endScreenModalInstance = null;
-        }
-        playNextEpisode();
-      },
-      onReplay: function () {
-        if (endScreenModalInstance) {
-          endScreenModalInstance.cleanup();
-          endScreenModalInstance = null;
-        }
-        replayCurrentItem();
-      },
-      onClose: function () {
-        if (endScreenModalInstance) {
-          endScreenModalInstance.cleanup();
-          endScreenModalInstance = null;
-        }
-      },
-      onBack: function () {
-        if (endScreenModalInstance) {
-          endScreenModalInstance.cleanup();
-          endScreenModalInstance = null;
-        }
-        if (item.SeriesId) {
-          navigateTo('#/item?id=' + item.SeriesId);
-        } else {
-          navigateTo('#/home');
-        }
-      },
-      initialCountdown: initialCountdown,
-    });
-
-    root.appendChild(endScreenModalInstance.overlay);
-    if (endScreenModalInstance.primaryBtn) {
-      endScreenModalInstance.primaryBtn.focus();
-    }
-    wakeControls();
-  }
-
-  function updateUpNextCountdown() {
-    if (upNextPlayButton) {
-      if (upNextCountdownRemaining > 0) {
-        upNextPlayButton.textContent = t('player_play_now_countdown', { seconds: upNextCountdownRemaining });
-      } else {
-        upNextPlayButton.textContent = t('player_play_now');
-      }
-    }
-  }
-
-  function showUpNext() {
-    if (upNextShown || upNextDismissed || !upNextOverlay) return;
-    upNextShown = true;
-    preloadNextEpisodeStream();
-    markRealWatchComplete();
-    reportRealDurationIfUseful(currentPositionTicks() / TICKS_PER_SECOND);
-    upNextOverlay.classList.remove('jellio-player-upnext-hidden');
-    const countdownSecs = getUpNextCountdownSeconds();
-    if (countdownSecs > 0) {
-      upNextCountdownRemaining = countdownSecs;
-      updateUpNextCountdown();
-      upNextCountdownInterval = window.setInterval(function () {
-        upNextCountdownRemaining -= 1;
-        updateUpNextCountdown();
-        if (upNextCountdownRemaining <= 0) {
-          window.clearInterval(upNextCountdownInterval);
-          upNextCountdownInterval = null;
-          playNextEpisode();
-        }
-      }, 1000);
-    } else {
-      upNextCountdownRemaining = 0;
-      updateUpNextCountdown();
-    }
-  }
-
-  function hideUpNext() {
-    if (upNextCountdownInterval) {
-      window.clearInterval(upNextCountdownInterval);
-      upNextCountdownInterval = null;
-    }
-    upNextShown = false;
-    if (upNextOverlay) upNextOverlay.classList.add('jellio-player-upnext-hidden');
-  }
-
-  function dismissUpNext() {
-    hideUpNext();
-    upNextDismissed = true;
-  }
-
-  if (item.Type === 'Episode') {
-    getNextEpisode(item)
-      .then(function (result) {
-        if (!result) return;
-        nextEpisode = result;
-        prefetchStreams(result.Id);
-        const built = buildUpNextOverlay(result, playNextEpisode, dismissUpNext);
-        upNextOverlay = built.overlay;
-        upNextPlayButton = built.playButton;
-        root.appendChild(upNextOverlay);
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not resolve next episode', err);
-      });
-  }
+  const { activeAudioLanguageCode, showEndScreenModal, preloadNextEpisodeStream, dismissUpNext, showUpNext } = wireUpNext(
+    {
+      attemptPlay, currentPositionTicks, currentUserPromise, itemId, markRealWatchComplete, performSeek,
+      pickNegotiatedSource, reportRealDurationIfUseful, root, showLoadingLogo, video, waitForPlayableBuffer,
+      wakeControls,
+    },
+    playerLive,
+  );
 
   let hasReportedStart = false;
 
@@ -4367,165 +2613,15 @@ export async function renderPlayer(root, params) {
     }
   }, PROGRESS_REPORT_MS);
 
-  const SYNC_DRIFT_THRESHOLD_SECONDS = 1.5;
-  let scheduledSyncTimeout = null;
-  function clearScheduledSync() {
-    if (scheduledSyncTimeout) {
-      window.clearTimeout(scheduledSyncTimeout);
-      scheduledSyncTimeout = null;
-    }
-  }
-
-  function syncDriftSeconds(command) {
-    return driftFromCommand(currentPositionTicks(), command, estimateCurrentTicks, TICKS_PER_SECOND);
-  }
-
-  // Every command bumps this; work a command left waiting (a reload, a
-  // buffer wait) checks it so a newer command always wins.
-  let syncGeneration = 0;
-  let lastAppliedSyncCommand = null;
-
-  function syncSeekThenReady(targetSeconds, generation) {
-    const playlistItemId = syncPlaylistItemId;
-    video.pause();
-    notifyBuffering(currentPositionTicks(), false, playlistItemId).catch(function () {});
-    seekToAbsoluteSeconds(Math.max(0, targetSeconds)).then(function () {
-      waitForPlayableBuffer(function () {
-        if (generation !== syncGeneration || playlistItemId !== syncPlaylistItemId) return;
-        notifyReady(currentPositionTicks(), false, playlistItemId).catch(function () {});
-      });
-    });
-  }
-
-  function applySyncCommand(command) {
-    if (command.PlaylistItemId !== syncPlaylistItemId) return;
-    lastAppliedSyncCommand = command;
-    clearScheduledSync();
-    const generation = ++syncGeneration;
-
-    function run() {
-      if (generation !== syncGeneration) return;
-      switch (command.Command) {
-        case 'Unpause':
-          if (syncDriftSeconds(command) > SYNC_DRIFT_THRESHOLD_SECONDS) {
-            syncSeekThenReady(estimateCurrentTicks(command.PositionTicks || 0, command.When) / TICKS_PER_SECOND, generation);
-          } else {
-            attemptPlay();
-          }
-          break;
-        case 'Pause':
-          video.pause();
-          if (syncDriftSeconds(command) > SYNC_DRIFT_THRESHOLD_SECONDS) {
-            seekToAbsoluteSeconds(Math.max(0, (command.PositionTicks || 0) / TICKS_PER_SECOND));
-          }
-          break;
-        case 'Seek':
-          // The server waits for every member's Ready after a seek; a seek
-          // inside the buffer fires no canplay, so Ready is sent here.
-          syncSeekThenReady((command.PositionTicks || 0) / TICKS_PER_SECOND, generation);
-          break;
-        case 'Stop':
-          video.pause();
-          break;
-        default:
-          break;
-      }
-    }
-
-    const delay = remoteToLocal(command.When).getTime() - Date.now();
-    if (delay > 0) {
-      scheduledSyncTimeout = window.setTimeout(run, delay);
-    } else {
-      run();
-    }
-  }
-
   let unsubscribeSyncCommand = null;
   let unsubscribeSyncGroupChange = null;
-  let syncQueuePublishAttempted = false;
-  console.debug('Jellio: player sync check, group is', getCurrentGroup(), 'syncPlaylistItemId is', syncPlaylistItemId);
-
-  unsubscribeSyncCommand = onSyncCommand(applySyncCommand);
-
-  partyLayer = createPartyLayer({
-    root: root,
-    itemId: itemId,
-    getPlaylistItemId: function () {
-      return syncPlaylistItemId;
+  const { clearScheduledSync } = wireGroupSync(
+    {
+      attemptPlay, currentPositionTicks, isEpisodeItem, isGroupJoinNavigation, isInitialGroupCatchUp, itemId,
+      root, seekToAbsoluteSeconds, showPlayerToast, video, waitForPlayableBuffer,
     },
-    getPositionTicks: currentPositionTicks,
-    getUserId: getSyncUserId,
-    toast: showPlayerToast,
-  });
-
-  // Joining well into the group's title: follow the group or start alone.
-  if (isInitialGroupCatchUp && startTicks > 120 * TICKS_PER_SECOND) {
-    askCatchUp(root, startTicks / TICKS_PER_SECOND).then(function (choice) {
-      if (choice !== 'solo' || screenTornDown) return;
-      if (joinSyncGroupId) clearJoinSync(joinSyncGroupId).catch(function () {});
-      leaveSyncGroup()
-        .catch(function () {})
-        .then(function () {
-          navigateTo('#/play?id=' + encodeURIComponent(itemId) + '&fromStart=1');
-        });
-    });
-  }
-
-  function maybePublishQueue() {
-    if (syncQueuePublishAttempted || !getCurrentGroup() || isGroupJoinNavigation) return;
-    syncQueuePublishAttempted = true;
-    publishSyncQueue(itemId, startTicks)
-      .then(function () {
-        console.debug('Jellio: published Group Watch queue for', itemId);
-        const syncGroup = getCurrentGroup();
-        if (syncGroup) {
-          const watchingName = isEpisodeItem ? item.SeriesName : item.Name;
-          sendGroupWatchMessage(syncGroup.GroupId, 'The group started watching ' + (watchingName || 'something'), itemId).catch(function () {});
-        }
-        if (!(partyLayer && partyLayer.published())) {
-          waitForPlayableBuffer(function () {
-            requestSyncUnpause().catch(function (err) {
-              console.warn('Jellio: could not send initial Group Watch unpause', err);
-            });
-          });
-        }
-        window.setTimeout(function () {
-          if (!syncPlaylistItemId) {
-            showPlayerToast(t('player_sync_no_access'));
-          }
-        }, 6000);
-      })
-      .catch(function (err) {
-        console.warn('Jellio: could not publish Group Watch queue', err);
-      });
-  }
-
-  unsubscribeSyncGroupChange = onSyncGroupChange(function () {
-    const target = getCurrentPlaylistTarget();
-    const previousPlaylistItemId = syncPlaylistItemId;
-    syncPlaylistItemId = target && sameSyncId(target.itemId, itemId) ? target.playlistItemId : null;
-    // A command for this queue item can arrive before this player knew it
-    // was the group's: apply the last one now instead of losing it.
-    if (syncPlaylistItemId && syncPlaylistItemId !== previousPlaylistItemId) {
-      const missed = getLastSyncCommand();
-      if (missed && missed !== lastAppliedSyncCommand && missed.PlaylistItemId === syncPlaylistItemId
-        && Date.now() - remoteToLocal(missed.When).getTime() < 60000) {
-        applySyncCommand(missed);
-      }
-    }
-    if (syncPlaylistItemId && video.readyState >= 3) {
-      notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
-      if (partyLayer) partyLayer.markReady(syncPlaylistItemId);
-    } else if (syncPlaylistItemId && !joinSyncActive && target && target.isPlaying) {
-      joinSyncActive = true;
-      joinSyncGroupId = getCurrentGroup().GroupId;
-      notifyBuffering(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
-      startJoinSync(joinSyncGroupId, syncPlaylistItemId).catch(function () {});
-    }
-    maybePublishQueue();
-  });
-
-  maybePublishQueue();
+    playerLive,
+  );
 
   video.addEventListener('waiting', function () {
     const stallSeconds = prebufferSettings().stallSeconds;
@@ -4547,117 +2643,14 @@ export async function renderPlayer(root, params) {
     notifyBuffering(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
   });
 
-  // A stream that keeps stopping to buffer: offer the next one (or switch
-  // straight away when that's the setting), resuming at the same spot.
-  const BUFFER_WINDOW_MS = 120000;
-  const BUFFER_STALL_TOTAL_MS = 12000;
-  const BUFFER_STALL_COUNT = 4;
-  const BUFFER_PROMPT_SNOOZE_MS = 10 * 60000;
-  const bufferStalls = [];
   let bufferStallStartedAt = 0;
   let bufferStallTimer = null;
-  let bufferPromptSnoozedUntil = 0;
-  let bufferPrompt = null;
-  let bufferSwitching = false;
-
-  function recentStalls(now) {
-    while (bufferStalls.length && now - bufferStalls[0].at > BUFFER_WINDOW_MS) bufferStalls.shift();
-    return bufferStalls;
-  }
-
-  function checkBuffering() {
-    const now = Date.now();
-    const stalls = recentStalls(now);
-    const ongoing = bufferStallStartedAt ? now - bufferStallStartedAt : 0;
-    const total = stalls.reduce(function (sum, stall) {
-      return sum + stall.ms;
-    }, ongoing);
-    const count = stalls.length + (bufferStallStartedAt ? 1 : 0);
-    if (total < BUFFER_STALL_TOTAL_MS && count < BUFFER_STALL_COUNT) return;
-    if (bufferPrompt || bufferSwitching || now < bufferPromptSnoozedUntil) return;
-    const mode = getBufferSwitchMode();
-    if (mode === 'off') return;
-    if (mode === 'auto') switchForBuffering();
-    else showBufferPrompt();
-  }
-
-  function closeBufferPrompt() {
-    if (bufferPrompt) bufferPrompt.remove();
-    bufferPrompt = null;
-  }
-
-  function showBufferPrompt() {
-    bufferPrompt = el('div', 'jellio-player-buffer-prompt');
-    bufferPrompt.appendChild(el('div', 'jellio-player-buffer-prompt-text', t('player_buffer_prompt')));
-    const actions = el('div', 'jellio-player-buffer-prompt-actions');
-    const switchButton = el('button', 'jellio-settings-button', t('player_buffer_switch'));
-    switchButton.type = 'button';
-    switchButton.addEventListener('click', function () {
-      closeBufferPrompt();
-      switchForBuffering();
-    });
-    const keep = el('button', 'jellio-settings-button jellio-settings-button-secondary', t('player_buffer_keep'));
-    keep.type = 'button';
-    keep.addEventListener('click', function () {
-      closeBufferPrompt();
-      bufferPromptSnoozedUntil = Date.now() + BUFFER_PROMPT_SNOOZE_MS;
-    });
-    const always = el('button', 'jellio-player-buffer-prompt-always', t('player_buffer_always'));
-    always.type = 'button';
-    always.addEventListener('click', function () {
-      setBufferSwitchMode('auto');
-      closeBufferPrompt();
-      switchForBuffering();
-    });
-    actions.appendChild(switchButton);
-    actions.appendChild(keep);
-    actions.appendChild(always);
-    bufferPrompt.appendChild(actions);
-    root.appendChild(bufferPrompt);
-    switchButton.focus();
-  }
-
-  async function switchForBuffering() {
-    if (bufferSwitching || screenTornDown || getCurrentGroup()) return;
-    bufferSwitching = true;
-    const tried = failoverTried.concat(mediaSource && mediaSource.Id ? [mediaSource.Id] : []);
-    const language = await streamLanguage();
-    const ordered = await nextStreams(tried, language, 'buffering switch');
-    if (screenTornDown) return;
-    if (!ordered.length) {
-      bufferSwitching = false;
-      bufferPromptSnoozedUntil = Date.now() + BUFFER_PROMPT_SNOOZE_MS;
-      showPlayerToast(t('player_buffer_no_other'));
-      return;
-    }
-    markBadSource(itemId, mediaSource, { soft: true });
-    if (mediaSource && mediaSource.Id && failoverTried.indexOf(mediaSource.Id) === -1) failoverTried.push(mediaSource.Id);
-    await switchSource(ordered[0]);
-    bufferSwitching = false;
-  }
-
-  video.addEventListener('waiting', function () {
-    if (!hasReportedStart || video.paused || syncPlaylistItemId || bufferStallStartedAt) return;
-    if (Date.now() - lastUserSeekAt < 4000) return;
-    bufferStallStartedAt = Date.now();
-    if (bufferStallTimer) window.clearInterval(bufferStallTimer);
-    bufferStallTimer = window.setInterval(function () {
-      if (screenTornDown || !bufferStallStartedAt) {
-        window.clearInterval(bufferStallTimer);
-        bufferStallTimer = null;
-        return;
-      }
-      checkBuffering();
-    }, 1000);
-  });
-  video.addEventListener('playing', function () {
-    if (!bufferStallStartedAt) return;
-    bufferStalls.push({ at: Date.now(), ms: Date.now() - bufferStallStartedAt });
-    bufferStallStartedAt = 0;
-    if (bufferStallTimer) window.clearInterval(bufferStallTimer);
-    bufferStallTimer = null;
-    checkBuffering();
-  });
+  const { bufferStalls, closeBufferPrompt } = wireBufferPrompt(
+    {
+      failoverTried, itemId, nextStreams, root, showPlayerToast, streamLanguage, switchSource, video,
+    },
+    playerLive,
+  );
   video.addEventListener('canplay', function () {
     if (!syncPlaylistItemId) return;
     notifyReady(currentPositionTicks(), !video.paused, syncPlaylistItemId).catch(function () {});
@@ -4668,44 +2661,7 @@ export async function renderPlayer(root, params) {
     }
   });
 
-  const SYNC_WAIT_POLL_MS = 3000;
-  let syncWaitVisible = false;
-  function describeSyncWait(entries) {
-    const names = entries.map(function (entry) {
-      return entry.UserName || 'Someone';
-    });
-    if (names.length === 1) return 'Waiting for ' + names[0] + ' to finish loading in…';
-    if (names.length === 2) return 'Waiting for ' + names[0] + ' and ' + names[1] + ' to finish loading in…';
-    return 'Waiting for ' + names[0] + ' and ' + (names.length - 1) + ' others to finish loading in…';
-  }
-  function pollSyncWait() {
-    const group = getCurrentGroup();
-    if (!group || !syncPlaylistItemId) {
-      if (syncWaitVisible) {
-        syncWaitVisible = false;
-        syncWaitBanner.classList.remove('jellio-player-sync-wait-visible');
-      }
-      return;
-    }
-    getJoinSync(group.GroupId, syncPlaylistItemId)
-      .then(function (entries) {
-        const myUserId = getSyncUserId();
-        const others = (entries || []).filter(function (entry) {
-          return entry.UserId !== myUserId;
-        });
-        if (others.length) {
-          syncWaitText.textContent = describeSyncWait(others);
-          syncWaitVisible = true;
-          syncWaitBanner.classList.add('jellio-player-sync-wait-visible');
-        } else if (syncWaitVisible) {
-          syncWaitVisible = false;
-          syncWaitBanner.classList.remove('jellio-player-sync-wait-visible');
-        }
-      })
-      .catch(function () {});
-  }
-  scope.interval(pollSyncWait, SYNC_WAIT_POLL_MS);
-  pollSyncWait();
+  startSyncWaitPoll({ scope, syncWaitBanner, syncWaitText }, playerLive);
 
   async function cleanup() {
     scope.dispose();
