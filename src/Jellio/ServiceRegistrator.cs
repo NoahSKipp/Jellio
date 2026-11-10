@@ -77,6 +77,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<GroupWatchJoinSyncService>();
 
         services.AddSingleton<IntroCreditsStore>();
+        services.AddSingleton<Jellio.Services.Segments.IntroSkipperTimestamps>();
         services.AddSingleton<ChromaprintExtractor>();
         services.AddSingleton<IntroCreditsAnalyzer>();
         services.AddSingleton<Jellio.Services.Downloads.ConversionSlotService>();
