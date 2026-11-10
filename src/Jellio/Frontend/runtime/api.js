@@ -1845,6 +1845,13 @@ export function logPlaybackDecision(itemId, mediaSource, classification, policy)
   postJson('/Jellio/playback/decision', body).catch(function () {});
 }
 
+// One record per play once its first frame shows (runtime/playStart.js).
+export function logPlayStart(record) {
+  try {
+    postJson('/Jellio/playback/start', record).catch(function () {});
+  } catch (err) {}
+}
+
 // One line per switch to another stream: counts and ids, no addresses.
 export function logFailoverDecision(entry) {
   const c = entry.counts;

@@ -60,6 +60,9 @@ import { el } from '../runtime/dom.js';
 import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
 import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
+import { logPlayStart, getWarmSources } from '../runtime/api.js';
+import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger } from '../runtime/playStart.js';
+import { normalizeId } from '../runtime/readySources.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -180,6 +183,18 @@ export async function renderPlayer(root, params) {
   if (params.get('local') === '1' || isOffline()) return renderOfflinePlayer(root, params);
 
   const isGroupJoinNavigation = params.get('groupJoin') === '1';
+  const playTrace = createPlayStartTrace(function () {
+    return performance.now();
+  });
+  const notedTrigger = takePlayTrigger(itemId);
+  let playStartFrom = 'fresh';
+  // Ids of the sources the server has warm; null until it answers or when it can't say.
+  let warmSourceIds = null;
+  getWarmSources(itemId)
+    .then(function (warm) {
+      if (warm) warmSourceIds = Object.keys(warm).map(normalizeId);
+    })
+    .catch(function () {});
 
   renderLoading(root);
 
@@ -195,6 +210,7 @@ export async function renderPlayer(root, params) {
     });
     return undefined;
   }
+  playTrace.mark('details');
 
   let syncPlaylistItemId = null;
   // The watch party layer (components/partyLayer.js), set once the
@@ -434,6 +450,7 @@ export async function renderPlayer(root, params) {
     console.warn('Jellio: could not match preferred audio language', err);
   }
   if (screenTornDown) return undefined;
+  playTrace.mark('playbackInfo');
 
   root.textContent = '';
   if (failoverOverlay) {
@@ -479,6 +496,41 @@ export async function renderPlayer(root, params) {
   // paused by the reader, so no pause screen.
   let stallHold = false;
   video.src = streamUrl;
+  playTrace.mark('playerReady');
+  const playStartTriggerValue = playStartTrigger(notedTrigger, failoverTried.length > 0, startTicks);
+  const playStartWarm = warmSourceIds;
+  let playStartSent = false;
+  function sendPlayStart() {
+    if (playStartSent || screenTornDown) return;
+    playStartSent = true;
+    playTrace.mark('firstFrame');
+    const sourceId = mediaSource && mediaSource.Id;
+    const warmIds = playStartWarm || warmSourceIds;
+    logPlayStart(
+      buildPlayStartRecord(
+        {
+          itemId: itemId,
+          mediaSourceId: sourceId,
+          client: playStartClient(window),
+          trigger: playStartTriggerValue,
+          from: playStartFrom,
+          warmAtPlay: warmIds && sourceId ? warmIds.indexOf(normalizeId(sourceId)) !== -1 : null,
+          directPlay: !streamIsTranscoded,
+        },
+        playTrace,
+      ),
+    );
+  }
+  ['loadedmetadata', 'progress'].forEach(function (type) {
+    video.addEventListener(type, function () {
+      playTrace.mark('firstByte');
+    }, { once: true });
+  });
+  video.addEventListener('playing', function () {
+    if (playStartSent) return;
+    if (typeof video.requestVideoFrameCallback === 'function') video.requestVideoFrameCallback(sendPlayStart);
+    else sendPlayStart();
+  });
   video.playsInline = true;
   video.preservesPitch = true;
   video.webkitPreservesPitch = true;
@@ -3419,13 +3471,16 @@ export async function renderPlayer(root, params) {
       item.UserData && item.UserData.PlayedPercentage != null
         ? Math.round(item.UserData.PlayedPercentage)
         : null;
+    playTrace.hold();
     const resumePrompt = buildResumePrompt(
       percent,
       function () {
+        playTrace.release();
         resumePrompt.overlay.remove();
         waitForPlayableBuffer(attemptPlay);
       },
       function () {
+        playTrace.release();
         resumePrompt.overlay.remove();
         hasReportedStart = false;
         getPlaybackInfo(itemId, 0, mediaSource.Id, currentAudioStreamIndex)
