@@ -1,28 +1,4 @@
 import { getJson, postJson } from './core.js';
-import { TICKS_PER_SECOND } from './streams.js';
-
-async function getNativeMediaSegments(itemId) {
-  const result = await getJson('/MediaSegments/' + itemId);
-  const items = Array.isArray(result) ? result : (result && result.Items) || [];
-  if (!items.length) {
-    console.warn('Jellio: native Media Segments came back with nothing for', itemId, result);
-  }
-  function bySeconds(type) {
-    const segment = items.find(function (s) {
-      return s.Type === type;
-    });
-    return segment
-      ? { Start: segment.StartTicks / TICKS_PER_SECOND, End: segment.EndTicks / TICKS_PER_SECOND }
-      : null;
-  }
-  const introduction = bySeconds('Intro');
-  const credits = bySeconds('Outro');
-  if (!introduction && !credits) return null;
-  return {
-    Introduction: introduction || { Start: 0, End: 0 },
-    Credits: credits || { Start: 0, End: 0 },
-  };
-}
 
 export async function getCommunitySkipSegments(itemId) {
   try {
@@ -41,19 +17,27 @@ export async function getCommunitySkipSegments(itemId) {
   }
 }
 
+// The server merges Jellyfin's Media Segments with the Intro Skipper plugin
+// (GET /Jellio/segments/{id}); the first Intro and Outro become the skip ranges.
 export async function getIntroSkipperSegments(itemId) {
   try {
-    const native = await getNativeMediaSegments(itemId);
-    if (native) return native;
+    const result = await getJson('/Jellio/segments/' + itemId);
+    const segments = (result && result.Segments) || [];
+    function bySeconds(type) {
+      const segment = segments.find(function (s) {
+        return s.Type === type;
+      });
+      return segment ? { Start: segment.StartMs / 1000, End: segment.EndMs / 1000 } : null;
+    }
+    const introduction = bySeconds('Intro');
+    const credits = bySeconds('Outro');
+    if (!introduction && !credits) return {};
+    return {
+      Introduction: introduction || { Start: 0, End: 0 },
+      Credits: credits || { Start: 0, End: 0 },
+    };
   } catch (err) {
-    console.warn('Jellio: native Media Segments lookup failed for', itemId, err && err.status, err);
-  }
-
-  try {
-    const result = await getJson('/Episode/' + itemId + '/Timestamps');
-    return result || {};
-  } catch (err) {
-    console.warn('Jellio: Intro Skipper segment lookup failed for', itemId, err && err.status, err);
+    console.warn('Jellio: skip segment lookup failed for', itemId, err && err.status);
     return {};
   }
 }
