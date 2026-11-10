@@ -189,9 +189,8 @@ public class IndexHtmlPatchService(
             + EarlySessionCaptureScript
             + BuildLanguagePreloadScript(version)
             + "</script>\n"
-            // async: a classic script in <head> held up the whole page until
-            // gstatic.com answered. cast.js waits for the SDK's own callback.
-            + "<script async src=\"https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1\"></script>\n"
+            // The Cast SDK is not loaded here: runtime/cast.js injects it when
+            // the player first needs it.
             + (iconFont != null ? $"<link rel=\"preload\" href=\"{iconFont}\" as=\"font\" type=\"font/woff2\" crossorigin>\n" : string.Empty)
             + "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n"
             + "<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n"
