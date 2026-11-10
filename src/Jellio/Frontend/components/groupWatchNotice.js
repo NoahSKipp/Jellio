@@ -1,6 +1,7 @@
 import { t } from '../runtime/i18n.js';
 
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const NOTICE_ID = 'jellioGroupWatchNotice';
 const HIDE_MS = 10000;
@@ -34,7 +35,7 @@ export function showGroupWatchNotice(options) {
 
   const media = el('div', 'jellio-groupwatch-notice-media');
   if (options.imageUrl) {
-    media.style.backgroundImage = "url('" + options.imageUrl + "')";
+    media.style.backgroundImage = cssUrl(options.imageUrl);
   } else {
     const icon = el('span', 'material-icons ' + (options.icon || 'groups'));
     icon.setAttribute('aria-hidden', 'true');

@@ -10,6 +10,7 @@ import { showToast } from './toast.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { canDownload, promptDownload } from './downloads.js';
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const MENU_ID = 'jellioCardOptionsMenu';
 const HOLD_MS = 500;
@@ -385,7 +386,7 @@ export function animateCardRemoval(card) {
       shard.style.top = row * shardHeight + 'px';
       shard.style.width = shardWidth + 'px';
       shard.style.height = shardHeight + 'px';
-      shard.style.backgroundImage = 'url(' + image.currentSrc + ')';
+      shard.style.backgroundImage = cssUrl(image.currentSrc);
       shard.style.backgroundSize = rect.width + 'px ' + rect.height + 'px';
       shard.style.backgroundPosition = -(col * shardWidth) + 'px ' + -(row * shardHeight) + 'px';
       const delayMs = col * 45 + Math.random() * 90;

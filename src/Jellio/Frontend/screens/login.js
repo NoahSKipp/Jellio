@@ -13,6 +13,7 @@ import {
 import { getUserImageUrl, updateUserPassword, getOnlineUserIds } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const landingHash = /^#\/(item|books|read|listen)\b/.test(window.location.hash) ? window.location.hash : null;
 
@@ -270,7 +271,7 @@ function buildProfileTile(userId, entry, index, onForgotten, onFailed, online) {
   avatar.setAttribute('aria-label', t('auth_quick_sign_in', { name: entry.name || '' }));
 
   if (entry.primaryImageTag) {
-    avatar.style.backgroundImage = "url('" + getUserImageUrl(userId, entry.primaryImageTag, { maxWidth: 300 }) + "')";
+    avatar.style.backgroundImage = cssUrl(getUserImageUrl(userId, entry.primaryImageTag, { maxWidth: 300 }));
   } else {
     const icon = el('span', 'material-icons person jellio-login-profile-icon');
     icon.setAttribute('aria-hidden', 'true');
@@ -337,7 +338,7 @@ function buildPublicUserTile(user, index, onNeedsPassword, online) {
 
   if (user.PrimaryImageTag) {
     avatar.style.backgroundImage =
-      "url('" + getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 300 }) + "')";
+      cssUrl(getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 300 }));
   } else {
     const icon = el('span', 'material-icons person jellio-login-profile-icon');
     icon.setAttribute('aria-hidden', 'true');

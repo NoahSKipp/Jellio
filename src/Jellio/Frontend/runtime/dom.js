@@ -1,4 +1,5 @@
 import { transitionsAllowed } from './motionSettings.js';
+import { cssUrl } from './safeUrl.js';
 
 // Shared DOM element builder, previously copy pasted byte for byte at the
 // top of every screen and component file in this bundle.
@@ -11,7 +12,7 @@ export function el(tag, className, text) {
 
 export function fadeInBackdrop(target, url) {
   if (!url) return;
-  const css = 'url(' + url + ')';
+  const css = cssUrl(url);
   const probe = new Image();
   probe.src = url;
   if (!transitionsAllowed() || probe.complete) {

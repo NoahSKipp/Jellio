@@ -6,6 +6,7 @@ import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playb
 import { videoInfoOf } from '../runtime/transcodeClassifier.js';
 import { QUALITY_ORDER, labelQuality, sourceQuality, filterPlayableSources } from '../runtime/quality.js';
 import { getAvailableEditions, detectSourceEdition, rawEditionTag } from '../runtime/editions.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 export { sourceQuality };
 import { navigateTo } from '../runtime/router.js';
@@ -318,9 +319,9 @@ function buildOverlayShell(item) {
   const backdropTag = item.BackdropImageTags && item.BackdropImageTags[0];
   const posterTag = item.ImageTags && item.ImageTags.Primary;
   if (backdropTag) {
-    overlay.style.backgroundImage = "url('" + getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 1920 }) + "')";
+    overlay.style.backgroundImage = cssUrl(getImageUrl(item.Id, 'Backdrop', { tag: backdropTag, maxWidth: 1920 }));
   } else if (posterTag) {
-    overlay.style.backgroundImage = "url('" + getImageUrl(item.Id, 'Primary', { tag: posterTag, maxWidth: 1920 }) + "')";
+    overlay.style.backgroundImage = cssUrl(getImageUrl(item.Id, 'Primary', { tag: posterTag, maxWidth: 1920 }));
   }
 
   overlay.appendChild(el('div', 'jellio-stream-picker-dim'));

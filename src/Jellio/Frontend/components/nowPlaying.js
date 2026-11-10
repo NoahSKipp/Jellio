@@ -6,6 +6,7 @@ import { mangaSeriesKey } from './mangaSeries.js';
 import { isAuthenticated, getCurrentUserId, getCurrentUser } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const POLL_INTERVAL_MS = 10000;
 const HOVER_CLOSE_DELAY_MS = 200;
@@ -127,7 +128,7 @@ function buildRow(session) {
 
   const poster = el('div', 'jellio-now-playing-row-poster');
   poster.style.backgroundImage = posterUrls(item, imageId)
-    .map((url) => 'url("' + url + '")')
+    .map((url) => cssUrl(url))
     .join(', ');
   row.appendChild(poster);
 

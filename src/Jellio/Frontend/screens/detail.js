@@ -33,6 +33,7 @@ import {
   isTodayItemStreamVerified,
   markTodayItemHasStream,
 } from '../runtime/releaseDate.js';
+import { cssUrl, safeExternalUrl } from '../runtime/safeUrl.js';
 
 function renderDetailError(root, message, onRetry) {
   renderRetry(root, message, onRetry, { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' });
@@ -219,7 +220,7 @@ function paintHeroArt(hero, item, id) {
     probe.onload = function () {
       if (next.blur) {
         const blur = el('div', 'jellio-detail-hero-blur');
-        blur.style.backgroundImage = 'url(' + next.url + ')';
+        blur.style.backgroundImage = cssUrl(next.url);
         hero.insertBefore(blur, hero.firstChild);
       } else {
         fadeInBackdrop(hero, next.url);
@@ -266,12 +267,15 @@ function openTrailerModal(trailer, youTubeId) {
 
   const actions = el('div', 'jellio-trailer-modal-actions');
   const externalLink = el('a', 'jellio-trailer-modal-ext-link');
-  externalLink.href = trailer.Url;
-  externalLink.target = '_blank';
-  externalLink.rel = 'noopener noreferrer';
-  externalLink.title = t('detail_watch_youtube');
-  externalLink.appendChild(el('span', 'material-icons open_in_new'));
-  actions.appendChild(externalLink);
+  const externalUrl = safeExternalUrl(trailer.Url);
+  if (externalUrl) {
+    externalLink.href = externalUrl;
+    externalLink.target = '_blank';
+    externalLink.rel = 'noopener noreferrer';
+    externalLink.title = t('detail_watch_youtube');
+    externalLink.appendChild(el('span', 'material-icons open_in_new'));
+    actions.appendChild(externalLink);
+  }
 
   const closeButton = el('button', 'jellio-trailer-modal-close', '×');
   closeButton.type = 'button';
@@ -304,7 +308,7 @@ function openTrailerModal(trailer, youTubeId) {
 function buildTrailersRow(trailers) {
   const trailerList = Array.isArray(trailers) ? trailers : [];
   const usable = trailerList.filter(function (trailer) {
-    return trailer && trailer.Url;
+    return trailer && safeExternalUrl(trailer.Url);
   });
   if (!usable.length) return null;
 
@@ -315,7 +319,7 @@ function buildTrailersRow(trailers) {
 
   usable.forEach(function (trailer) {
     const card = el('a', 'jellio-trailer-card');
-    card.href = trailer.Url;
+    card.href = safeExternalUrl(trailer.Url);
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
 
@@ -574,7 +578,7 @@ function buildEpisodeCard(episode, context) {
     thumbUrl = getImageUrl(episode.ParentThumbItemId, 'Thumb', { tag: episode.ParentThumbImageTag, maxWidth: 500 });
   }
   if (thumbUrl) {
-    thumb.style.backgroundImage = 'url(' + thumbUrl + ')';
+    thumb.style.backgroundImage = cssUrl(thumbUrl);
   }
   if (episode.IndexNumber != null) {
     thumb.appendChild(el('span', 'jellio-episode-badge', 'E' + episode.IndexNumber));

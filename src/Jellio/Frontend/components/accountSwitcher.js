@@ -11,6 +11,7 @@ import {
 import { getUserImageUrl, clearCache, getOnlineUserIds, getCurrentUser } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const OVERLAY_ID = 'jellioAccountSwitcher';
 
@@ -67,7 +68,7 @@ function buildProfileTile(userId, name, imageTag, onClick, quick, online, index)
   avatar.className = 'jellio-login-profile-avatar';
   avatar.setAttribute('aria-label', (quick ? 'Quick sign in as ' : 'Switch to ') + (name || ''));
   if (imageTag) {
-    avatar.style.backgroundImage = "url('" + getUserImageUrl(userId, imageTag, { maxWidth: 300 }) + "')";
+    avatar.style.backgroundImage = cssUrl(getUserImageUrl(userId, imageTag, { maxWidth: 300 }));
   } else {
     const icon = el('span', 'material-icons person jellio-login-profile-icon');
     icon.setAttribute('aria-hidden', 'true');
@@ -156,7 +157,7 @@ export async function openAccountSwitcher() {
   const currentAvatar = el('div', 'jellio-account-switcher-avatar');
   if (current && current.PrimaryImageTag) {
     currentAvatar.style.backgroundImage =
-      "url('" + getUserImageUrl(current.Id, current.PrimaryImageTag, { maxWidth: 200 }) + "')";
+      cssUrl(getUserImageUrl(current.Id, current.PrimaryImageTag, { maxWidth: 200 }));
   } else {
     const icon = el('span', 'material-icons person');
     icon.setAttribute('aria-hidden', 'true');
@@ -200,7 +201,7 @@ export async function openAccountSwitcher() {
     if (user.PrimaryImageTag) {
       currentAvatar.textContent = '';
       currentAvatar.style.backgroundImage =
-        "url('" + getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 200 }) + "')";
+        cssUrl(getUserImageUrl(user.Id, user.PrimaryImageTag, { maxWidth: 200 }));
     }
   }).catch(function () {});
 

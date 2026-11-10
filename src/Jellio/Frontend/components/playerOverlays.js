@@ -2,6 +2,7 @@ import { el } from '../runtime/dom.js';
 import { TICKS_PER_SECOND, getImageUrl } from '../runtime/api.js';
 import { t } from '../runtime/i18n.js';
 import { navigateTo } from '../runtime/router.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 export function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   const overlay = el('div', 'jellio-player-upnext jellio-player-upnext-hidden');
@@ -9,7 +10,7 @@ export function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   const thumbTag = (episode.ImageTags && episode.ImageTags.Primary) || episode.ParentThumbImageTag;
   const thumb = el('div', 'jellio-player-upnext-thumb');
   if (thumbTag) {
-    thumb.style.backgroundImage = 'url(' + getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }) + ')';
+    thumb.style.backgroundImage = cssUrl(getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }));
   }
   overlay.appendChild(thumb);
 
@@ -87,7 +88,7 @@ export function buildEndScreenModal(options) {
   if (thumbTag) {
     const imgType = (targetItem.ImageTags && targetItem.ImageTags.Primary) ? 'Primary' :
                     (targetItem.BackdropImageTags && targetItem.BackdropImageTags[0]) ? 'Backdrop' : 'Thumb';
-    thumb.style.backgroundImage = 'url(' + getImageUrl(targetItem.Id, imgType, { tag: thumbTag, maxWidth: 640 }) + ')';
+    thumb.style.backgroundImage = cssUrl(getImageUrl(targetItem.Id, imgType, { tag: thumbTag, maxWidth: 640 }));
   }
 
   if (targetItem.RunTimeTicks) {

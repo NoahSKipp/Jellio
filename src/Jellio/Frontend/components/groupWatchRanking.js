@@ -2,6 +2,7 @@ import { t } from '../runtime/i18n.js';
 import { getRankingSession, startRankingSession, voteRankingSession } from '../runtime/apiSocial.js';
 import { getItem, getImageUrl } from '../runtime/api.js';
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 export function buildPickTrigger(onStart) {
   const button = el('button', 'jellio-pick-trigger');
@@ -60,7 +61,7 @@ function buildOption(itemId, isPicked, isDisabled, onPick) {
     .then(function (item) {
       const isEpisode = item && item.Type === 'Episode';
       const artId = isEpisode && item.SeriesId ? item.SeriesId : itemId;
-      poster.style.backgroundImage = "url('" + getImageUrl(artId, 'Primary', { maxWidth: 300 }) + "')";
+      poster.style.backgroundImage = cssUrl(getImageUrl(artId, 'Primary', { maxWidth: 300 }));
       const title = el('div', 'jellio-pick-option-title', (item && item.Name) || 'Unknown title');
       poster.appendChild(title);
     })

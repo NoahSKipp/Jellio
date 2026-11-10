@@ -26,6 +26,7 @@ import {
   buildVolumeControl,
   setAudiobookVolume,
 } from '../components/audioMiniPlayer.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const SKIP_SECONDS_BACK = 30;
 const SKIP_SECONDS_FORWARD = 30;
@@ -202,7 +203,7 @@ export async function renderListen(root, params) {
   setTitle(bookTitle + ' - Jellio');
 
   root.textContent = '';
-  if (cover) root.style.setProperty('--listen-cover', 'url("' + cover + '")');
+  if (cover) root.style.setProperty('--listen-cover', cssUrl(cover));
   root.appendChild(el('div', 'jellio-listen-backdrop'));
 
   const topbar = el('div', 'jellio-listen-topbar');

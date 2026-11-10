@@ -2,6 +2,7 @@ import { t } from '../runtime/i18n.js';
 import { getTrackerStatus, connectTracker, disconnectTracker, searchTracker, getTrackerLink, setTrackerLink, removeTrackerLink, setTrackerEntry, syncTracker } from '../runtime/apiBooks.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
+import { safeExternalUrl } from '../runtime/safeUrl.js';
 
 const OVERLAY_ID = 'jellioTracker';
 const STATUSES = [
@@ -76,7 +77,7 @@ export function openTrackerDialog(options) {
     const authorize =
       'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(status.ClientId) + '&response_type=token';
     const open = el('a', 'jellio-chapter-settings-action jellio-tracker-link', t('tracker_auth'));
-    open.href = authorize;
+    open.href = safeExternalUrl(authorize);
     open.target = '_blank';
     open.rel = 'noopener noreferrer';
     body.appendChild(open);

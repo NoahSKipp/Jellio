@@ -22,6 +22,7 @@ import {
   stopRankingCountdown,
 } from './groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const OVERLAY_ID = 'jellioGroupWatch';
 const CHAT_POLL_MS = 3000;
@@ -202,7 +203,7 @@ export async function openGroupWatch() {
     const avatar = el('div', 'jellio-group-watch-avatar');
     const user = publicUsersById[userId];
     if (user && user.PrimaryImageTag) {
-      avatar.style.backgroundImage = "url('" + getUserImageUrl(userId, user.PrimaryImageTag, { maxWidth: 100 }) + "')";
+      avatar.style.backgroundImage = cssUrl(getUserImageUrl(userId, user.PrimaryImageTag, { maxWidth: 100 }));
     } else {
       avatar.textContent = (name || '?').charAt(0).toUpperCase();
     }
@@ -573,7 +574,7 @@ export async function openGroupWatch() {
   function partyArt(item, icon) {
     const art = el('div', 'jellio-party-art');
     if (item && item.ImageItemId) {
-      art.style.backgroundImage = "url('" + getImageUrl(item.ImageItemId, 'Primary', { maxWidth: 200 }) + "')";
+      art.style.backgroundImage = cssUrl(getImageUrl(item.ImageItemId, 'Primary', { maxWidth: 200 }));
     } else {
       const glyph = el('span', 'material-icons ' + icon);
       glyph.setAttribute('aria-hidden', 'true');
