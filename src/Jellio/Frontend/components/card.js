@@ -15,7 +15,7 @@ import { openListMembershipMenu } from './listMembershipMenu.js';
 import { showToast } from './toast.js';
 import { buildRatingBadge } from './ratingBadge.js';
 import { el } from '../runtime/dom.js';
-import { isUnreleasedItem, episodeReleaseLabel } from '../runtime/releaseDate.js';
+import { episodeReleaseLabel } from '../runtime/releaseDate.js';
 
 function paintCardState(imageWrap, item) {
   const existingBadge = imageWrap.querySelector('.jellio-card-watched');

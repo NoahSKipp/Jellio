@@ -23,8 +23,6 @@ import { loadLibraryView, openLibraryView, passesLibraryFilters, activeFilterCou
 import { listDownloads } from '../runtime/offline.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
-import { buildBookRequestPanel } from '../components/bookRequest.js';
-import { openMangaRequestSheet } from '../components/mangaRequest.js';
 import { buildHomeSkeleton } from '../components/homeSkeleton.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';

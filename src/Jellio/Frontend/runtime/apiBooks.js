@@ -1,6 +1,6 @@
 import { getAccessToken, getAuthHeaders, getCurrentUserId, getDeviceId, getServerAddress } from './auth.js';
 import { getDisplayCulture } from './i18n.js';
-import { findDownload, getDownload, getLocalProgress, getOfflineBlob, isNetworkError, isOffline, queueSync, setLocalProgress, updateDownload } from './offline.js';
+import { findDownload, getDownload, getLocalProgress, getOfflineBlob, isOffline, queueSync, setLocalProgress, updateDownload } from './offline.js';
 import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, requestJson, rowJson } from './api.js';
 
 // The home screen's personal rows: small, fast, and what a reader is

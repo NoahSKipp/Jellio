@@ -1,5 +1,5 @@
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
-import { getCurrentUser, saveServerDisplayLanguage, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl, searchGenreOrCategory } from '../runtime/api.js';
+import { getCurrentUser, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl, searchGenreOrCategory } from '../runtime/api.js';
 import { getProfileSettings, setProfilePrivacy, setGrouplistEnabled, getCommunityUsers } from '../runtime/apiSocial.js';
 import { startMangaImport, getMangaImportStatus } from '../runtime/apiBooks.js';
 import {
@@ -14,7 +14,6 @@ import {
   setCustomGenres,
   addCustomGenre,
   removeCustomGenre,
-  syncRecommendationsFromServer,
 } from '../runtime/recommendationSettings.js';
 import { LATEST_CHANGELOG, CHANGELOG_RELEASES, MACOS_CHANGELOG_RELEASES } from '../runtime/changelog.js';
 import { invalidateAllHomeSections } from './home.js';
@@ -46,7 +45,7 @@ import {
 import { getDefaultAudiobookSpeed, setDefaultAudiobookSpeed } from '../components/audioMiniPlayer.js';
 import { navigateTo } from '../runtime/router.js';
 import { LANGUAGE_OPTIONS, languageName } from '../runtime/languages.js';
-import { DISPLAY_LANGUAGES, getDisplayLanguage, setDisplayLanguage, t, translateGenre } from '../runtime/i18n.js';
+import { DISPLAY_LANGUAGES, getDisplayLanguage, setDisplayLanguage, t } from '../runtime/i18n.js';
 import {
   LANGUAGES,
   languageLabel,

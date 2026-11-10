@@ -5,7 +5,6 @@ import {
   getCollections,
   getCurrentUser,
   getHeroCandidates,
-  getImageUrl,
   itemTypesForKind,
   invalidateNavCaches,
   invalidateUserDataRows,

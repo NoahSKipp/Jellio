@@ -6,7 +6,7 @@ import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildSkeletonRow } from '../components/homeSkeleton.js';
 import { describeNetworkFailure } from '../runtime/network.js';
-import { reflectStateInAddressBar, navigateTo } from '../runtime/router.js';
+import { reflectStateInAddressBar } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 
 const DEBOUNCE_MS = 300;
