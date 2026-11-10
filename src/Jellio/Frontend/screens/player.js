@@ -208,6 +208,15 @@ export async function renderPlayer(root, params) {
   detailsPromise.catch(function () {});
   const preferredMediaSourceId = params.get('mediaSourceId') || undefined;
   const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
+  // Start over, and a buffering switch that carries the position over,
+  // override the saved position before anything is negotiated.
+  const startFromBeginning = params.get('fromStart') === '1';
+  const reloadedAtTicks = Number(params.get('at')) || 0;
+  function overrideStartTicks(ticks, inSyncPlaylist) {
+    if (startFromBeginning) ticks = 0;
+    if (reloadedAtTicks > 0 && !inSyncPlaylist) ticks = reloadedAtTicks;
+    return ticks;
+  }
 
   // The reader's audio language for the stream asked for, when its tracks
   // are already known here, so the first PlaybackInfo can ask for it.
@@ -243,8 +252,10 @@ export async function renderPlayer(root, params) {
   const earlySyncTarget = getCurrentPlaylistTarget();
   const preview = getCachedItemSync(itemId);
   let earlyTicks = null;
-  if (earlySyncTarget && sameSyncId(earlySyncTarget.itemId, itemId)) earlyTicks = earlySyncTarget.startPositionTicks || 0;
+  const earlyInSync = !!(earlySyncTarget && sameSyncId(earlySyncTarget.itemId, itemId));
+  if (earlyInSync) earlyTicks = earlySyncTarget.startPositionTicks || 0;
   else if (preview && preview.UserData) earlyTicks = preview.UserData.PlaybackPositionTicks || 0;
+  if (earlyTicks != null) earlyTicks = overrideStartTicks(earlyTicks, earlyInSync);
   let earlyNegotiation = null;
   if (earlyTicks != null) {
     earlyNegotiation = cachedNegotiation(earlyTicks);
@@ -284,6 +295,7 @@ export async function renderPlayer(root, params) {
     syncPlaylistItemId = initialSyncTarget.playlistItemId;
     startTicks = initialSyncTarget.startPositionTicks || 0;
   }
+  startTicks = overrideStartTicks(startTicks, !!syncPlaylistItemId);
 
   const isInitialGroupCatchUp = !!(getCurrentGroup() && syncPlaylistItemId && initialSyncTarget.isPlaying);
   let joinSyncActive = false;
@@ -560,11 +572,8 @@ export async function renderPlayer(root, params) {
     durationLabel.textContent = durationSeconds ? formatTime(durationSeconds) : '--:--';
   }
 
-  if (params.get('fromStart') === '1') startTicks = 0;
   // A buffering switch carries the position over and plays straight on.
   let lastUserSeekAt = 0;
-  const reloadedAtTicks = Number(params.get('at')) || 0;
-  if (reloadedAtTicks > 0 && !syncPlaylistItemId) startTicks = reloadedAtTicks;
   const hasResumePosition = startTicks > 0 && !syncPlaylistItemId && !reloadedAtTicks;
 
   const video = document.createElement('video');
