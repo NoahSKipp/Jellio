@@ -145,7 +145,7 @@ export function hasNoAudio(media) {
 export function looksLikeSilentSlideshow(frames, seconds, noAudio, expectedSeconds) {
   if (!expectedSeconds || expectedSeconds < PLACEHOLDER_MIN_RUNTIME_SECONDS) return false;
   if (noAudio !== true) return false;
-  if (!isFinite(frames) || !isFinite(seconds) || seconds < PLACEHOLDER_MIN_SAMPLE_SECONDS) return false;
+  if (!isFinite(frames) || frames < 0 || !isFinite(seconds) || seconds < PLACEHOLDER_MIN_SAMPLE_SECONDS) return false;
   return frames / seconds <= PLACEHOLDER_MAX_FPS;
 }
 
