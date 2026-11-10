@@ -18,6 +18,7 @@ import {
 } from '../runtime/liveTv.js';
 import { openGuide, buildChannelLogo, liveFilters } from './liveTv.js';
 import { formatClockTime } from '../runtime/format.js';
+import { createScope } from '../runtime/teardown.js';
 
 const STALL_NOTICE_MS = 15000;
 const STALL_RESTART_MS = 30000;
@@ -103,7 +104,7 @@ export async function renderLivePlayer(root, params) {
   let restarts = 0;
   let lastProgressAt = 0;
   let lastTime = -1;
-  let stallTimer = null;
+  const scope = createScope();
   let infoTimer = null;
   let switchTimer = null;
   let chromeTimer = null;
@@ -358,7 +359,7 @@ export async function renderLivePlayer(root, params) {
       setStatus(t('live_reconnecting'));
     }
   }
-  stallTimer = window.setInterval(watch, 1000);
+  scope.interval(watch, 1000);
 
   function orderedChannels() {
     // My streams keep the order they were added in, playlists their own.
@@ -437,7 +438,7 @@ export async function renderLivePlayer(root, params) {
     }
     showChrome();
   }
-  document.addEventListener('keydown', onKey);
+  scope.listen(document, 'keydown', onKey);
   stage.addEventListener('mousemove', showChrome);
 
   // The tab closing still releases the tuner slot.
@@ -458,7 +459,7 @@ export async function renderLivePlayer(root, params) {
 
   function startWatchReports() {
     sendWatchReport();
-    if (!watchTimer) watchTimer = window.setInterval(sendWatchReport, 30000);
+    if (!watchTimer) watchTimer = scope.interval(sendWatchReport, 30000);
   }
 
   function onPageHide() {
@@ -466,7 +467,12 @@ export async function renderLivePlayer(root, params) {
     const stream = lifecycle.current();
     if (stream && stream.liveStreamId) closeLiveStream(stream.liveStreamId, stream.playSessionId).catch(function () {});
   }
-  window.addEventListener('pagehide', onPageHide);
+  scope.listen(window, 'pagehide', onPageHide);
+  scope.onDispose(function () {
+    window.clearTimeout(infoTimer);
+    window.clearTimeout(switchTimer);
+    window.clearTimeout(chromeTimer);
+  });
 
   setStatus(t('live_starting', { name: '' }));
   const id = params && params.get('id');
@@ -493,14 +499,8 @@ export async function renderLivePlayer(root, params) {
   return async function cleanup() {
     left = true;
     attempt++;
-    document.removeEventListener('keydown', onKey);
-    window.removeEventListener('pagehide', onPageHide);
-    window.clearInterval(watchTimer);
+    scope.dispose();
     stopLiveWatching();
-    window.clearInterval(stallTimer);
-    window.clearTimeout(infoTimer);
-    window.clearTimeout(switchTimer);
-    window.clearTimeout(chromeTimer);
     destroyEngine();
     await lifecycle.stop();
   };

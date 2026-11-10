@@ -8,6 +8,7 @@ import { mapChannels, filterChannels, arrangeChannels, guideWindow, languageFace
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { formatClockTime } from '../runtime/format.js';
+import { createScope } from '../runtime/teardown.js';
 
 const STATE_KEY = 'jellio.livetv.state';
 const HOUR_MS = 60 * 60 * 1000;
@@ -480,7 +481,7 @@ export async function renderLiveTv(root) {
   let brokenOpen = false;
   let links = [];
   let userChannels = [];
-  let refreshTimer = null;
+  const scope = createScope();
   let scrollTimer = null;
   let restoredScroll = false;
 
@@ -728,18 +729,17 @@ export async function renderLiveTv(root) {
       writeState({ scrollY: window.scrollY });
     }, 150);
   }
-  window.addEventListener('scroll', onScroll, { passive: true });
+  scope.listen(window, 'scroll', onScroll, { passive: true });
+  scope.onDispose(function () {
+    window.clearTimeout(searchTimer);
+    window.clearTimeout(scrollTimer);
+  });
 
   await load(false);
   // What is on now moves on; refresh the list each minute.
-  refreshTimer = window.setInterval(function () {
+  scope.interval(function () {
     if (document.visibilityState === 'visible') load(true);
   }, 60000);
 
-  return function cleanup() {
-    window.clearInterval(refreshTimer);
-    window.clearTimeout(searchTimer);
-    window.clearTimeout(scrollTimer);
-    window.removeEventListener('scroll', onScroll);
-  };
+  return scope.dispose;
 }

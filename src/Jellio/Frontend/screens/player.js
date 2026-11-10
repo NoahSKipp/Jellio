@@ -70,6 +70,7 @@ import { syncDriftSeconds as driftFromCommand } from '../runtime/syncDrift.js';
 import { rememberedSourceId } from '../components/streamPicker.js';
 import { readString, writeString, remove } from '../runtime/storage.js';
 import { formatClock } from '../runtime/format.js';
+import { createScope } from '../runtime/teardown.js';
 
 const PROGRESS_REPORT_MS = 5000;
 // title|source pairs already failed over as a placeholder clip this session,
@@ -163,6 +164,8 @@ function renderFailoverEnd(root, itemId, outcome, tried, language, reason) {
 
 export async function renderPlayer(root, params) {
   let screenTornDown = false;
+  // Listeners, timers and observers that live as long as this screen.
+  const scope = createScope();
   const playerToken = {};
   mediaSessionOwner = playerToken;
   root.textContent = '';
@@ -279,7 +282,6 @@ export async function renderPlayer(root, params) {
   // The watch party layer (components/partyLayer.js), set once the
   // player is built.
   let partyLayer = null;
-  let overlayInsets = null;
   const initialSyncTarget = getCurrentPlaylistTarget();
   let startTicks = (item.UserData && item.UserData.PlaybackPositionTicks) || 0;
   if (initialSyncTarget && sameSyncId(initialSyncTarget.itemId, itemId)) {
@@ -728,7 +730,7 @@ export async function renderPlayer(root, params) {
       holdAwake(true);
     }
   }
-  document.addEventListener('visibilitychange', onWakeVisibility);
+  scope.listen(document, 'visibilitychange', onWakeVisibility);
 
   function notifyNativePlayback(active) {
     if (window.jellioNative && typeof window.jellioNative.setPlaybackState === 'function') {
@@ -862,7 +864,7 @@ export async function renderPlayer(root, params) {
       // Not every browser knows this action.
     }
   }
-  document.addEventListener('visibilitychange', onTabVisibility);
+  scope.listen(document, 'visibilitychange', onTabVisibility);
   function onTabVisibility() {
     if (document.visibilityState === 'visible') checkForFrozenPicture();
   }
@@ -1402,7 +1404,7 @@ export async function renderPlayer(root, params) {
       reentrant = false;
     }
   }
-  video.textTracks.addEventListener('change', enforceSubtitleTrackModes);
+  scope.listen(video.textTracks, 'change', enforceSubtitleTrackModes);
 
   function normalizeCuePositions(textTrack) {
     const cues = textTrack.cues;
@@ -3078,12 +3080,12 @@ export async function renderPlayer(root, params) {
   shell.appendChild(seekRow);
   shell.appendChild(pill);
   // Party overlays sit just above the seek row and below the top bar.
-  overlayInsets = new ResizeObserver(function () {
+  const overlayInsets = scope.observe(new ResizeObserver(function () {
     const box = root.getBoundingClientRect();
     if (!box.height) return;
     root.style.setProperty('--jellio-player-bottom-inset', Math.max(0, box.bottom - seekRow.getBoundingClientRect().top) + 'px');
     root.style.setProperty('--jellio-player-top-inset', Math.max(0, topbar.getBoundingClientRect().bottom - box.top) + 'px');
-  });
+  }));
   overlayInsets.observe(root);
   overlayInsets.observe(seekRow);
   overlayInsets.observe(pill);
@@ -3180,7 +3182,7 @@ export async function renderPlayer(root, params) {
   }
   const rootWakeEvents = ['mousemove', 'touchstart', 'keydown', 'click'];
   rootWakeEvents.forEach(function (eventName) {
-    root.addEventListener(eventName, onRootWake);
+    scope.listen(root, eventName, onRootWake);
   });
   function onPlayerDblClick(event) {
     if (screenTornDown) return;
@@ -3198,8 +3200,8 @@ export async function renderPlayer(root, params) {
     wakeControls();
     adjustVolume(event.deltaY < 0 ? 0.05 : -0.05);
   }
-  root.addEventListener('dblclick', onPlayerDblClick);
-  root.addEventListener('wheel', onPlayerWheel, { passive: false });
+  scope.listen(root, 'dblclick', onPlayerDblClick);
+  scope.listen(root, 'wheel', onPlayerWheel, { passive: false });
   wakeControls();
 
   function isTypingTarget(target) {
@@ -3366,7 +3368,7 @@ export async function renderPlayer(root, params) {
         break;
     }
   }
-  document.addEventListener('keydown', onPlayerKeydown);
+  scope.listen(document, 'keydown', onPlayerKeydown);
 
   const syncWaitBanner = el('div', 'jellio-player-sync-wait');
   syncWaitBanner.appendChild(el('span', 'jellio-player-sync-wait-dot'));
@@ -4702,11 +4704,11 @@ export async function renderPlayer(root, params) {
       })
       .catch(function () {});
   }
-  const syncWaitPollTimer = window.setInterval(pollSyncWait, SYNC_WAIT_POLL_MS);
+  scope.interval(pollSyncWait, SYNC_WAIT_POLL_MS);
   pollSyncWait();
 
   async function cleanup() {
-    if (overlayInsets) overlayInsets.disconnect();
+    scope.dispose();
     window.clearTimeout(slideshowTimer);
     if (failoverWatch) { window.clearInterval(failoverWatch); failoverWatch = 0; }
     if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = 0; }
@@ -4716,11 +4718,9 @@ export async function renderPlayer(root, params) {
     closeBufferPrompt();
     setPlaybackActive(false);
     holdAwake(false);
-    document.removeEventListener('visibilitychange', onWakeVisibility);
     notifyNativePlayback(false);
     if (unsubscribeCast) unsubscribeCast();
     if (getActiveCast()) disconnectCast().catch(function () {});
-    document.removeEventListener('visibilitychange', onTabVisibility);
     window.clearTimeout(frozenCheck);
     if (pip) pip.destroy();
     if (screenTornDown) return;
@@ -4737,12 +4737,6 @@ export async function renderPlayer(root, params) {
       audioCtx = null;
     }
     window.clearInterval(logoWatchdog);
-    document.removeEventListener('keydown', onPlayerKeydown);
-    rootWakeEvents.forEach(function (eventName) {
-      root.removeEventListener(eventName, onRootWake);
-    });
-    root.removeEventListener('dblclick', onPlayerDblClick);
-    root.removeEventListener('wheel', onPlayerWheel);
     exitFullscreenOnCleanup();
     if ('mediaSession' in navigator && mediaSessionOwner === playerToken) {
       mediaSessionOwner = null;
@@ -4764,13 +4758,11 @@ export async function renderPlayer(root, params) {
       joinSyncActive = false;
       clearJoinSync(joinSyncGroupId).catch(function () {});
     }
-    window.clearInterval(syncWaitPollTimer);
     clearScheduledSync();
     if (unsubscribeSyncCommand) unsubscribeSyncCommand();
     if (unsubscribeSyncGroupChange) unsubscribeSyncGroupChange();
     stopChatOnCleanup();
     if (partyLayer) partyLayer.destroy();
-    video.textTracks.removeEventListener('change', enforceSubtitleTrackModes);
     if (subtitleStyleTag) {
       subtitleStyleTag.remove();
       subtitleStyleTag = null;
