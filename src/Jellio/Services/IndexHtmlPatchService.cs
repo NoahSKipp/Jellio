@@ -187,6 +187,7 @@ public class IndexHtmlPatchService(
         return $"{StartMarker} v={version} -->\n"
             + "<script>\n"
             + EarlySessionCaptureScript
+            + BuildLanguagePreloadScript(version)
             + "</script>\n"
             // async: a classic script in <head> held up the whole page until
             // gstatic.com answered. cast.js waits for the SDK's own callback.
@@ -202,6 +203,34 @@ public class IndexHtmlPatchService(
             + preloadLinks
             + $"<script type=\"module\" src=\"/Jellio/frontend/app.js?v={version}\"></script>\n"
             + $"{EndMarker}\n";
+    }
+
+    // Non-English users need runtime/strings-xx.js before the first render;
+    // fetching it now overlaps it with the startup modules.
+    internal static string BuildLanguagePreloadScript(string version)
+    {
+        const string prefix = "Jellio.Frontend.runtime.strings-";
+        var codes = Assembly.GetExecutingAssembly().GetManifestResourceNames()
+            .Where(name => name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".js", StringComparison.Ordinal))
+            .Select(name => name[prefix.Length..^3])
+            .Where(code => code.Length > 0 && code.All(char.IsAsciiLetterLower))
+            .OrderBy(code => code, StringComparer.Ordinal)
+            .ToList();
+        if (codes.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return "(function () {\n"
+            + "  try {\n"
+            + "    var lang = localStorage.getItem('jellio_display_language');\n"
+            + $"    if ({JsonSerializer.Serialize(codes)}.indexOf(lang) === -1) return;\n"
+            + "    var link = document.createElement('link');\n"
+            + "    link.rel = 'modulepreload';\n"
+            + $"    link.href = '/Jellio/frontend/runtime/strings-' + lang + '.js?v={version}';\n"
+            + "    document.head.appendChild(link);\n"
+            + "  } catch (e) {}\n"
+            + "})();\n";
     }
 
     private const string EarlySessionCaptureScript =
