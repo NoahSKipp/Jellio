@@ -57,7 +57,7 @@ import { createPartyLayer, askCatchUp } from '../components/partyLayer.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
-import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
+import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode, startBufferTarget } from '../runtime/bufferSettings.js';
 import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
 import { logPlayStart, getWarmSources, getCachedItemSync } from '../runtime/api.js';
@@ -2812,20 +2812,23 @@ export async function renderPlayer(root, params) {
     }
   }
 
-  const PREBUFFER_TARGET_SECONDS = 8;
-  const PREBUFFER_TIMEOUT_MS = 12000;
-  const CONFIRMED_CACHED_TARGET_SECONDS = 1;
-  const CONFIRMED_CACHED_TIMEOUT_MS = 2500;
   function isConfirmedCachedSource() {
     return !!(mediaSource && mediaSource.Formats && mediaSource.Formats.indexOf('gelato-cached') !== -1);
   }
+  function startBufferSource() {
+    return {
+      confirmedCached: isConfirmedCachedSource(),
+      ready: !!(warmSourceIds && mediaSource && warmSourceIds.indexOf(normalizeId(mediaSource.Id)) !== -1),
+      localFile: !!(mediaSource && mediaSource.Protocol === 'File' && !mediaSource.IsRemote),
+      transcoded: streamIsTranscoded,
+    };
+  }
   function waitForPlayableBuffer(callback, targetOverride, timeoutOverride) {
     let settled = false;
-    const prebuffer = prebufferSettings();
-    const raised = prebuffer.startSeconds > PREBUFFER_TARGET_SECONDS;
-    const confirmedCached = !raised && isConfirmedCachedSource();
-    const targetSeconds = targetOverride || (confirmedCached ? CONFIRMED_CACHED_TARGET_SECONDS : Math.max(PREBUFFER_TARGET_SECONDS, prebuffer.startSeconds));
-    const timeoutMs = timeoutOverride || (confirmedCached ? CONFIRMED_CACHED_TIMEOUT_MS : Math.max(PREBUFFER_TIMEOUT_MS, prebuffer.startTimeoutMs));
+    const startTarget = startBufferTarget(prebufferSettings(), startBufferSource());
+    const targetSeconds = targetOverride || startTarget.targetSeconds;
+    const timeoutMs = timeoutOverride || startTarget.timeoutMs;
+    const acceptReadyState = startTarget.acceptReadyState && !targetOverride;
     function bufferedAheadSeconds() {
       const start = video.currentTime || 0;
       const buffered = video.buffered;
@@ -2847,7 +2850,7 @@ export async function renderPlayer(root, params) {
     function check() {
       // readyState 4 only means the browser expects to play through at the
       // current rate; with a raised target the seconds have to be there.
-      if (bufferedAheadSeconds() >= targetSeconds || (!raised && !targetOverride && video.readyState >= 4)) settle();
+      if (bufferedAheadSeconds() >= targetSeconds || (acceptReadyState && video.readyState >= 4)) settle();
       else if (video.duration && video.currentTime + bufferedAheadSeconds() >= video.duration - 0.5) settle();
     }
     const fallbackTimer = window.setTimeout(settle, timeoutMs);
