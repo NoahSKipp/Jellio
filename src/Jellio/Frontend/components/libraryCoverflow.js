@@ -131,6 +131,9 @@ export function buildLibraryCoverflow(options) {
   let dots = [];
   let index = 0;
   let timer = null;
+  let destroyed = false;
+  // Paused while the tab is hidden.
+  document.addEventListener('visibilitychange', restartTimer);
   let hovered = false;
 
   root.addEventListener('mouseenter', function () {
@@ -172,7 +175,8 @@ export function buildLibraryCoverflow(options) {
 
   function restartTimer() {
     if (timer) window.clearInterval(timer);
-    if (items.length < 2) return;
+    timer = null;
+    if (destroyed || items.length < 2 || document.hidden) return;
     timer = window.setInterval(function () {
       if (hovered) return;
       go(index + 1);
@@ -240,6 +244,8 @@ export function buildLibraryCoverflow(options) {
     element: root,
     ready: ready,
     destroy: function () {
+      destroyed = true;
+      document.removeEventListener('visibilitychange', restartTimer);
       if (timer) window.clearInterval(timer);
     },
   };

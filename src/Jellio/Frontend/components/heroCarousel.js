@@ -329,6 +329,21 @@ export function buildHeroCarousel(options) {
     }
   }, { passive: true });
 
+  // Rotation stops while the tab is hidden and picks up again when it is back.
+  let rotating = false;
+  let destroyed = false;
+  function startRotation() {
+    if (timer) window.clearInterval(timer);
+    timer = null;
+    if (!rotating || document.hidden) return;
+    timer = window.setInterval(function () {
+      if (hovered || !items.length) return;
+      index = (index + 1) % items.length;
+      render();
+    }, ROTATE_MS);
+  }
+  document.addEventListener('visibilitychange', startRotation);
+
   getHeroCandidates(CANDIDATE_LIMIT, options)
     .then(function (result) {
       if (!result.length) {
@@ -342,11 +357,9 @@ export function buildHeroCarousel(options) {
       const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduceMotion) return;
 
-      timer = window.setInterval(function () {
-        if (hovered || !items.length) return;
-        index = (index + 1) % items.length;
-        render();
-      }, ROTATE_MS);
+      if (destroyed) return;
+      rotating = true;
+      startRotation();
     })
     .catch(function (err) {
       console.warn('Jellio: hero carousel could not load candidates', err);
@@ -356,6 +369,9 @@ export function buildHeroCarousel(options) {
   return {
     element: root,
     destroy: function () {
+      rotating = false;
+      destroyed = true;
+      document.removeEventListener('visibilitychange', startRotation);
       if (timer) window.clearInterval(timer);
     },
   };
