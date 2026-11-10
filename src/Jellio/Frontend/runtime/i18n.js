@@ -1141,6 +1141,13 @@ const STRINGS = {
     downloads_empty_hint: "Use Download on a book, a manga series, an audiobook, a film or an episode to keep it on this device and read, listen or watch without the server.",
     toast_offline: "Offline. Your downloads still work.",
     toast_online: "Back online.",
+    release_tomorrow: "Tomorrow",
+    release_in_days: "In {count} days",
+    release_coming_soon: "Coming soon",
+    seasonal_halloween: "Spooky Season",
+    seasonal_christmas: "Holiday Favorites",
+    seasonal_newyear: "New Year Celebrations",
+    seasonal_valentine: "Romance & Date Night",
   },
 };
 

@@ -1124,4 +1124,11 @@ export default {
   downloads_empty_hint: "Pobierz książkę, mangę, audiobook, film lub odcinek, aby odtwarzać i czytać na tym urządzeniu bez połączenia z serwerem.",
   toast_offline: "Tryb offline. Twoje pobrane pliki nadal działają.",
   toast_online: "Znowu online.",
+  release_tomorrow: "Jutro",
+  release_in_days: "Za {count} dni",
+  release_coming_soon: "Wkrótce",
+  seasonal_halloween: "Straszny sezon",
+  seasonal_christmas: "Świąteczne ulubione",
+  seasonal_newyear: "Sylwester i Nowy Rok",
+  seasonal_valentine: "Romans i randka",
 };

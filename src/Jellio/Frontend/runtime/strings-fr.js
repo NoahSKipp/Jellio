@@ -1101,4 +1101,11 @@ export default {
   downloads_empty_hint: "Télécharge un livre, un manga, un livre audio, un film ou un épisode pour en profiter sur cet appareil sans connexion au serveur.",
   toast_offline: "Hors ligne. Tes téléchargements fonctionnent toujours.",
   toast_online: "De nouveau en ligne.",
+  release_tomorrow: "Demain",
+  release_in_days: "Dans {count} jours",
+  release_coming_soon: "Bientôt disponible",
+  seasonal_halloween: "La saison des frissons",
+  seasonal_christmas: "Les favoris des fêtes",
+  seasonal_newyear: "Fêtes du Nouvel An",
+  seasonal_valentine: "Romance et soirée en amoureux",
 };

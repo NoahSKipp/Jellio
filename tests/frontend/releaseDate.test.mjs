@@ -261,3 +261,21 @@ test('seasonEpisodeReleaseLabels marks unverified today episodes and trailing un
   assert.equal(labels[3], 'Coming soon');
   assert.equal(labels[4], 'Coming soon');
 });
+
+test('release labels and seasonal row titles are translated in every table', async () => {
+  const keys = [
+    'calendar_today',
+    'release_tomorrow',
+    'release_in_days',
+    'release_coming_soon',
+    'seasonal_halloween',
+    'seasonal_christmas',
+    'seasonal_newyear',
+    'seasonal_valentine',
+  ];
+  for (const lang of ['de', 'es', 'fr', 'it', 'pl', 'pt']) {
+    const table = (await import('../../src/Jellio/Frontend/runtime/strings-' + lang + '.js')).default;
+    for (const key of keys) assert.ok(table[key], lang + ' is missing ' + key);
+  }
+  assert.equal(episodeReleaseLabel({ Id: 'x', PremiereDate: '2026-11-08T00:00:00Z' }, FIXED_NOW), 'In 3 days');
+});

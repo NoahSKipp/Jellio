@@ -1101,4 +1101,11 @@ export default {
   downloads_empty_hint: "Transfere um livro, um manga, um audiolivro, um filme ou um episódio para desfrutar neste dispositivo sem ligação ao servidor.",
   toast_offline: "Offline. As tuas transferências continuam a funcionar.",
   toast_online: "Novamente online.",
+  release_tomorrow: "Amanhã",
+  release_in_days: "Em {count} dias",
+  release_coming_soon: "Em breve",
+  seasonal_halloween: "Temporada de arrepios",
+  seasonal_christmas: "Favoritos das festas",
+  seasonal_newyear: "Celebrações de Ano Novo",
+  seasonal_valentine: "Romance e noite a dois",
 };

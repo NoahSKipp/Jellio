@@ -113,23 +113,16 @@ export function episodeReleaseLabel(item, nowMs) {
     const premiereDay = Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
     const diffDays = Math.round((premiereDay - today) / MS_PER_DAY);
     if (diffDays === 0) {
-      let todayLabel = 'Today';
-      try {
-        if (typeof t === 'function') {
-          const localized = t('calendar_today');
-          if (localized) todayLabel = localized;
-        }
-      } catch (_) {}
-      return todayLabel;
+      return t('calendar_today', null, 'Today');
     }
-    if (diffDays === 1) return 'Tomorrow';
-    if (diffDays > 1 && diffDays < 7) return 'In ' + diffDays + ' days';
+    if (diffDays === 1) return t('release_tomorrow', null, 'Tomorrow');
+    if (diffDays > 1 && diffDays < 7) return t('release_in_days', { count: diffDays }, 'In {count} days');
     if (diffDays >= 7) {
       return dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
     }
   }
 
-  return 'Coming soon';
+  return t('release_coming_soon', null, 'Coming soon');
 }
 
 export function filterReleasedItems(items, nowMs) {
@@ -152,7 +145,7 @@ export function seasonEpisodeReleaseLabels(episodes, nowMs) {
     } else if (seenUnreleased) {
       const isPlayed = !!(ep.UserData && (ep.UserData.Played || ep.UserData.PlaybackPositionTicks > 0));
       if (!ep.PremiereDate && !isPlayed && !ep.RunTimeTicks) {
-        label = 'Coming soon';
+        label = t('release_coming_soon', null, 'Coming soon');
       }
     }
     if (label) {
