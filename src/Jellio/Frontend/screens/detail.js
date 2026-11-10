@@ -9,6 +9,8 @@ import { getBookMetadata, getBookCoverUrl, getMangaSeriesCoverUrl, getAudiobookT
 import { watchSources } from '../runtime/itemInfo.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
+import { attachPlayPrefetch } from '../components/playPrefetch.js';
+import { notePlayTrigger } from '../runtime/playStart.js';
 import { getAvailableEditions, getPreferredEdition, setPreferredEdition } from '../runtime/editions.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
@@ -1317,7 +1319,12 @@ export async function renderDetail(root, params, signal) {
     playButton.appendChild(el('span', 'material-icons play_arrow'));
     playButton.appendChild(el('span', null, t('action_play')));
     playButton.addEventListener('click', function () {
+      notePlayTrigger(item.Id, 'detail');
       openStreamPicker(item, activeEdition ? { edition: activeEdition } : undefined);
+    });
+    // An edition picked on the page may not be the stream the prefetch takes.
+    attachPlayPrefetch(playButton, item.Id, function () {
+      return activeEdition ? null : item;
     });
     actions.appendChild(playButton);
   } else {
@@ -1338,12 +1345,20 @@ export async function renderDetail(root, params, signal) {
       },
     );
     if (isSeries) seriesTargetPromise = targetPromise;
+    attachPlayPrefetch(playButton, item.Id, function () {
+      return targetPromise.then(function (result) {
+        return result && result.episode;
+      });
+    });
 
     playButton.addEventListener('click', function () {
       playButton.disabled = true;
       targetPromise
         .then(function (result) {
-          if (result && result.episode) openStreamPicker(result.episode);
+          if (result && result.episode) {
+            notePlayTrigger(result.episode.Id, 'detail');
+            openStreamPicker(result.episode);
+          }
         })
         .catch(function (err) {
           console.warn('Jellio: could not resolve series/season play target', err);

@@ -63,6 +63,12 @@ function readRememberedSources() {
   }
 }
 
+export function rememberedSourceId(itemId) {
+  if (!isRememberStreamEnabled()) return null;
+  const remembered = readRememberedSources()[itemId];
+  return (remembered && remembered.mediaSourceId) || null;
+}
+
 function rememberSourceChoice(itemId, mediaSourceId) {
   try {
     const map = readRememberedSources();

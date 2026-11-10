@@ -80,20 +80,29 @@ export function createDwellPrefetch(options) {
     timer = null;
   }
 
+  function ranLately(id) {
+    const last = ranAt.get(id);
+    return last != null && options.now() - last < windowMs;
+  }
+
+  function runNow(itemId) {
+    stop();
+    const id = normalizeId(itemId);
+    if (ranLately(id)) return;
+    ranAt.set(id, options.now());
+    options.run(itemId);
+  }
+
   return {
     start(itemId) {
       stop();
-      const id = normalizeId(itemId);
-      const last = ranAt.get(id);
-      if (last != null && options.now() - last < windowMs) return;
+      if (ranLately(normalizeId(itemId))) return;
       timer = options.schedule(function () {
         timer = null;
-        const again = ranAt.get(id);
-        if (again != null && options.now() - again < windowMs) return;
-        ranAt.set(id, options.now());
-        options.run(itemId);
+        runNow(itemId);
       }, delayMs);
     },
+    runNow: runNow,
     stop: stop,
   };
 }

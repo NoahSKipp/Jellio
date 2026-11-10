@@ -99,6 +99,18 @@ test('a new rest replaces the one waiting', () => {
   assert.deepEqual(runs, ['b']);
 });
 
+test('runNow skips the wait but keeps the once-per-window rule', () => {
+  const clock = fakeClock();
+  const runs = [];
+  const dwell = createDwellPrefetch({ ...clock, delayMs: 1000, run: (id) => runs.push(id) });
+  dwell.start('a');
+  clock.advance(300);
+  dwell.runNow('a');
+  clock.advance(2000);
+  dwell.runNow('a');
+  assert.deepEqual(runs, ['a']);
+});
+
 const S = (Id, tier, lang) => ({ Id, tier, lang });
 
 test('pick: remembered first, unless it failed lately', () => {
