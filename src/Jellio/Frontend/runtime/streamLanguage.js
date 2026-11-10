@@ -1,28 +1,9 @@
 // Which audio language to look for when Jellio picks a stream on its
 // own (failover, buffering switch), and the order to try streams in.
 
-const CANONICAL = {
-  en: 'eng', eng: 'eng',
-  de: 'ger', ger: 'ger', deu: 'ger',
-  fr: 'fre', fre: 'fre', fra: 'fre',
-  es: 'spa', spa: 'spa',
-  it: 'ita', ita: 'ita',
-  pl: 'pol', pol: 'pol',
-  pt: 'por', por: 'por',
-  ja: 'jpn', jpn: 'jpn',
-  ko: 'kor', kor: 'kor',
-  zh: 'chi', chi: 'chi', zho: 'chi',
-  ru: 'rus', rus: 'rus',
-  nl: 'dut', dut: 'dut', nld: 'dut',
-  ar: 'ara', ara: 'ara',
-  sv: 'swe', swe: 'swe',
-  tr: 'tur', tur: 'tur',
-};
+import { normalizeLanguage } from './languages.js';
 
-export function normalizeLanguage(code) {
-  const value = String(code || '').toLowerCase().split('-')[0];
-  return CANONICAL[value] || value;
-}
+export { normalizeLanguage };
 
 // A preferred audio language set by the user wins; otherwise the menu
 // language stands in for it.
