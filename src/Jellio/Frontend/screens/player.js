@@ -60,8 +60,9 @@ import { el } from '../runtime/dom.js';
 import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
 import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
-import { logPlayStart, getWarmSources } from '../runtime/api.js';
-import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger } from '../runtime/playStart.js';
+import { logPlayStart, getWarmSources, getCachedItemSync } from '../runtime/api.js';
+import { prefetchedPlayback, prewarmedPlayback, negotiationFits } from '../runtime/playbackPrefetch.js';
+import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
 import { normalizeId } from '../runtime/readySources.js';
 
 const PROGRESS_REPORT_MS = 5000;
@@ -199,10 +200,66 @@ export async function renderPlayer(root, params) {
   renderLoading(root);
 
   const currentUserPromise = getCurrentUser();
+  const detailsPromise = getItemDetails(itemId, { includePlaybackFields: true });
+  detailsPromise.catch(function () {});
+  const preferredMediaSourceId = params.get('mediaSourceId') || undefined;
+  const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
+
+  // The reader's audio language for the stream asked for, when its tracks
+  // are already known here, so the first PlaybackInfo can ask for it.
+  function predictAudioIndex(user) {
+    const preferredLanguage = user && user.Configuration && user.Configuration.AudioLanguagePreference;
+    const known = preferredMediaSourceId && preferredLanguage ? getLastMediaSources(itemId) : null;
+    const source = known && (known.sources || []).find(function (s) {
+      return s && s.Id === preferredMediaSourceId;
+    });
+    if (!source) return null;
+    const matched = matchAudioStreamIndex(source, preferredLanguage);
+    return wantsAudioIndex(matched, getAudioStreams(source).length) ? matched : null;
+  }
+
+  function cachedNegotiation(ticks) {
+    if (failoverTried.length) return null;
+    const prewarmed = prewarmedPlayback.take(itemId, preferredMediaSourceId, ticks);
+    if (prewarmed) return { from: 'prewarmed', ticks: ticks, audioIndex: prewarmed.audioIndex, promise: prewarmed.promise };
+    const prefetched = prefetchedPlayback.take(itemId, preferredMediaSourceId, ticks);
+    if (prefetched) return { from: 'prefetched', ticks: ticks, audioIndex: prefetched.audioIndex, promise: prefetched.promise };
+    return null;
+  }
+
+  function requestNegotiation(ticks, audioIndex, from) {
+    const promise = getPlaybackInfo(itemId, ticks, preferredMediaSourceId, audioIndex);
+    promise.catch(function () {});
+    return { from: from, ticks: ticks, audioIndex: audioIndex, promise: promise };
+  }
+
+  // PlaybackInfo starts alongside the details when the start position is
+  // already known (a cached item or the group's position); the details
+  // only confirm it.
+  const earlySyncTarget = getCurrentPlaylistTarget();
+  const preview = getCachedItemSync(itemId);
+  let earlyTicks = null;
+  if (earlySyncTarget && sameSyncId(earlySyncTarget.itemId, itemId)) earlyTicks = earlySyncTarget.startPositionTicks || 0;
+  else if (preview && preview.UserData) earlyTicks = preview.UserData.PlaybackPositionTicks || 0;
+  let earlyNegotiation = null;
+  if (earlyTicks != null) {
+    earlyNegotiation = cachedNegotiation(earlyTicks);
+    if (!earlyNegotiation) {
+      const quickUser = await Promise.race([
+        currentUserPromise.catch(function () {
+          return null;
+        }),
+        new Promise(function (resolve) {
+          window.setTimeout(resolve, 100);
+        }),
+      ]);
+      earlyNegotiation = requestNegotiation(earlyTicks, predictAudioIndex(quickUser), 'early');
+    }
+  }
 
   let item;
   try {
-    item = await getItemDetails(itemId, { includePlaybackFields: true });
+    item = await detailsPromise;
   } catch (err) {
     console.warn('Jellio: could not load item for playback', err);
     renderPlaybackError(root, itemId, describeNetworkFailure('this title', err), function () {
@@ -278,9 +335,6 @@ export async function renderPlayer(root, params) {
     root.appendChild(preLogo);
   }
 
-  const preferredMediaSourceId = params.get('mediaSourceId') || undefined;
-  const failoverTried = (params.get('tried') || '').split(',').filter(Boolean);
-
   if (preferredMediaSourceId && !failoverTried.length) {
     unmarkBadSource(itemId, { Id: preferredMediaSourceId });
   }
@@ -321,8 +375,25 @@ export async function renderPlayer(root, params) {
   }
 
   let playbackInfo;
+  let negotiation = earlyNegotiation && earlyNegotiation.ticks === startTicks ? earlyNegotiation : cachedNegotiation(startTicks);
   try {
-    playbackInfo = await getPlaybackInfo(itemId, startTicks, preferredMediaSourceId);
+    // One negotiated a while ago is used only while it still has the stream;
+    // the early one asked exactly what a fresh one would.
+    if (negotiation && negotiation.from !== 'early') {
+      const cachedInfo = await negotiation.promise.catch(function () {
+        return null;
+      });
+      if (!negotiationFits(cachedInfo, preferredMediaSourceId)) negotiation = null;
+    }
+    if (!negotiation) {
+      let user = null;
+      try {
+        user = await currentUserPromise;
+      } catch (e) {}
+      negotiation = requestNegotiation(startTicks, predictAudioIndex(user), 'fresh');
+    }
+    playbackInfo = await negotiation.promise;
+    playStartFrom = negotiation.from;
   } catch (err) {
     if (screenTornDown) return undefined;
     console.warn('Jellio: could not negotiate playback', err);
@@ -437,7 +508,11 @@ export async function renderPlayer(root, params) {
     const user = await currentUserPromise;
     const preferredLanguage = user && user.Configuration && user.Configuration.AudioLanguagePreference;
     const matchedIndex = preferredLanguage ? matchAudioStreamIndex(mediaSource, preferredLanguage) : null;
-    if (matchedIndex != null && getAudioStreams(mediaSource).length > 1) {
+    const audioCount = getAudioStreams(mediaSource).length;
+    const requestedAudioIndex = negotiation && mediaSource.Id === preferredMediaSourceId ? negotiation.audioIndex : null;
+    if (!audioRematchNeeded(matchedIndex, audioCount, requestedAudioIndex)) {
+      if (wantsAudioIndex(matchedIndex, audioCount)) currentAudioStreamIndex = matchedIndex;
+    } else {
       const rematched = await getPlaybackInfo(itemId, startTicks, mediaSource.Id, matchedIndex);
       const rematchedSource = pickNegotiatedSource(rematched, mediaSource.Id);
       if (rematchedSource) {
