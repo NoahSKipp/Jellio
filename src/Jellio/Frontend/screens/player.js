@@ -58,6 +58,7 @@ import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { fetchRankingSession, renderRankingSession, stopRankingCountdown } from '../components/groupWatchRanking.js';
 import { el } from '../runtime/dom.js';
 import { prebufferSettings, getBufferSwitchMode, setBufferSwitchMode, startBufferTarget } from '../runtime/bufferSettings.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 import { loadVolumePreference, saveVolumePreference, SUBTITLE_SIZES, SUBTITLE_BACKGROUNDS, loadSubtitleStyle, saveSubtitleStyle, subtitleStyleTag, applySubtitleStyle } from '../runtime/playerPrefs.js';
 import { buildUpNextOverlay, buildEndScreenModal, buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
 import { logPlayStart, getWarmSources, getCachedItemSync, getQualityTiers, seedItemCache } from '../runtime/api.js';
@@ -320,8 +321,8 @@ export async function renderPlayer(root, params) {
   function fullscreenArtCss() {
     const backdropId = isEpisodeItem ? item.ParentBackdropItemId || item.SeriesId : null;
     const layers = [];
-    if (backdropId) layers.push('url(' + getImageUrl(backdropId, 'Backdrop', { maxWidth: 1920 }) + ')');
-    if (posterUrl) layers.push('url(' + posterUrl + ')');
+    if (backdropId) layers.push(cssUrl(getImageUrl(backdropId, 'Backdrop', { maxWidth: 1920 })));
+    if (posterUrl) layers.push(cssUrl(posterUrl));
     return layers.join(', ');
   }
   const logoUrl = seriesAwareLogoUrl(800);
@@ -334,7 +335,7 @@ export async function renderPlayer(root, params) {
   }
   if (logoUrl) {
     const preLogo = el('div', 'jellio-player-loading-logo');
-    preLogo.style.backgroundImage = 'url(' + logoUrl + ')';
+    preLogo.style.backgroundImage = cssUrl(logoUrl);
     root.appendChild(preLogo);
   }
 
@@ -653,7 +654,7 @@ export async function renderPlayer(root, params) {
     }
     if (posterUrl && video.readyState < 3) {
       loadingBackdrop = el('div', 'jellio-player-loading-backdrop');
-      loadingBackdrop.style.backgroundImage = 'url(' + posterUrl + ')';
+      loadingBackdrop.style.backgroundImage = cssUrl(posterUrl);
       if (video.parentNode === root && video.nextSibling) {
         root.insertBefore(loadingBackdrop, video.nextSibling);
       } else {
@@ -666,7 +667,7 @@ export async function renderPlayer(root, params) {
     }
     if (logoUrl) {
       loadingLogo = el('div', 'jellio-player-loading-logo');
-      loadingLogo.style.backgroundImage = 'url(' + logoUrl + ')';
+      loadingLogo.style.backgroundImage = cssUrl(logoUrl);
       const anchor = loadingBackdrop || video;
       if (anchor.parentNode === root && anchor.nextSibling) {
         root.insertBefore(loadingLogo, anchor.nextSibling);
@@ -2662,7 +2663,7 @@ export async function renderPlayer(root, params) {
     const thumbTag = (episode.ImageTags && episode.ImageTags.Primary) || episode.ParentThumbImageTag;
     const thumb = el('div', 'jellio-player-episode-thumb');
     if (thumbTag) {
-      thumb.style.backgroundImage = 'url(' + getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }) + ')';
+      thumb.style.backgroundImage = cssUrl(getImageUrl(episode.Id, 'Primary', { tag: thumbTag, maxWidth: 400 }));
     }
     if (episode.CommunityRating) {
       thumb.appendChild(buildRatingBadge(episode.CommunityRating, 'jellio-player-episode-rating'));

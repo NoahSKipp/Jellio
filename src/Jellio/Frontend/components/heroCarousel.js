@@ -6,6 +6,7 @@ import { formatRuntime } from '../runtime/format.js';
 import { toggleWatchlist } from './cardOptionsMenu.js';
 import { el } from '../runtime/dom.js';
 import { transitionsAllowed } from '../runtime/motionSettings.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 
 const ROTATE_MS = 9000;
 const CANDIDATE_LIMIT = 8;
@@ -80,7 +81,7 @@ function crossfadeBackdrop(container, url, isCurrent) {
   img.onload = function () {
     if (isCurrent && !isCurrent()) return;
     const layer = el('div', 'jellio-hero-backdrop-layer');
-    layer.style.backgroundImage = 'url(' + url + ')';
+    layer.style.backgroundImage = cssUrl(url);
     container.appendChild(layer);
 
     void layer.offsetWidth;

@@ -7,6 +7,7 @@ import { getMangaShelfHash } from './navShared.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 import { LATEST_BIG_CHANGELOG_VERSION, markLatestChangelogSeen, shouldShowChangelogNotification } from '../runtime/changelogState.js';
+import { cssUrl } from '../runtime/safeUrl.js';
 // The release history is large: it loads only when its notification is due.
 let changelogModule = null;
 function loadChangelog() {
@@ -134,7 +135,7 @@ function buildRow(n) {
     poster.appendChild(icon);
   } else {
     poster.style.backgroundImage =
-      'url(' + (n.Kind === 'manga' && n.MangaId ? getStreamCoverUrl(n.MangaId) : getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 })) + ')';
+      cssUrl(n.Kind === 'manga' && n.MangaId ? getStreamCoverUrl(n.MangaId) : getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 }));
   }
   row.appendChild(poster);
 
