@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.109.0] - 2026-11-10\n\n### 🚀 Features\n\n- *(player)* Add hover and drag timestamp preview on scrubber\n- Add reverse stream handoff and subtitle style sync\n- *(playback)* Add play-start telemetry endpoint and admin stats\n- *(playback)* Send play-start timings from the web player\n- *(api)* Serve normalized skip segments at /Jellio/segments/{itemId}\n- *(player)* Load skip segments from the server's merged segments endpoint\n\n### 🐛 Bug Fixes\n\n- *(offline)* Prevent false offline detection and auto-restore previous route on reconnect\n- *(web)* Confirm a 401 before signing the user out\n- *(web)* Match stream languages across all ISO 639 codes\n- *(web)* Translate release-date labels and seasonal row titles\n- *(web)* Only open http(s) links and escape CSS url() values\n- *(syncplay)* Judge Pause drift against the commanded position\n- *(player)* Translate player toasts and playback errors\n- *(web)* Escape the remaining CSS url() values in the player, hero and notifications\n- *(player)* Apply start over and carried-over positions before negotiating the stream\n- *(web)* Pull recommendation genres from the server on start and in Settings\n- *(player)* Never read a backwards frame count as a silent slideshow\n- *(syncplay)* Keep the position on a Pause that carries none\n- *(syncplay)* Start Group Watch once Jellyfin's ApiClient exists and keep its sign-in in line with Jellio's\n\n### 📚 Documentation\n\n- Add 1.109.0 release notes to What's New changelog\n\n### ⚡ Performance\n\n- *(core)* Pause now-playing polling when hidden and align assembly version to 1.0.0.0\n- *(web)* Compress frontend assets at the smallest size and send Vary: Accept-Encoding\n- *(web)* Raise the startup request cap on HTTP/2 connections\n- *(web)* Cache the display language and fill t() placeholders without RegExp\n- *(boot)* Modulepreload the stored display language table from the early inline script\n- *(web)* Keep the full changelog out of the notification poll\n- *(boot)* Load seasons, SyncPlay, the mini player, onboarding, stream picker and downloads on first use\n- *(boot)* Start the first data requests alongside the server ping\n- *(web)* Serve versioned assets cache-first and let images bypass the service worker\n- *(web)* Request card images at display size times pixel ratio\n- *(boot)* Stop loading the Cast SDK on every page, runtime/cast.js loads it with the player\n- *(web)* Pause the hero and coverflow rotation while the tab is hidden\n- *(web)* Resize seasonal canvases at most once per frame\n- *(web)* Make row scroll handling passive and stop measuring layout on every scroll event\n- *(player)* Negotiate playback alongside item details and ask for the audio language up front\n- *(playback)* Prefetch PlaybackInfo while resting on Play on the title page\n- *(player)* Start Ready and local direct-play streams after 2 s of buffer\n- *(player)* Hand the next-episode preload to the next player\n\n### 🚜 Refactor\n\n- *(web)* Drop client-side watchlist auto-removal\n- *(web)* Split runtime/api.js into runtime/api/ modules behind a barrel\n- *(web)* Route hand-built authenticated fetches through authedFetch\n- *(web)* Read and write localStorage through runtime/storage.js\n- *(web)* Share clock and file size formatters through runtime/format.js\n- *(web)* Break the recommend cycle and stop screens importing home.js\n- *(web)* Add a teardown scope for screen timers, listeners and observers\n- *(web)* Move self-contained player clusters into components/player\n- *(web)* Drop the unused saveServerDisplayLanguage\n- *(player)* Add the skip segment rules as a pure module\n- *(player)* Run the skip rules from runtime/skipSegments.js\n\n### 🧪 Testing\n\n- Add shared web/TV test vectors\n\n### ⚙️ Miscellaneous Tasks\n\n- *(changelog)* Sync 0.7.1 release notes for macOS\n- *(api)* Remove five endpoints nothing calls\n- *(web)* Drop unused imports\n- *(web)* Drop the non-streaming manga search fallback\n",
+        "checksum": "b503046fe357c11c8b2ab4c07f5bcad0",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.109.0/jellio_1.109.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-10T21:11:33Z",
+        "version": "1.109.0"
+      },
+      {
         "changelog": "## [1.108.0] - 2026-11-08\n\n### 🚀 Features\n\n- *(nowplaying)* Include UserId in Now Playing sessions endpoint\n\n### 📚 Documentation\n\n- Add 1.108.0 release notes to What's New changelog\n",
         "checksum": "2592f65543727630fcdbca2ecefacc95",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.108.0/jellio_1.108.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-01T11:58:39Z",
         "version": "1.102.2"
-      },
-      {
-        "changelog": "## [1.102.1] - 2026-11-01\n\n### 🐛 Bug Fixes\n\n- *(parties)* Let only invited people or code holders into private parties\n\n### 📚 Documentation\n\n- *(changelog)* Private party admission in 1.102.1\n",
-        "checksum": "86037ccffa68e2f83490c34bd753c119",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.1/jellio_1.102.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-01T00:34:01Z",
-        "version": "1.102.1"
       }
     ]
   }
