@@ -1,4 +1,4 @@
-import { getCurrentUserId } from './auth.js';
+import { getAccessToken, getCurrentUserId } from './auth.js';
 import { getSyncPlayGroups } from './apiSocial.js';
 import { getCurrentUser } from './api.js';
 import { readString, writeString, remove } from './storage.js';
@@ -111,6 +111,40 @@ function bindApiClientMessage(fn) {
   client._callbacks = client._callbacks || {};
   client._callbacks.message = client._callbacks.message || [];
   client._callbacks.message.push(fn);
+}
+
+// SyncPlay requests and the WebSocket go through Jellyfin's own ApiClient.
+// It can still hold a token from before Jellio's sign-in (or one the server
+// revoked since), which fails every join with 401, so it is brought in line
+// with Jellio's session before each use.
+function ensureClientAuth() {
+  if (!started && window.ApiClient) {
+    startSyncPlay();
+    return;
+  }
+  const client = window.ApiClient || apiClient;
+  if (!client) return;
+  if (client !== apiClient) {
+    apiClient = client;
+    if (started) bindApiClientMessage(onApiClientMessage);
+  }
+  const token = getAccessToken();
+  const userId = getCurrentUserId();
+  try {
+    const current = typeof client.accessToken === 'function' ? client.accessToken() : null;
+    if (token && userId && current !== token && typeof client.setAuthenticationInfo === 'function') {
+      client.setAuthenticationInfo(token, userId);
+      if (typeof client.closeWebSocket === 'function') client.closeWebSocket();
+    }
+  } catch (err) {
+    console.warn('Jellio SyncPlay: could not update the ApiClient sign-in', err);
+  }
+  try {
+    const opening = typeof client.isWebSocketOpenOrConnecting === 'function' ? client.isWebSocketOpenOrConnecting() : false;
+    if (!opening && typeof client.ensureWebSocket === 'function') client.ensureWebSocket();
+  } catch (err) {
+    console.warn('Jellio SyncPlay: could not open WebSocket', err);
+  }
 }
 
 const LOW_SIGNAL_MESSAGE_TYPES = ['KeepAlive', 'ForceKeepAlive'];
@@ -290,6 +324,7 @@ let lastLoggedReconcileGroupId = undefined;
 
 async function reconcileGroupMembership() {
   if (document.visibilityState === 'hidden') return;
+  ensureClientAuth();
   try {
     const [groups, user] = await Promise.all([getSyncPlayGroups(), getCurrentUser()]);
     if (user && user.Name) myUserName = user.Name;
@@ -372,20 +407,25 @@ function onVisibilityChange() {
   }
 }
 
+let startRetries = 0;
+
 export function startSyncPlay() {
   if (started) return;
   if (!window.ApiClient) {
-    console.debug('Jellio SyncPlay: window.ApiClient not present yet, not starting');
+    // Jellyfin's web app creates its ApiClient after Jellio boots on some
+    // pages; keep looking for a while instead of never starting.
+    if (startRetries < 60) {
+      startRetries += 1;
+      window.setTimeout(startSyncPlay, 500);
+    } else {
+      console.warn('Jellio SyncPlay: window.ApiClient never appeared, Group Watch is unavailable');
+    }
     return;
   }
   started = true;
   apiClient = window.ApiClient;
-  try {
-    apiClient.ensureWebSocket();
-  } catch (err) {
-    console.warn('Jellio SyncPlay: could not open WebSocket', err);
-  }
   bindApiClientMessage(onApiClientMessage);
+  ensureClientAuth();
   window.setTimeout(function () {
     if (apiClient && typeof apiClient.isWebSocketOpen === 'function' && !apiClient.isWebSocketOpen()) {
       console.warn('Jellio SyncPlay: WebSocket still not open a few seconds in, check for a reverse proxy not passing WebSocket upgrades through');
@@ -475,6 +515,7 @@ export function getMyGroupId() {
 }
 
 export function joinGroup(groupId) {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   explicitLeaveUntil = 0;
   return apiClient.joinSyncPlayGroup({ GroupId: groupId }).then(function (result) {
@@ -484,6 +525,7 @@ export function joinGroup(groupId) {
 }
 
 export function leaveGroup() {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   explicitLeaveUntil = Date.now() + ExplicitLeaveGraceMs;
   writeMyGroupId(null);
@@ -491,21 +533,25 @@ export function leaveGroup() {
 }
 
 export function requestUnpause() {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   return apiClient.requestSyncPlayUnpause();
 }
 
 export function requestPause() {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   return apiClient.requestSyncPlayPause();
 }
 
 export function requestSeek(positionTicks) {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   return apiClient.requestSyncPlaySeek({ PositionTicks: Math.round(positionTicks) });
 }
 
 export function notifyBuffering(positionTicks, isPlaying, playlistItemId) {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   return apiClient.requestSyncPlayBuffering({
     When: localToRemote(new Date()).toISOString(),
@@ -516,6 +562,7 @@ export function notifyBuffering(positionTicks, isPlaying, playlistItemId) {
 }
 
 export function publishQueue(itemId, startPositionTicks) {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   if (typeof apiClient.requestSyncPlaySetNewQueue !== 'function') {
     console.warn('Jellio SyncPlay: this server\'s own ApiClient has no requestSyncPlaySetNewQueue, too old for real SyncPlay queue publishing');
@@ -530,6 +577,7 @@ export function publishQueue(itemId, startPositionTicks) {
 }
 
 export function notifyReady(positionTicks, isPlaying, playlistItemId) {
+  ensureClientAuth();
   if (!apiClient) return Promise.reject(new Error('SyncPlay not started'));
   return apiClient.requestSyncPlayReady({
     When: localToRemote(new Date()).toISOString(),
