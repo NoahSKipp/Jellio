@@ -1,0 +1,97 @@
+{
+  "family": "language",
+  "version": 1,
+  "description": "Language codes meet on one ISO 639-2/B code; streams in the wanted language first, multi-audio next, other languages only when neither is left.",
+  "cases": [
+    { "name": "639-1 code", "fn": "normalize", "input": { "code": "de" }, "expected": "ger" },
+    { "name": "639-2/T code", "fn": "normalize", "input": { "code": "deu" }, "expected": "ger" },
+    { "name": "639-2/B code", "fn": "normalize", "input": { "code": "ger" }, "expected": "ger" },
+    { "name": "region suffix", "fn": "normalize", "input": { "code": "de-DE" }, "expected": "ger" },
+    { "name": "English name", "fn": "normalize", "input": { "code": "German" }, "expected": "ger" },
+    { "name": "French forms", "fn": "normalize", "input": { "code": "fra" }, "expected": "fre" },
+    { "name": "French name", "fn": "normalize", "input": { "code": "French" }, "expected": "fre" },
+    { "name": "Czech 639-1", "fn": "normalize", "input": { "code": "cs" }, "expected": "cze" },
+    { "name": "Czech 639-2/T", "fn": "normalize", "input": { "code": "ces" }, "expected": "cze" },
+    { "name": "Czech upper case with region", "fn": "normalize", "input": { "code": "CS-cz" }, "expected": "cze" },
+    { "name": "Czech name", "fn": "normalize", "input": { "code": "Czech" }, "expected": "cze" },
+    { "name": "Hindi with region", "fn": "normalize", "input": { "code": "hi-IN" }, "expected": "hin" },
+    { "name": "Farsi alias", "fn": "normalize", "input": { "code": "Farsi" }, "expected": "per" },
+    { "name": "Persian 639-2/T", "fn": "normalize", "input": { "code": "fas" }, "expected": "per" },
+    { "name": "Flemish alias", "fn": "normalize", "input": { "code": "Flemish" }, "expected": "dut" },
+    { "name": "Dutch 639-2/T", "fn": "normalize", "input": { "code": "nld" }, "expected": "dut" },
+    { "name": "Greek 639-2/T", "fn": "normalize", "input": { "code": "ell" }, "expected": "gre" },
+    { "name": "Chinese with region", "fn": "normalize", "input": { "code": "zh-TW" }, "expected": "chi" },
+    { "name": "Chinese with script and region", "fn": "normalize", "input": { "code": "zh-Hant-TW" }, "expected": "chi" },
+    { "name": "Chinese 639-2/T", "fn": "normalize", "input": { "code": "zho" }, "expected": "chi" },
+    { "name": "withdrawn Hebrew code", "fn": "normalize", "input": { "code": "iw" }, "expected": "heb" },
+    { "name": "withdrawn Javanese code", "fn": "normalize", "input": { "code": "jw" }, "expected": "jav" },
+    { "name": "underscore region", "fn": "normalize", "input": { "code": "pt_BR" }, "expected": "por" },
+    { "name": "underscore region English", "fn": "normalize", "input": { "code": "en_US" }, "expected": "eng" },
+    { "name": "numeric region", "fn": "normalize", "input": { "code": "es-419" }, "expected": "spa" },
+    { "name": "name with bracketed region", "fn": "normalize", "input": { "code": "Portuguese (Brazil)" }, "expected": "por" },
+    { "name": "name without its accent", "fn": "normalize", "input": { "code": "Norwegian Bokmal" }, "expected": "nob" },
+    { "name": "name with its accent", "fn": "normalize", "input": { "code": "Māori" }, "expected": "mao" },
+    { "name": "Serbian with script", "fn": "normalize", "input": { "code": "sr-Latn" }, "expected": "srp" },
+    { "name": "surrounding spaces", "fn": "normalize", "input": { "code": " en " }, "expected": "eng" },
+    { "name": "three letter code only in 639-2", "fn": "normalize", "input": { "code": "fil" }, "expected": "fil" },
+    { "name": "unknown code passes through lower-cased", "fn": "normalize", "input": { "code": "XYZ" }, "expected": "xyz" },
+    { "name": "multi-audio marker", "fn": "normalize", "input": { "code": "__multi__" }, "expected": "__multi__" },
+    { "name": "empty", "fn": "normalize", "input": { "code": "" }, "expected": "" },
+    { "name": "missing", "fn": "normalize", "input": { "code": null }, "expected": "" },
+
+    { "name": "a set audio preference beats the menu language", "fn": "preferred", "input": { "audioPreference": "eng", "displayLanguage": "de" }, "expected": "eng" },
+    { "name": "no preference: the menu language", "fn": "preferred", "input": { "audioPreference": "", "displayLanguage": "de" }, "expected": "ger" },
+    { "name": "missing preference: the menu language", "fn": "preferred", "input": { "audioPreference": null, "displayLanguage": "en" }, "expected": "eng" },
+    { "name": "neither set", "fn": "preferred", "input": { "audioPreference": null, "displayLanguage": null }, "expected": "" },
+
+    {
+      "name": "matches first, then multi-audio, others dropped",
+      "fn": "order",
+      "input": {
+        "language": "de",
+        "sources": [
+          { "id": "en", "languages": ["eng"] },
+          { "id": "multi", "languages": ["__multi__"] },
+          { "id": "de", "languages": ["ger", "eng"] }
+        ]
+      },
+      "expected": ["de", "multi"]
+    },
+    {
+      "name": "other languages only when nothing matches",
+      "fn": "order",
+      "input": { "language": "de", "sources": [{ "id": "en", "languages": ["eng"] }, { "id": "fr", "languages": ["fre"] }] },
+      "expected": ["en", "fr"]
+    },
+    {
+      "name": "no language keeps the order",
+      "fn": "order",
+      "input": { "language": "", "sources": [{ "id": "en", "languages": ["eng"] }, { "id": "de", "languages": ["ger"] }] },
+      "expected": ["en", "de"]
+    },
+    {
+      "name": "639-2/T stream language meets a 639-1 preference",
+      "fn": "order",
+      "input": { "language": "cs", "sources": [{ "id": "en", "languages": ["eng"] }, { "id": "cz", "languages": ["ces"] }] },
+      "expected": ["cz"]
+    },
+    {
+      "name": "preference with a region",
+      "fn": "order",
+      "input": { "language": "hi-IN", "sources": [{ "id": "en", "languages": ["eng"] }, { "id": "hi", "languages": ["hin"] }] },
+      "expected": ["hi"]
+    },
+    {
+      "name": "stream language given as a name",
+      "fn": "order",
+      "input": { "language": "ger", "sources": [{ "id": "en", "languages": ["English"] }, { "id": "de", "languages": ["German"] }] },
+      "expected": ["de"]
+    },
+    {
+      "name": "unknown audio is not a match",
+      "fn": "order",
+      "input": { "language": "de", "sources": [{ "id": "orig", "languages": ["__original__"] }, { "id": "multi", "languages": ["__multi__"] }] },
+      "expected": ["multi"]
+    }
+  ]
+}

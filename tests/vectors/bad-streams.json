@@ -1,0 +1,825 @@
+{
+  "family": "bad-streams",
+  "version": 1,
+  "description": "Bad stream marks (hard: two days by source id and by the full multi-line release name; soft: two hours by source id only; read back as soft once under two hours remain) and failover planning.",
+  "cases": [
+    {
+      "name": "never marked",
+      "fn": "badKind",
+      "input": {
+        "ops": [],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "hard mark",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": "hard"
+    },
+    {
+      "name": "a hard mark with under two hours left reads soft",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 169200000
+        }
+      },
+      "expected": "soft"
+    },
+    {
+      "name": "a hard mark ends after two days",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 172800000
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "soft mark",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": true,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": "soft"
+    },
+    {
+      "name": "a soft mark ends after two hours",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": true,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 7200000
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "hard after soft",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": true,
+            "atMs": 0
+          },
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 60000
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": "hard"
+    },
+    {
+      "name": "soft after hard keeps the hard one",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          },
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": true,
+            "atMs": 60000
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": "hard"
+    },
+    {
+      "name": "the release name marks the same release under another source id",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a2",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": "hard"
+    },
+    {
+      "name": "a soft mark is by source id only",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": true,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a2",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "a one line name is not a release",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "b",
+              "name": "Single line name"
+            },
+            "soft": false,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "b2",
+            "name": "Single line name"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "marks are per item",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          }
+        ],
+        "query": {
+          "itemId": "ep2",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "unmark clears id and release",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          },
+          {
+            "op": "unmark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a2",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "atMs": 60000
+          },
+          {
+            "op": "unmark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "atMs": 60000
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a2",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "unmark by another source leaves the id mark",
+      "fn": "badKind",
+      "input": {
+        "ops": [
+          {
+            "op": "mark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "soft": false,
+            "atMs": 0
+          },
+          {
+            "op": "unmark",
+            "itemId": "ep1",
+            "source": {
+              "id": "a2",
+              "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+            },
+            "atMs": 60000
+          }
+        ],
+        "query": {
+          "itemId": "ep1",
+          "source": {
+            "id": "a",
+            "name": "Torrentio 1080p\nShow.S01E01.1080p.WEB.mkv"
+          },
+          "atMs": 3600000
+        }
+      },
+      "expected": "hard"
+    },
+    {
+      "name": "tried and bad streams are left out",
+      "fn": "planFailover",
+      "input": {
+        "sources": [
+          {
+            "id": "a",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "b",
+            "bad": "hard",
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "c",
+            "bad": "soft",
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "d",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          }
+        ],
+        "tried": [
+          "a"
+        ],
+        "language": "",
+        "avoidReencode": false,
+        "blockReencode": false
+      },
+      "expected": {
+        "ordered": [
+          "d"
+        ],
+        "counts": {
+          "total": 4,
+          "tried": 1,
+          "badHard": 1,
+          "badSoft": 1,
+          "afterLanguage": 1,
+          "afterTranscode": 1
+        }
+      }
+    },
+    {
+      "name": "language order among the rest",
+      "fn": "planFailover",
+      "input": {
+        "sources": [
+          {
+            "id": "en",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "de",
+            "bad": null,
+            "languages": [
+              "ger"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "multi",
+            "bad": null,
+            "languages": [
+              "__multi__"
+            ],
+            "reencode": false
+          }
+        ],
+        "tried": [],
+        "language": "de",
+        "avoidReencode": false,
+        "blockReencode": false
+      },
+      "expected": {
+        "ordered": [
+          "de",
+          "multi"
+        ],
+        "counts": {
+          "total": 3,
+          "tried": 0,
+          "badHard": 0,
+          "badSoft": 0,
+          "afterLanguage": 2,
+          "afterTranscode": 2
+        }
+      }
+    },
+    {
+      "name": "streams that copy go before ones that re-encode",
+      "fn": "planFailover",
+      "input": {
+        "sources": [
+          {
+            "id": "x",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": true
+          },
+          {
+            "id": "y",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "z",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": true
+          }
+        ],
+        "tried": [],
+        "language": "",
+        "avoidReencode": true,
+        "blockReencode": false
+      },
+      "expected": {
+        "ordered": [
+          "y",
+          "x",
+          "z"
+        ],
+        "counts": {
+          "total": 3,
+          "tried": 0,
+          "badHard": 0,
+          "badSoft": 0,
+          "afterLanguage": 3,
+          "afterTranscode": 3
+        }
+      }
+    },
+    {
+      "name": "re-encoding blocked",
+      "fn": "planFailover",
+      "input": {
+        "sources": [
+          {
+            "id": "x",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": true
+          },
+          {
+            "id": "y",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          }
+        ],
+        "tried": [],
+        "language": "",
+        "avoidReencode": true,
+        "blockReencode": true
+      },
+      "expected": {
+        "ordered": [
+          "y"
+        ],
+        "counts": {
+          "total": 2,
+          "tried": 0,
+          "badHard": 0,
+          "badSoft": 0,
+          "afterLanguage": 2,
+          "afterTranscode": 1
+        }
+      }
+    },
+    {
+      "name": "language order inside each transcode group",
+      "fn": "planFailover",
+      "input": {
+        "sources": [
+          {
+            "id": "en1",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": true
+          },
+          {
+            "id": "de1",
+            "bad": null,
+            "languages": [
+              "deu"
+            ],
+            "reencode": true
+          },
+          {
+            "id": "en2",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "de2",
+            "bad": null,
+            "languages": [
+              "de"
+            ],
+            "reencode": false
+          }
+        ],
+        "tried": [],
+        "language": "ger",
+        "avoidReencode": true,
+        "blockReencode": false
+      },
+      "expected": {
+        "ordered": [
+          "de2",
+          "de1"
+        ],
+        "counts": {
+          "total": 4,
+          "tried": 0,
+          "badHard": 0,
+          "badSoft": 0,
+          "afterLanguage": 2,
+          "afterTranscode": 2
+        }
+      }
+    },
+    {
+      "name": "nothing left",
+      "fn": "planFailover",
+      "input": {
+        "sources": [
+          {
+            "id": "a",
+            "bad": null,
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          },
+          {
+            "id": "b",
+            "bad": "hard",
+            "languages": [
+              "eng"
+            ],
+            "reencode": false
+          }
+        ],
+        "tried": [
+          "a"
+        ],
+        "language": "",
+        "avoidReencode": false,
+        "blockReencode": false
+      },
+      "expected": {
+        "ordered": [],
+        "counts": {
+          "total": 2,
+          "tried": 1,
+          "badHard": 1,
+          "badSoft": 0,
+          "afterLanguage": 0,
+          "afterTranscode": 0
+        }
+      }
+    },
+    {
+      "name": "no list",
+      "fn": "planFailover",
+      "input": {
+        "sources": [],
+        "tried": [],
+        "language": "",
+        "avoidReencode": false,
+        "blockReencode": false
+      },
+      "expected": {
+        "ordered": [],
+        "counts": {
+          "total": 0,
+          "tried": 0,
+          "badHard": 0,
+          "badSoft": 0,
+          "afterLanguage": 0,
+          "afterTranscode": 0
+        }
+      }
+    },
+    {
+      "name": "a stream left",
+      "fn": "failoverOutcome",
+      "input": {
+        "origin": "fresh",
+        "errorKind": null,
+        "ordered": [
+          "b",
+          "c"
+        ]
+      },
+      "expected": {
+        "action": "navigate",
+        "sourceId": "b"
+      }
+    },
+    {
+      "name": "a stream left in an old list",
+      "fn": "failoverOutcome",
+      "input": {
+        "origin": "fallback",
+        "errorKind": "timeout",
+        "ordered": [
+          "b"
+        ]
+      },
+      "expected": {
+        "action": "navigate",
+        "sourceId": "b"
+      }
+    },
+    {
+      "name": "none left in a loaded list",
+      "fn": "failoverOutcome",
+      "input": {
+        "origin": "retry",
+        "errorKind": "server",
+        "ordered": []
+      },
+      "expected": {
+        "action": "none-left"
+      }
+    },
+    {
+      "name": "list could not be loaded",
+      "fn": "failoverOutcome",
+      "input": {
+        "origin": "failed",
+        "errorKind": "timeout",
+        "ordered": []
+      },
+      "expected": {
+        "action": "list-failed",
+        "kind": "timeout"
+      }
+    },
+    {
+      "name": "only an old list, and nothing in it is left",
+      "fn": "failoverOutcome",
+      "input": {
+        "origin": "fallback",
+        "errorKind": "network",
+        "ordered": []
+      },
+      "expected": {
+        "action": "list-failed",
+        "kind": "network"
+      }
+    },
+    {
+      "name": "failed with no error kind",
+      "fn": "failoverOutcome",
+      "input": {
+        "origin": "failed",
+        "errorKind": null,
+        "ordered": []
+      },
+      "expected": {
+        "action": "list-failed",
+        "kind": "unknown"
+      }
+    }
+  ]
+}

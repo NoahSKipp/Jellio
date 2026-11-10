@@ -1,0 +1,105 @@
+{
+  "family": "sync-drift",
+  "version": 1,
+  "description": "Group watch: where a play or pause command puts the player and how far this player is from it. A paused group stays at the commanded position; a playing one has moved on since the command.",
+  "cases": [
+    {
+      "name": "a late Pause compares against the commanded position",
+      "fn": "drift",
+      "input": {
+        "command": "Pause",
+        "positionMs": 100000,
+        "sinceCommandMs": 4000,
+        "currentMs": 100500
+      },
+      "expected": {
+        "targetMs": 100000,
+        "driftMs": 500
+      }
+    },
+    {
+      "name": "Pause far from the group",
+      "fn": "drift",
+      "input": {
+        "command": "Pause",
+        "positionMs": 100000,
+        "sinceCommandMs": 4000,
+        "currentMs": 110000
+      },
+      "expected": {
+        "targetMs": 100000,
+        "driftMs": 10000
+      }
+    },
+    {
+      "name": "Unpause moves the position on by the time since the command",
+      "fn": "drift",
+      "input": {
+        "command": "Unpause",
+        "positionMs": 100000,
+        "sinceCommandMs": 4000,
+        "currentMs": 100000
+      },
+      "expected": {
+        "targetMs": 104000,
+        "driftMs": 4000
+      }
+    },
+    {
+      "name": "Unpause in step",
+      "fn": "drift",
+      "input": {
+        "command": "Unpause",
+        "positionMs": 100000,
+        "sinceCommandMs": 4000,
+        "currentMs": 104200
+      },
+      "expected": {
+        "targetMs": 104000,
+        "driftMs": 200
+      }
+    },
+    {
+      "name": "Unpause ahead of the group",
+      "fn": "drift",
+      "input": {
+        "command": "Unpause",
+        "positionMs": 100000,
+        "sinceCommandMs": 0,
+        "currentMs": 103000
+      },
+      "expected": {
+        "targetMs": 100000,
+        "driftMs": 3000
+      }
+    },
+    {
+      "name": "Unpause with no position starts from zero",
+      "fn": "drift",
+      "input": {
+        "command": "Unpause",
+        "positionMs": null,
+        "sinceCommandMs": 2000,
+        "currentMs": 5000
+      },
+      "expected": {
+        "targetMs": 2000,
+        "driftMs": 3000
+      }
+    },
+    {
+      "name": "Pause with no position stays put",
+      "fn": "drift",
+      "input": {
+        "command": "Pause",
+        "positionMs": null,
+        "sinceCommandMs": 4000,
+        "currentMs": 600000
+      },
+      "expected": {
+        "targetMs": null,
+        "driftMs": 0
+      }
+    }
+  ]
+}

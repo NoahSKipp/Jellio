@@ -1,0 +1,221 @@
+{
+  "family": "placeholder",
+  "version": 1,
+  "description": "Signs that a stream is the placeholder clip instead of the title. All times in milliseconds; the web client works in seconds.",
+  "cases": [
+    {
+      "name": "two minute clip for a 45 minute episode",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 120000,
+        "expectedMs": 2700000
+      },
+      "expected": true
+    },
+    {
+      "name": "three minutes is still a clip",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 180000,
+        "expectedMs": 3600000
+      },
+      "expected": true
+    },
+    {
+      "name": "longer than three minutes",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 200000,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "title shorter than ten minutes",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 120000,
+        "expectedMs": 500000
+      },
+      "expected": false
+    },
+    {
+      "name": "unknown length",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 0,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "unknown runtime",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 120000,
+        "expectedMs": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "exactly a quarter",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 150000,
+        "expectedMs": 600000
+      },
+      "expected": false
+    },
+    {
+      "name": "just under a quarter of an odd runtime",
+      "fn": "looksLikePlaceholder",
+      "input": {
+        "actualMs": 150000,
+        "expectedMs": 600003
+      },
+      "expected": true
+    },
+    {
+      "name": "1 fps, no audio",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 4,
+        "seconds": 4,
+        "noAudio": true,
+        "expectedMs": 2700000
+      },
+      "expected": true
+    },
+    {
+      "name": "2 fps is the limit",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 12,
+        "seconds": 6,
+        "noAudio": true,
+        "expectedMs": 2700000
+      },
+      "expected": true
+    },
+    {
+      "name": "real video",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 100,
+        "seconds": 4,
+        "noAudio": true,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "audio present",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 4,
+        "seconds": 4,
+        "noAudio": false,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "audio unknown",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 4,
+        "seconds": 4,
+        "noAudio": null,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "sample too short",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 2,
+        "seconds": 2,
+        "noAudio": true,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "short title",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": 4,
+        "seconds": 4,
+        "noAudio": true,
+        "expectedMs": 300000
+      },
+      "expected": false
+    },
+    {
+      "name": "frame counter went backwards",
+      "fn": "silentSlideshow",
+      "input": {
+        "frames": -5,
+        "seconds": 4,
+        "noAudio": true,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "one minute into 45",
+      "fn": "stoppedTooEarly",
+      "input": {
+        "positionMs": 60000,
+        "expectedMs": 2700000
+      },
+      "expected": true
+    },
+    {
+      "name": "at the start",
+      "fn": "stoppedTooEarly",
+      "input": {
+        "positionMs": 0,
+        "expectedMs": 2700000
+      },
+      "expected": true
+    },
+    {
+      "name": "exactly a quarter",
+      "fn": "stoppedTooEarly",
+      "input": {
+        "positionMs": 675000,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "past a quarter",
+      "fn": "stoppedTooEarly",
+      "input": {
+        "positionMs": 700000,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "negative position",
+      "fn": "stoppedTooEarly",
+      "input": {
+        "positionMs": -1,
+        "expectedMs": 2700000
+      },
+      "expected": false
+    },
+    {
+      "name": "short title",
+      "fn": "stoppedTooEarly",
+      "input": {
+        "positionMs": 60000,
+        "expectedMs": 300000
+      },
+      "expected": false
+    }
+  ]
+}

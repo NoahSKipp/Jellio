@@ -1,0 +1,599 @@
+{
+  "family": "skip-segments",
+  "version": 1,
+  "description": "Skip prompts from intro and credits ranges (seconds), the merge rule between segment sources, and the chapter name fallback. A range is valid when end > 0 and end > start; invalid ranges compare as null.",
+  "cases": [
+    {
+      "name": "in the intro",
+      "fn": "activeSegment",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 10
+      },
+      "expected": {
+        "kind": "intro",
+        "targetSeconds": 90
+      }
+    },
+    {
+      "name": "intro end is outside it",
+      "fn": "activeSegment",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 90
+      },
+      "expected": null
+    },
+    {
+      "name": "before the intro",
+      "fn": "activeSegment",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 5
+      },
+      "expected": null
+    },
+    {
+      "name": "in the credits",
+      "fn": "activeSegment",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 1350
+      },
+      "expected": {
+        "kind": "credits",
+        "targetSeconds": 1400
+      }
+    },
+    {
+      "name": "overlap: intro wins",
+      "fn": "activeSegment",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 0,
+            "end": 100
+          },
+          "credits": {
+            "start": 50,
+            "end": 200
+          }
+        },
+        "positionSeconds": 60
+      },
+      "expected": {
+        "kind": "intro",
+        "targetSeconds": 100
+      }
+    },
+    {
+      "name": "an empty intro never shows",
+      "fn": "activeSegment",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 0,
+            "end": 0
+          },
+          "credits": null
+        },
+        "positionSeconds": 0
+      },
+      "expected": null
+    },
+    {
+      "name": "no segments",
+      "fn": "activeSegment",
+      "input": {
+        "segments": null,
+        "positionSeconds": 20
+      },
+      "expected": null
+    },
+    {
+      "name": "before the credits",
+      "fn": "upNextNow",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 1299,
+        "durationSeconds": 1440
+      },
+      "expected": false
+    },
+    {
+      "name": "credits start",
+      "fn": "upNextNow",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 1300,
+        "durationSeconds": 1440
+      },
+      "expected": true
+    },
+    {
+      "name": "no credits data: no countdown card",
+      "fn": "upNextNow",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": null
+        },
+        "positionSeconds": 1430,
+        "durationSeconds": 1440
+      },
+      "expected": false
+    },
+    {
+      "name": "no duration yet",
+      "fn": "upNextNow",
+      "input": {
+        "segments": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "positionSeconds": 1350,
+        "durationSeconds": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "nothing known takes the candidate",
+      "fn": "merge",
+      "input": {
+        "current": null,
+        "candidate": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 10,
+          "end": 90
+        },
+        "credits": {
+          "start": 1300,
+          "end": 1400
+        }
+      }
+    },
+    {
+      "name": "what is known wins",
+      "fn": "merge",
+      "input": {
+        "current": {
+          "intro": {
+            "start": 5,
+            "end": 80
+          },
+          "credits": {
+            "start": 1310,
+            "end": 1440
+          }
+        },
+        "candidate": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 5,
+          "end": 80
+        },
+        "credits": {
+          "start": 1310,
+          "end": 1440
+        }
+      }
+    },
+    {
+      "name": "the candidate fills what is missing",
+      "fn": "merge",
+      "input": {
+        "current": {
+          "intro": {
+            "start": 5,
+            "end": 80
+          },
+          "credits": null
+        },
+        "candidate": {
+          "intro": {
+            "start": 10,
+            "end": 90
+          },
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 5,
+          "end": 80
+        },
+        "credits": {
+          "start": 1300,
+          "end": 1400
+        }
+      }
+    },
+    {
+      "name": "credits in the first half are bad data",
+      "fn": "merge",
+      "input": {
+        "current": {
+          "intro": {
+            "start": 5,
+            "end": 80
+          },
+          "credits": {
+            "start": 600,
+            "end": 700
+          }
+        },
+        "candidate": {
+          "intro": null,
+          "credits": {
+            "start": 1300,
+            "end": 1400
+          }
+        },
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 5,
+          "end": 80
+        },
+        "credits": {
+          "start": 1300,
+          "end": 1400
+        }
+      }
+    },
+    {
+      "name": "bad credits from both",
+      "fn": "merge",
+      "input": {
+        "current": null,
+        "candidate": {
+          "intro": {
+            "start": 5,
+            "end": 80
+          },
+          "credits": {
+            "start": 100,
+            "end": 200
+          }
+        },
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 5,
+          "end": 80
+        },
+        "credits": null
+      }
+    },
+    {
+      "name": "no runtime takes any credits",
+      "fn": "merge",
+      "input": {
+        "current": null,
+        "candidate": {
+          "intro": null,
+          "credits": {
+            "start": 100,
+            "end": 200
+          }
+        },
+        "runtimeSeconds": 0
+      },
+      "expected": {
+        "intro": null,
+        "credits": {
+          "start": 100,
+          "end": 200
+        }
+      }
+    },
+    {
+      "name": "an empty intro is filled",
+      "fn": "merge",
+      "input": {
+        "current": {
+          "intro": {
+            "start": 0,
+            "end": 0
+          },
+          "credits": null
+        },
+        "candidate": {
+          "intro": {
+            "start": 3,
+            "end": 60
+          },
+          "credits": null
+        },
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 3,
+          "end": 60
+        },
+        "credits": null
+      }
+    },
+    {
+      "name": "no candidate keeps what is known",
+      "fn": "merge",
+      "input": {
+        "current": {
+          "intro": {
+            "start": 5,
+            "end": 80
+          },
+          "credits": null
+        },
+        "candidate": null,
+        "runtimeSeconds": 1440
+      },
+      "expected": {
+        "intro": {
+          "start": 5,
+          "end": 80
+        },
+        "credits": null
+      }
+    },
+    {
+      "name": "nothing at all",
+      "fn": "merge",
+      "input": {
+        "current": null,
+        "candidate": null,
+        "runtimeSeconds": 1440
+      },
+      "expected": null
+    },
+    {
+      "name": "intro and end credits chapters",
+      "fn": "chapters",
+      "input": {
+        "chapters": [
+          {
+            "name": "Intro",
+            "startSeconds": 0
+          },
+          {
+            "name": "Chapter 1",
+            "startSeconds": 90
+          },
+          {
+            "name": "End Credits",
+            "startSeconds": 1300
+          }
+        ],
+        "runtimeSeconds": 1400
+      },
+      "expected": {
+        "intro": {
+          "start": 0,
+          "end": 90
+        },
+        "credits": {
+          "start": 1300,
+          "end": 1400
+        }
+      }
+    },
+    {
+      "name": "opening credits are the intro",
+      "fn": "chapters",
+      "input": {
+        "chapters": [
+          {
+            "name": "Prologue",
+            "startSeconds": 0
+          },
+          {
+            "name": "Opening Credits",
+            "startSeconds": 60
+          },
+          {
+            "name": "Part 1",
+            "startSeconds": 150
+          }
+        ],
+        "runtimeSeconds": 1400
+      },
+      "expected": {
+        "intro": {
+          "start": 60,
+          "end": 150
+        },
+        "credits": null
+      }
+    },
+    {
+      "name": "outro runs to the next chapter",
+      "fn": "chapters",
+      "input": {
+        "chapters": [
+          {
+            "name": "Chapter 1",
+            "startSeconds": 0
+          },
+          {
+            "name": "Outro",
+            "startSeconds": 1200
+          },
+          {
+            "name": "Preview",
+            "startSeconds": 1350
+          }
+        ],
+        "runtimeSeconds": 1400
+      },
+      "expected": {
+        "intro": null,
+        "credits": {
+          "start": 1200,
+          "end": 1350
+        }
+      }
+    },
+    {
+      "name": "ending chapter, case does not matter",
+      "fn": "chapters",
+      "input": {
+        "chapters": [
+          {
+            "name": "Chapter 1",
+            "startSeconds": 0
+          },
+          {
+            "name": "ENDING",
+            "startSeconds": 1250
+          }
+        ],
+        "runtimeSeconds": 1400
+      },
+      "expected": {
+        "intro": null,
+        "credits": {
+          "start": 1250,
+          "end": 1400
+        }
+      }
+    },
+    {
+      "name": "no matching names",
+      "fn": "chapters",
+      "input": {
+        "chapters": [
+          {
+            "name": "Chapter 1",
+            "startSeconds": 0
+          },
+          {
+            "name": "Chapter 2",
+            "startSeconds": 600
+          }
+        ],
+        "runtimeSeconds": 1400
+      },
+      "expected": null
+    },
+    {
+      "name": "no chapters",
+      "fn": "chapters",
+      "input": {
+        "chapters": [],
+        "runtimeSeconds": 1400
+      },
+      "expected": null
+    },
+    {
+      "name": "credits last with no runtime",
+      "fn": "chapters",
+      "input": {
+        "chapters": [
+          {
+            "name": "Chapter 1",
+            "startSeconds": 0
+          },
+          {
+            "name": "Credits",
+            "startSeconds": 1300
+          }
+        ],
+        "runtimeSeconds": 0
+      },
+      "expected": null
+    }
+  ]
+}

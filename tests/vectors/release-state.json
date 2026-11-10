@@ -1,0 +1,377 @@
+{
+  "family": "release-state",
+  "version": 1,
+  "description": "Whether an item counts as unreleased and whether it came out today (UTC days). An episode out today stays unreleased until a stream for it has been found (verifiedToday).",
+  "cases": [
+    {
+      "name": "aired days ago",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "a",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-01T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "airs later today",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "b",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T20:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "aired today, no stream found yet",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "c",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "aired today, stream found",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "c",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T00:00:00Z"
+        },
+        "verifiedToday": [
+          "c"
+        ]
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "aired today, another item's stream found",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "c",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T00:00:00Z"
+        },
+        "verifiedToday": [
+          "x"
+        ]
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "aired today with no type counts as an episode",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "d",
+          "PremiereDate": "2026-11-05T06:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "movie out today needs no stream check",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "e",
+          "Type": "Movie",
+          "PremiereDate": "2026-11-05T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "movie out later today",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "e2",
+          "Type": "Movie",
+          "PremiereDate": "2026-11-05T18:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "Jellyfin's seven digit fraction, stream found",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "f",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T00:00:00.0000000Z"
+        },
+        "verifiedToday": [
+          "f"
+        ]
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "date only, today",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "g",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "airs tomorrow",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "h",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-06T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "placeholder year",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "i",
+          "Type": "Episode",
+          "PremiereDate": "9999-01-01T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "virtual with no dates and no runtime",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "j",
+          "Type": "Episode",
+          "LocationType": "Virtual"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "virtual with a runtime",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "k",
+          "Type": "Episode",
+          "LocationType": "Virtual",
+          "RunTimeTicks": 13000000000
+        }
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "no dates, not virtual",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "l",
+          "Type": "Episode"
+        }
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "played wins over a future date",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "m",
+          "Type": "Episode",
+          "PremiereDate": "2026-12-01T00:00:00Z",
+          "UserData": {
+            "Played": true
+          }
+        }
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "a resume position wins over today",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "n",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T00:00:00Z",
+          "UserData": {
+            "PlaybackPositionTicks": 1000
+          }
+        }
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "end date only, in the future",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "o",
+          "Type": "Series",
+          "EndDate": "2026-11-20T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "unreadable premiere date falls back to the end date",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "p",
+          "Type": "Episode",
+          "PremiereDate": "not a date",
+          "EndDate": "2026-11-20T00:00:00Z"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "offset date that is tomorrow in UTC",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "q",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T23:00:00-05:00"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": false
+      }
+    },
+    {
+      "name": "offset date that is today in UTC",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "r",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-06T01:00:00+03:00"
+        }
+      },
+      "expected": {
+        "unreleased": true,
+        "releasedToday": true
+      }
+    },
+    {
+      "name": "offset date earlier today in UTC, stream found",
+      "fn": "releaseState",
+      "input": {
+        "now": "2026-11-05T12:00:00Z",
+        "item": {
+          "Id": "s",
+          "Type": "Episode",
+          "PremiereDate": "2026-11-05T09:00:00+02:00"
+        },
+        "verifiedToday": [
+          "s"
+        ]
+      },
+      "expected": {
+        "unreleased": false,
+        "releasedToday": true
+      }
+    }
+  ]
+}
