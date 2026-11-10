@@ -5,6 +5,34 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.109.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.109.0",
+    "summary": "Faster start and playback, a fixed Watch Party join, and many reliability fixes.",
+    "highlights": [
+      {
+        "title": "Faster Start",
+        "description": "Jellio loads your rows while it checks the server, downloads less code at startup, serves its files from cache, and loads card images at the size they are shown."
+      },
+      {
+        "title": "Quicker Playback",
+        "description": "Playback is negotiated alongside the title's details, resting on Play prepares the stream ahead, ready and local streams start after two seconds of buffer, and the next episode reuses what was prepared for it."
+      },
+      {
+        "title": "Watch Party Join Fixed",
+        "description": "Joining a group no longer fails with an error when Jellyfin's own client starts after Jellio, Pause in a group stays in place, and skip segments come from one merged server source."
+      },
+      {
+        "title": "Stays Signed In",
+        "description": "A single rejected request no longer signs you out; Jellio checks with the server first and only signs out when the session really ended."
+      },
+      {
+        "title": "Better Language Matching",
+        "description": "Audio and subtitle languages now match across every ISO language code and name, and release dates, seasonal rows and player messages are translated."
+      }
+    ]
+  },
+  {
     "version": "1.108.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.108.0",
