@@ -440,23 +440,6 @@ export function getMangaRequestStatus() {
   }, SHORT_CACHE_TTL_MS);
 }
 
-// Resolves to { Searched, Failed, Languages, InstalledLanguages,
-// TotalSources, NsfwSources, Sources }.
-function searchMangaSources(query) {
-  return getJson('/Jellio/manga/search?q=' + encodeURIComponent(query), 45000).then(function (response) {
-    const result = response || {};
-    return {
-      Searched: result.Searched || 0,
-      Failed: result.Failed || 0,
-      Languages: result.Languages || [],
-      InstalledLanguages: result.InstalledLanguages || [],
-      TotalSources: result.TotalSources || 0,
-      NsfwSources: result.NsfwSources || 0,
-      Sources: result.Sources || [],
-    };
-  });
-}
-
 export async function streamMangaSources(query, onProgress, signal) {
   const summary = {
     Searched: 0,
@@ -483,13 +466,7 @@ export async function streamMangaSources(query, onProgress, signal) {
     if (err && err.name !== 'AbortError') err.isNetworkError = true;
     throw err;
   }
-  if (response.status === 404 || !response.body) {
-    const whole = await searchMangaSources(query);
-    Object.assign(summary, whole, { Unavailable: [], Pending: 0 });
-    notify('done');
-    return summary;
-  }
-  if (!response.ok) {
+  if (!response.ok || !response.body) {
     const err = new Error('Request failed: manga search');
     err.status = response.status;
     throw err;

@@ -1053,8 +1053,6 @@ export function renderBookshelf(root, params, parentId) {
         if (parts.length) sourcesStatus.textContent = parts.join(' · ');
       },
       finish: function (summary) {
-        // An older server answers everything at once.
-        if (!shown) summary.Sources.forEach(place);
         const note = unavailableNote(summary);
         sourcesStatus.textContent = shown
           ? note
