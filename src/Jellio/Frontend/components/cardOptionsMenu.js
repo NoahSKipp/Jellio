@@ -1,14 +1,13 @@
 import { t } from '../runtime/i18n.js';
 import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
-import { openStreamPicker } from './streamPicker.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
 import { isAdminSync } from '../runtime/adminStatus.js';
 import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from './toast.js';
 import { shareItem } from '../runtime/shareLink.js';
-import { canDownload, promptDownload } from './downloads.js';
+import { canDownload } from './downloadSupport.js';
 import { el } from '../runtime/dom.js';
 import { cssUrl } from '../runtime/safeUrl.js';
 
@@ -204,7 +203,13 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     );
     menu.appendChild(
       buildOption(t('menu_play_manually'), 'play_arrow', function () {
-        openStreamPicker(item, { forceChoice: true });
+        import('./streamPicker.js')
+          .then(function (m) {
+            m.openStreamPicker(item, { forceChoice: true });
+          })
+          .catch(function (err) {
+            console.warn('Jellio: could not open the stream picker', err);
+          });
       }),
     );
     menu.appendChild(
@@ -310,7 +315,13 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
     if (canDownload(item)) {
       menu.appendChild(
         buildOption(item.Type === 'Series' || item.Type === 'Season' ? t('menu_download_episodes') : t('menu_download'), 'download', function () {
-          promptDownload(item, anchorRect);
+          import('./downloads.js')
+            .then(function (m) {
+              m.promptDownload(item, anchorRect);
+            })
+            .catch(function (err) {
+              console.warn('Jellio: could not start the download', err);
+            });
         }),
       );
     }

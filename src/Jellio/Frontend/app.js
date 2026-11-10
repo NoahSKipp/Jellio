@@ -17,7 +17,6 @@ import { checkServer, isOffline } from './runtime/offline.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderMobileNav } from './components/mobileNav.js';
 import { getPrimaryNavLinks } from './components/navShared.js';
-import { mountSeasons } from './components/seasons.js';
 import { startNowPlaying } from './components/nowPlaying.js';
 import { startNotifications } from './components/notifications.js';
 import { startSounds } from './components/sounds.js';
@@ -26,15 +25,13 @@ import { startAchievementNotifier } from './components/achievementNotifier.js';
 import { loadGrouplistSetting } from './runtime/grouplistSettings.js';
 import { loadAdminStatus } from './runtime/adminStatus.js';
 import { loadSkipIntroCreditsMenuSetting } from './runtime/introCreditsMenuSetting.js';
-import { startSyncPlay, onUserDataChange } from './runtime/syncPlay.js';
 import { startGroupWatchInvites } from './components/groupWatchInvites.js';
 import { showSplash, hideSplash, setSplashTotal, reportSplashStep } from './components/splash.js';
 import { showToast } from './components/toast.js';
 import { buildLibraryCoverflow } from './components/libraryCoverflow.js';
 import { getHeroBackdropUrl, getHeroLogoUrl } from './components/heroCarousel.js';
-import { syncMiniPlayer } from './components/audioMiniPlayer.js';
 import { onRouteChange, parseRoute, setTitle, navigateTo } from './runtime/router.js';
-import { shouldShowOnboarding, openOnboardingModal } from './components/onboardingModal.js';
+import { shouldShowOnboarding } from './components/onboardingState.js';
 
 const ROOT_ID = 'jellioRoot';
 
@@ -77,6 +74,54 @@ if (typeof window !== 'undefined') {
     import('./screens/detail.js').catch(() => {});
     import('./screens/library.js').catch(() => {});
   });
+}
+
+// Not needed for the first paint: loaded when first used.
+let seasonsLoad = null;
+function mountSeasonsLater(root) {
+  if (!seasonsLoad) seasonsLoad = import('./components/seasons.js');
+  seasonsLoad
+    .then(function (m) {
+      m.mountSeasons(root);
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load seasonal themes', err);
+    });
+}
+
+let syncPlayLoad = null;
+function startSyncPlayLater() {
+  if (!syncPlayLoad) syncPlayLoad = import('./runtime/syncPlay.js');
+  syncPlayLoad
+    .then(function (m) {
+      m.startSyncPlay();
+      // Watched, resumed or favourited on another device: home rows are
+      // asked for fresh in every tab.
+      if (!userDataRowsHooked) {
+        userDataRowsHooked = true;
+        m.onUserDataChange(invalidateUserDataRows);
+      }
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load SyncPlay', err);
+    });
+}
+
+// Only the listen screen starts an audiobook session, so the mini player
+// has nothing to show until that screen has loaded it.
+let miniPlayerLoad = null;
+function syncMiniPlayerLater(path) {
+  if (!miniPlayerLoad) {
+    if (path !== 'listen') return;
+    miniPlayerLoad = import('./components/audioMiniPlayer.js');
+  }
+  miniPlayerLoad
+    .then(function (m) {
+      m.syncMiniPlayer();
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load the mini player', err);
+    });
 }
 
 const loadLiveTv = () => import('./screens/liveTv.js').then((m) => m.renderLiveTv);
@@ -551,13 +596,7 @@ async function runSync() {
     startSounds();
     startOverlays();
     startAchievementNotifier();
-    startSyncPlay();
-    // Watched, resumed or favourited on another device: home rows are
-    // asked for fresh in every tab.
-    if (!userDataRowsHooked) {
-      userDataRowsHooked = true;
-      onUserDataChange(invalidateUserDataRows);
-    }
+    startSyncPlayLater();
     startGroupWatchInvites();
     loadGrouplistSetting();
     loadAdminStatus();
@@ -567,9 +606,9 @@ async function runSync() {
 
     root.classList.add('jellio-root-visible');
     root.classList.toggle('jellio-root-fullscreen', FULLSCREEN_ROUTES.has(route.path));
-    mountSeasons(root);
+    mountSeasonsLater(root);
     applyResponsiveNav();
-    syncMiniPlayer();
+    syncMiniPlayerLater(route.path);
 
     const sidebarMount = root.querySelector('.jellio-sidebar-mount');
     const mobileNavMount = root.querySelector('.jellio-mobile-nav-mount');
@@ -599,7 +638,13 @@ async function runSync() {
       onboardingPrompted = true;
       window.setTimeout(function () {
         if (shouldShowOnboarding() && !document.getElementById('jellioOnboardingModal')) {
-          openOnboardingModal();
+          import('./components/onboardingModal.js')
+            .then(function (m) {
+              if (!document.getElementById('jellioOnboardingModal')) m.openOnboardingModal();
+            })
+            .catch(function (err) {
+              console.warn('Jellio: could not open onboarding', err);
+            });
         }
       }, 350);
     }

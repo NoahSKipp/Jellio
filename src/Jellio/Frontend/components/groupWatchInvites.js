@@ -1,7 +1,7 @@
 import { getGroupWatchInvites } from '../runtime/apiSocial.js';
 import { getItem, getImageUrl, getCurrentUser } from '../runtime/api.js';
 import { isAuthenticated, getCurrentUserId } from '../runtime/auth.js';
-import { joinGroup, onWatchTargetChange, onGroupPresenceChange } from '../runtime/syncPlay.js';
+const loadSyncPlay = () => import('../runtime/syncPlay.js');
 import { navigateTo, parseRoute } from '../runtime/router.js';
 import { showGroupWatchNotice } from './groupWatchNotice.js';
 
@@ -45,7 +45,9 @@ function pollInvites() {
           text: (invite.FromUserName || 'Someone') + ' invited you to join ' + (invite.GroupName || 'Group Watch'),
           cta: 'Click to join',
           onClick: function () {
-            joinGroup(invite.GroupId).catch(function (err) {
+            loadSyncPlay().then(function (syncPlay) {
+              return syncPlay.joinGroup(invite.GroupId);
+            }).catch(function (err) {
               console.warn('Jellio: could not join Group Watch group from invite', err);
             });
           },
@@ -105,8 +107,14 @@ function handleGroupPresenceChange(kind, name) {
 export function startGroupWatchInvites() {
   if (started || !isAuthenticated()) return;
   started = true;
-  onWatchTargetChange(handleWatchTargetChange);
-  onGroupPresenceChange(handleGroupPresenceChange);
+  loadSyncPlay()
+    .then(function (syncPlay) {
+      syncPlay.onWatchTargetChange(handleWatchTargetChange);
+      syncPlay.onGroupPresenceChange(handleGroupPresenceChange);
+    })
+    .catch(function (err) {
+      console.warn('Jellio: could not load Group Watch', err);
+    });
   getCurrentUser()
     .then(function (user) {
       if (user && user.Name) myUserName = user.Name;

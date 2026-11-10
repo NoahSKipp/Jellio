@@ -18,6 +18,19 @@ public class FrontendAssetsTests
         Assert.DoesNotContain("runtime/strings-de.js", modules);
     }
 
+    [Theory]
+    [InlineData("components/seasons.js")]
+    [InlineData("components/audioMiniPlayer.js")]
+    [InlineData("components/onboardingModal.js")]
+    [InlineData("runtime/syncPlay.js")]
+    [InlineData("components/streamPicker.js")]
+    [InlineData("components/downloads.js")]
+    [InlineData("components/readerStudy.js")]
+    public void StartupModulesLeaveOutModulesLoadedOnFirstUse(string module)
+    {
+        Assert.DoesNotContain(module, FrontendAssets.StartupModules());
+    }
+
     [Fact]
     public void MinifiedCssDropsCommentsAndIndentation()
     {

@@ -1,6 +1,16 @@
 import { t } from './i18n.js';
 import { getRecentlyCompleted, getRecommendationCandidates, getNextUp, getGenreItems, getGenreItemsPage } from './api.js';
-import { getSeasonalRecommendationRow } from './seasonalRecommendations.js';
+// Loaded on first use: it pulls in components/seasons.js, which startup does not need.
+function getSeasonalRecommendationRow(exclude) {
+  return import('./seasonalRecommendations.js').then(
+    function (m) {
+      return m.getSeasonalRecommendationRow(exclude);
+    },
+    function () {
+      return null;
+    },
+  );
+}
 
 const SEED_LIMIT = 4;
 const HISTORY_SAMPLE_LIMIT = 60;

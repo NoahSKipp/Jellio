@@ -20,6 +20,8 @@ import { mangaSeriesTitle, mangaSeriesKey } from './mangaSeries.js';
 import { showToast } from './toast.js';
 import { el } from '../runtime/dom.js';
 import { idKey } from '../runtime/util.js';
+import { canDownload, downloadKindFor } from './downloadSupport.js';
+export { canDownload };
 
 // The reader's libraries, fetched once so the service worker keeps them
 // for opening books offline.
@@ -302,13 +304,6 @@ async function downloadVideo(item, quality) {
   });
 }
 
-function downloadKindFor(item, bookKind) {
-  if (item.Type === 'AudioBook') return 'audiobook';
-  if (item.Type === 'Book') return bookKind === 'manga' || /\.(cbz|cbr|cb7|cbt)$/i.test(item.Path || '') ? 'manga' : 'book';
-  if (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Video' || item.Type === 'MusicVideo') return 'video';
-  return null;
-}
-
 function startDownload(item, kind, quality) {
   if (kind === 'audiobook') return downloadAudiobook(item);
   if (kind === 'video') return downloadVideo(item, quality);
@@ -539,14 +534,6 @@ function openEpisodesMenu(item, anchor, busyButton) {
 }
 
 // Whether a card's options menu should offer Download for this item.
-export function canDownload(item) {
-  return (
-    'caches' in window &&
-    'indexedDB' in window &&
-    (!!downloadKindFor(item) || item.Type === 'Series' || item.Type === 'Season')
-  );
-}
-
 export function promptDownload(item, anchorRect) {
   if (item.Type === 'Series' || item.Type === 'Season') {
     openEpisodesMenu(item, anchorRect, null);

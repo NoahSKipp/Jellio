@@ -31,7 +31,6 @@ import { navigateTo, reflectStateInAddressBar } from '../runtime/router.js';
 import { attachCardOptionsTrigger, animateCardRemoval } from '../components/cardOptionsMenu.js';
 import { showToast } from '../components/toast.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
-import { onUserDataChange } from '../runtime/syncPlay.js';
 import { el } from '../runtime/dom.js';
 
 const CATALOG_ROW_LIMIT = 24;
@@ -988,14 +987,20 @@ export async function renderHome(root, params) {
   rowCacheRefreshers.add(refreshFromRowCache);
 
   let userDataRefreshTimer = null;
-  const unsubscribeUserData = onUserDataChange(function () {
-    window.clearTimeout(userDataRefreshTimer);
-    userDataRefreshTimer = window.setTimeout(function () {
+  let unsubscribeUserData = null;
+  import('../runtime/syncPlay.js')
+    .then(function (syncPlay) {
       if (!active) return;
-      invalidateHomeSections();
-      preloadHomeSections().then(settleRows);
-    }, 600);
-  });
+      unsubscribeUserData = syncPlay.onUserDataChange(function () {
+        window.clearTimeout(userDataRefreshTimer);
+        userDataRefreshTimer = window.setTimeout(function () {
+          if (!active) return;
+          invalidateHomeSections();
+          preloadHomeSections().then(settleRows);
+        }, 600);
+      });
+    })
+    .catch(function () {});
 
   return function cleanup() {
     active = false;
@@ -1005,7 +1010,7 @@ export async function renderHome(root, params) {
     removeSkeleton();
     subscription.unsubscribe();
     window.clearTimeout(userDataRefreshTimer);
-    unsubscribeUserData();
+    if (unsubscribeUserData) unsubscribeUserData();
     hero.destroy();
   };
 }
