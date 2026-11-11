@@ -1,3 +1,4 @@
+import './runtime/socketAuth.js';
 import { t, loadDisplayLanguage } from './runtime/i18n.js';
 import { isAuthenticated, loginScreenBypassed, clearSession } from './runtime/auth.js';
 import {
