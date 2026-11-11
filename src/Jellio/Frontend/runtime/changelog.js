@@ -5,6 +5,30 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.110.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.110.0",
+    "summary": "Friends: add titles to each other's watchlists.",
+    "highlights": [
+      {
+        "title": "Friends",
+        "description": "Send a friend request from anyone's profile or from the new People screen. Once they accept, you can add titles to each other's watchlists."
+      },
+      {
+        "title": "Add to a Friend's Watchlist",
+        "description": "A new button on movie and series pages, and an entry in the card menu, lets you pick one or more friends. You see right away whether it was added, already on their list, or not visible to them."
+      },
+      {
+        "title": "Who Added It",
+        "description": "Titles a friend added to your watchlist show their avatar on the card, and you get a notification and a short summary when you open Jellio."
+      },
+      {
+        "title": "Your Privacy",
+        "description": "Choose whether friends may add to your watchlist and who may send you requests, and mute a friend at any time. Private profiles cannot be found or added."
+      }
+    ]
+  },
+  {
     "version": "1.109.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.109.1",

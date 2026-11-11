@@ -4,7 +4,7 @@ import { readString, writeString, remove } from './storage.js';
 // The newest big release (X.Y.0) in runtime/changelog.js. Bump it whenever a big
 // release is added there; tests/frontend/changelog.test.mjs fails until they match.
 // Kept here so startup and the notification poll never load the full release list.
-export const LATEST_BIG_CHANGELOG_VERSION = '1.109.0';
+export const LATEST_BIG_CHANGELOG_VERSION = '1.110.0';
 
 export function isBigRelease(version) {
   if (!version || typeof version !== 'string') return false;
