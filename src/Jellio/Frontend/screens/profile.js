@@ -1,5 +1,5 @@
 import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
-import { getUserById, getUserImageUrl, getCurrentUser } from '../runtime/api.js';
+import { getUserById, getUserImageUrl, getCurrentUser, friendsSupported } from '../runtime/api.js';
 import { getProfileForUser, setProfileBio, getBannerUrl, setProfileBannerFromFile, getAchievementsForUser, deleteActivityEntry, lockBadgeForUser, resetAchievementsForUser } from '../runtime/apiSocial.js';
 import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -677,6 +677,20 @@ export async function renderProfile(root, params) {
       /* bio already updated in place */
     }),
   );
+  // Friend request controls on someone else's profile; they stay hidden
+  // when the server is older or the member can't be added.
+  if (!isOwner && friendsSupported() !== false) {
+    const friendActions = el('div', 'jellio-profile-friend-actions');
+    friendActions.hidden = true;
+    identity.appendChild(friendActions);
+    import('../components/friendButton.js')
+      .then(function (m) {
+        m.mountFriendButton(friendActions, userId, user.Name || '');
+      })
+      .catch(function (err) {
+        console.warn('Jellio: could not load friend controls', err);
+      });
+  }
   header.appendChild(identity);
   root.appendChild(header);
 
