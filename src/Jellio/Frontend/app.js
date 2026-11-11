@@ -75,6 +75,14 @@ if (typeof window !== 'undefined') {
     import('./screens/detail.js').catch(() => {});
     import('./screens/library.js').catch(() => {});
   });
+  // The screens that work without a connection are loaded once while online,
+  // so the service worker has them when the device goes offline later.
+  scheduleIdle(() => {
+    if (!navigator.onLine) return;
+    ['./screens/downloads.js', './screens/player.js', './screens/reader.js', './screens/listen.js'].forEach(function (path) {
+      import(path).catch(function () {});
+    });
+  });
 }
 
 // Not needed for the first paint: loaded when first used.
@@ -174,6 +182,25 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
     .catch(function (err) {
       console.warn('Jellio: offline support unavailable', err);
     });
+  // Hand the worker this page and everything it loaded, so an offline start
+  // works even when the worker arrived during this very visit.
+  window.addEventListener('load', function () {
+    window.setTimeout(function () {
+      if (!navigator.onLine) return;
+      navigator.serviceWorker.ready
+        .then(function (registration) {
+          if (!registration.active) return;
+          const urls = [window.location.origin + window.location.pathname];
+          (performance.getEntriesByType('resource') || []).forEach(function (entry) {
+            if (entry.name.indexOf(window.location.origin) === 0 && (entry.initiatorType === 'script' || entry.initiatorType === 'link' || entry.initiatorType === 'css' || entry.initiatorType === 'other')) {
+              urls.push(entry.name);
+            }
+          });
+          registration.active.postMessage({ type: 'jellio-cache-urls', urls: urls });
+        })
+        .catch(function () {});
+    }, 15000);
+  });
 }
 
 // Whether the server answers, settled before the first render so an
