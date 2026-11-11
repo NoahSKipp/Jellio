@@ -21,6 +21,11 @@ public class ProfileSettings
 
     public string? Bio { get; set; }
 
+    public bool FriendsCanAddToWatchlist { get; set; } = true;
+
+    // "everyone" or "nobody".
+    public string FriendRequestsFrom { get; set; } = "everyone";
+
     public bool GrouplistEnabled { get; set; }
 
     public bool RemoveFromWatchlistAfterWatching { get; set; } = true;

@@ -15,6 +15,8 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
 {
     public record PrivacyRequest(bool IsPrivate);
 
+    public record FriendsSettingsRequest(bool? FriendsCanAddToWatchlist, string? FriendRequestsFrom);
+
     public record BioRequest(string? Bio);
 
     public record GrouplistEnabledRequest(bool GrouplistEnabled);
@@ -86,6 +88,41 @@ public class ProfileController(ProfileSettingsStore store) : ControllerBase
 
         var updated = store.Update(userId, s => s.RemoveFromWatchlistAfterWatching = request.RemoveFromWatchlistAfterWatching);
         return Ok(updated);
+    }
+
+    [HttpPost("friends-settings")]
+    public IActionResult SetFriendsSettings([FromBody] FriendsSettingsRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return BadRequest("Invalid user session");
+        }
+
+        if (request == null)
+        {
+            return BadRequest();
+        }
+
+        var from = request.FriendRequestsFrom?.Trim().ToLowerInvariant();
+        if (from != null && from != "everyone" && from != "nobody")
+        {
+            return BadRequest("FriendRequestsFrom must be everyone or nobody");
+        }
+
+        var updated = store.Update(userId, s =>
+        {
+            if (request.FriendsCanAddToWatchlist is { } allow)
+            {
+                s.FriendsCanAddToWatchlist = allow;
+            }
+
+            if (from != null)
+            {
+                s.FriendRequestsFrom = from;
+            }
+        });
+        return Ok(new { updated.FriendsCanAddToWatchlist, updated.FriendRequestsFrom });
     }
 
     [HttpPost("bio")]

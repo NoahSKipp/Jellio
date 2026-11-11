@@ -17,7 +17,11 @@ public record WatchlistNotification(
     string? SeriesKey = null,
     int? MangaId = null,
     // An announcement's picture (Jellio/notifications/image/{ImageId}).
-    string? ImageId = null
+    string? ImageId = null,
+    // Friend notifications: who it is from (N format id), their name and avatar tag.
+    string? FromUserId = null,
+    string? FromUserName = null,
+    string? FromImageTag = null
 );
 
 public class NotificationStore(IApplicationPaths applicationPaths)
