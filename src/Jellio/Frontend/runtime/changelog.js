@@ -5,6 +5,22 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.109.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.109.1",
+    "summary": "Watch Party works on current Jellyfin servers again, and offline mode opens your downloads.",
+    "highlights": [
+      {
+        "title": "Watch Party Connection",
+        "description": "Jellio now opens the live connection Watch Party needs in the way current Jellyfin servers accept, so joining a group starts the stream in sync instead of failing."
+      },
+      {
+        "title": "Offline Library",
+        "description": "When this device loses its connection, Jellio opens your downloads again, also after reloading the page without a connection."
+      }
+    ]
+  },
+  {
     "version": "1.109.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.109.0",
