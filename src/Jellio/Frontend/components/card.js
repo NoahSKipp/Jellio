@@ -54,6 +54,34 @@ function episodeSubtitle(item) {
   return code || item.Name || '';
 }
 
+function buildPersonAvatar(person) {
+  if (person.PrimaryImageTag) {
+    const img = document.createElement('img');
+    img.className = 'jellio-card-watcher-avatar';
+    img.src = getUserImageUrl(person.UserId, person.PrimaryImageTag, { maxWidth: 64 });
+    img.alt = person.UserName || '';
+    img.loading = 'lazy';
+    return img;
+  }
+  const initial = document.createElement('span');
+  initial.className = 'jellio-card-watcher-avatar jellio-card-watcher-initial';
+  initial.textContent = (person.UserName || 'U').charAt(0).toUpperCase();
+  return initial;
+}
+
+// Friends who put a title on the Watchlist (item.AddedBy, set by the
+// Watchlist screen); a bookmark corner tells it from the watchers badge.
+function buildAddedByBadge(entries) {
+  const wrap = document.createElement('div');
+  wrap.className = 'jellio-card-addedby';
+  const names = entries.map((e) => e.UserName || '').filter(Boolean).join(', ');
+  wrap.title = t('friends_added_by', { names });
+  wrap.setAttribute('role', 'img');
+  wrap.setAttribute('aria-label', t('friends_added_by', { names }));
+  entries.slice(0, 3).forEach((e) => wrap.appendChild(buildPersonAvatar(e)));
+  return wrap;
+}
+
 function buildWatchersBadge(watchers) {
   if (!watchers || !watchers.length) return null;
   const wrap = document.createElement('div');
@@ -66,21 +94,8 @@ function buildWatchersBadge(watchers) {
   wrap.title = t('card_watching', { names });
   wrap.setAttribute('aria-label', t('card_watched_by', { names }));
 
-  const displayWatchers = watchers.slice(0, 3);
-  displayWatchers.forEach(function (watcher) {
-    if (watcher.PrimaryImageTag) {
-      const img = document.createElement('img');
-      img.className = 'jellio-card-watcher-avatar';
-      img.src = getUserImageUrl(watcher.UserId, watcher.PrimaryImageTag, { maxWidth: 64 });
-      img.alt = watcher.UserName || '';
-      img.loading = 'lazy';
-      wrap.appendChild(img);
-    } else {
-      const initial = document.createElement('span');
-      initial.className = 'jellio-card-watcher-avatar jellio-card-watcher-initial';
-      initial.textContent = (watcher.UserName || 'U').charAt(0).toUpperCase();
-      wrap.appendChild(initial);
-    }
+  watchers.slice(0, 3).forEach(function (watcher) {
+    wrap.appendChild(buildPersonAvatar(watcher));
   });
 
   if (watchers.length > 3) {
@@ -574,6 +589,7 @@ export function buildCard(item, options) {
   }
 
   paintCardState(imageWrap, item);
+  if (item.AddedBy && item.AddedBy.length > 0) imageWrap.appendChild(buildAddedByBadge(item.AddedBy));
   if (item.Watchers && item.Watchers.length > 0) {
     const watchersBadge = buildWatchersBadge(item.Watchers);
     if (watchersBadge) imageWrap.appendChild(watchersBadge);

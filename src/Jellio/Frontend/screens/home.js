@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
-import { getCurrentUser, getResumeItems, getNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
+import { getCurrentUser, getResumeItems, getNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAddedBy, friendsSupported, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
 import { getContinueReading, getContinueListening } from '../runtime/apiBooks.js';
 import { getCommunityWatching, invalidateCommunityWatchingCache } from '../runtime/apiSocial.js';
 import {
@@ -408,7 +408,14 @@ async function renderWatchlist(root, activeList) {
   root.appendChild(skeleton);
 
   try {
+    // Who added what is one request per render, matched to cards by id.
+    const addedByRequest = !isGroup && friendsSupported() !== false ? getAddedBy().catch(function () { return {}; }) : null;
     const items = await (isGroup ? getGrouplistItems() : getWatchlistItems());
+    const addedBy = addedByRequest ? await addedByRequest : {};
+    items.forEach(function (item) {
+      const entries = addedBy[String(item.Id || '').replace(/-/g, '').toLowerCase()];
+      if (entries && entries.length) item.AddedBy = entries;
+    });
     skeleton.remove();
     const movies = items.filter(function (item) {
       return item.Type === 'Movie';
