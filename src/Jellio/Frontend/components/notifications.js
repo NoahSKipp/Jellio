@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl } from '../runtime/api.js';
+import { getNotifications, markNotificationsRead, deleteNotification, clearAllNotifications, getImageUrl, setFriendsIncomingCount, loadFriends } from '../runtime/api.js';
 import { getStreamCoverUrl } from '../runtime/apiBooks.js';
 import { isAuthenticated, getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { navigateTo } from '../runtime/router.js';
@@ -13,6 +13,19 @@ let changelogModule = null;
 function loadChangelog() {
   if (!changelogModule) changelogModule = import('../runtime/changelog.js');
   return changelogModule;
+}
+
+// Friends notifications render from a module loaded when one first shows up.
+const FRIEND_KINDS = ['friend_request', 'friend_accepted', 'watchlist_added'];
+let friendModule = null;
+function loadFriendNotifications(items) {
+  if (friendModule || !items || !items.some(function (n) { return FRIEND_KINDS.indexOf(n.Kind) !== -1; })) return null;
+  return import('./friendNotifications.js').then(function (m) {
+    friendModule = m;
+  });
+}
+function isFriendNotification(n) {
+  return !!friendModule && FRIEND_KINDS.indexOf(n.Kind) !== -1;
 }
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -31,6 +44,7 @@ function partyWhen(n) {
 }
 
 function messageFor(n) {
+  if (isFriendNotification(n)) return friendModule.messageFor(n);
   if (n.Kind === 'party_scheduled') {
     return t('party_notice_scheduled', { host: n.Detail || 'Someone', name: n.Name, when: partyWhen(n) });
   }
@@ -71,6 +85,10 @@ function subtitleFor(n) {
 function openItem(n) {
   if (n.Kind === 'announcement' || n.Kind === 'whatsnew') return;
   hideNotificationsPanel();
+  if (isFriendNotification(n)) {
+    friendModule.openTarget(n);
+    return;
+  }
   if (n.Kind === 'streamlink' || n.Kind === 'streamlink_removed') {
     navigateTo('#/livetv');
     return;
@@ -98,6 +116,15 @@ function announcementImageUrl(n) {
 }
 
 function buildRow(n) {
+  if (isFriendNotification(n)) {
+    return friendModule.buildRow(n, {
+      open: openItem,
+      remove: function (id) {
+        render(currentItems.filter(function (x) { return x.Id !== id; }));
+      },
+      dismiss: removeOne,
+    });
+  }
   const isAnnouncement = n.Kind === 'announcement';
   const isWhatsNew = n.Kind === 'whatsnew';
   const row = el(
@@ -221,6 +248,7 @@ function render(items) {
   lastUnreadCount = items.filter(function (n) {
     return !n.Read;
   }).length;
+  setFriendsIncomingCount(items.filter(function (n) { return n.Kind === 'friend_request'; }).length);
   updateBadge();
 
   if (!panel) return;
@@ -279,6 +307,11 @@ function clearAll() {
 function poll() {
   Promise.all([getNotifications(), shouldShowChangelogNotification() ? loadChangelog() : null])
     .then(function (results) {
+      return Promise.resolve(loadFriendNotifications(results[0])).then(function () {
+        return results;
+      });
+    })
+    .then(function (results) {
       const items = results[0];
       const changelog = results[1];
       // Clear out any previous or stale changelog notifications from the list
@@ -312,12 +345,14 @@ function poll() {
           }
         });
       }
+      const firstPoll = !knownIds;
       knownIds = new Set(
         merged.map(function (n) {
           return n.Id;
         }),
       );
       render(merged);
+      if (firstPoll && friendModule) friendModule.announceStartup(merged);
     })
     .catch(function () {
     })
@@ -371,6 +406,8 @@ export function startNotifications() {
   started = true;
   createPanel();
   poll();
+  // Learns whether the server has friends and warms the list the menus use.
+  loadFriends().catch(function () {});
 }
 
 export function notificationsUnreadCount() {
