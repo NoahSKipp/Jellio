@@ -1422,6 +1422,9 @@ export async function renderPlayer(root, params) {
     playerLive,
   );
 
+  // Declared before the media session wiring, which reads it from events
+  // that can fire while this function is still awaiting.
+  let nextEpisode = null;
   wireMediaSession(
     {
       attemptPlay, backButton, isEpisodeItem, performSeek, seriesAwareArtworkUrl, skipBackButton, video,
@@ -2076,11 +2079,10 @@ export async function renderPlayer(root, params) {
     );
     root.appendChild(resumePrompt.overlay);
     resumePrompt.resumeButton.focus();
-  } else if ((!syncPlaylistItemId && !getCurrentGroup()) || initialSyncTarget.isPlaying) {
+  } else if ((!syncPlaylistItemId && !getCurrentGroup()) || (initialSyncTarget && initialSyncTarget.isPlaying)) {
     waitForPlayableBuffer(attemptPlay);
   }
 
-  let nextEpisode = null;
   let upNextShown = false;
   let upNextDismissed = false;
   let upNextCountdownInterval = null;
