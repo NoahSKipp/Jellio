@@ -95,7 +95,11 @@ public class FriendsService(
     {
         Friendships = d.Friendships.Select(f => new Friendship
         {
-            UserA = f.UserA, UserB = f.UserB, Since = f.Since, MutedByA = f.MutedByA, MutedByB = f.MutedByB,
+            UserA = f.UserA,
+            UserB = f.UserB,
+            Since = f.Since,
+            MutedByA = f.MutedByA,
+            MutedByB = f.MutedByB,
         }).ToList(),
         Requests = d.Requests.Select(r => new FriendRequest { Id = r.Id, From = r.From, To = r.To, At = r.At }).ToList(),
     });
