@@ -10,7 +10,45 @@ let serverOffline = false;
 self.addEventListener('message', function (event) {
   const data = event.data;
   if (data && data.type === 'jellio-connectivity') serverOffline = Boolean(data.offline);
+  if (data && data.type === 'jellio-cache-urls' && Array.isArray(data.urls)) {
+    event.waitUntil(cacheMissing(data.urls));
+  }
 });
+
+// The first visit loads before this worker controls the page, so the page
+// and the scripts it loaded never passed through here. The page sends their
+// URLs once it runs; whatever is not cached yet is fetched and kept, so a
+// later start without a connection still has the app.
+function cacheMissing(urls) {
+  return caches.open(SHELL_CACHE).then(function (cache) {
+    return Promise.all(
+      urls.slice(0, 400).map(function (href) {
+        let url;
+        try {
+          url = new URL(href);
+        } catch (err) {
+          return null;
+        }
+        if (url.origin !== self.location.origin) return null;
+        const isPage = url.pathname === scopePath() || url.pathname === scopePath() + 'index.html';
+        if (!isPage && url.pathname.indexOf(scopePath()) !== 0 && url.pathname.indexOf(VERSIONED_PREFIX) !== 0) return null;
+        const key = isPage ? url.origin + url.pathname : url.href;
+        return cache.match(key).then(function (cached) {
+          if (cached) return null;
+          return fetch(url.href, { credentials: 'same-origin' }).then(
+            function (response) {
+              if (response && response.ok && response.type === 'basic') return cache.put(key, response);
+              return null;
+            },
+            function () {
+              return null;
+            },
+          );
+        });
+      }),
+    );
+  });
+}
 
 try {
   importScripts(new URL('serviceworker.js', self.registration.scope).href);
