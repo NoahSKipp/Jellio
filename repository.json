@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.110.0] - 2026-11-11\n\n### 🚀 Features\n\n- *(friends)* Friends, watchlist sharing, added-by and friend notifications\n- *(friends)* Add the friends API layer, helpers and strings\n- *(friends)* Add the People screen with friends, requests and search\n- *(friends)* Add the friend button to member profiles\n- *(friends)* Add titles to a friend's watchlist from the detail screen and card menu\n- *(friends)* Show who added a title on Watchlist cards\n- *(friends)* Render friends notifications and a startup summary toast\n- *(friends)* Add People to the sidebar and account menu with a request counter\n- *(friends)* Add friends privacy settings\n\n### 📚 Documentation\n\n- Add 1.110.0 release notes to What's New changelog\n\n### 🎨 Styling\n\n- Format FriendsService\n\n### 🧪 Testing\n\n- Cover friends state machine, watchlist add rules, notifications and added-by\n- *(friends)* Cover the friends API wrappers and helpers\n",
+        "checksum": "b5133e5a5f3baa85836527c8d07f1aff",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.110.0/jellio_1.110.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-11T13:55:55Z",
+        "version": "1.110.0"
+      },
+      {
         "changelog": "## [1.109.1] - 2026-11-11\n\n### 🐛 Bug Fixes\n\n- *(offline)* Cache the page and the scripts of the first visit so an offline start works\n- *(offline)* Load the screens that work offline while still online\n- *(syncplay)* Open Jellyfin's WebSocket with ApiKey so servers without legacy auth accept it\n- *(syncplay)* Install the WebSocket ApiKey fix before anything opens a socket\n- *(player)* Open a title while in a group whose queue is not known yet, and wire the media session after its state exists\n\n### 📚 Documentation\n\n- Add 1.109.1 release notes to What's New changelog\n",
         "checksum": "cfa2b8f249d1e8690081a633023cff61",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.109.1/jellio_1.109.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-02T02:20:15Z",
         "version": "1.102.4"
-      },
-      {
-        "changelog": "## [1.102.3] - 2026-11-02\n\n### 📚 Documentation\n\n- *(changelog)* Faster icons and hero in 1.102.3\n\n### ⚡ Performance\n\n- *(web)* Preload the icon font and the last hero backdrop\n- *(home)* Remember the first hero backdrop for the next load\n",
-        "checksum": "cb2d4ae54be97c56dc99f23a7ed63482",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.102.3/jellio_1.102.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-02T00:34:13Z",
-        "version": "1.102.3"
       }
     ]
   }
