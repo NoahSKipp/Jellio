@@ -169,3 +169,22 @@ export {
   sendPlaystateCommand,
   sendSessionGeneralCommand,
 } from './api/sessions.js';
+export {
+  friendsSupported,
+  friendsIncomingCount,
+  setFriendsIncomingCount,
+  getFriendsSnapshot,
+  loadFriends,
+  getFriendStatus,
+  searchPeople,
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  cancelFriendRequest,
+  removeFriend,
+  setFriendMuted,
+  addToFriendsWatchlists,
+  getAddedBy,
+  getFriendsSettings,
+  saveFriendsSettings,
+} from './api/friends.js';
