@@ -16099,3 +16099,529 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Friends and watchlist sharing */
+.jellio-friend-avatar {
+  flex: 0 0 auto;
+  width: 2.8em;
+  height: 2.8em;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--jellio-card-bg);
+}
+
+.jellio-friend-avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-weight: 700;
+}
+
+.jellio-screen-people {
+  padding-bottom: 3em;
+}
+
+.jellio-people-tabs {
+  margin-bottom: clamp(14px, 2vw, 24px);
+}
+
+.jellio-people-count {
+  min-width: 1.3em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 0.8em;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.jellio-people-panel {
+  padding: 0 var(--jellio-safe-gutter);
+  max-width: 54em;
+}
+
+.jellio-people-heading {
+  margin: 1.2em 0 0.5em;
+  color: var(--jellio-text-secondary);
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.jellio-people-heading:first-child {
+  margin-top: 0;
+}
+
+.jellio-people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  outline: none;
+}
+
+.jellio-people-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.6em 0.8em;
+  border-radius: var(--jellio-card-radius);
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid transparent;
+}
+
+.jellio-people-row:hover {
+  background: rgb(255 255 255 / 0.07);
+}
+
+.jellio-people-who {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  flex: 1 1 0;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: calc(var(--jellio-card-radius) / 2);
+}
+
+.jellio-people-who:focus-visible {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: 3px;
+}
+
+.jellio-people-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.jellio-people-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-people-sub {
+  color: var(--jellio-text-secondary);
+  font-size: 0.82em;
+}
+
+.jellio-people-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  flex: 0 0 auto;
+}
+
+.jellio-people-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.5em 1.1em;
+}
+
+.jellio-people-btn .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-people-chip {
+  padding: 0.15em 0.6em;
+  border: 1px solid var(--jellio-border-color);
+  border-radius: 999px;
+  color: var(--jellio-text-tertiary);
+  font-size: 0.72em;
+  font-weight: 700;
+}
+
+.jellio-people-more {
+  display: inline-flex;
+  padding: 0.4em;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+}
+
+.jellio-people-more:hover,
+.jellio-people-more:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--jellio-text-color);
+}
+
+.jellio-people-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
+  padding: clamp(28px, 6vw, 64px) 1em;
+  text-align: center;
+}
+
+.jellio-people-empty-icon {
+  font-size: 3em;
+  color: var(--jellio-text-tertiary);
+}
+
+.jellio-people-empty-title {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.jellio-people-empty-body {
+  margin: 0 0 0.8em;
+  max-width: 28em;
+  color: var(--jellio-text-secondary);
+  line-height: 1.5;
+}
+
+.jellio-people-search {
+  position: relative;
+  margin-bottom: 1em;
+}
+
+.jellio-people-search-icon {
+  position: absolute;
+  left: 0.8em;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--jellio-text-tertiary);
+  pointer-events: none;
+}
+
+.jellio-people-search-input {
+  padding-left: 3.1em;
+}
+
+.jellio-friend-btn .material-icons {
+  font-size: 1.15em;
+}
+
+.jellio-friend-btn-caret {
+  margin-left: -0.2em;
+}
+
+.jellio-profile-friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
+  margin-top: 0.7em;
+}
+
+.jellio-friend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.jellio-friend-note {
+  color: var(--jellio-text-tertiary);
+  font-size: 0.85em;
+}
+
+.jellio-friend-menu {
+  z-index: 10003;
+}
+
+.jellio-friend-confirm {
+  width: min(90vw, 26em);
+}
+
+.jellio-friend-confirm-text {
+  margin: 0 0 1.2em;
+  color: var(--jellio-text-secondary);
+  line-height: 1.5;
+}
+
+.jellio-friend-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  margin-top: 1em;
+}
+
+.jellio-friend-picker {
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 28em);
+}
+
+.jellio-friend-picker-item {
+  margin: -0.6em 0 1em;
+  color: var(--jellio-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-friend-picker-search {
+  margin-bottom: 0.7em;
+}
+
+.jellio-friend-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jellio-friend-picker-row {
+  border-radius: calc(var(--jellio-card-radius) / 1.5);
+  background: rgb(255 255 255 / 0.04);
+}
+
+.jellio-friend-picker-row-on {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.jellio-friend-picker-label {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.55em 0.8em;
+  cursor: pointer;
+}
+
+.jellio-friend-picker-check {
+  width: 1.15em;
+  height: 1.15em;
+  accent-color: var(--jellio-secondary-color);
+}
+
+.jellio-friend-picker-label:has(:focus-visible) {
+  outline: 2px solid var(--jellio-secondary-color);
+  outline-offset: -2px;
+  border-radius: inherit;
+}
+
+.jellio-friend-picker-note {
+  margin: 0.4em 0;
+  color: var(--jellio-text-secondary);
+  line-height: 1.5;
+}
+
+.jellio-friend-picker-result {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.55em 0.8em;
+}
+
+.jellio-friend-picker-result .jellio-people-text {
+  flex: 1 1 auto;
+}
+
+.jellio-friend-picker-result-ok .jellio-friend-picker-result-icon {
+  color: #46c37b;
+}
+
+.jellio-friend-picker-result-info .jellio-friend-picker-result-icon {
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-friend-picker-result-warn .jellio-friend-picker-result-icon {
+  color: var(--jellio-trending-color);
+}
+
+/* Added-by badge: friends who put a title on the Watchlist */
+.jellio-card-addedby {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.jellio-card-addedby::after {
+  content: 'bookmark';
+  position: absolute;
+  right: -6px;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #141414;
+  box-sizing: border-box;
+  background: var(--jellio-secondary-color);
+  color: var(--jellio-on-secondary);
+  font-family: 'Material Icons';
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+}
+
+.jellio-card-addedby .jellio-card-watcher-avatar:first-child {
+  margin-left: 0;
+}
+
+.jellio-card-image-wrap:has(.jellio-card-watched) .jellio-card-addedby {
+  top: 2.2em;
+}
+
+.jellio-card-image-wrap:has(.jellio-card-addedby) .jellio-card-watchers {
+  top: calc(0.4em + 30px);
+}
+
+.jellio-card-image-wrap:has(.jellio-card-watched):has(.jellio-card-addedby) .jellio-card-watchers {
+  top: calc(2.2em + 30px);
+}
+
+/* Friends notifications in the bell list */
+.jellio-notifications-row-friend {
+  align-items: flex-start;
+}
+
+.jellio-notifications-row-friend:not([role='button']) {
+  cursor: default;
+}
+
+.jellio-notifications-row-friend:not([role='button']):hover {
+  background: transparent;
+}
+
+.jellio-notifications-row-lead {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.jellio-notifications-row-avatar {
+  width: 3em;
+  height: 3em;
+}
+
+.jellio-notifications-row-sender {
+  position: absolute;
+  right: -0.45em;
+  bottom: -0.35em;
+  width: 1.7em;
+  height: 1.7em;
+  border: 2px solid var(--jellio-bg-elevated);
+  font-size: 0.85em;
+}
+
+.jellio-notifications-row-wrap {
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.jellio-notifications-row-actions {
+  display: flex;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+
+.jellio-notifications-row-action {
+  padding: 0.4em 1em;
+  font-size: 0.85em;
+}
+
+/* People entry in the rail, the phone bar and the account menu */
+.jellio-sidebar-people {
+  position: relative;
+}
+
+.jellio-sidebar-people-badge {
+  position: absolute;
+  top: 0.3em;
+  left: 2.2em;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2em;
+  height: 1.2em;
+  padding: 0 0.3em;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 0.65em;
+  font-weight: 700;
+}
+
+.jellio-sidebar-people.jellio-has-requests .jellio-sidebar-people-badge {
+  display: inline-flex;
+}
+
+.jellio-mobile-nav-icon {
+  position: relative;
+}
+
+.jellio-mobile-nav-dot {
+  position: absolute;
+  top: -0.1em;
+  right: -0.2em;
+  display: none;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: #e5484d;
+  box-shadow: 0 0 0 2px var(--jellio-bg-color);
+}
+
+.jellio-has-requests .jellio-mobile-nav-dot {
+  display: block;
+}
+
+.jellio-account-switcher-people {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.jellio-account-switcher-people-count {
+  min-width: 1.4em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 0.8em;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 47.99em) {
+  .jellio-screen-people {
+    padding-bottom: 7em;
+  }
+
+  .jellio-people-row {
+    flex-wrap: wrap;
+  }
+
+  .jellio-people-actions {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+  }
+
+  .jellio-people-actions:has(.jellio-people-more:only-of-type),
+  .jellio-people-row:has(.jellio-people-more) .jellio-people-actions {
+    flex: 0 0 auto;
+  }
+}
+
+.jellio-people-empty .jellio-settings-button {
+  align-self: center;
+}
+
+.jellio-card-addedby .jellio-card-watcher-initial {
+  background: #3a3a3a;
+  color: #fff;
+}

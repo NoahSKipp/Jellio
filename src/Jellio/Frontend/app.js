@@ -65,6 +65,7 @@ const loadReader = () => import('./screens/reader.js').then((m) => m.renderReade
 const loadListen = () => import('./screens/listen.js').then((m) => m.renderListen);
 const loadVocab = () => import('./screens/vocab.js').then((m) => m.renderVocab);
 const loadDiscover = () => import('./screens/discover.js').then((m) => m.renderDiscover);
+const loadPeople = () => import('./screens/people.js').then((m) => m.renderPeople);
 const loadDownloads = () => import('./screens/downloads.js').then((m) => m.renderDownloads);
 
 // Pre-warm common next screens during idle time after boot
@@ -162,6 +163,7 @@ const SCREENS = {
   vocab: async (content, params, signal) => (await loadVocab())(content, params, signal),
   discover: async (content, params, signal) => (await loadDiscover())(content, params, signal),
   downloads: async (content, params, signal) => (await loadDownloads())(content, params, signal),
+  people: async (content, params, signal) => (await loadPeople())(content, params, signal),
   movies: async (content, params, signal) => (await loadLibrary())(content, params, signal),
   tv: async (content, params, signal) => (await loadLibrary())(content, params, signal),
   music: async (content, params, signal) => (await loadLibrary())(content, params, signal),
