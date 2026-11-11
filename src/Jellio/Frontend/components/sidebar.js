@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, SETTINGS_LINK, FIXED_NAV_LINKS } from './navShared.js';
+import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, bindFriendsBadge, PEOPLE_LINK, SETTINGS_LINK, FIXED_NAV_LINKS } from './navShared.js';
 import { navigateTo } from '../runtime/router.js';
 import { toggleNowPlayingPanel, nowPlayingCount } from './nowPlaying.js';
 import { toggleNotificationsPanel, notificationsUnreadCount } from './notifications.js';
@@ -42,6 +42,17 @@ function updateActiveLinks(container) {
       link.removeAttribute('aria-current');
     }
   });
+}
+
+function buildPeopleButton() {
+  const button = buildLink(PEOPLE_LINK);
+  button.classList.add('jellio-sidebar-people');
+  const badge = document.createElement('span');
+  badge.className = 'jellio-sidebar-people-badge';
+  badge.setAttribute('aria-hidden', 'true');
+  button.appendChild(badge);
+  bindFriendsBadge(button, badge);
+  return button;
 }
 
 function buildGroupWatchButton() {
@@ -197,6 +208,7 @@ export async function renderSidebar(container) {
   rail.appendChild(scroll);
   rail.appendChild(buildLink(DOWNLOADS_LINK));
   rail.appendChild(buildGroupWatchButton());
+  rail.appendChild(buildPeopleButton());
   rail.appendChild(buildNowPlayingButton());
   rail.appendChild(buildNotificationsButton());
   rail.appendChild(buildLink(SETTINGS_LINK));

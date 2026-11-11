@@ -1,6 +1,6 @@
 import { t } from '../runtime/i18n.js';
 import { getPrimaryNavLinks, isActive, buildIconElement, buildAvatarIconMount, SETTINGS_LINK, FIXED_NAV_LINKS } from './navShared.js';
-import { getCurrentUser } from '../runtime/api.js';
+import { getCurrentUser, friendsSupported, friendsIncomingCount } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { openAccountSwitcher } from './accountSwitcher.js';
 import { openLibraryPicker } from './libraryPicker.js';
@@ -110,6 +110,17 @@ async function buildProfileButton() {
   labelEl.className = 'jellio-mobile-nav-label';
   labelEl.textContent = name;
   button.appendChild(labelEl);
+
+  // A dot when friend requests wait; People itself sits in this menu.
+  const dot = document.createElement('span');
+  dot.className = 'jellio-mobile-nav-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  iconWrap.appendChild(dot);
+  function syncDot() {
+    button.classList.toggle('jellio-has-requests', friendsIncomingCount() > 0 && friendsSupported() === true);
+  }
+  syncDot();
+  document.addEventListener('jellio:friends-changed', syncDot);
 
   button.addEventListener('click', function () {
     openAccountSwitcher();

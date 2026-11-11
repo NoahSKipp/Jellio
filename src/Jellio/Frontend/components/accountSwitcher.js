@@ -8,7 +8,7 @@ import {
   authenticateByName,
   logout,
 } from '../runtime/auth.js';
-import { getUserImageUrl, clearCache, getOnlineUserIds, getCurrentUser } from '../runtime/api.js';
+import { getUserImageUrl, clearCache, getOnlineUserIds, getCurrentUser, friendsSupported, friendsIncomingCount } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
 import { cssUrl } from '../runtime/safeUrl.js';
@@ -182,6 +182,22 @@ export async function openAccountSwitcher() {
     navigateTo('#/account');
   });
   actions.appendChild(manage);
+  // People lives here on phones, where the bottom bar has no room for it.
+  if (friendsSupported() === true) {
+    const people = el('button', 'jellio-settings-button jellio-account-switcher-people', t('nav_people'));
+    people.type = 'button';
+    const pending = friendsIncomingCount();
+    if (pending > 0) {
+      const count = el('span', 'jellio-account-switcher-people-count', String(pending));
+      count.setAttribute('aria-label', t('friends_pending_count', { count: pending }));
+      people.appendChild(count);
+    }
+    people.addEventListener('click', function () {
+      closeAccountSwitcher();
+      navigateTo(pending > 0 ? '#/people?tab=requests' : '#/people');
+    });
+    actions.appendChild(people);
+  }
   const signOut = el('button', 'jellio-settings-button jellio-settings-button-danger', t('nav_sign_out'));
   signOut.type = 'button';
   signOut.addEventListener('click', function () {

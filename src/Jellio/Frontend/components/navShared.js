@@ -9,7 +9,7 @@ import { t } from '../runtime/i18n.js';
 // (originally sourced from Harbor, harborstremio/harbor, MIT, and
 // NuvioMobile's own real vector drawables, see that file's own header
 // for the full provenance), not re-derived here.
-import { getUserViews, getCollections, getCurrentUser, getUserImageUrl } from '../runtime/api.js';
+import { getUserViews, getCollections, getCurrentUser, getUserImageUrl, friendsSupported, friendsIncomingCount } from '../runtime/api.js';
 import { currentHash } from '../runtime/router.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -54,6 +54,23 @@ const LIBRARY_ROUTES = {
 };
 
 export const SETTINGS_LINK = { icon: 'settings', get label() { return t('nav_settings'); }, hash: '#/account' };
+
+export const PEOPLE_LINK = { icon: 'contacts', get label() { return t('nav_people'); }, hash: '#/people' };
+
+// Keeps a People entry in step with the friends state: hidden unless the
+// server has friends, with a counter for pending requests in `badge`.
+export function bindFriendsBadge(host, badge) {
+  function sync() {
+    const count = friendsIncomingCount();
+    host.hidden = friendsSupported() !== true;
+    if (badge) {
+      badge.textContent = count > 99 ? '99+' : String(count);
+      host.classList.toggle('jellio-has-requests', count > 0);
+    }
+  }
+  sync();
+  document.addEventListener('jellio:friends-changed', sync);
+}
 
 export const FIXED_NAV_LINKS = [
   { icon: 'home', get label() { return t('nav_home'); }, hash: '#/home' },
