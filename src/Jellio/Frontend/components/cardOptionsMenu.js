@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem } from '../runtime/api.js';
+import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem, friendsSupported, getFriendsSnapshot, loadFriends } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
@@ -300,6 +300,20 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
           },
         ),
       );
+    }
+    // Friends load in the background; until they have, the entry waits.
+    if (friendsSupported() !== false && (item.Type === 'Movie' || item.Type === 'Series')) {
+      const friends = getFriendsSnapshot();
+      if (!friends) loadFriends().catch(function () {});
+      else if (friends.Friends.length) {
+        menu.appendChild(buildOption(t('friends_menu_add_to_friend'), 'person_add', function () {
+          import('./friendPicker.js').then(function (m) { m.openFriendPicker(item); }).catch(function (err) {
+            console.warn('Jellio: could not open the friend picker', err);
+          });
+        }));
+      } else {
+        menu.appendChild(buildOption(t('friends_menu_find'), 'group_add', function () { navigateTo('#/people?tab=find'); }));
+      }
     }
     const isPlayed = !!(item.UserData && item.UserData.Played);
     menu.appendChild(

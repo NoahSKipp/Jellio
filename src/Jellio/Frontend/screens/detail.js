@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { buildDownloadButton, buildEpisodesDownloadButton, canDownload, promptDownload } from '../components/downloads.js';
-import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, getResumeItems, audiobookTitle, getCachedItemSync, seedItemCache, getMediaSources, getWarmSources } from '../runtime/api.js';
+import { getItemDetails, getImageUrl, getItem, getSeasons, getEpisodes, setPlayed, getSeriesNextUp, getResumeItems, audiobookTitle, getCachedItemSync, seedItemCache, getMediaSources, getWarmSources, friendsSupported, getFriendsSnapshot, loadFriends } from '../runtime/api.js';
 import { warmItem, warmSource } from '../runtime/warmQueue.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { normalizeId } from '../runtime/readySources.js';
@@ -1421,6 +1421,39 @@ export async function renderDetail(root, params, signal) {
       });
   });
   actionsIcons.appendChild(watchlistButton);
+
+  // Send this title to a friend's watchlist (components/friendPicker.js).
+  if (friendsSupported() !== false && (item.Type === 'Movie' || item.Type === 'Series')) {
+    const friendButton = el('button', iconActionClass);
+    friendButton.type = 'button';
+    friendButton.hidden = true;
+    const friendIcon = el('span', 'material-icons person_add');
+    friendButton.appendChild(friendIcon);
+    function paintFriendButton() {
+      const snapshot = getFriendsSnapshot();
+      const supported = friendsSupported();
+      friendButton.hidden = supported === false || !snapshot;
+      if (friendButton.hidden) return;
+      const label = snapshot.Friends.length ? t('friends_menu_add_to_friend') : t('friends_menu_find');
+      friendButton.setAttribute('aria-label', label);
+      friendButton.title = label;
+      friendIcon.textContent = '';
+      friendIcon.className = 'material-icons ' + (snapshot.Friends.length ? 'person_add' : 'group_add');
+    }
+    friendButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (!getFriendsSnapshot().Friends.length) {
+        navigateTo('#/people?tab=find');
+        return;
+      }
+      import('../components/friendPicker.js').then(function (m) { m.openFriendPicker(item, friendButton); }).catch(function (err) {
+        console.warn('Jellio: could not open the friend picker', err);
+      });
+    });
+    actionsIcons.appendChild(friendButton);
+    loadFriends().then(paintFriendButton, function () {});
+    paintFriendButton();
+  }
 
   const watchedButton = el('button', iconActionClass);
   watchedButton.type = 'button';
