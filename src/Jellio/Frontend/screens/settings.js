@@ -1,5 +1,5 @@
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
-import { getCurrentUser, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl, searchGenreOrCategory } from '../runtime/api.js';
+import { getFriendsSettings, saveFriendsSettings, friendsSupported, getCurrentUser, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl, searchGenreOrCategory } from '../runtime/api.js';
 import { getProfileSettings, setProfilePrivacy, setGrouplistEnabled, getCommunityUsers } from '../runtime/apiSocial.js';
 import { startMangaImport, getMangaImportStatus } from '../runtime/apiBooks.js';
 import {
@@ -253,9 +253,11 @@ function buildPasswordCard() {
 
 async function buildPrivacyCard() {
   let isPrivate = false;
+  let friends = null;
   try {
     const settings = await getProfileSettings();
     isPrivate = !!(settings && settings.IsPrivate);
+    friends = friendsSupported() === false ? null : getFriendsSettings(settings);
   } catch (err) {
     console.warn('Jellio: could not load profile privacy setting', err);
   }
@@ -274,6 +276,33 @@ async function buildPrivacyCard() {
       },
     ),
   );
+  // Only servers that answer with the friends fields have the feature.
+  if (friends) {
+    body.appendChild(
+      buildToggleRow(null, t('friends_setting_add_label'), t('friends_setting_add_desc'), friends.FriendsCanAddToWatchlist, function (checked) {
+        saveFriendsSettings({ FriendsCanAddToWatchlist: checked }).catch(function (err) {
+          console.warn('Jellio: could not update friends setting', err);
+        });
+      }),
+    );
+    body.appendChild(
+      buildSelectRow(
+        null,
+        t('friends_setting_requests_label'),
+        t('friends_setting_requests_desc'),
+        [
+          { value: 'everyone', label: t('friends_setting_everyone') },
+          { value: 'nobody', label: t('friends_setting_nobody') },
+        ],
+        friends.FriendRequestsFrom,
+        function (value) {
+          saveFriendsSettings({ FriendRequestsFrom: value }).catch(function (err) {
+            console.warn('Jellio: could not update friends setting', err);
+          });
+        },
+      ),
+    );
+  }
   return card;
 }
 
