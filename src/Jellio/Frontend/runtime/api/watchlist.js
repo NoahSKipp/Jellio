@@ -1,7 +1,7 @@
 import { getCurrentUserId } from '../auth.js';
 import { SHORT_CACHE_TTL_MS, authedFetch, cached, getJson, invalidateCache, invalidateUserDataRows, postJson, rowJson } from './core.js';
 
-export function getWatchlistItems(limit) {
+export function getWatchlistItems(limit, opts) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -12,6 +12,7 @@ export function getWatchlistItems(limit) {
     Limit: String(limit || 100),
   });
   const path = '/Users/' + userId + '/Items?' + params.toString();
+  if (opts && opts.fresh) invalidateCache(path);
   return cached(path, function () {
     return getJson(path);
   }, SHORT_CACHE_TTL_MS).then(function (result) {

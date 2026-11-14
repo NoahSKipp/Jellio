@@ -4,6 +4,7 @@ import { getCurrentUserId } from '../auth.js';
 import { isNetworkError, findDownload } from '../offline.js';
 import { isReleasedToday, isTodayItemStreamVerified, markTodayItemHasStream, isUnreleasedItem, filterReleasedItems } from '../releaseDate.js';
 import { ITEM_DETAILS_TIMEOUT_MS, SHORT_CACHE_TTL_MS, authedFetch, cache, cached, cachedRecent, getJson, invalidateCache, invalidateUserDataRows, rowJson } from './core.js';
+import { earlierSeasonIndexes, isSpecialsSeason } from '../episodeNav.js';
 import { getMediaSources } from './playback.js';
 
 export function getItem(itemId) {
@@ -465,6 +466,40 @@ export async function getNextEpisode(item) {
   return null;
 }
 
+const previousEpisodeCache = new Map();
+
+export async function getPreviousEpisode(item) {
+  if (!item || item.Type !== 'Episode' || !item.SeriesId || !item.Id) return null;
+  if (previousEpisodeCache.has(item.Id)) return previousEpisodeCache.get(item.Id);
+
+  if (item.SeasonId) {
+    const episodes = await getEpisodes(item.SeriesId, item.SeasonId);
+    const index = episodes.findIndex(function (episode) {
+      return episode.Id === item.Id;
+    });
+    if (index > 0) {
+      const prev = episodes[index - 1] || null;
+      if (prev) previousEpisodeCache.set(item.Id, prev);
+      return prev;
+    }
+  }
+
+  const seasons = await getSeasons(item.SeriesId);
+  const seasonIndex = seasons.findIndex(function (season) {
+    return season.Id === item.SeasonId;
+  });
+  const indexes = earlierSeasonIndexes(seasons.map(isSpecialsSeason), seasonIndex);
+  for (let i = 0; i < indexes.length; i += 1) {
+    const earlierEpisodes = await getEpisodes(item.SeriesId, seasons[indexes[i]].Id);
+    if (earlierEpisodes && earlierEpisodes.length) {
+      const prev = earlierEpisodes[earlierEpisodes.length - 1];
+      if (prev) previousEpisodeCache.set(item.Id, prev);
+      return prev;
+    }
+  }
+  return null;
+}
+
 export function getPerson(personId) {
   return getItem(personId);
 }
@@ -509,8 +544,8 @@ export function getPersonFilmography(personId, limit) {
     IncludeItemTypes: 'Movie,Series,Book,AudioBook',
     SortBy: 'PremiereDate,SortName',
     SortOrder: 'Descending',
-    Fields: 'PrimaryImageAspectRatio,ProductionYear,Album,Artists,SeriesName',
-    Limit: String(limit || 100),
+    Fields: 'PrimaryImageAspectRatio,ProductionYear,Album,Artists,SeriesName,ProviderIds',
+    Limit: String(limit || 300),
   });
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return cached(path, function () {

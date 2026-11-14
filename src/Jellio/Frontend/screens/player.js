@@ -12,7 +12,7 @@ import {
   disconnectCast,
   getActiveCast,
 } from '../runtime/cast.js';
-import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped } from '../runtime/api.js';
+import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped, getPreviousEpisode, prefetchStreams, seedItemCache } from '../runtime/api.js';
 import { creditGroupWatchTogether, startJoinSync, clearJoinSync } from '../runtime/apiSocial.js';
 import { syncTracker } from '../runtime/apiBooks.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
@@ -42,7 +42,8 @@ import { loadVolumePreference, saveVolumePreference, loadSubtitleStyle, subtitle
 import { buildResumePrompt, renderPlaybackError } from '../components/playerOverlays.js';
 import { logPlayStart, getWarmSources, getCachedItemSync } from '../runtime/api.js';
 import { prefetchedPlayback, prewarmedPlayback, negotiationFits } from '../runtime/playbackPrefetch.js';
-import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
+import { createPlayStartTrace, buildPlayStartRecord, playStartClient, playStartTrigger, takePlayTrigger, notePlayTrigger, wantsAudioIndex, audioRematchNeeded } from '../runtime/playStart.js';
+import { computeEpisodeNavState } from '../runtime/episodeNav.js';
 import { normalizeId } from '../runtime/readySources.js';
 import { readString, writeString } from '../runtime/storage.js';
 import { formatClock } from '../runtime/format.js';
@@ -195,17 +196,21 @@ export async function renderPlayer(root, params) {
     get needsStartOffset() { return needsStartOffset; },
     set needsStartOffset(value) { needsStartOffset = value; },
     get nextEpisode() { return nextEpisode; },
-    set nextEpisode(value) { nextEpisode = value; },
+    set nextEpisode(value) { nextEpisode = value; syncEpisodeTransportVisibility(); },
     get openShortcutsModal() { return openShortcutsModal; },
     set openShortcutsModal(value) { openShortcutsModal = value; },
     get partyLayer() { return partyLayer; },
     set partyLayer(value) { partyLayer = value; },
     get pendingNativeSeekSeconds() { return pendingNativeSeekSeconds; },
     set pendingNativeSeekSeconds(value) { pendingNativeSeekSeconds = value; },
+    get playNextEpisode() { return playNextEpisode; },
+    get playPreviousEpisode() { return playPreviousEpisode; },
     get playSessionId() { return playSessionId; },
     set playSessionId(value) { playSessionId = value; },
     get preloadedNextVideoEl() { return preloadedNextVideoEl; },
     set preloadedNextVideoEl(value) { preloadedNextVideoEl = value; },
+    get previousEpisode() { return previousEpisode; },
+    set previousEpisode(value) { previousEpisode = value; syncEpisodeTransportVisibility(); },
     get rebuildAudioMenu() { return rebuildAudioMenu; },
     get screenTornDown() { return screenTornDown; },
     get seeking() { return seeking; },
@@ -225,6 +230,7 @@ export async function renderPlayer(root, params) {
     set streamOffsetTicks(value) { streamOffsetTicks = value; },
     get subtitleStyle() { return subtitleStyle; },
     set subtitleStyle(value) { subtitleStyle = value; },
+    get syncEpisodeTransportVisibility() { return syncEpisodeTransportVisibility; },
     get syncMediaPosition() { return syncMediaPosition; },
     set syncMediaPosition(value) { syncMediaPosition = value; },
     get syncMediaSession() { return syncMediaSession; },
@@ -1001,8 +1007,18 @@ export async function renderPlayer(root, params) {
   topbarActions.appendChild(backButton);
   topbar.appendChild(topbarActions);
 
-  // === Center transport: skip back 10s, play/pause, skip forward 10s ===
+  // === Center transport: previous episode, skip back 10s, play/pause, skip forward 10s, next episode ===
   const centerControls = el('div', 'jellio-player-center-controls');
+
+  const prevEpisodeButton = el('button', 'jellio-player-transport');
+  prevEpisodeButton.type = 'button';
+  prevEpisodeButton.hidden = true;
+  prevEpisodeButton.disabled = true;
+  prevEpisodeButton.title = t('player_previous_episode');
+  prevEpisodeButton.setAttribute('aria-label', t('player_previous_episode'));
+  const prevEpisodeIcon = el('span', 'material-icons skip_previous');
+  prevEpisodeIcon.setAttribute('aria-hidden', 'true');
+  prevEpisodeButton.appendChild(prevEpisodeIcon);
 
   const skipBackButton = el('button', 'jellio-player-transport');
   skipBackButton.type = 'button';
@@ -1046,9 +1062,70 @@ export async function renderPlayer(root, params) {
   skipForwardIcon.setAttribute('aria-hidden', 'true');
   skipForwardButton.appendChild(skipForwardIcon);
 
+  const nextEpisodeButton = el('button', 'jellio-player-transport');
+  nextEpisodeButton.type = 'button';
+  nextEpisodeButton.hidden = true;
+  nextEpisodeButton.disabled = true;
+  nextEpisodeButton.title = t('player_next_episode');
+  nextEpisodeButton.setAttribute('aria-label', t('player_next_episode'));
+  const nextEpisodeIcon = el('span', 'material-icons skip_next');
+  nextEpisodeIcon.setAttribute('aria-hidden', 'true');
+  nextEpisodeButton.appendChild(nextEpisodeIcon);
+
+  centerControls.appendChild(prevEpisodeButton);
   centerControls.appendChild(skipBackButton);
   centerControls.appendChild(playPauseButton);
   centerControls.appendChild(skipForwardButton);
+  centerControls.appendChild(nextEpisodeButton);
+
+  let previousEpisode = null;
+  let isNavigatingPrevious = false;
+  let playNextEpisode = function () {};
+  let activeAudioLanguageCode = function () { return null; };
+
+  function syncEpisodeTransportVisibility() {
+    const state = computeEpisodeNavState({
+      isEpisode: isEpisodeItem,
+      blockedInGroup: !!(partyLayer && partyLayer.shouldAsk()),
+      hasPrevious: !!previousEpisode,
+      hasNext: !!nextEpisode,
+    });
+    prevEpisodeButton.hidden = !state.showPrevious;
+    prevEpisodeButton.disabled = !state.showPrevious;
+    nextEpisodeButton.hidden = !state.showNext;
+    nextEpisodeButton.disabled = !state.showNext;
+  }
+
+  async function playPreviousEpisode() {
+    if (isNavigatingPrevious || !previousEpisode || screenTornDown) return;
+    if (partyLayer && partyLayer.shouldAsk()) return;
+    isNavigatingPrevious = true;
+    const target = previousEpisode;
+    let mediaSourceId = null;
+    try {
+      const languageCode = typeof activeAudioLanguageCode === 'function' ? activeAudioLanguageCode() : null;
+      if (languageCode) {
+        const sources = await getMediaSources(target.Id);
+        const matched = (sources || []).find(function (source) {
+          return sourceAudioLanguages(source).indexOf(languageCode) !== -1;
+        });
+        if (matched) mediaSourceId = matched.Id;
+      }
+    } catch (err) {
+      console.warn('Jellio: could not check previous episode sources', err);
+    }
+    if (target.UserData) seedItemCache(target);
+    notePlayTrigger(target.Id, 'previous-episode');
+    navigateTo(playHash(target.Id, mediaSourceId));
+  }
+
+  prevEpisodeButton.addEventListener('click', function () {
+    playPreviousEpisode();
+  });
+  nextEpisodeButton.addEventListener('click', function () {
+    if (partyLayer && partyLayer.shouldAsk()) return;
+    playNextEpisode();
+  });
 
   // === Full width seek bar ===
   let seeking = false;
@@ -1954,7 +2031,7 @@ export async function renderPlayer(root, params) {
     body.appendChild(actions);
     overlay.appendChild(body);
 
-    return { overlay: overlay, eyebrowEl: eyebrow, titleEl: title };
+    return { overlay: overlay, eyebrowEl: eyebrow, titleEl: title, actionButton: skipActionButton };
   }
 
   let skipSegments = null;
@@ -1983,13 +2060,64 @@ export async function renderPlayer(root, params) {
   }
 
   let dismissedSkipKind = null;
+  let activeSkipKind = null;
+  let skipCountdownSeconds = 0;
+  let skipCountdownTimer = null;
+
+  function clearSkipCountdown() {
+    if (skipCountdownTimer) {
+      window.clearInterval(skipCountdownTimer);
+      skipCountdownTimer = null;
+    }
+  }
+
+  function updateSkipButtonLabel() {
+    if (!skipOverlay || !skipOverlay.actionButton) return;
+    if (skipCountdownSeconds > 0) {
+      skipOverlay.actionButton.textContent = t('player_skip_countdown', { seconds: skipCountdownSeconds });
+    } else {
+      skipOverlay.actionButton.textContent = t('player_skip');
+    }
+  }
+
+  function hideSkipOverlay(kindToDismiss) {
+    clearSkipCountdown();
+    activeSkipKind = null;
+    skipCountdownSeconds = 0;
+    if (kindToDismiss) dismissedSkipKind = kindToDismiss;
+    if (skipOverlay && skipOverlay.overlay) {
+      skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
+    }
+  }
+
+  function startSkipCountdown(kind) {
+    if (activeSkipKind === kind) return;
+    clearSkipCountdown();
+    activeSkipKind = kind;
+    skipCountdownSeconds = skipRules.SKIP_PROMPT_SECONDS;
+    updateSkipButtonLabel();
+    skipCountdownTimer = window.setInterval(function () {
+      if (screenTornDown || activeSkipKind !== kind) {
+        clearSkipCountdown();
+        return;
+      }
+      skipCountdownSeconds -= 1;
+      if (skipCountdownSeconds <= 0) {
+        hideSkipOverlay(kind);
+        return;
+      }
+      updateSkipButtonLabel();
+    }, 1000);
+  }
+
   const skipOverlay = buildSkipOverlay(
     function () {
-      performSeek(skipTargetSeconds);
+      const target = skipTargetSeconds;
+      hideSkipOverlay(activeSkipKind || skipOverlay.eyebrowEl.textContent);
+      performSeek(target);
     },
     function () {
-      dismissedSkipKind = skipOverlay.eyebrowEl.textContent;
-      skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
+      hideSkipOverlay(activeSkipKind || skipOverlay.eyebrowEl.textContent);
     },
   );
 
@@ -2089,14 +2217,32 @@ export async function renderPlayer(root, params) {
   let endScreenModalInstance = null;
   let preloadedNextVideoEl = null;
   let hasInitiatedNextPreload = false;
-  const { activeAudioLanguageCode, showEndScreenModal, preloadNextEpisodeStream, dismissUpNext, showUpNext } = wireUpNext(
+  let showEndScreenModal;
+  let preloadNextEpisodeStream;
+  let dismissUpNext;
+  let showUpNext;
+  ({ activeAudioLanguageCode, showEndScreenModal, preloadNextEpisodeStream, dismissUpNext, showUpNext, playNextEpisode } = wireUpNext(
     {
       attemptPlay, currentPositionTicks, currentUserPromise, itemId, markRealWatchComplete, performSeek,
       pickNegotiatedSource, reportRealDurationIfUseful, root, showLoadingLogo, video, waitForPlayableBuffer,
       wakeControls,
     },
     playerLive,
-  );
+  ));
+  syncEpisodeTransportVisibility();
+  if (isEpisodeItem) {
+    getPreviousEpisode(item)
+      .then(function (result) {
+        if (!result || screenTornDown) return;
+        previousEpisode = result;
+        prefetchStreams(result.Id);
+        syncEpisodeTransportVisibility();
+        syncMediaSession();
+      })
+      .catch(function (err) {
+        console.warn('Jellio: could not resolve previous episode', err);
+      });
+  }
 
   let hasReportedStart = false;
 
@@ -2486,23 +2632,22 @@ export async function renderPlayer(root, params) {
     }
 
     const activeSegment = activeSkipSegment(positionSeconds);
-    if (activeSegment && activeSegment.eyebrow !== dismissedSkipKind) {
+    if (!activeSegment) {
       dismissedSkipKind = null;
-    }
-    if (activeSegment && !upNextShown && activeSegment.eyebrow !== dismissedSkipKind) {
-      if (autoSkipEnabled && activeSegment.eyebrow === 'Introduction') {
-        dismissedSkipKind = activeSegment.eyebrow;
-        skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
-        performSeek(activeSegment.target);
-        showPlayerToast(t('player_skipped_intro'));
-        return;
-      }
+      hideSkipOverlay(null);
+    } else if (upNextShown || activeSegment.eyebrow === dismissedSkipKind) {
+      hideSkipOverlay(null);
+    } else if (autoSkipEnabled && activeSegment.eyebrow === 'Introduction') {
+      hideSkipOverlay(activeSegment.eyebrow);
+      performSeek(activeSegment.target);
+      showPlayerToast(t('player_skipped_intro'));
+      return;
+    } else {
       skipTargetSeconds = activeSegment.target;
       skipOverlay.eyebrowEl.textContent = activeSegment.eyebrow;
       skipOverlay.titleEl.textContent = activeSegment.label;
       skipOverlay.overlay.classList.remove('jellio-player-skip-hidden');
-    } else {
-      skipOverlay.overlay.classList.add('jellio-player-skip-hidden');
+      startSkipCountdown(activeSegment.eyebrow);
     }
   });
 
@@ -2625,6 +2770,7 @@ export async function renderPlayer(root, params) {
     if (failoverWatch) { window.clearInterval(failoverWatch); failoverWatch = 0; }
     if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = 0; }
     if (startTimer) { window.clearTimeout(startTimer); startTimer = 0; }
+    clearSkipCountdown();
     clearEarlyStall();
     if (bufferStallTimer) window.clearInterval(bufferStallTimer);
     closeBufferPrompt();

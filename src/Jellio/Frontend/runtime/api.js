@@ -46,6 +46,7 @@ export {
   getSeriesEpisodes,
   getEpisodes,
   getNextEpisode,
+  getPreviousEpisode,
   getPerson,
   getPersonFilmography,
 } from './api/items.js';

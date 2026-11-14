@@ -4,6 +4,8 @@
 
 const EMPTY = { Start: 0, End: 0 };
 
+export const SKIP_PROMPT_SECONDS = 15;
+
 export function isValidSegment(segment) {
   return !!(segment && segment.End > 0 && segment.End > segment.Start);
 }

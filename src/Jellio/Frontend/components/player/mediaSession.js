@@ -47,12 +47,24 @@ export function wireMediaSession(deps, live) {
         backButton.click();
       });
       navigator.mediaSession.setActionHandler('previoustrack', function () {
-        skipBackButton.click();
+        if (live.previousEpisode && typeof live.playPreviousEpisode === 'function') {
+          live.playPreviousEpisode();
+        } else {
+          skipBackButton.click();
+        }
       });
       if (live.nextEpisode) {
         navigator.mediaSession.setActionHandler('nexttrack', function () {
-          navigateTo('#/item?id=' + live.nextEpisode.Id);
+          if (typeof live.playNextEpisode === 'function') {
+            live.playNextEpisode();
+          } else if (live.nextEpisode) {
+            navigateTo('#/item?id=' + live.nextEpisode.Id);
+          }
         });
+      } else {
+        try {
+          navigator.mediaSession.setActionHandler('nexttrack', null);
+        } catch (e) {}
       }
     } catch (e) {
       console.warn('Jellio: could not initialize MediaSession', e);

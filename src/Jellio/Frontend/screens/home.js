@@ -35,6 +35,7 @@ import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { el } from '../runtime/dom.js';
 import { readString, writeJson } from '../runtime/storage.js';
 import { onHomeInvalidate } from '../runtime/homeInvalidate.js';
+import { WATCHLIST_POLL_INTERVAL_MS, watchlistIdsChanged } from '../runtime/watchlistRefresh.js';
 
 const CATALOG_ROW_LIMIT = 24;
 const MAX_CATALOG_ROWS = 8;
@@ -407,16 +408,38 @@ async function renderWatchlist(root, activeList) {
   const skeleton = buildHomeSkeleton(3);
   root.appendChild(skeleton);
 
-  try {
+  const listBody = el('div', 'jellio-watchlist-body');
+  root.appendChild(listBody);
+
+  let active = true;
+  let shownIds = null;
+  let polling = false;
+  let pollTimer = null;
+
+  async function loadAndPaint(fresh) {
     // Who added what is one request per render, matched to cards by id.
-    const addedByRequest = !isGroup && friendsSupported() !== false ? getAddedBy().catch(function () { return {}; }) : null;
-    const items = await (isGroup ? getGrouplistItems() : getWatchlistItems());
+    const addedByRequest = !isGroup && friendsSupported() !== false
+      ? getAddedBy().catch(function () { return {}; })
+      : null;
+    const items = await (isGroup ? getGrouplistItems() : getWatchlistItems(undefined, fresh ? { fresh: true } : undefined));
+    if (!active) return;
     const addedBy = addedByRequest ? await addedByRequest : {};
-    items.forEach(function (item) {
-      const entries = addedBy[String(item.Id || '').replace(/-/g, '').toLowerCase()];
+    if (!active) return;
+
+    const nextIds = items.map(function (item) {
+      const id = String((item && item.Id) || '');
+      const entries = addedBy[id.replace(/-/g, '').toLowerCase()];
       if (entries && entries.length) item.AddedBy = entries;
+      return id + ':' + ((item.AddedBy && item.AddedBy.length) || 0);
     });
+    if (shownIds !== null && !watchlistIdsChanged(shownIds, nextIds)) {
+      return;
+    }
+    shownIds = nextIds;
+
     skeleton.remove();
+    listBody.textContent = '';
+
     const movies = items.filter(function (item) {
       return item.Type === 'Movie';
     });
@@ -428,24 +451,62 @@ async function renderWatchlist(root, activeList) {
       const hasMovie = movieSection && movieSection.parentNode;
       const hasSeries = seriesSection && seriesSection.parentNode;
       if (!hasMovie && !hasSeries) {
-        if (!root.querySelector('.jellio-service-empty')) {
-          root.appendChild(el('p', 'jellio-service-empty', emptyMessage));
+        if (!listBody.querySelector('.jellio-service-empty')) {
+          listBody.appendChild(el('p', 'jellio-service-empty', emptyMessage));
         }
       }
     }
 
     const movieSection = buildWatchlistSection(t('nav_movies', null, 'Movies'), movies, checkBothEmpty);
-    if (movieSection) root.appendChild(movieSection);
+    if (movieSection) listBody.appendChild(movieSection);
     const seriesSection = buildWatchlistSection(t('type_series', null, 'Series'), series, checkBothEmpty);
-    if (seriesSection) root.appendChild(seriesSection);
+    if (seriesSection) listBody.appendChild(seriesSection);
 
     if (!movieSection && !seriesSection) {
-      root.appendChild(el('p', 'jellio-service-empty', emptyMessage));
+      listBody.appendChild(el('p', 'jellio-service-empty', emptyMessage));
     }
+  }
+
+  try {
+    await loadAndPaint(!isGroup);
   } catch (err) {
     skeleton.remove();
     console.warn('Jellio: could not load ' + (isGroup ? 'grouplist' : 'watchlist'), err);
   }
+
+  function refreshInBackground() {
+    if (!active || polling || (typeof document !== 'undefined' && document.hidden)) return;
+    polling = true;
+    loadAndPaint(true)
+      .catch(function () {})
+      .finally(function () {
+        polling = false;
+      });
+  }
+
+  function onVisibilityChange() {
+    if (typeof document !== 'undefined' && !document.hidden) {
+      refreshInBackground();
+    }
+  }
+
+  if (!isGroup && active) {
+    pollTimer = window.setInterval(refreshInBackground, WATCHLIST_POLL_INTERVAL_MS);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+  }
+
+  return function cleanupWatchlist() {
+    active = false;
+    if (pollTimer !== null) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    }
+  };
 }
 
 let cheapSectionsPromise = null;
@@ -805,8 +866,7 @@ export async function renderHome(root, params) {
   root.className = 'jellio-content jellio-screen-home';
 
   if (params && params.get('tab') === '1') {
-    await renderWatchlist(root, params.get('list'));
-    return undefined;
+    return renderWatchlist(root, params.get('list'));
   }
 
   const hero = buildHeroCarousel({

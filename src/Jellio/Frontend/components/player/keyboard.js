@@ -120,7 +120,11 @@ export function createPlayerKeydown(deps, live) {
       case 's':
       case 'S':
         if (!live.skipOverlay.overlay.classList.contains('jellio-player-skip-hidden')) {
-          performSeek(live.skipTargetSeconds);
+          if (live.skipOverlay.actionButton) {
+            live.skipOverlay.actionButton.click();
+          } else {
+            performSeek(live.skipTargetSeconds);
+          }
         }
         break;
       case '?':

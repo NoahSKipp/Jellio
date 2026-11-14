@@ -207,24 +207,27 @@ function buildLockedPanel() {
   return panel;
 }
 
-function buildBadgesSection(badges, isAdmin, userId, onChanged) {
+function buildBadgesSection(badges, isAdmin, userId, onChanged, isOwner) {
   const section = el('section', 'jellio-profile-section');
   const unlockedCount = badges.filter(function (b) { return b.Unlocked; }).length;
-  section.appendChild(el('h2', 'jellio-row-title', t('profile_badges_title', { unlocked: unlockedCount, total: badges.length })));
+  const visibleSource = isOwner ? badges : badges.filter(function (b) { return b.Unlocked; });
+  section.appendChild(
+    el(
+      'h2',
+      'jellio-row-title',
+      isOwner
+        ? t('profile_badges_title', { unlocked: unlockedCount, total: badges.length })
+        : t('profile_badges_unlocked_title', { unlocked: unlockedCount }),
+    ),
+  );
 
   let filter = 'all';
-  const filterBar = el('div', 'jellio-profile-filter-bar');
-  const filters = [
-    { key: 'all', label: t('profile_filter_all', { count: badges.length }) },
-    { key: 'unlocked', label: t('profile_filter_unlocked', { count: unlockedCount }) },
-    { key: 'locked', label: t('profile_filter_locked', { count: badges.length - unlockedCount }) },
-  ];
-
   const grid = el('div', 'jellio-profile-badges');
 
   function renderGrid() {
     grid.textContent = '';
-    const filtered = badges.filter(function (badge) {
+    const filtered = visibleSource.filter(function (badge) {
+      if (!isOwner) return true;
       if (filter === 'unlocked') return badge.Unlocked;
       if (filter === 'locked') return !badge.Unlocked;
       return true;
@@ -263,21 +266,29 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged) {
     });
   }
 
-  filters.forEach(function (f) {
-    const chip = el('button', 'jellio-profile-filter-chip' + (f.key === filter ? ' jellio-profile-filter-chip-active' : ''), f.label);
-    chip.type = 'button';
-    chip.addEventListener('click', function () {
-      filter = f.key;
-      Array.prototype.forEach.call(filterBar.children, function (c) {
-        c.classList.remove('jellio-profile-filter-chip-active');
+  if (isOwner) {
+    const filterBar = el('div', 'jellio-profile-filter-bar');
+    const filters = [
+      { key: 'all', label: t('profile_filter_all', { count: badges.length }) },
+      { key: 'unlocked', label: t('profile_filter_unlocked', { count: unlockedCount }) },
+      { key: 'locked', label: t('profile_filter_locked', { count: badges.length - unlockedCount }) },
+    ];
+    filters.forEach(function (f) {
+      const chip = el('button', 'jellio-profile-filter-chip' + (f.key === filter ? ' jellio-profile-filter-chip-active' : ''), f.label);
+      chip.type = 'button';
+      chip.addEventListener('click', function () {
+        filter = f.key;
+        Array.prototype.forEach.call(filterBar.children, function (c) {
+          c.classList.remove('jellio-profile-filter-chip-active');
+        });
+        chip.classList.add('jellio-profile-filter-chip-active');
+        renderGrid();
       });
-      chip.classList.add('jellio-profile-filter-chip-active');
-      renderGrid();
+      filterBar.appendChild(chip);
     });
-    filterBar.appendChild(chip);
-  });
+    section.appendChild(filterBar);
+  }
 
-  section.appendChild(filterBar);
   section.appendChild(grid);
   renderGrid();
   return section;
@@ -711,7 +722,13 @@ export async function renderProfile(root, params) {
     const navTabs = el('div', 'jellio-profile-nav-tabs');
     const tabs = [
       { key: 'stats', label: t('profile_tab_overview'), icon: 'analytics' },
-      { key: 'badges', label: t('profile_tab_badges', { unlocked: unlockedBadgesCount, total: badges.length }), icon: 'military_tech' },
+      {
+        key: 'badges',
+        label: isOwner
+          ? t('profile_tab_badges', { unlocked: unlockedBadgesCount, total: badges.length })
+          : t('profile_badges_unlocked_title', { unlocked: unlockedBadgesCount }),
+        icon: 'military_tech',
+      },
       { key: 'activity', label: t('profile_tab_activity', { count: activities.length }), icon: 'history' },
     ];
 
@@ -759,8 +776,8 @@ export async function renderProfile(root, params) {
       }
 
       // Quick Badges showcase at the bottom of the stats overview
-      if (badges.length) {
-        tabContentContainer.appendChild(buildBadgesSection(badges, isAdmin, userId, refresh));
+      if (isOwner ? badges.length : unlockedBadgesCount) {
+        tabContentContainer.appendChild(buildBadgesSection(badges, isAdmin, userId, refresh, isOwner));
       }
     }
 
@@ -773,7 +790,7 @@ export async function renderProfile(root, params) {
         renderStatsTab();
       } else if (activeTab === 'badges') {
         tabContentContainer.textContent = '';
-        tabContentContainer.appendChild(buildBadgesSection(badges, isAdmin, userId, refresh));
+        tabContentContainer.appendChild(buildBadgesSection(badges, isAdmin, userId, refresh, isOwner));
       } else if (activeTab === 'activity') {
         tabContentContainer.textContent = '';
         tabContentContainer.appendChild(buildActivitySection(activities, canRemoveActivity, userId, refresh));

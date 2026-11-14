@@ -226,9 +226,15 @@ export function wireGroupSync(deps, live) {
       notifyBuffering(currentPositionTicks(), !video.paused, live.syncPlaylistItemId).catch(function () {});
       startJoinSync(live.joinSyncGroupId, live.syncPlaylistItemId).catch(function () {});
     }
+    if (typeof live.syncEpisodeTransportVisibility === 'function') {
+      live.syncEpisodeTransportVisibility();
+    }
     maybePublishQueue();
   });
 
   maybePublishQueue();
+  if (typeof live.syncEpisodeTransportVisibility === 'function') {
+    live.syncEpisodeTransportVisibility();
+  }
   return { clearScheduledSync };
 }

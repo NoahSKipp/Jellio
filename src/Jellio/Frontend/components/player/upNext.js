@@ -320,10 +320,11 @@ export function wireUpNext(deps, live) {
         upNextOverlay = built.overlay;
         upNextPlayButton = built.playButton;
         root.appendChild(upNextOverlay);
+        if (typeof live.syncMediaSession === 'function') live.syncMediaSession();
       })
       .catch(function (err) {
         console.warn('Jellio: could not resolve next episode', err);
       });
   }
-  return { activeAudioLanguageCode, showEndScreenModal, preloadNextEpisodeStream, dismissUpNext, showUpNext };
+  return { activeAudioLanguageCode, showEndScreenModal, preloadNextEpisodeStream, dismissUpNext, showUpNext, playNextEpisode };
 }
