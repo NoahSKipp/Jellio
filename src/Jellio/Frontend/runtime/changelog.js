@@ -5,6 +5,30 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.0",
+    "summary": "Per-user Ani-Sync tracking, proactive stream warmup with Ready badges, smarter Top Picks, and typo-tolerant fuzzy search with Similar results.",
+    "highlights": [
+      {
+        "title": "Per-User Ani-Sync",
+        "description": "Connect AniList, MyAnimeList, Shikimori, or Simkl per user in Settings with encrypted server-side credential storage, shared preferences across Jellio Web and Jellio TV, automatic playback sync, and manual Test and Sync Now controls."
+      },
+      {
+        "title": "Expanded Stream Warmup & Ready Badge",
+        "description": "Streams warm up proactively across Continue Watching, Next Up, detail pages, and backup sources, with a Ready badge shown in the stream picker for pre-warmed streams."
+      },
+      {
+        "title": "Smarter Personal Top Picks",
+        "description": "Top Picks uses weighted taste signals, recency decay, crew and cast affinity, and diversity caps while deduplicating against Because You Watched rows."
+      },
+      {
+        "title": "Fuzzy Search & Similar Results",
+        "description": "Search now handles typos, aliases, and alternate spellings with spelling suggestions, and includes an always-on Similar results row powered by your library."
+      }
+    ]
+  },
+  {
     "version": "1.111.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.111.0",
