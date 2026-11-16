@@ -1,4 +1,4 @@
-import { t } from '../runtime/i18n.js';
+import { t, getDisplayLanguage } from '../runtime/i18n.js';
 import {
   getPerson,
   getPersonFilmography,
@@ -24,6 +24,8 @@ import {
   formatCreditSubtitle,
   parseMarkdownBio,
   resolveCreditTarget,
+  getCachedRichPersonDetails,
+  setCachedRichPersonDetails,
 } from '../runtime/personProfile.js';
 
 function appendFormattedBio(targetEl, raw) {
@@ -45,6 +47,7 @@ function appendFormattedBio(targetEl, raw) {
 
 function buildPersonCreditCard(credit) {
   if (credit && credit.localItem && credit.localItem.Id) {
+    seedItemCache(credit.localItem);
     const card = buildCard(credit.localItem);
     const subtitle = formatCreditSubtitle(credit);
     if (subtitle) {
@@ -117,7 +120,10 @@ function buildPersonCreditCard(credit) {
     try {
       const target = await resolveCreditTarget(credit, { searchMovies, searchSeries });
       if (!target) return;
-      if (target.item) seedItemCache(target.item);
+      if (target.item) {
+        credit.localItem = target.item;
+        seedItemCache(target.item);
+      }
       navigateTo(target.hash);
     } finally {
       resolving = false;
@@ -158,53 +164,67 @@ export async function renderPerson(root, params, signal) {
   const personId = params.get('id');
   if (!personId) return;
 
-  renderLoading(root);
-
-  const filmographyPromise = getPersonFilmography(personId).catch(function () {
-    return [];
-  });
+  const lang = getDisplayLanguage();
+  const cachedEntry = getCachedRichPersonDetails(personId, lang);
 
   let person;
-  try {
-    person = await getPerson(personId);
-  } catch (err) {
+  let localItems;
+  let details;
+
+  if (cachedEntry && cachedEntry.details) {
+    person = cachedEntry.person || {};
+    localItems = cachedEntry.localItems || [];
+    details = cachedEntry.details;
+  } else {
+    renderLoading(root);
+
+    const filmographyPromise = getPersonFilmography(personId).catch(function () {
+      return [];
+    });
+
+    try {
+      person = await getPerson(personId);
+    } catch (err) {
+      if (signal && signal.aborted) return;
+      console.warn('Jellio: could not load person', err);
+      renderRetry(
+        root,
+        describeNetworkFailure('this person', err),
+        function () {
+          renderPerson(root, params, signal);
+        },
+        { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' },
+      );
+      return;
+    }
+
     if (signal && signal.aborted) return;
-    console.warn('Jellio: could not load person', err);
-    renderRetry(
-      root,
-      describeNetworkFailure('this person', err),
-      function () {
-        renderPerson(root, params, signal);
-      },
-      { onBack: function () { navigateTo('#/home'); }, backLabel: 'Back to Home' },
-    );
-    return;
+
+    localItems = await filmographyPromise;
+    if (signal && signal.aborted) return;
+
+    const labels = {
+      all: t('person_tab_all'),
+      acting: t('person_tab_acting'),
+      directing: t('person_tab_directing'),
+      writing: t('person_tab_writing'),
+      production: t('person_tab_production'),
+      other: t('person_tab_other'),
+    };
+
+    let tmdbId = person.ProviderIds && Number(person.ProviderIds.Tmdb || person.ProviderIds.tmdb);
+    if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
+      tmdbId = await searchTmdbPersonId(person.Name);
+    }
+    const tmdbDetails = tmdbId ? await fetchTmdbPersonDetails(tmdbId) : null;
+    if (signal && signal.aborted) return;
+
+    details = tmdbDetails
+      ? buildRichPersonDetails(personId, person, tmdbDetails, localItems, labels)
+      : buildFallbackPersonDetails(personId, person, localItems, labels);
+
+    setCachedRichPersonDetails(personId, { person, localItems, details }, lang);
   }
-
-  if (signal && signal.aborted) return;
-
-  const localItems = await filmographyPromise;
-  if (signal && signal.aborted) return;
-
-  const labels = {
-    all: t('person_tab_all'),
-    acting: t('person_tab_acting'),
-    directing: t('person_tab_directing'),
-    writing: t('person_tab_writing'),
-    production: t('person_tab_production'),
-    other: t('person_tab_other'),
-  };
-
-  let tmdbId = person.ProviderIds && Number(person.ProviderIds.Tmdb);
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
-    tmdbId = await searchTmdbPersonId(person.Name);
-  }
-  const tmdbDetails = tmdbId ? await fetchTmdbPersonDetails(tmdbId) : null;
-  if (signal && signal.aborted) return;
-
-  const details = tmdbDetails
-    ? buildRichPersonDetails(personId, person, tmdbDetails, localItems, labels)
-    : buildFallbackPersonDetails(personId, person, localItems, labels);
 
   root.textContent = '';
 
@@ -215,6 +235,21 @@ export async function renderPerson(root, params, signal) {
     header.appendChild(backdrop);
   }
   header.appendChild(el('div', 'jellio-person-backdrop-scrim'));
+
+  const topBar = el('div', 'jellio-person-top-bar');
+  const backBtn = el('button', 'jellio-person-back-btn');
+  backBtn.type = 'button';
+  backBtn.appendChild(el('span', 'material-icons', 'arrow_back'));
+  backBtn.appendChild(el('span', null, t('nav_back') || 'Back'));
+  backBtn.addEventListener('click', function () {
+    if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigateTo('#/home');
+    }
+  });
+  topBar.appendChild(backBtn);
+  header.appendChild(topBar);
 
   const headerInner = el('div', 'jellio-person-header-inner');
   const imageTag = person.ImageTags && person.ImageTags.Primary;
@@ -242,7 +277,10 @@ export async function renderPerson(root, params, signal) {
   }
   if (details.birthday) {
     const ageText = details.age != null ? ' (' + t('person_age', { age: details.age }) + ')' : '';
-    metaRow.appendChild(el('span', 'jellio-person-chip', t('person_born') + ' ' + details.birthday + ageText));
+    const dateLabel = details.deathday
+      ? t('person_born') + ' ' + details.birthday + ' · ' + details.deathday + ageText
+      : t('person_born') + ' ' + details.birthday + ageText;
+    metaRow.appendChild(el('span', 'jellio-person-chip', dateLabel));
   }
   if (details.placeOfBirth) {
     metaRow.appendChild(el('span', 'jellio-person-chip', details.placeOfBirth));
@@ -263,7 +301,16 @@ export async function renderPerson(root, params, signal) {
     tmdbLink.href = 'https://www.themoviedb.org/person/' + encodeURIComponent(String(details.tmdbId));
     tmdbLink.target = '_blank';
     tmdbLink.rel = 'noopener noreferrer';
-    tmdbLink.textContent = 'TMDB';
+    tmdbLink.setAttribute('aria-label', 'TMDB');
+    const tmdbIcon = document.createElement('img');
+    tmdbIcon.className = 'jellio-person-tmdb-logo';
+    tmdbIcon.src = 'icons/tmdb.svg';
+    tmdbIcon.alt = 'TMDB';
+    tmdbIcon.addEventListener('error', function () {
+      tmdbIcon.remove();
+      tmdbLink.textContent = 'TMDB';
+    });
+    tmdbLink.appendChild(tmdbIcon);
     metaRow.appendChild(tmdbLink);
   }
   info.appendChild(metaRow);

@@ -161,19 +161,30 @@ test('buildRichPersonDetails deduplicates credits, matches local library items, 
   assert.equal(directingFiltered[0].role, 'Director');
 });
 
-test('buildFallbackPersonDetails filters out non-Movie/Series and keeps basic metadata', () => {
+test('buildFallbackPersonDetails filters out non-Movie/Series and keeps basic metadata including Jellyfin birth info', () => {
   const details = buildFallbackPersonDetails(
     'p-2',
-    { Name: 'Local Person', Overview: 'Some bio', ProviderIds: { Imdb: 'nm999', Tmdb: '456' } },
+    {
+      Name: 'Local Person',
+      Overview: 'Some bio',
+      PremiereDate: '1971-02-01T00:00:00.0000000Z',
+      ProductionLocations: ['Raleigh, North Carolina, USA'],
+      ProviderIds: { Imdb: 'nm999', Tmdb: '456' },
+    },
     [
       { Id: 'm1', Name: 'Film 1', Type: 'Movie', ProductionYear: 2021 },
       { Id: 'e1', Name: 'Episode 1', Type: 'Episode', ProductionYear: 2021 },
     ],
+    null,
+    new Date('2026-06-15T12:00:00Z'),
   );
   assert.equal(details.totalCreditsCount, 1);
   assert.equal(details.allCredits[0].id, 'm1');
   assert.equal(details.imdbId, 'nm999');
   assert.equal(details.tmdbId, 456);
+  assert.equal(details.birthday, '1971-02-01');
+  assert.equal(details.age, 55);
+  assert.equal(details.placeOfBirth, 'Raleigh, North Carolina, USA');
 });
 
 test('formatCreditSubtitle formats acting vs crew roles properly', () => {

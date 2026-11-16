@@ -10,6 +10,7 @@ test('no info request asks for MediaSources or MediaStreams', () => {
     assert.ok(noStreamFields(itemFallbackPath('u1', 'i1', playback)));
   }
   assert.match(itemInfoPath('u1', 'i1', false), /^\/Items\?userId=u1&ids=i1&Fields=Overview/);
+  assert.match(itemInfoPath('u1', 'i1', false), /ProviderIds/);
   assert.match(itemInfoPath('u1', 'i1', true), /RemoteTrailers%2CChapters$/);
 });
 

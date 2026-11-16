@@ -1,5 +1,5 @@
 import { t, getBadgeName, getBadgeDescription, getDisplayLanguage } from '../runtime/i18n.js';
-import { getUserById, getUserImageUrl, getCurrentUser, friendsSupported } from '../runtime/api.js';
+import { getUserById, getUserImageUrl, getCurrentUser, friendsSupported, getFriendsSnapshot, loadFriends } from '../runtime/api.js';
 import { getProfileForUser, setProfileBio, getBannerUrl, setProfileBannerFromFile, getAchievementsForUser, deleteActivityEntry, lockBadgeForUser, resetAchievementsForUser } from '../runtime/apiSocial.js';
 import { getCurrentUserId } from '../runtime/auth.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -207,6 +207,94 @@ function buildLockedPanel() {
   return panel;
 }
 
+function buildFriendsSection() {
+  const section = el('section', 'jellio-profile-section jellio-profile-friends-section');
+  section.hidden = friendsSupported() === false;
+
+  function renderCard(snapshot) {
+    section.textContent = '';
+    if (friendsSupported() === false || !snapshot) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    const friends = Array.isArray(snapshot.Friends) ? snapshot.Friends : [];
+    const incoming = Array.isArray(snapshot.IncomingRequests) ? snapshot.IncomingRequests : [];
+
+    const card = el('button', 'jellio-profile-friends-card');
+    card.type = 'button';
+    card.addEventListener('click', function () {
+      navigateTo(incoming.length > 0 ? '#/people?tab=requests' : '#/people');
+    });
+
+    const lead = el('div', 'jellio-profile-friends-lead');
+    if (friends.length > 0) {
+      const avatarsRow = el('div', 'jellio-profile-friends-avatars');
+      friends.slice(0, 5).forEach(function (friend) {
+        const img = document.createElement('img');
+        img.className = 'jellio-profile-friends-avatar';
+        img.alt = friend.UserName || '';
+        img.src = getUserImageUrl(friend.UserId, friend.PrimaryImageTag, { maxWidth: 80 });
+        avatarsRow.appendChild(img);
+      });
+      lead.appendChild(avatarsRow);
+    } else {
+      const iconWrap = el('div', 'jellio-profile-friends-icon-wrap');
+      iconWrap.appendChild(el('span', 'material-icons', 'group'));
+      lead.appendChild(iconWrap);
+    }
+
+    const textCol = el('div', 'jellio-profile-friends-text');
+    textCol.appendChild(
+      el(
+        'span',
+        'jellio-profile-friends-title',
+        friends.length > 0
+          ? t('friends_tab_friends') + ' (' + friends.length + ')'
+          : t('friends_empty_title'),
+      ),
+    );
+    textCol.appendChild(
+      el(
+        'span',
+        'jellio-profile-friends-sub',
+        friends.length > 0
+          ? friends.slice(0, 3).map(function (f) { return f.UserName; }).filter(Boolean).join(', ')
+          : t('friends_empty_body'),
+      ),
+    );
+    lead.appendChild(textCol);
+    card.appendChild(lead);
+
+    const trail = el('div', 'jellio-profile-friends-trail');
+    if (incoming.length > 0) {
+      trail.appendChild(
+        el(
+          'span',
+          'jellio-profile-friends-badge',
+          t('friends_pending_count', { count: incoming.length }),
+        ),
+      );
+    }
+    trail.appendChild(el('span', 'material-icons jellio-profile-friends-chevron', 'chevron_right'));
+    card.appendChild(trail);
+
+    section.appendChild(card);
+  }
+
+  const initial = getFriendsSnapshot();
+  if (initial && (initial.Friends.length || initial.IncomingRequests.length || friendsSupported() === true)) {
+    renderCard(initial);
+  }
+  loadFriends()
+    .then(function (snap) {
+      renderCard(snap);
+    })
+    .catch(function () {});
+
+  return section;
+}
+
 function buildBadgesSection(badges, isAdmin, userId, onChanged, isOwner) {
   const section = el('section', 'jellio-profile-section');
   const unlockedCount = badges.filter(function (b) { return b.Unlocked; }).length;
@@ -222,7 +310,31 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged, isOwner) {
   );
 
   let filter = 'all';
+  const inspector = el('div', 'jellio-profile-badge-inspector');
   const grid = el('div', 'jellio-profile-badges');
+
+  function updateInspector(badge) {
+    inspector.textContent = '';
+    if (!badge) {
+      inspector.hidden = true;
+      return;
+    }
+    inspector.hidden = false;
+    const rarity = String(badge.Rarity || 'Common').toLowerCase();
+    inspector.dataset.rarity = rarity;
+    inspector.dataset.unlocked = String(!!badge.Unlocked);
+
+    const icon = el('span', 'material-icons jellio-profile-badge-inspector-icon', badge.Unlocked ? 'military_tech' : 'lock');
+    inspector.appendChild(icon);
+
+    const body = el('div', 'jellio-profile-badge-inspector-body');
+    const titleRow = el('div', 'jellio-profile-badge-inspector-head');
+    titleRow.appendChild(el('span', 'jellio-profile-badge-inspector-name', getBadgeName(badge)));
+    titleRow.appendChild(el('span', 'jellio-profile-badge-rarity', badge.Rarity || 'Common'));
+    body.appendChild(titleRow);
+    body.appendChild(el('p', 'jellio-profile-badge-inspector-desc', getBadgeDescription(badge)));
+    inspector.appendChild(body);
+  }
 
   function renderGrid() {
     grid.textContent = '';
@@ -234,18 +346,33 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged, isOwner) {
     });
 
     if (!filtered.length) {
+      updateInspector(null);
       grid.appendChild(el('p', 'jellio-profile-empty', t('profile_no_badges')));
       return;
     }
 
+    updateInspector(filtered[0]);
+
     filtered.forEach(function (badge) {
       const tile = el('article', 'jellio-profile-badge');
-      tile.dataset.rarity = badge.Rarity.toLowerCase();
+      tile.tabIndex = 0;
+      tile.dataset.rarity = String(badge.Rarity || 'Common').toLowerCase();
       tile.dataset.unlocked = String(badge.Unlocked);
       const icon = el('span', 'material-icons jellio-profile-badge-icon', badge.Unlocked ? 'military_tech' : 'lock');
       tile.appendChild(icon);
       tile.appendChild(el('span', 'jellio-profile-badge-name', getBadgeName(badge)));
+      tile.appendChild(el('span', 'jellio-profile-badge-rarity', badge.Rarity || 'Common'));
+      tile.appendChild(el('span', 'jellio-profile-badge-desc', getBadgeDescription(badge)));
       tile.title = getBadgeDescription(badge);
+      tile.addEventListener('mouseenter', function () {
+        updateInspector(badge);
+      });
+      tile.addEventListener('focus', function () {
+        updateInspector(badge);
+      });
+      tile.addEventListener('click', function () {
+        updateInspector(badge);
+      });
       if (isAdmin && badge.Unlocked) {
         const lockButton = el('button', 'jellio-profile-admin-lock', t('action_lock_again'));
         lockButton.type = 'button';
@@ -289,6 +416,7 @@ function buildBadgesSection(badges, isAdmin, userId, onChanged, isOwner) {
     section.appendChild(filterBar);
   }
 
+  section.appendChild(inspector);
   section.appendChild(grid);
   renderGrid();
   return section;
@@ -811,6 +939,9 @@ export async function renderProfile(root, params) {
       navTabs.appendChild(btn);
     });
 
+    if (isOwner && friendsSupported() !== false) {
+      body.appendChild(buildFriendsSection());
+    }
     body.appendChild(navTabs);
     body.appendChild(tabContentContainer);
     renderActiveTab();

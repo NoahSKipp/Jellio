@@ -172,6 +172,58 @@ function buildDepartmentTabs(dedupedCredits, uniqueCount, labels) {
   return tabs;
 }
 
+export function extractIsoDate(rawDate) {
+  if (!rawDate || typeof rawDate !== 'string') return null;
+  const match = rawDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  if (!Number.isFinite(year) || year < 1800 || year >= 9000) return null;
+  return match[1] + '-' + match[2] + '-' + match[3];
+}
+
+export function generateDeterministicVirtualId(type, tmdbId) {
+  const input = 'jellio-virtual:' + String(type || 'movie').toLowerCase() + ':' + String(tmdbId || 0);
+  let h1 = 0xdeadbeef ^ input.length;
+  let h2 = 0x41c6ce57 ^ input.length;
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const hex1 = (h1 >>> 0).toString(16).padStart(8, '0');
+  const hex2 = (h2 >>> 0).toString(16).padStart(8, '0');
+  const hex3 = ((h1 ^ h2) >>> 0).toString(16).padStart(8, '0');
+  const hex4 = ((Math.imul(h1, 31) ^ h2) >>> 0).toString(16).padStart(8, '0');
+  const full = (hex1 + hex2 + hex3 + hex4).slice(0, 32);
+  return (
+    full.slice(0, 8) + '-' +
+    full.slice(8, 12) + '-3' +
+    full.slice(13, 16) + '-8' +
+    full.slice(17, 20) + '-' +
+    full.slice(20, 32)
+  );
+}
+
+const richPersonDetailsCache = new Map();
+
+export function getCachedRichPersonDetails(personId, lang) {
+  if (!personId) return null;
+  const key = String(personId) + ':' + String(lang || 'en');
+  return richPersonDetailsCache.get(key) || null;
+}
+
+export function setCachedRichPersonDetails(personId, details, lang) {
+  if (!personId || !details) return;
+  const key = String(personId) + ':' + String(lang || 'en');
+  richPersonDetailsCache.set(key, details);
+}
+
+export function clearCachedRichPersonDetails() {
+  richPersonDetailsCache.clear();
+}
+
 export function buildRichPersonDetails(personId, person, tmdb, localFilmography, labels, nowDate) {
   const safePerson = person || {};
   const localIndex = indexLocalItems(localFilmography);
@@ -187,7 +239,7 @@ export function buildRichPersonDetails(personId, person, tmdb, localFilmography,
     const releaseDate = cast.release_date || cast.first_air_date || null;
     const year = yearFromDate(releaseDate);
     const localItem = findLocalMatch(localIndex, cast.id, title, year);
-    const id = localItem ? localItem.Id : ('tmdb-' + (cast.media_type === 'tv' ? 'tv' : 'movie') + '-' + cast.id);
+    const id = localItem ? localItem.Id : generateDeterministicVirtualId(cast.media_type === 'tv' ? 'tv' : 'movie', cast.id);
 
     rawCredits.push({
       id: id,
@@ -218,7 +270,7 @@ export function buildRichPersonDetails(personId, person, tmdb, localFilmography,
     const year = yearFromDate(releaseDate);
     const department = mapCrewDepartment(crew.department);
     const localItem = findLocalMatch(localIndex, crew.id, title, year);
-    const id = localItem ? localItem.Id : ('tmdb-' + (crew.media_type === 'tv' ? 'tv' : 'movie') + '-' + crew.id);
+    const id = localItem ? localItem.Id : generateDeterministicVirtualId(crew.media_type === 'tv' ? 'tv' : 'movie', crew.id);
 
     rawCredits.push({
       id: id,
@@ -278,15 +330,18 @@ export function buildRichPersonDetails(personId, person, tmdb, localFilmography,
 
   const personName = (tmdb && tmdb.name && tmdb.name.trim()) ? tmdb.name : (safePerson.Name || '');
   const biography = (tmdb && tmdb.biography && tmdb.biography.trim()) ? tmdb.biography : (safePerson.Overview || null);
-  const birthday = (tmdb && tmdb.birthday) || null;
-  const deathday = (tmdb && tmdb.deathday) || null;
-  const placeOfBirth = (tmdb && tmdb.place_of_birth) || null;
+  const birthday = (tmdb && tmdb.birthday) || extractIsoDate(safePerson.PremiereDate) || null;
+  const deathday = (tmdb && tmdb.deathday) || extractIsoDate(safePerson.EndDate) || null;
+  const placeOfBirth = (tmdb && tmdb.place_of_birth)
+    || (Array.isArray(safePerson.ProductionLocations) && safePerson.ProductionLocations[0])
+    || null;
   const age = calculateAge(birthday, deathday, nowDate);
   const profileUrl = (tmdb && tmdb.profile_path) ? (TMDB_IMAGE_BASE + '/h632' + tmdb.profile_path) : null;
   const imdbId = (tmdb && tmdb.external_ids && tmdb.external_ids.imdb_id)
-    || (safePerson.ProviderIds && safePerson.ProviderIds.Imdb)
+    || (safePerson.ProviderIds && (safePerson.ProviderIds.Imdb || safePerson.ProviderIds.imdb))
     || null;
-  const tmdbId = (tmdb && tmdb.id) || (safePerson.ProviderIds && Number(safePerson.ProviderIds.Tmdb)) || null;
+  const rawTmdbId = (tmdb && tmdb.id) || (safePerson.ProviderIds && Number(safePerson.ProviderIds.Tmdb || safePerson.ProviderIds.tmdb));
+  const tmdbId = Number.isFinite(rawTmdbId) && rawTmdbId > 0 ? rawTmdbId : null;
   const uniqueCount = uniqueByTmdb.size;
 
   return {
@@ -301,7 +356,7 @@ export function buildRichPersonDetails(personId, person, tmdb, localFilmography,
     profileUrl: profileUrl,
     backdropUrl: backdropHit ? backdropHit.backdropUrl : null,
     imdbId: imdbId,
-    tmdbId: Number.isFinite(tmdbId) ? tmdbId : null,
+    tmdbId: tmdbId,
     totalCreditsCount: uniqueCount,
     knownFor: knownFor,
     allCredits: dedupedCredits,
@@ -309,14 +364,14 @@ export function buildRichPersonDetails(personId, person, tmdb, localFilmography,
   };
 }
 
-export function buildFallbackPersonDetails(personId, person, localFilmography, labels) {
+export function buildFallbackPersonDetails(personId, person, localFilmography, labels, nowDate) {
   const safePerson = person || {};
   const films = (Array.isArray(localFilmography) ? localFilmography : [])
     .filter(function (item) {
       return item && (item.Type === 'Movie' || item.Type === 'Series');
     });
   const credits = films.map(function (item) {
-    const rawTmdb = item.ProviderIds && Number(item.ProviderIds.Tmdb);
+    const rawTmdb = item.ProviderIds && Number(item.ProviderIds.Tmdb || item.ProviderIds.tmdb);
     return {
       id: item.Id,
       tmdbId: Number.isFinite(rawTmdb) ? rawTmdb : 0,
@@ -341,19 +396,23 @@ export function buildFallbackPersonDetails(personId, person, localFilmography, l
   if (credits.length > 0) {
     tabs.push({ key: 'Acting', label: (labels && labels.acting) || 'Acting', count: credits.length });
   }
+  const birthday = extractIsoDate(safePerson.PremiereDate);
+  const deathday = extractIsoDate(safePerson.EndDate);
+  const placeOfBirth = (Array.isArray(safePerson.ProductionLocations) && safePerson.ProductionLocations[0]) || null;
+  const rawTmdbId = safePerson.ProviderIds && Number(safePerson.ProviderIds.Tmdb || safePerson.ProviderIds.tmdb);
   return {
     id: personId,
     name: safePerson.Name || '',
     biography: safePerson.Overview || null,
-    birthday: null,
-    deathday: null,
-    placeOfBirth: null,
-    age: null,
+    birthday: birthday,
+    deathday: deathday,
+    placeOfBirth: placeOfBirth,
+    age: calculateAge(birthday, deathday, nowDate),
     knownForDepartment: 'Acting',
     profileUrl: null,
     backdropUrl: null,
-    imdbId: (safePerson.ProviderIds && safePerson.ProviderIds.Imdb) || null,
-    tmdbId: (safePerson.ProviderIds && Number(safePerson.ProviderIds.Tmdb)) || null,
+    imdbId: (safePerson.ProviderIds && (safePerson.ProviderIds.Imdb || safePerson.ProviderIds.imdb)) || null,
+    tmdbId: Number.isFinite(rawTmdbId) && rawTmdbId > 0 ? rawTmdbId : null,
     totalCreditsCount: credits.length,
     knownFor: credits.slice(0, 10),
     allCredits: credits,
