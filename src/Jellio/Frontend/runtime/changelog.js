@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.1",
+    "summary": "Ani-Sync timeframe sync selector (Recent, Last Week, Last Month, Last Year, All Time), Setup Guide modal, and centered empty activity text.",
+    "highlights": [
+      {
+        "title": "Ani-Sync Timeframe Sync & Setup Guide",
+        "description": "Added a timeframe selector next to Sync Now (Recent, Last Week, Last Month, Last Year, All Time), a Setup Guide modal with step-by-step instructions for each provider, and centered the empty Recent Sync Activity text."
+      }
+    ]
+  },
+  {
     "version": "1.112.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.0",
