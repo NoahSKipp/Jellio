@@ -234,7 +234,7 @@ const STRINGS = {
 
     // Settings - Ani-Sync
     settings_anisync_title: 'Ani-Sync',
-    settings_anisync_desc: 'Automatically scrobble watched anime episodes, movies, and read manga chapters to your external tracking services.',
+    settings_anisync_desc: 'Automatically scrobble watched anime episodes, movies, and read manga chapters to your external tracking services. Credentials and preferences are saved to your Jellyfin profile and synced automatically across Jellio Web and Jellio TV.',
     settings_anisync_enable: 'Enable Ani-Sync',
     settings_anisync_enable_desc: 'Track watched episodes and read manga chapters to your selected provider.',
     settings_anisync_only_anime: 'Only sync anime & manga titles',
