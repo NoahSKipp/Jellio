@@ -531,7 +531,7 @@ public class SearchSuggestionsController(
             return true;
         }
 
-        var tmdb = item.GetProviderId(MetadataProvider.Tmdb);
+        var tmdb = item.GetProviderId(MediaBrowser.Model.Entities.MetadataProvider.Tmdb);
         if (!string.IsNullOrEmpty(tmdb) && excluded.Contains(tmdb))
         {
             return true;
