@@ -2096,7 +2096,7 @@ function buildAniSyncCategory() {
       actions.appendChild(testBtn);
 
       const syncRangeSelect = document.createElement('select');
-      syncRangeSelect.className = 'jellio-anisync-input jellio-anisync-range-select';
+      syncRangeSelect.className = 'jellio-settings-select jellio-anisync-range-select';
       [
         ['recent', t('settings_anisync_range_recent')],
         ['week', t('settings_anisync_range_week')],

@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.2",
+    "summary": "Styled the Ani-Sync timeframe selector to match Jellio's pill controls.",
+    "highlights": [
+      {
+        "title": "Ani-Sync Timeframe Selector Styling",
+        "description": "Updated the Ani-Sync timeframe dropdown next to Sync Now to match Jellio's pill button and dark select styling."
+      }
+    ]
+  },
+  {
     "version": "1.112.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.1",
