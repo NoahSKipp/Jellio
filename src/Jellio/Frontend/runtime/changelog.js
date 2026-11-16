@@ -8,11 +8,11 @@ export const CHANGELOG_RELEASES = [
     "version": "1.112.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.0",
-    "summary": "Per-user Ani-Sync tracking, proactive stream warmup with Ready badges, smarter Top Picks, and typo-tolerant fuzzy search with Similar results.",
+    "summary": "Per-user Ani-Sync tracking for anime and manga, proactive stream warmup with Ready badges, smarter Top Picks, and typo-tolerant fuzzy search with Similar results.",
     "highlights": [
       {
-        "title": "Per-User Ani-Sync",
-        "description": "Connect AniList, MyAnimeList, Shikimori, or Simkl per user in Settings with encrypted server-side credential storage, shared preferences across Jellio Web and Jellio TV, automatic playback sync, and manual Test and Sync Now controls."
+        "title": "Per-User Ani-Sync (Anime & Manga)",
+        "description": "Connect AniList, MyAnimeList, Shikimori, or Simkl per user in Settings with encrypted server-side credential storage, shared preferences across Jellio Web and Jellio TV, automatic anime playback and manga chapter reading sync, and manual Test and Sync Now controls."
       },
       {
         "title": "Expanded Stream Warmup & Ready Badge",

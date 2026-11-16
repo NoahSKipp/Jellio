@@ -49,7 +49,8 @@ public record AniSyncSyncTarget(
     int? EpisodeNumber,
     bool IsMovie,
     bool IsCompleted,
-    Dictionary<string, string> ProviderIds);
+    Dictionary<string, string> ProviderIds,
+    bool IsManga = false);
 
 public record AniSyncSyncOutcome(
     bool Success,
@@ -491,9 +492,10 @@ public class AniSyncProviderClients(
         else
         {
             var searchQuery = BuildAnimeSearchQuery(target);
+            var mediaType = target.IsManga ? "MANGA" : "ANIME";
             var searchData = await QueryAniListAsync(
                 token,
-                "query ($search: String) { Page(perPage: 5) { media(search: $search, type: ANIME) { id episodes startDate { year } title { romaji english } } } }",
+                $"query ($search: String) {{ Page(perPage: 5) {{ media(search: $search, type: {mediaType}) {{ id episodes chapters startDate {{ year }} title {{ romaji english }} }} }} }}",
                 new JsonObject { ["search"] = searchQuery },
                 ct).ConfigureAwait(false);
             var list = searchData?["Page"]?["media"]?.AsArray();
@@ -503,7 +505,7 @@ public class AniSyncProviderClients(
             }
 
             JsonNode? best = null;
-            if (target.ProductionYear is { } yr && (target.SeasonNumber is null or <= 1))
+            if (target.ProductionYear is { } yr && (target.IsManga || target.SeasonNumber is null or <= 1))
             {
                 best = list.FirstOrDefault(m => ReadInt(m?["startDate"]?["year"]) == yr);
             }
@@ -520,7 +522,7 @@ public class AniSyncProviderClients(
         var mediaIdStr = mediaId.ToString(CultureInfo.InvariantCulture);
         var entryData = await QueryAniListAsync(
             token,
-            "query ($id: Int) { Media(id: $id) { episodes mediaListEntry { status progress } } }",
+            "query ($id: Int) { Media(id: $id) { episodes chapters mediaListEntry { status progress } } }",
             new JsonObject { ["id"] = mediaId },
             ct).ConfigureAwait(false);
 
@@ -532,15 +534,18 @@ public class AniSyncProviderClients(
 
         var existingProgress = ReadInt(media["mediaListEntry"]?["progress"]) ?? 0;
         var existingStatus = media["mediaListEntry"]?["status"]?.GetValue<string>();
-        var totalEpisodes = ReadInt(media["episodes"]);
-        var desiredProgress = target.IsMovie ? (totalEpisodes ?? 1) : Math.Max(1, target.EpisodeNumber ?? 1);
+        var totalUnits = target.IsManga ? ReadInt(media["chapters"]) : ReadInt(media["episodes"]);
+        var desiredProgress = (!target.IsManga && target.IsMovie)
+            ? (totalUnits ?? 1)
+            : Math.Max(1, target.EpisodeNumber ?? 1);
+        var unitLabel = target.IsManga ? "chapter" : "episode";
 
         if (desiredProgress <= existingProgress && (existingStatus == "CURRENT" || existingStatus == "COMPLETED"))
         {
-            return new AniSyncSyncOutcome(true, true, mediaIdStr, $"Already at episode {existingProgress} on AniList.");
+            return new AniSyncSyncOutcome(true, true, mediaIdStr, $"Already at {unitLabel} {existingProgress} on AniList.");
         }
 
-        var nextStatus = (target.IsCompleted || target.IsMovie || (totalEpisodes is > 0 && desiredProgress >= totalEpisodes.Value))
+        var nextStatus = (target.IsCompleted || (!target.IsManga && target.IsMovie) || (totalUnits is > 0 && desiredProgress >= totalUnits.Value))
             ? "COMPLETED"
             : "CURRENT";
 
@@ -560,7 +565,7 @@ public class AniSyncProviderClients(
             return new AniSyncSyncOutcome(false, false, mediaIdStr, "AniList rejected progress update.");
         }
 
-        return new AniSyncSyncOutcome(true, false, mediaIdStr, $"Synced episode {Math.Max(existingProgress, desiredProgress)} ({nextStatus.ToLowerInvariant()}) on AniList.");
+        return new AniSyncSyncOutcome(true, false, mediaIdStr, $"Synced {unitLabel} {Math.Max(existingProgress, desiredProgress)} ({nextStatus.ToLowerInvariant()}) on AniList.");
     }
 
     private async Task<JsonNode?> QueryAniListAsync(string token, string query, JsonObject variables, CancellationToken ct)
@@ -630,9 +635,15 @@ public class AniSyncProviderClients(
     {
         var client = httpClientFactory.CreateClient();
         int malId = 0;
-        int? totalEpisodes = null;
-        int existingWatched = 0;
+        int? totalUnits = null;
+        int existingProgress = 0;
         string? existingStatus = null;
+
+        var mediaSegment = target.IsManga ? "manga" : "anime";
+        var totalField = target.IsManga ? "num_chapters" : "num_episodes";
+        var progressField = target.IsManga ? "num_chapters_read" : "num_watched_episodes";
+        var activeStatus = target.IsManga ? "reading" : "watching";
+        var unitLabel = target.IsManga ? "chapter" : "episode";
 
         if (TryGetMalId(target.ProviderIds, out var explicitMal))
         {
@@ -647,7 +658,7 @@ public class AniSyncProviderClients(
             var searchQuery = BuildAnimeSearchQuery(target);
             using var searchReq = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"https://api.myanimelist.net/v2/anime?q={Uri.EscapeDataString(searchQuery)}&limit=5&fields=num_episodes,my_list_status");
+                $"https://api.myanimelist.net/v2/{mediaSegment}?q={Uri.EscapeDataString(searchQuery)}&limit=5&fields={totalField},my_list_status");
             searchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using var searchResp = await client.SendAsync(searchReq, ct).ConfigureAwait(false);
             if (!searchResp.IsSuccessStatusCode)
@@ -658,8 +669,8 @@ public class AniSyncProviderClients(
             var searchJson = JsonNode.Parse(await searchResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
             var firstNode = searchJson?["data"]?.AsArray()?.FirstOrDefault()?["node"];
             malId = ReadInt(firstNode?["id"]) ?? 0;
-            totalEpisodes = ReadInt(firstNode?["num_episodes"]);
-            existingWatched = ReadInt(firstNode?["my_list_status"]?["num_watched_episodes"]) ?? 0;
+            totalUnits = ReadInt(firstNode?[totalField]);
+            existingProgress = ReadInt(firstNode?["my_list_status"]?[progressField]) ?? 0;
             existingStatus = firstNode?["my_list_status"]?["status"]?.GetValue<string>();
         }
 
@@ -670,41 +681,41 @@ public class AniSyncProviderClients(
 
         var malIdStr = malId.ToString(CultureInfo.InvariantCulture);
 
-        if (totalEpisodes == null)
+        if (totalUnits == null)
         {
             using var detailReq = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"https://api.myanimelist.net/v2/anime/{malId}?fields=num_episodes,my_list_status");
+                $"https://api.myanimelist.net/v2/{mediaSegment}/{malId}?fields={totalField},my_list_status");
             detailReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using var detailResp = await client.SendAsync(detailReq, ct).ConfigureAwait(false);
             if (detailResp.IsSuccessStatusCode)
             {
                 var detailJson = JsonNode.Parse(await detailResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
-                totalEpisodes = ReadInt(detailJson?["num_episodes"]);
-                existingWatched = ReadInt(detailJson?["my_list_status"]?["num_watched_episodes"]) ?? existingWatched;
+                totalUnits = ReadInt(detailJson?[totalField]);
+                existingProgress = ReadInt(detailJson?["my_list_status"]?[progressField]) ?? existingProgress;
                 existingStatus = detailJson?["my_list_status"]?["status"]?.GetValue<string>() ?? existingStatus;
             }
         }
 
-        var desired = target.IsMovie ? (totalEpisodes ?? 1) : Math.Max(1, target.EpisodeNumber ?? 1);
-        if (desired <= existingWatched && (existingStatus == "watching" || existingStatus == "completed"))
+        var desired = (!target.IsManga && target.IsMovie) ? (totalUnits ?? 1) : Math.Max(1, target.EpisodeNumber ?? 1);
+        if (desired <= existingProgress && (existingStatus == activeStatus || existingStatus == "completed"))
         {
-            return new AniSyncSyncOutcome(true, true, malIdStr, $"Already at episode {existingWatched} on MyAnimeList.");
+            return new AniSyncSyncOutcome(true, true, malIdStr, $"Already at {unitLabel} {existingProgress} on MyAnimeList.");
         }
 
-        var finalEps = Math.Max(existingWatched, desired);
-        var nextStatus = (target.IsCompleted || target.IsMovie || (totalEpisodes is > 0 && finalEps >= totalEpisodes.Value))
+        var finalCount = Math.Max(existingProgress, desired);
+        var nextStatus = (target.IsCompleted || (!target.IsManga && target.IsMovie) || (totalUnits is > 0 && finalCount >= totalUnits.Value))
             ? "completed"
-            : "watching";
+            : activeStatus;
 
         using var updateReq = new HttpRequestMessage(
             HttpMethod.Patch,
-            $"https://api.myanimelist.net/v2/anime/{malId}/my_list_status")
+            $"https://api.myanimelist.net/v2/{mediaSegment}/{malId}/my_list_status")
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["status"] = nextStatus,
-                ["num_watched_episodes"] = finalEps.ToString(CultureInfo.InvariantCulture),
+                [progressField] = finalCount.ToString(CultureInfo.InvariantCulture),
             }),
         };
         updateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -714,7 +725,7 @@ public class AniSyncProviderClients(
             return new AniSyncSyncOutcome(false, false, malIdStr, $"MyAnimeList rejected update ({(int)updateResp.StatusCode}).");
         }
 
-        return new AniSyncSyncOutcome(true, false, malIdStr, $"Synced episode {finalEps} ({nextStatus}) on MyAnimeList.");
+        return new AniSyncSyncOutcome(true, false, malIdStr, $"Synced {unitLabel} {finalCount} ({nextStatus}) on MyAnimeList.");
     }
 
     // ---- Shikimori ----
@@ -773,22 +784,28 @@ public class AniSyncProviderClients(
             externalUserId = whoami.ExternalUserId;
         }
 
-        int animeId = 0;
-        int? totalEpisodes = null;
+        int targetId = 0;
+        int? totalUnits = null;
+        var searchEndpoint = target.IsManga ? "mangas" : "animes";
+        var targetType = target.IsManga ? "Manga" : "Anime";
+        var totalField = target.IsManga ? "chapters" : "episodes";
+        var rateField = target.IsManga ? "chapters" : "episodes";
+        var unitLabel = target.IsManga ? "chapter" : "episode";
+
         if (TryGetMalId(target.ProviderIds, out var explicitMal))
         {
-            animeId = explicitMal;
+            targetId = explicitMal;
         }
         else if (!string.IsNullOrEmpty(cachedMediaId) && int.TryParse(cachedMediaId, out var parsedCached) && parsedCached > 0)
         {
-            animeId = parsedCached;
+            targetId = parsedCached;
         }
         else
         {
             var searchQuery = BuildAnimeSearchQuery(target);
             using var searchReq = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"https://shikimori.one/api/animes?search={Uri.EscapeDataString(searchQuery)}&limit=5");
+                $"https://shikimori.one/api/{searchEndpoint}?search={Uri.EscapeDataString(searchQuery)}&limit=5");
             searchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             searchReq.Headers.TryAddWithoutValidation("User-Agent", ShikimoriUserAgent);
             using var searchResp = await client.SendAsync(searchReq, ct).ConfigureAwait(false);
@@ -799,26 +816,26 @@ public class AniSyncProviderClients(
 
             var arr = JsonNode.Parse(await searchResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false))?.AsArray();
             var first = arr?.FirstOrDefault();
-            animeId = ReadInt(first?["id"]) ?? 0;
-            totalEpisodes = ReadInt(first?["episodes"]);
+            targetId = ReadInt(first?["id"]) ?? 0;
+            totalUnits = ReadInt(first?[totalField]);
         }
 
-        if (animeId <= 0)
+        if (targetId <= 0)
         {
             return new AniSyncSyncOutcome(false, true, null, $"Could not find '{target.Title}' on Shikimori.");
         }
 
-        var animeIdStr = animeId.ToString(CultureInfo.InvariantCulture);
+        var targetIdStr = targetId.ToString(CultureInfo.InvariantCulture);
 
         using var rateReq = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://shikimori.one/api/v2/user_rates?user_id={Uri.EscapeDataString(externalUserId)}&target_id={animeId}&target_type=Anime");
+            $"https://shikimori.one/api/v2/user_rates?user_id={Uri.EscapeDataString(externalUserId)}&target_id={targetId}&target_type={targetType}");
         rateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         rateReq.Headers.TryAddWithoutValidation("User-Agent", ShikimoriUserAgent);
         using var rateResp = await client.SendAsync(rateReq, ct).ConfigureAwait(false);
 
         long existingRateId = 0;
-        int existingEps = 0;
+        int existingCount = 0;
         string? existingStatus = null;
         if (rateResp.IsSuccessStatusCode)
         {
@@ -827,19 +844,19 @@ public class AniSyncProviderClients(
             if (rate != null)
             {
                 existingRateId = ReadLong(rate["id"]) ?? 0;
-                existingEps = ReadInt(rate["episodes"]) ?? 0;
+                existingCount = ReadInt(rate[rateField]) ?? 0;
                 existingStatus = rate["status"]?.GetValue<string>();
             }
         }
 
-        var desired = target.IsMovie ? (totalEpisodes ?? 1) : Math.Max(1, target.EpisodeNumber ?? 1);
-        if (desired <= existingEps && (existingStatus == "watching" || existingStatus == "completed"))
+        var desired = (!target.IsManga && target.IsMovie) ? (totalUnits ?? 1) : Math.Max(1, target.EpisodeNumber ?? 1);
+        if (desired <= existingCount && (existingStatus == "watching" || existingStatus == "completed"))
         {
-            return new AniSyncSyncOutcome(true, true, animeIdStr, $"Already at episode {existingEps} on Shikimori.");
+            return new AniSyncSyncOutcome(true, true, targetIdStr, $"Already at {unitLabel} {existingCount} on Shikimori.");
         }
 
-        var finalEps = Math.Max(existingEps, desired);
-        var nextStatus = (target.IsCompleted || target.IsMovie || (totalEpisodes is > 0 && finalEps >= totalEpisodes.Value))
+        var finalCount = Math.Max(existingCount, desired);
+        var nextStatus = (target.IsCompleted || (!target.IsManga && target.IsMovie) || (totalUnits is > 0 && finalCount >= totalUnits.Value))
             ? "completed"
             : "watching";
 
@@ -850,7 +867,7 @@ public class AniSyncProviderClients(
             {
                 ["user_rate"] = new JsonObject
                 {
-                    ["episodes"] = finalEps,
+                    [rateField] = finalCount,
                     ["status"] = nextStatus,
                 },
             };
@@ -869,9 +886,9 @@ public class AniSyncProviderClients(
                 ["user_rate"] = new JsonObject
                 {
                     ["user_id"] = long.Parse(externalUserId, CultureInfo.InvariantCulture),
-                    ["target_id"] = animeId,
-                    ["target_type"] = "Anime",
-                    ["episodes"] = finalEps,
+                    ["target_id"] = targetId,
+                    ["target_type"] = targetType,
+                    [rateField] = finalCount,
                     ["status"] = nextStatus,
                 },
             };
@@ -888,11 +905,11 @@ public class AniSyncProviderClients(
         {
             if (!saveResp.IsSuccessStatusCode)
             {
-                return new AniSyncSyncOutcome(false, false, animeIdStr, $"Shikimori rejected update ({(int)saveResp.StatusCode}).");
+                return new AniSyncSyncOutcome(false, false, targetIdStr, $"Shikimori rejected update ({(int)saveResp.StatusCode}).");
             }
         }
 
-        return new AniSyncSyncOutcome(true, false, animeIdStr, $"Synced episode {finalEps} ({nextStatus}) on Shikimori.");
+        return new AniSyncSyncOutcome(true, false, targetIdStr, $"Synced {unitLabel} {finalCount} ({nextStatus}) on Shikimori.");
     }
 
     // ---- Simkl ----
@@ -1046,7 +1063,7 @@ public class AniSyncProviderClients(
 
     private static string BuildAnimeSearchQuery(AniSyncSyncTarget target)
     {
-        if (target.SeasonNumber is > 1)
+        if (!target.IsManga && target.SeasonNumber is > 1)
         {
             return $"{target.Title} Season {target.SeasonNumber.Value}";
         }

@@ -227,10 +227,12 @@ public class AniSyncStore(IApplicationPaths applicationPaths, AniSyncSecretProte
         string itemTitle,
         int? episodeNumber,
         bool success,
-        string message)
+        string message,
+        bool isManga = false)
     {
         var normalized = AniSyncServices.Normalize(service) ?? service;
         var now = DateTime.UtcNow;
+        var unit = isManga ? "Ch" : "Ep";
 
         _store.Update(userId, record =>
         {
@@ -239,7 +241,7 @@ public class AniSyncStore(IApplicationPaths applicationPaths, AniSyncSecretProte
                 if (success)
                 {
                     provider.LastSyncAtUtc = now;
-                    provider.LastSyncedTitle = episodeNumber is > 0 ? $"{itemTitle} (Ep {episodeNumber})" : itemTitle;
+                    provider.LastSyncedTitle = episodeNumber is > 0 ? $"{itemTitle} ({unit} {episodeNumber})" : itemTitle;
                     provider.LastError = null;
                 }
                 else

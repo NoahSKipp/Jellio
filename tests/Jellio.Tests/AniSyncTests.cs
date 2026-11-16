@@ -94,4 +94,19 @@ public class AniSyncTests : IDisposable
     {
         Assert.Equal(expected, AniSyncServices.Normalize(input));
     }
+
+    [Fact]
+    public void RecordSyncOutcome_FormatsMangaAndAnimeTitles()
+    {
+        var userId = Guid.NewGuid();
+        _store.SaveProviderCredentials(userId, "anilist", "Reader", "1", "token-1234567890", null, null, null, null);
+
+        _store.RecordSyncOutcome(userId, AniSyncServices.AniList, "Chainsaw Man", 42, true, "Synced chapter 42", isManga: true);
+        var afterManga = _store.Load(userId);
+        Assert.Equal("Chainsaw Man (Ch 42)", afterManga.Providers[AniSyncServices.AniList].LastSyncedTitle);
+
+        _store.RecordSyncOutcome(userId, AniSyncServices.AniList, "Frieren", 10, true, "Synced episode 10", isManga: false);
+        var afterAnime = _store.Load(userId);
+        Assert.Equal("Frieren (Ep 10)", afterAnime.Providers[AniSyncServices.AniList].LastSyncedTitle);
+    }
 }

@@ -48,7 +48,7 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
         if (body!.Read)
         {
             var now = DateTimeOffset.UtcNow;
-            store.SetMany(userId, ids.Select(id => (id, "page:1", 1.0, (int?)null, (DateTimeOffset?)now)), keepExisting: false);
+            store.SetMany(userId, ids.Select(id => (id, "page:1", 1.0, (int?)null, (DateTimeOffset?)now)), keepExisting: false, notify: true);
         }
         else
         {

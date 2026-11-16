@@ -38,8 +38,12 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
         }
     }
 
+    public event Action<Guid, Guid, double>? ProgressSaved;
+
     public ReadingProgressRecord Set(Guid userId, Guid itemId, string locator, double progress, int? totalPages, DateTimeOffset? updatedAt = null)
     {
+        var clamped = Math.Clamp(progress, 0, 1);
+        ReadingProgressRecord record;
         lock (_lock)
         {
             var all = LoadLocked();
@@ -49,21 +53,29 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
                 all[Key(userId)] = items;
             }
 
-            var record = new ReadingProgressRecord
+            record = new ReadingProgressRecord
             {
                 Locator = locator,
-                Progress = Math.Clamp(progress, 0, 1),
+                Progress = clamped,
                 TotalPages = totalPages ?? items.GetValueOrDefault(Key(itemId))?.TotalPages,
                 UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow,
             };
             items[Key(itemId)] = record;
             SaveLocked(all);
-            return record;
         }
+
+        if (clamped >= 0.98)
+        {
+            ProgressSaved?.Invoke(userId, itemId, clamped);
+        }
+
+        return record;
     }
 
-    public int SetMany(Guid userId, IEnumerable<(Guid ItemId, string Locator, double Progress, int? TotalPages, DateTimeOffset? UpdatedAt)> entries, bool keepExisting)
+    public int SetMany(Guid userId, IEnumerable<(Guid ItemId, string Locator, double Progress, int? TotalPages, DateTimeOffset? UpdatedAt)> entries, bool keepExisting, bool notify = false)
     {
+        var written = 0;
+        List<(Guid ItemId, double Progress)>? completed = null;
         lock (_lock)
         {
             var all = LoadLocked();
@@ -73,7 +85,6 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
                 all[Key(userId)] = items;
             }
 
-            var written = 0;
             foreach (var entry in entries)
             {
                 var key = Key(entry.ItemId);
@@ -82,23 +93,37 @@ public class ReadingProgressStore(IApplicationPaths applicationPaths)
                     continue;
                 }
 
+                var clamped = Math.Clamp(entry.Progress, 0, 1);
                 items[key] = new ReadingProgressRecord
                 {
                     Locator = entry.Locator,
-                    Progress = Math.Clamp(entry.Progress, 0, 1),
+                    Progress = clamped,
                     TotalPages = entry.TotalPages ?? items.GetValueOrDefault(key)?.TotalPages,
                     UpdatedAt = entry.UpdatedAt ?? DateTimeOffset.UtcNow,
                 };
                 written++;
+                if (notify && clamped >= 0.98)
+                {
+                    completed ??= [];
+                    completed.Add((entry.ItemId, clamped));
+                }
             }
 
             if (written > 0)
             {
                 SaveLocked(all);
             }
-
-            return written;
         }
+
+        if (completed != null)
+        {
+            foreach (var (itemId, progress) in completed)
+            {
+                ProgressSaved?.Invoke(userId, itemId, progress);
+            }
+        }
+
+        return written;
     }
 
     // Clears progress (marking chapters unread), saved once.

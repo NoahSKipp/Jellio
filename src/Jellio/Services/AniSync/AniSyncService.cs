@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellio.Services.Manga;
+using Jellio.Services.Reading;
 using Jellyfin.Data.Enums;
 using Jellyfin.Database.Implementations.Enums;
 using MediaBrowser.Controller.Entities;
@@ -55,11 +60,17 @@ public class AniSyncService(
     IUserManager userManager,
     IUserDataManager userDataManager,
     ISessionManager sessionManager,
+    ReadingProgressStore readingProgressStore,
+    MangaStreamService mangaStreamService,
+    TrackerStore trackerStore,
+    ShelfStore shelfStore,
     AniSyncStore store,
     AniSyncProviderClients clients,
     ILogger<AniSyncService> logger) : IHostedService
 {
     private static readonly TimeSpan EventDedupeWindow = TimeSpan.FromSeconds(30);
+    private static readonly Regex ChapterOrVolumeRegex = new(@"(?:ch(?:apter)?|vol(?:ume)?|ep(?:isode)?|#)\s*\.?\s*(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex TrailingChapterSuffixRegex = new(@"\s+(?:ch(?:apter)?|vol(?:ume)?|#)\s*\.?\s*\d+.*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly ConcurrentDictionary<string, DateTime> _recentEvents = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _userLocks = new();
@@ -73,10 +84,11 @@ public class AniSyncService(
         {
             userDataManager.UserDataSaved += OnUserDataSaved;
             sessionManager.PlaybackStopped += OnPlaybackStopped;
+            readingProgressStore.ProgressSaved += OnReadingProgressSaved;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Jellio Ani-Sync: could not subscribe to user data or playback events.");
+            logger.LogWarning(ex, "Jellio Ani-Sync: could not subscribe to user data, playback, or reading events.");
         }
 
         return Task.CompletedTask;
@@ -88,6 +100,7 @@ public class AniSyncService(
         {
             userDataManager.UserDataSaved -= OnUserDataSaved;
             sessionManager.PlaybackStopped -= OnPlaybackStopped;
+            readingProgressStore.ProgressSaved -= OnReadingProgressSaved;
             _shutdownCts.Cancel();
         }
         catch (Exception ex)
@@ -361,12 +374,60 @@ public class AniSyncService(
             }
         }
 
-        if (considered == 0)
+        if (considered < limit)
         {
-            return (0, 0, "No recently watched anime items found in library.");
+            var seenReadSeries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var completedReads = readingProgressStore.GetAll(userId)
+                .Where(kv => kv.Value.Progress >= 0.98)
+                .OrderByDescending(kv => kv.Value.UpdatedAt)
+                .Take(Math.Clamp(limit * 4, 10, 80));
+
+            foreach (var (key, _) in completedReads)
+            {
+                if (considered >= limit)
+                {
+                    break;
+                }
+
+                if (!Guid.TryParseExact(key, "N", out var readItemId))
+                {
+                    continue;
+                }
+
+                var resolved = await BuildReadSyncTargetAsync(userId, readItemId, record.OnlyAnimeItems, ct).ConfigureAwait(false);
+                if (resolved == null)
+                {
+                    continue;
+                }
+
+                var (syncTarget, seriesKey) = resolved.Value;
+                if (!seenReadSeries.Add(seriesKey))
+                {
+                    continue;
+                }
+
+                considered++;
+                foreach (var service in targets)
+                {
+                    var ok = await SyncResolvedTargetWithServiceAsync(userId, service, $"{seriesKey}:{service}", syncTarget, ct).ConfigureAwait(false);
+                    if (ok)
+                    {
+                        synced++;
+                    }
+                    else
+                    {
+                        failed++;
+                    }
+                }
+            }
         }
 
-        return (synced, failed, $"Processed {considered} anime item(s): {synced} synced, {failed} error(s).");
+        if (considered == 0)
+        {
+            return (0, 0, "No recently watched anime or read manga items found.");
+        }
+
+        return (synced, failed, $"Processed {considered} item(s): {synced} synced, {failed} error(s).");
     }
 
     public async Task SyncItemForUserAsync(Guid userId, BaseItem item, CancellationToken ct)
@@ -396,6 +457,42 @@ public class AniSyncService(
             foreach (var service in targets)
             {
                 await SyncTargetWithServiceAsync(userId, service, item, syncTarget, ct).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            userLock.Release();
+        }
+    }
+
+    public async Task SyncReadItemForUserAsync(Guid userId, Guid itemId, CancellationToken ct)
+    {
+        var record = store.Load(userId);
+        if (!record.Enabled)
+        {
+            return;
+        }
+
+        var targets = ResolveTargetServices(record, null);
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var resolved = await BuildReadSyncTargetAsync(userId, itemId, record.OnlyAnimeItems, ct).ConfigureAwait(false);
+        if (resolved == null)
+        {
+            return;
+        }
+
+        var (syncTarget, seriesKey) = resolved.Value;
+        var userLock = _userLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        await userLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            foreach (var service in targets)
+            {
+                await SyncResolvedTargetWithServiceAsync(userId, service, $"{seriesKey}:{service}", syncTarget, ct).ConfigureAwait(false);
             }
         }
         finally
@@ -441,6 +538,48 @@ public class AniSyncService(
         }
     }
 
+    private void OnReadingProgressSaved(Guid userId, Guid itemId, double progress)
+    {
+        try
+        {
+            if (userId == Guid.Empty || itemId == Guid.Empty || progress < 0.98)
+            {
+                return;
+            }
+
+            var key = $"read:{userId:N}:{itemId:N}";
+            if (!TryClaimEventKey(key))
+            {
+                return;
+            }
+
+            var record = store.Load(userId);
+            if (!record.Enabled || record.Providers.Count == 0)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await SyncReadItemForUserAsync(userId, itemId, _shutdownCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Jellio Ani-Sync: background manga sync failed for user {UserId}, item {ItemId}", userId, itemId);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Jellio Ani-Sync: error in OnReadingProgressSaved");
+        }
+    }
+
     private void EnqueueBackgroundSync(Guid userId, BaseItem item)
     {
         if (userId == Guid.Empty || (item is not Episode && item is not Movie))
@@ -449,19 +588,9 @@ public class AniSyncService(
         }
 
         var key = $"{userId:N}:{item.Id:N}";
-        var now = DateTime.UtcNow;
-        if (_recentEvents.TryGetValue(key, out var last) && now - last < EventDedupeWindow)
+        if (!TryClaimEventKey(key))
         {
             return;
-        }
-
-        _recentEvents[key] = now;
-        if (_recentEvents.Count > 500)
-        {
-            foreach (var oldKey in _recentEvents.Where(kv => now - kv.Value > EventDedupeWindow).Select(kv => kv.Key).ToList())
-            {
-                _recentEvents.TryRemove(oldKey, out _);
-            }
         }
 
         var record = store.Load(userId);
@@ -486,10 +615,41 @@ public class AniSyncService(
         });
     }
 
-    private async Task<bool> SyncTargetWithServiceAsync(
+    private bool TryClaimEventKey(string key)
+    {
+        var now = DateTime.UtcNow;
+        if (_recentEvents.TryGetValue(key, out var last) && now - last < EventDedupeWindow)
+        {
+            return false;
+        }
+
+        _recentEvents[key] = now;
+        if (_recentEvents.Count > 500)
+        {
+            foreach (var oldKey in _recentEvents.Where(kv => now - kv.Value > EventDedupeWindow).Select(kv => kv.Key).ToList())
+            {
+                _recentEvents.TryRemove(oldKey, out _);
+            }
+        }
+
+        return true;
+    }
+
+    private Task<bool> SyncTargetWithServiceAsync(
         Guid userId,
         string service,
         BaseItem item,
+        AniSyncSyncTarget target,
+        CancellationToken ct)
+    {
+        var linkKey = ResolveSeriesOrItemKey(item, service);
+        return SyncResolvedTargetWithServiceAsync(userId, service, linkKey, target, ct);
+    }
+
+    private async Task<bool> SyncResolvedTargetWithServiceAsync(
+        Guid userId,
+        string service,
+        string linkKey,
         AniSyncSyncTarget target,
         CancellationToken ct)
     {
@@ -500,7 +660,6 @@ public class AniSyncService(
         }
 
         var effectiveClientId = creds.ClientId ?? GetServerClientId(service);
-        var linkKey = ResolveSeriesOrItemKey(item, service);
         var record = store.Load(userId);
         record.MediaLinks.TryGetValue(linkKey, out var cachedRemoteId);
 
@@ -528,10 +687,154 @@ public class AniSyncService(
 
         if (!outcome.Skipped || !outcome.Success)
         {
-            store.RecordSyncOutcome(userId, service, target.Title, target.EpisodeNumber, outcome.Success, outcome.Message);
+            store.RecordSyncOutcome(userId, service, target.Title, target.EpisodeNumber, outcome.Success, outcome.Message, target.IsManga);
         }
 
         return outcome.Success;
+    }
+
+    private async Task<(AniSyncSyncTarget Target, string SeriesKey)?> BuildReadSyncTargetAsync(
+        Guid userId,
+        Guid itemId,
+        bool onlyAnimeItems,
+        CancellationToken ct)
+    {
+        var item = libraryManager.GetItemById(itemId);
+        if (item != null)
+        {
+            if (item.GetBaseItemKind() != BaseItemKind.Book)
+            {
+                return null;
+            }
+
+            if (onlyAnimeItems && !IsMangaBook(userId, item))
+            {
+                return null;
+            }
+
+            var seriesTitle = ResolveBookSeriesTitle(item);
+            if (string.IsNullOrWhiteSpace(seriesTitle))
+            {
+                return null;
+            }
+
+            var chapterNum = item.IndexNumber ?? ParseChapterOrVolumeNumber(item.Name) ?? 1;
+            var providerIds = MergeProviderIds(item, null);
+            var target = new AniSyncSyncTarget(
+                seriesTitle,
+                item.OriginalTitle,
+                item.ProductionYear,
+                SeasonNumber: null,
+                EpisodeNumber: chapterNum,
+                IsMovie: false,
+                IsCompleted: false,
+                providerIds,
+                IsManga: true);
+            var seriesKey = $"manga:lib:{ShelfStore.SeriesKey(seriesTitle)}";
+            return (target, seriesKey);
+        }
+
+        var streamed = await mangaStreamService.FindChapterAsync(itemId.ToString("N"), null, ct).ConfigureAwait(false);
+        if (streamed is { } found)
+        {
+            var chapterNum = found.Chapter.Number >= 1 ? (int)Math.Floor(found.Chapter.Number) : 1;
+            var providerIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var trackerData = trackerStore.Load(userId);
+            if (trackerData.Links.TryGetValue(found.Series.Key, out var trackLink) && trackLink.MediaId > 0)
+            {
+                providerIds["AniList"] = trackLink.MediaId.ToString(CultureInfo.InvariantCulture);
+            }
+
+            var target = new AniSyncSyncTarget(
+                found.Series.Title,
+                null,
+                null,
+                SeasonNumber: null,
+                EpisodeNumber: chapterNum,
+                IsMovie: false,
+                IsCompleted: false,
+                providerIds,
+                IsManga: true);
+            return (target, $"manga:{found.Series.Key}");
+        }
+
+        return null;
+    }
+
+    private bool IsMangaBook(Guid userId, BaseItem item)
+    {
+        var ext = Path.GetExtension(item.Path ?? string.Empty);
+        if (ext.Equals(".cbz", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".cbr", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".cb7", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".cbt", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (HasAnimeMarker(item))
+        {
+            return true;
+        }
+
+        if (item.Tags != null && item.Tags.Any(t => t.Equals("manga", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (item.Genres != null && item.Genres.Any(g => g.Equals("manga", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(item.Path) && item.Path.Contains("manga", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var shelf = shelfStore.Load(userId);
+        var itemShelfKey = "i:" + item.Id.ToString("N");
+        var seriesTitle = ResolveBookSeriesTitle(item);
+        var seriesShelfKey = string.IsNullOrWhiteSpace(seriesTitle) ? null : ShelfStore.SeriesShelfKey(seriesTitle);
+        return shelf.Categories.Any(c =>
+            c.Kind == "manga"
+            && (c.Items.Contains(itemShelfKey) || (seriesShelfKey != null && c.Items.Contains(seriesShelfKey))));
+    }
+
+    private string ResolveBookSeriesTitle(BaseItem item)
+    {
+        var parent = item.ParentId != Guid.Empty ? libraryManager.GetItemById(item.ParentId) : null;
+        if (parent != null && parent.GetBaseItemKind() == BaseItemKind.Folder && !string.IsNullOrWhiteSpace(parent.Name))
+        {
+            // If the parent is a series folder (and not a generic root like "Manga" or "Books"), use it.
+            var pName = parent.Name.Trim();
+            if (!pName.Equals("manga", StringComparison.OrdinalIgnoreCase)
+                && !pName.Equals("books", StringComparison.OrdinalIgnoreCase)
+                && !pName.Equals("comics", StringComparison.OrdinalIgnoreCase))
+            {
+                return pName;
+            }
+        }
+
+        var rawName = (item.Name ?? string.Empty).Trim();
+        var cleaned = TrailingChapterSuffixRegex.Replace(rawName, string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(cleaned) ? rawName : cleaned;
+    }
+
+    private static int? ParseChapterOrVolumeNumber(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        var match = ChapterOrVolumeRegex.Match(name);
+        if (match.Success && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var num) && num > 0)
+        {
+            return num;
+        }
+
+        return null;
     }
 
     private AniSyncSyncTarget? BuildSyncTarget(BaseItem item, bool onlyAnimeItems)
