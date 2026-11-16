@@ -70,6 +70,8 @@ keeps your configuration, achievements, and other plugin data intact.
   [Namo2/InPlayerEpisodePreview](https://github.com/Namo2/InPlayerEpisodePreview)
 - Achievement badges based on
   [ZL154/AchievementBadges_for_Jellyfin](https://github.com/ZL154/AchievementBadges_for_Jellyfin)
+- Ani-Sync inspired by and adapted from
+  [vosmiic/jellyfin-ani-sync](https://github.com/vosmiic/jellyfin-ani-sync)
 
 ## Disclaimer
 
