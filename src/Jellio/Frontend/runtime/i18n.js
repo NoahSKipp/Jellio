@@ -278,6 +278,8 @@ const STRINGS = {
     settings_anisync_sync_failed: 'Sync completed with errors.',
     settings_anisync_connected_success: 'Connected to {service} as @{username}.',
     settings_anisync_disconnected_success: 'Disconnected {service}.',
+    settings_anisync_guide_btn: 'Setup Guide',
+    settings_anisync_guide_title: 'Ani-Sync Setup Guide',
   
     // Settings - Display
     settings_display_language_title: 'Display language',

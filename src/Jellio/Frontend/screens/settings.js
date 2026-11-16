@@ -2145,6 +2145,100 @@ function buildAniSyncCategory() {
       actions.appendChild(disconnectBtn);
     }
 
+    const guideBtn = el('button', 'jellio-settings-button jellio-settings-btn-secondary', t('settings_anisync_guide_btn'));
+    guideBtn.type = 'button';
+    guideBtn.addEventListener('click', function () {
+      const overlay = el('div', 'jellio-anisync-guide-backdrop');
+      const modal = el('div', 'jellio-anisync-guide-modal');
+      const header = el('div', 'jellio-anisync-guide-header');
+      header.appendChild(el('h3', '', t('settings_anisync_guide_title')));
+      const closeX = el('button', 'jellio-settings-button jellio-settings-btn-secondary', '×');
+      closeX.type = 'button';
+      header.appendChild(closeX);
+      modal.appendChild(header);
+
+      const guideBody = el('div', 'jellio-anisync-guide-body');
+      const guides = [
+        {
+          name: 'AniList',
+          url: 'https://anilist.co/settings/developer',
+          steps: [
+            'Open anilist.co/settings/developer and click Create New Client.',
+            'Set Redirect URL to: https://anilist.co/api/v2/oauth/pin',
+            'Copy your Client ID (Client Secret is not needed for AniList).',
+            'Expand Advanced Settings here, paste Client ID, and click Authorize with AniList.',
+            'Approve on AniList, copy the full redirect URL (#access_token=...), paste it into the token box, and click Save & Connect.',
+          ],
+        },
+        {
+          name: 'MyAnimeList',
+          url: 'https://myanimelist.net/apiconfig',
+          steps: [
+            'Open myanimelist.net/apiconfig and click Create ID.',
+            'Set App Type to web and App Redirect URL to your Jellio Web URL.',
+            'Copy your Client ID (and Client Secret if shown).',
+            'Expand Advanced Settings here, paste Client ID (and Secret), and click Authorize with MyAnimeList.',
+            'Approve on MyAnimeList, copy the callback URL (?code=...&state=...), paste it into the token box, and click Save & Connect.',
+          ],
+        },
+        {
+          name: 'Shikimori',
+          url: 'https://shikimori.one/oauth/applications',
+          steps: [
+            'Open shikimori.one/oauth/applications and create a new OAuth application.',
+            'Set Redirect URI to urn:ietf:wg:oauth:2.0:oob (or your Jellio Web URL).',
+            'Copy your Client ID and Client Secret.',
+            'Expand Advanced Settings here, paste Client ID and Client Secret, and click Authorize with Shikimori.',
+            'Approve on Shikimori, copy the authorization code or callback URL, paste it into the token box, and click Save & Connect.',
+          ],
+        },
+        {
+          name: 'Simkl',
+          url: 'https://simkl.com/settings/developer/',
+          steps: [
+            'Open simkl.com/settings/developer/ and create an application.',
+            'Set Redirect URI to your Jellio Web URL and copy your Client ID (and Client Secret for OAuth redirect).',
+            'Expand Advanced Settings here and paste your Client ID.',
+            'Click Connect with PIN Code (visit simkl.com/pin and enter the code) or click Authorize with Simkl and paste the callback URL.',
+          ],
+        },
+      ];
+
+      guides.forEach(function (g) {
+        const card = el('div', 'jellio-anisync-guide-card');
+        const titleRow = el('div', 'jellio-anisync-guide-card-title');
+        titleRow.appendChild(el('strong', '', g.name));
+        const link = el('a', 'jellio-anisync-guide-link', g.url);
+        link.href = g.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        titleRow.appendChild(link);
+        card.appendChild(titleRow);
+
+        const ol = el('ol', 'jellio-anisync-guide-steps');
+        g.steps.forEach(function (s) {
+          ol.appendChild(el('li', '', s));
+        });
+        card.appendChild(ol);
+        guideBody.appendChild(card);
+      });
+
+      modal.appendChild(guideBody);
+      overlay.appendChild(modal);
+
+      function closeModal() {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+      }
+      closeX.addEventListener('click', closeModal);
+      overlay.addEventListener('click', function (ev) {
+        if (ev.target === overlay) closeModal();
+      });
+      document.body.appendChild(overlay);
+    });
+    actions.appendChild(guideBtn);
+
     form.appendChild(actions);
 
     form.addEventListener('submit', function (e) {

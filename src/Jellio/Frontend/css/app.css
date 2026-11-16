@@ -7815,6 +7815,81 @@
   min-width: 9.5em;
 }
 
+.jellio-anisync-guide-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.jellio-anisync-guide-modal {
+  width: 100%;
+  max-width: 44rem;
+  max-height: 85vh;
+  background: var(--jellio-card-bg, #18181b);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.jellio-anisync-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jellio-anisync-guide-header h3 {
+  margin: 0;
+}
+
+.jellio-anisync-guide-body {
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.jellio-anisync-guide-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.jellio-anisync-guide-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.jellio-anisync-guide-link {
+  font-size: 0.85em;
+  color: var(--jellio-accent, #a78bfa);
+  word-break: break-all;
+}
+
+.jellio-anisync-guide-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9em;
+  color: var(--jellio-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .jellio-custom-genre-search-wrap {
   display: flex;
   flex-direction: column;
