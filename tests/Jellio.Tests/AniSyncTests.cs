@@ -1,8 +1,8 @@
 using System;
 using System.IO;
+using System.Reflection;
 using Jellio.Services.AniSync;
 using MediaBrowser.Common.Configuration;
-using Moq;
 using Xunit;
 
 namespace Jellio.Tests;
@@ -17,10 +17,9 @@ public class AniSyncTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "jellio_anisync_test_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDir);
-        var paths = new Mock<IApplicationPaths>();
-        paths.SetupGet(p => p.PluginConfigurationsPath).Returns(_tempDir);
-        _protector = new AniSyncSecretProtector(paths.Object);
-        _store = new AniSyncStore(paths.Object, _protector);
+        var paths = PathsProxy.Create(_tempDir);
+        _protector = new AniSyncSecretProtector(paths);
+        _store = new AniSyncStore(paths, _protector);
     }
 
     public void Dispose()
