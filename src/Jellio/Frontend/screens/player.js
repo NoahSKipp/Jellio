@@ -2217,6 +2217,7 @@ export async function renderPlayer(root, params) {
   let endScreenModalInstance = null;
   let preloadedNextVideoEl = null;
   let hasInitiatedNextPreload = false;
+  let hasRefreshedWarmupAt70 = false;
   let showEndScreenModal;
   let preloadNextEpisodeStream;
   let dismissUpNext;
@@ -2612,7 +2613,14 @@ export async function renderPlayer(root, params) {
       markRealWatchComplete();
     }
 
-    if (nextEpisode && !hasInitiatedNextPreload && durationSeconds > 60 && positionSeconds >= durationSeconds - 55) {
+    if (!hasRefreshedWarmupAt70 && durationSeconds > 120 && positionSeconds / durationSeconds >= 0.70) {
+      hasRefreshedWarmupAt70 = true;
+      prefetchStreams(itemId).catch(function () {});
+    }
+
+    const creditsStartSec = skipSegments && skipSegments.Credits && skipSegments.Credits.End > 0 ? skipSegments.Credits.Start : 0;
+    const preloadTriggerAt = creditsStartSec > 0 ? Math.min(creditsStartSec - 25, durationSeconds - 60) : durationSeconds - 60;
+    if (nextEpisode && !hasInitiatedNextPreload && durationSeconds > 60 && positionSeconds >= Math.max(0, preloadTriggerAt)) {
       preloadNextEpisodeStream();
     }
 

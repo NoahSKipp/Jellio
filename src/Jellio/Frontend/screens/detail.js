@@ -10,6 +10,8 @@ import { watchSources } from '../runtime/itemInfo.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { openStreamPicker } from '../components/streamPicker.js';
 import { attachPlayPrefetch } from '../components/playPrefetch.js';
+import { attachStreamPrefetch } from '../components/card.js';
+import { pickSecondSource } from '../runtime/playbackPrefetch.js';
 import { notePlayTrigger } from '../runtime/playStart.js';
 import { getAvailableEditions, getPreferredEdition, setPreferredEdition } from '../runtime/editions.js';
 import { renderLoading, renderRetry } from '../components/networkState.js';
@@ -600,9 +602,13 @@ function buildEpisodeCard(episode, context) {
       e.stopPropagation();
       openStreamPicker(episode);
     });
+    attachPlayPrefetch(quickPlay, episode.Id, function () {
+      return episode;
+    });
     thumb.appendChild(quickPlay);
   }
 
+  attachStreamPrefetch(card, episode);
   card.appendChild(thumb);
   card.appendChild(el('div', 'jellio-episode-title', episode.Name || ''));
   if (episode.Overview) {
@@ -825,6 +831,15 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, in
       .then(function (episodes) {
         if (token !== currentSelectionToken) return;
         renderTrack(season, episodes);
+
+        const firstPlayable = (episodes || []).find(function (ep) {
+          return ep && ep.Id && !isUnreleasedItem(ep) && !(ep.UserData && ep.UserData.Played);
+        }) || (episodes || []).find(function (ep) {
+          return ep && ep.Id && !isUnreleasedItem(ep);
+        });
+        if (firstPlayable) {
+          warmItem(firstPlayable.Id);
+        }
 
         const now = Date.now();
         const unverifiedToday = (episodes || []).filter(function (ep) {
@@ -1322,9 +1337,8 @@ export async function renderDetail(root, params, signal) {
       notePlayTrigger(item.Id, 'detail');
       openStreamPicker(item, activeEdition ? { edition: activeEdition } : undefined);
     });
-    // An edition picked on the page may not be the stream the prefetch takes.
     attachPlayPrefetch(playButton, item.Id, function () {
-      return activeEdition ? null : item;
+      return item;
     });
     actions.appendChild(playButton);
   } else {
@@ -1336,10 +1350,31 @@ export async function renderDetail(root, params, signal) {
     playButton.appendChild(playLabel);
     actions.appendChild(playButton);
 
+    const seriesOpenedHash = window.location.hash;
     const targetPromise = (isSeason ? resolveSeasonPlayTarget(item) : resolveSeriesPlayTarget(item.Id)).then(
       function (result) {
         if (result && result.resume) {
           playLabel.textContent = t('detail_resume_episode', { s: result.episode.ParentIndexNumber, e: result.episode.IndexNumber });
+        }
+        const ep = result && result.episode;
+        if (ep && ep.Id && window.location.hash === seriesOpenedHash) {
+          warmItem(ep.Id, true);
+          window.setTimeout(function () {
+            if (window.location.hash !== seriesOpenedHash) return;
+            Promise.all([getMediaSources(ep.Id), getWarmSources(ep.Id)])
+              .then(function (results) {
+                if (window.location.hash !== seriesOpenedHash) return;
+                const sources = results[0] || [];
+                const warmIds = Object.keys(results[1] || {}).map(normalizeId);
+                const second = pickSecondSource(sources, {
+                  isBad: function (source) { return isBadSource(ep.Id, source); },
+                });
+                if (second && warmIds.indexOf(normalizeId(second.Id)) === -1) {
+                  warmSource(ep.Id, second.Id);
+                }
+              })
+              .catch(function () {});
+          }, 1500);
         }
         return result;
       },

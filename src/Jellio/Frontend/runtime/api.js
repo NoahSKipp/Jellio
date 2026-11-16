@@ -5,6 +5,7 @@ export {
   requestJson,
   getJson,
   postJson,
+  putJson,
   deleteJson,
   authedFetch,
   SHORT_CACHE_TTL_MS,
@@ -37,6 +38,7 @@ export {
   getSeriesNextUp,
   getRecentlyCompleted,
   getRecommendationCandidates,
+  getTopPicksRecommendations,
   itemTypesForKind,
   audiobookGroupKey,
   audiobookTitle,
@@ -91,6 +93,7 @@ export {
   searchLibrary,
   searchMovies,
   searchSeries,
+  searchFuzzy,
   getSearchSuggestions,
 } from './api/search.js';
 export {
@@ -100,6 +103,9 @@ export {
   prefetchStreams,
   prefetchStreamsBatch,
   getWarmSources,
+  markLocalSourceWarm,
+  getLocalWarmedSources,
+  warmFirstBytes,
   getQualityTiers,
   getLastMediaSources,
   filterPlayableSources,
@@ -189,3 +195,16 @@ export {
   getFriendsSettings,
   saveFriendsSettings,
 } from './api/friends.js';
+export {
+  normalizeAniSyncService,
+  normalizeAniSyncSettings,
+  getAniSyncSettings,
+  saveAniSyncPreferences,
+  connectAniSync,
+  disconnectAniSync,
+  testAniSyncConnection,
+  syncAniSyncNow,
+  startAniSyncOAuth,
+  startSimklPin,
+  pollSimklPin,
+} from './api/anisync.js';

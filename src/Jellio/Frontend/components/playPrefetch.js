@@ -1,4 +1,4 @@
-import { getMediaSources, getWarmSources, getQualityTiers, getPlaybackInfo, getCurrentUser, getAudioStreams, matchAudioStreamIndex, isPlaceholderSource } from '../runtime/api.js';
+import { buildStreamUrl, canBrowserDirectPlay, getMediaSources, getWarmSources, getQualityTiers, getPlaybackInfo, getCurrentUser, getAudioStreams, matchAudioStreamIndex, isPlaceholderSource, markLocalSourceWarm, warmFirstBytes } from '../runtime/api.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { isPreferReadyEnabled, normalizeId } from '../runtime/readySources.js';
 import { isOffline } from '../runtime/offline.js';
@@ -51,7 +51,16 @@ async function prefetchPlayTarget(target, stillHere) {
   const ticks = (target.UserData && target.UserData.PlaybackPositionTicks) || 0;
   const audioIndex = preferredAudioIndex(source, results[3]);
   const promise = getPlaybackInfo(target.Id, ticks, source.Id, audioIndex);
-  promise.catch(function () {});
+  promise
+    .then(function (info) {
+      markLocalSourceWarm(target.Id, source.Id);
+      if (!stillHere() || !info || !Array.isArray(info.MediaSources)) return;
+      const negotiated = info.MediaSources.find(function (s) { return s.Id === source.Id; }) || info.MediaSources[0];
+      if (negotiated && ticks === 0 && audioIndex == null && canBrowserDirectPlay(negotiated)) {
+        warmFirstBytes(buildStreamUrl(target.Id, negotiated, 0, { playSessionId: info.PlaySessionId }));
+      }
+    })
+    .catch(function () {});
   if (!prefetchedPlayback.put(target.Id, source.Id, ticks, { promise: promise, audioIndex: audioIndex })) return;
   // Leaving for anything but this title's player drops the answer.
   function onLeave() {

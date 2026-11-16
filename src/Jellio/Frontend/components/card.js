@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getImageUrl, getUserImageUrl, TICKS_PER_SECOND, seedItemCache } from '../runtime/api.js';
+import { getImageUrl, getUserImageUrl, getSeriesNextUp, TICKS_PER_SECOND, seedItemCache } from '../runtime/api.js';
 import { landscapeImageWidth, posterImageWidth } from '../runtime/imageSize.js';
 import { warmItem } from '../runtime/warmQueue.js';
 import { getBookCoverUrl, getStreamCoverUrl, getMangaSeriesCoverUrl } from '../runtime/apiBooks.js';
@@ -110,8 +110,25 @@ function buildWatchersBadge(watchers) {
 
 // Long enough that sweeping across a row doesn't warm every card on it.
 const PREFETCH_DEBOUNCE_MS = 900;
+const resolvedSeriesWarmTargets = new Map();
 
-function attachStreamPrefetch(card, item) {
+function resolveSeriesWarmTarget(seriesId) {
+  if (!seriesId) return Promise.resolve(null);
+  if (resolvedSeriesWarmTargets.has(seriesId)) {
+    return Promise.resolve(resolvedSeriesWarmTargets.get(seriesId));
+  }
+  return getSeriesNextUp(seriesId)
+    .then(function (episode) {
+      const targetId = (episode && episode.Id) || seriesId;
+      resolvedSeriesWarmTargets.set(seriesId, targetId);
+      return targetId;
+    })
+    .catch(function () {
+      return seriesId;
+    });
+}
+
+export function attachStreamPrefetch(card, item) {
   if (item.Type !== 'Movie' && item.Type !== 'Episode' && item.Type !== 'Series') return;
   if (!item.Id) return;
   let timer = null;
@@ -120,7 +137,13 @@ function attachStreamPrefetch(card, item) {
     if (timer) return;
     timer = window.setTimeout(function () {
       timer = null;
-      warmItem(item.Id, true);
+      if (item.Type === 'Series') {
+        resolveSeriesWarmTarget(item.Id).then(function (targetId) {
+          if (targetId) warmItem(targetId, true);
+        });
+      } else {
+        warmItem(item.Id, true);
+      }
     }, PREFETCH_DEBOUNCE_MS);
   }
   function cancelFire() {

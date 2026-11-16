@@ -1,6 +1,7 @@
 import { getDisplayCulture } from '../i18n.js';
 import { getCurrentUserId } from '../auth.js';
 import { isUnreleasedItem } from '../releaseDate.js';
+import { invalidateHome } from '../homeInvalidate.js';
 import { authedFetch, invalidateCache, invalidateUserDataRows, postJson } from './core.js';
 import { getItem, getSeriesEpisodes } from './items.js';
 
@@ -129,6 +130,9 @@ export async function setItemRating(itemId, likes) {
     err.status = response.status;
     throw err;
   }
+  invalidateUserDataRows();
+  invalidateCache('personal');
+  invalidateHome(true);
   return response.json();
 }
 

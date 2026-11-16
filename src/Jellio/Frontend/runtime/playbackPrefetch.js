@@ -134,6 +134,16 @@ export function pickPlaySource(sources, options) {
   return ordered[0];
 }
 
+export function pickSecondSource(sources, options) {
+  const list = (sources || []).filter(Boolean);
+  if (list.length < 2) return null;
+  const isBad = (options && options.isBad) || function () { return false; };
+  const ordered = list
+    .filter(function (source) { return !isBad(source); })
+    .concat(list.filter(function (source) { return isBad(source); }));
+  return ordered[1] || null;
+}
+
 export const prefetchedPlayback = createPlaybackCache({ ttlMs: PREFETCH_TTL_MS, now: function () { return Date.now(); } });
 export const prewarmedPlayback = createPlaybackCache({ ttlMs: PREWARM_TTL_MS, now: function () { return Date.now(); } });
 

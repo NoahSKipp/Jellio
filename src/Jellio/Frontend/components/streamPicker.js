@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { getMediaSources, getImageUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, getWarmSources, getQualityTiers } from '../runtime/api.js';
+import { getMediaSources, getImageUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, getWarmSources, getLocalWarmedSources, getQualityTiers } from '../runtime/api.js';
 import { isPreferReadyEnabled, preferReadySource, normalizeId } from '../runtime/readySources.js';
 import { isBadSource } from '../runtime/streamHealth.js';
 import { avoidingVideoTranscodes, classifySource, getVideoTranscodePolicy, playbackOutlook } from '../runtime/transcodePolicy.js';
@@ -538,10 +538,13 @@ export async function openStreamPicker(item, options) {
       });
 
     const ready = await readyInfo;
-    if (ready && ready[0]) {
-      warmSourceIds = new Set(Object.keys(ready[0]).map(normalizeId));
+    const warmMap = (ready && ready[0]) || getLocalWarmedSources(item.Id);
+    if (warmMap) {
+      warmSourceIds = new Set(Object.keys(warmMap).map(normalizeId));
       const tiers = {};
-      Object.keys(ready[1] || {}).forEach(function (id) { tiers[normalizeId(id)] = ready[1][id]; });
+      if (ready && ready[1]) {
+        Object.keys(ready[1]).forEach(function (id) { tiers[normalizeId(id)] = ready[1][id]; });
+      }
       if (isPreferReadyEnabled()) {
         sources = preferReadySource(
           sources,

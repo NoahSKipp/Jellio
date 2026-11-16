@@ -176,12 +176,26 @@ export async function requestJson(url, options, path, timeoutMs, externalSignal,
       confirmIfUnauthorized(response, url, path);
       const err = new Error('Request failed: ' + path);
       err.status = response.status;
-      if (response.status === 503) {
-        try {
+      try {
+        if (typeof response.text === 'function') {
+          const text = await response.text();
+          if (text) {
+            let parsed = null;
+            try {
+              parsed = JSON.parse(text);
+            } catch (_) {}
+            if (parsed && typeof parsed.Error === 'string') err.errorCode = parsed.Error;
+            if (parsed && typeof parsed.message === 'string') err.serverMessage = parsed.message;
+            else if (parsed && typeof parsed.Message === 'string') err.serverMessage = parsed.Message;
+            else if (parsed && typeof parsed.title === 'string') err.serverMessage = parsed.title;
+            else if (typeof parsed === 'string') err.serverMessage = parsed;
+            else if (!parsed) err.serverMessage = text.replace(/^"|"$/g, '').trim();
+          }
+        } else if (response.status === 503 && typeof response.json === 'function') {
           const body = await response.json();
           if (body && typeof body.Error === 'string') err.errorCode = body.Error;
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
       throw err;
     }
     return response;
@@ -250,13 +264,36 @@ export async function postJson(path, body, timeoutMs) {
   return text ? JSON.parse(text) : null;
 }
 
-export async function deleteJson(path, timeoutMs) {
-  await requestJson(
+export async function putJson(path, body, timeoutMs) {
+  const response = await requestJson(
     getServerAddress() + path,
-    { method: 'DELETE', headers: getAuthHeaders() },
+    {
+      method: 'PUT',
+      headers: Object.assign(
+        { 'Content-Type': 'application/json', Accept: 'application/json' },
+        getAuthHeaders(),
+      ),
+      body: JSON.stringify(body || {}),
+    },
     path,
     timeoutMs || DEFAULT_TIMEOUT_MS,
   );
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+export async function deleteJson(path, timeoutMs) {
+  const response = await requestJson(
+    getServerAddress() + path,
+    {
+      method: 'DELETE',
+      headers: Object.assign({ Accept: 'application/json' }, getAuthHeaders()),
+    },
+    path,
+    timeoutMs || DEFAULT_TIMEOUT_MS,
+  );
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 function confirmIfUnauthorized(response, url, path) {

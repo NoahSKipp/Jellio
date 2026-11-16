@@ -1,5 +1,32 @@
 import { PREBUFFER_OPTIONS, getPrebufferLevel, setPrebufferLevel, getBufferSwitchMode, setBufferSwitchMode } from '../runtime/bufferSettings.js';
-import { getFriendsSettings, saveFriendsSettings, friendsSupported, getCurrentUser, saveServerDisplayPreferences, updateUserPassword, getSleepTimerStatus, cancelSleepTimer, updateLanguagePreferences, isQuickConnectEnabled, authorizeQuickConnect, getJellioConfig, clearCachedRows, isHomeRowCacheEnabled, getAllGenres, getUserImageUrl, searchGenreOrCategory } from '../runtime/api.js';
+import {
+  getFriendsSettings,
+  saveFriendsSettings,
+  friendsSupported,
+  getCurrentUser,
+  saveServerDisplayPreferences,
+  updateUserPassword,
+  getSleepTimerStatus,
+  cancelSleepTimer,
+  updateLanguagePreferences,
+  isQuickConnectEnabled,
+  authorizeQuickConnect,
+  getJellioConfig,
+  clearCachedRows,
+  isHomeRowCacheEnabled,
+  getAllGenres,
+  getUserImageUrl,
+  searchGenreOrCategory,
+  getAniSyncSettings,
+  saveAniSyncPreferences,
+  connectAniSync,
+  disconnectAniSync,
+  testAniSyncConnection,
+  syncAniSyncNow,
+  startAniSyncOAuth,
+  startSimklPin,
+  pollSimklPin,
+} from '../runtime/api.js';
 import { getProfileSettings, setProfilePrivacy, setGrouplistEnabled, getCommunityUsers } from '../runtime/apiSocial.js';
 import { startMangaImport, getMangaImportStatus } from '../runtime/apiBooks.js';
 import {
@@ -1643,10 +1670,565 @@ function buildAboutCategory() {
   return wrap;
 }
 
+function buildAniSyncCategory() {
+  const wrap = el('div', 'jellio-settings-category');
+
+  let currentSettings = null;
+  let activeServiceId = 'anilist';
+  let pinPollTimer = null;
+
+  const headerCard = buildCard('sync', t('settings_anisync_title'), t('settings_anisync_desc'));
+  wrap.appendChild(headerCard.card);
+
+  const togglesCard = buildCard('tune', t('settings_preferences_title', null, 'Preferences'), null);
+  const togglesBody = togglesCard.body;
+  wrap.appendChild(togglesCard.card);
+
+  const servicesCard = buildCard('extension', t('settings_anisync_services_title'), t('settings_anisync_services_desc'));
+  const servicesBody = servicesCard.body;
+  wrap.appendChild(servicesCard.card);
+
+  const accountCardWrap = el('div', 'jellio-anisync-account-container');
+  wrap.appendChild(accountCardWrap);
+
+  const activityCard = buildCard('history', t('settings_anisync_recent_activity_title'), t('settings_anisync_recent_activity_desc'));
+  const activityBody = activityCard.body;
+  wrap.appendChild(activityCard.card);
+
+  function stopPinPolling() {
+    if (pinPollTimer) {
+      clearInterval(pinPollTimer);
+      pinPollTimer = null;
+    }
+  }
+
+  function getActiveService() {
+    if (!currentSettings || !Array.isArray(currentSettings.services)) {
+      return {
+        id: activeServiceId,
+        name: activeServiceId === 'anilist' ? 'AniList' : activeServiceId === 'myanimelist' ? 'MyAnimeList' : activeServiceId === 'shikimori' ? 'Shikimori' : 'Simkl',
+        connected: false,
+        username: null,
+        maskedCredential: null,
+        hasRefreshToken: false,
+        hasCustomClientId: false,
+        serverClientId: null,
+        supportsPinAuth: activeServiceId === 'simkl',
+        updatedAtUtc: null,
+        lastSyncAtUtc: null,
+        lastSyncedTitle: null,
+        lastError: null,
+      };
+    }
+    const found = currentSettings.services.find(function (s) {
+      return s.id === activeServiceId;
+    });
+    return found || {
+      id: activeServiceId,
+      name: activeServiceId,
+      connected: false,
+      username: null,
+      maskedCredential: null,
+      hasRefreshToken: false,
+      hasCustomClientId: false,
+      serverClientId: null,
+      supportsPinAuth: activeServiceId === 'simkl',
+      updatedAtUtc: null,
+      lastSyncAtUtc: null,
+      lastSyncedTitle: null,
+      lastError: null,
+    };
+  }
+
+  function renderToggles() {
+    togglesBody.textContent = '';
+    const enabled = currentSettings ? currentSettings.enabled : true;
+    const onlyAnime = currentSettings ? currentSettings.onlyAnimeItems : true;
+    const syncAll = currentSettings ? currentSettings.syncAllConnected : false;
+
+    togglesBody.appendChild(
+      buildToggleRow('power_settings_new', t('settings_anisync_enable'), t('settings_anisync_enable_desc'), enabled, function (val) {
+        if (currentSettings) currentSettings.enabled = val;
+        saveAniSyncPreferences({ enabled: val }).then(function (updated) {
+          if (updated) {
+            currentSettings = updated;
+            renderAll();
+          }
+        }).catch(function (err) {
+          console.warn('Jellio: could not save Ani-Sync enable preference', err);
+        });
+      })
+    );
+
+    togglesBody.appendChild(
+      buildToggleRow('movie_filter', t('settings_anisync_only_anime'), t('settings_anisync_only_anime_desc'), onlyAnime, function (val) {
+        if (currentSettings) currentSettings.onlyAnimeItems = val;
+        saveAniSyncPreferences({ onlyAnimeItems: val }).then(function (updated) {
+          if (updated) {
+            currentSettings = updated;
+            renderAll();
+          }
+        }).catch(function (err) {
+          console.warn('Jellio: could not save Ani-Sync onlyAnimeItems preference', err);
+        });
+      })
+    );
+
+    togglesBody.appendChild(
+      buildToggleRow('sync_alt', t('settings_anisync_sync_all'), t('settings_anisync_sync_all_desc'), syncAll, function (val) {
+        if (currentSettings) currentSettings.syncAllConnected = val;
+        saveAniSyncPreferences({ syncAllConnected: val }).then(function (updated) {
+          if (updated) {
+            currentSettings = updated;
+            renderAll();
+          }
+        }).catch(function (err) {
+          console.warn('Jellio: could not save Ani-Sync syncAllConnected preference', err);
+        });
+      })
+    );
+  }
+
+  function renderServicesGrid() {
+    servicesBody.textContent = '';
+    const grid = el('div', 'jellio-anisync-services-grid');
+
+    const knownServices = ['anilist', 'myanimelist', 'shikimori', 'simkl'];
+    const serviceList = knownServices.map(function (id) {
+      if (currentSettings && Array.isArray(currentSettings.services)) {
+        const found = currentSettings.services.find(function (s) { return s.id === id; });
+        if (found) return found;
+      }
+      return {
+        id: id,
+        name: id === 'anilist' ? 'AniList' : id === 'myanimelist' ? 'MyAnimeList' : id === 'shikimori' ? 'Shikimori' : 'Simkl',
+        connected: false,
+        username: null,
+      };
+    });
+
+    serviceList.forEach(function (svc) {
+      const isSelected = svc.id === activeServiceId;
+      const card = el('button', 'jellio-anisync-service-card' + (isSelected ? ' jellio-anisync-service-card-active' : ''));
+      card.type = 'button';
+
+      const top = el('div', 'jellio-anisync-service-top');
+      top.appendChild(el('span', 'jellio-anisync-service-name', svc.name));
+
+      const pill = el('span', 'jellio-anisync-status-pill ' + (svc.connected ? 'jellio-anisync-pill-connected' : 'jellio-anisync-pill-disconnected'));
+      pill.appendChild(el('span', 'jellio-anisync-pill-dot'));
+      pill.appendChild(el('span', '', svc.connected ? t('settings_anisync_connected_pill') : t('settings_anisync_disconnected_pill')));
+      top.appendChild(pill);
+      card.appendChild(top);
+
+      const userText = svc.connected && svc.username ? '@' + svc.username : (svc.connected ? t('settings_anisync_connected_pill') : t('settings_anisync_disconnected_pill'));
+      card.appendChild(el('span', 'jellio-anisync-service-user', userText));
+
+      card.addEventListener('click', function () {
+        stopPinPolling();
+        activeServiceId = svc.id;
+        if (currentSettings) {
+          currentSettings.selectedService = svc.id;
+        }
+        renderServicesGrid();
+        renderAccountCard();
+        saveAniSyncPreferences({ selectedService: svc.id }).catch(function (err) {
+          console.warn('Jellio: could not update selected Ani-Sync service', err);
+        });
+      });
+
+      grid.appendChild(card);
+    });
+
+    servicesBody.appendChild(grid);
+  }
+
+  function renderAccountCard() {
+    stopPinPolling();
+    accountCardWrap.textContent = '';
+    const svc = getActiveService();
+    const serviceName = svc.name || activeServiceId;
+
+    const { card, body } = buildCard('account_circle', t('settings_anisync_account_title', { service: serviceName }), t('settings_anisync_account_desc'));
+
+    // Status Banner
+    const statusWrap = el('div', 'jellio-anisync-account-status');
+    const statusHeader = el('div', 'jellio-anisync-account-header');
+    const infoLeft = el('div', 'jellio-anisync-account-info');
+    infoLeft.appendChild(el('span', 'material-icons', svc.connected ? 'check_circle' : 'link_off'));
+    infoLeft.appendChild(el('strong', '', svc.connected ? (svc.username ? '@' + svc.username : serviceName) : t('settings_anisync_disconnected_pill')));
+
+    const pill = el('span', 'jellio-anisync-status-pill ' + (svc.connected ? 'jellio-anisync-pill-connected' : 'jellio-anisync-pill-disconnected'));
+    pill.appendChild(el('span', 'jellio-anisync-pill-dot'));
+    pill.appendChild(el('span', '', svc.connected ? t('settings_anisync_connected_pill') : t('settings_anisync_disconnected_pill')));
+    statusHeader.appendChild(infoLeft);
+    statusHeader.appendChild(pill);
+    statusWrap.appendChild(statusHeader);
+
+    const metaWrap = el('div', 'jellio-anisync-account-meta');
+    if (svc.connected && svc.maskedCredential) {
+      metaWrap.appendChild(el('span', '', 'Token: ' + svc.maskedCredential));
+    }
+    if (svc.lastSyncedTitle) {
+      metaWrap.appendChild(el('span', '', t('settings_anisync_last_synced', { title: svc.lastSyncedTitle })));
+    } else if (svc.connected) {
+      metaWrap.appendChild(el('span', '', t('settings_anisync_never_synced')));
+    }
+    if (svc.lastError) {
+      metaWrap.appendChild(el('span', 'jellio-anisync-account-error', svc.lastError));
+    }
+    statusWrap.appendChild(metaWrap);
+    card.insertBefore(statusWrap, body);
+
+    // Form
+    const formWrap = el('div', 'jellio-settings-card-body-form');
+    const form = document.createElement('form');
+    form.className = 'jellio-settings-form';
+
+    // Username Field
+    const usernameGroup = el('div', 'jellio-anisync-field-group');
+    usernameGroup.appendChild(el('label', 'jellio-anisync-label', t('settings_anisync_username')));
+    const usernameInput = document.createElement('input');
+    usernameInput.type = 'text';
+    usernameInput.className = 'jellio-settings-input';
+    usernameInput.placeholder = svc.username || 'username';
+    usernameInput.value = svc.username || '';
+    usernameGroup.appendChild(usernameInput);
+    form.appendChild(usernameGroup);
+
+    // Token / Code Field
+    const tokenGroup = el('div', 'jellio-anisync-field-group');
+    tokenGroup.appendChild(el('label', 'jellio-anisync-label', t('settings_anisync_token_or_code')));
+    const tokenWrap = el('div', 'jellio-anisync-input-wrap');
+    const tokenInput = document.createElement('input');
+    tokenInput.type = 'password';
+    tokenInput.className = 'jellio-settings-input';
+    tokenInput.placeholder = svc.connected ? (svc.maskedCredential || t('settings_anisync_token_placeholder')) : t('settings_anisync_token_placeholder');
+    tokenInput.autocomplete = 'off';
+
+    const revealBtn = el('button', 'jellio-anisync-reveal-btn');
+    revealBtn.type = 'button';
+    revealBtn.title = t('settings_anisync_reveal_token');
+    const revealIcon = el('span', 'material-icons', 'visibility');
+    revealBtn.appendChild(revealIcon);
+    revealBtn.addEventListener('click', function () {
+      if (tokenInput.type === 'password') {
+        tokenInput.type = 'text';
+        revealIcon.textContent = 'visibility_off';
+        revealBtn.title = t('settings_anisync_hide_token');
+      } else {
+        tokenInput.type = 'password';
+        revealIcon.textContent = 'visibility';
+        revealBtn.title = t('settings_anisync_reveal_token');
+      }
+    });
+
+    tokenWrap.appendChild(tokenInput);
+    tokenWrap.appendChild(revealBtn);
+    tokenGroup.appendChild(tokenWrap);
+    form.appendChild(tokenGroup);
+
+    // Advanced Collapsible Fields
+    const advancedToggle = el('button', 'jellio-anisync-advanced-toggle');
+    advancedToggle.type = 'button';
+    advancedToggle.setAttribute('aria-expanded', 'false');
+    const advChevron = el('span', 'material-icons', 'keyboard_arrow_down');
+    advancedToggle.appendChild(advChevron);
+    advancedToggle.appendChild(el('span', '', t('settings_anisync_advanced')));
+
+    const advancedFields = el('div', 'jellio-anisync-advanced-fields');
+    advancedFields.style.display = 'none';
+
+    // Client ID
+    const clientIdGroup = el('div', 'jellio-anisync-field-group');
+    clientIdGroup.appendChild(el('label', 'jellio-anisync-label', t('settings_anisync_client_id')));
+    const clientIdInput = document.createElement('input');
+    clientIdInput.type = 'text';
+    clientIdInput.className = 'jellio-settings-input';
+    clientIdInput.placeholder = svc.serverClientId ? '(Default: ' + svc.serverClientId + ')' : 'Client ID';
+    clientIdGroup.appendChild(clientIdInput);
+    advancedFields.appendChild(clientIdGroup);
+
+    // Client Secret
+    const clientSecretGroup = el('div', 'jellio-anisync-field-group');
+    clientSecretGroup.appendChild(el('label', 'jellio-anisync-label', t('settings_anisync_client_secret')));
+    const clientSecretInput = document.createElement('input');
+    clientSecretInput.type = 'password';
+    clientSecretInput.className = 'jellio-settings-input';
+    clientSecretInput.placeholder = 'Client Secret';
+    clientSecretGroup.appendChild(clientSecretInput);
+    advancedFields.appendChild(clientSecretGroup);
+
+    // Refresh Token
+    const refreshTokenGroup = el('div', 'jellio-anisync-field-group');
+    refreshTokenGroup.appendChild(el('label', 'jellio-anisync-label', t('settings_anisync_refresh_token')));
+    const refreshTokenInput = document.createElement('input');
+    refreshTokenInput.type = 'password';
+    refreshTokenInput.className = 'jellio-settings-input';
+    refreshTokenInput.placeholder = svc.hasRefreshToken ? '●●●● (Saved)' : 'Refresh Token';
+    refreshTokenGroup.appendChild(refreshTokenInput);
+    advancedFields.appendChild(refreshTokenGroup);
+
+    advancedToggle.addEventListener('click', function () {
+      const isExp = advancedToggle.getAttribute('aria-expanded') === 'true';
+      const next = !isExp;
+      advancedToggle.setAttribute('aria-expanded', String(next));
+      advancedFields.style.display = next ? '' : 'none';
+      advChevron.style.transform = next ? 'rotate(180deg)' : 'none';
+    });
+
+    form.appendChild(advancedToggle);
+    form.appendChild(advancedFields);
+
+    const statusMsg = el('p', 'jellio-settings-status');
+    form.appendChild(statusMsg);
+
+    // Action Buttons
+    const actions = el('div', 'jellio-anisync-actions');
+
+    const connectBtn = el('button', 'jellio-settings-button', t('settings_anisync_connect_btn'));
+    connectBtn.type = 'submit';
+    actions.appendChild(connectBtn);
+
+    const authBtn = el('button', 'jellio-settings-button jellio-settings-btn-secondary', t('settings_anisync_authorize_btn', { service: serviceName }));
+    authBtn.type = 'button';
+    authBtn.addEventListener('click', function () {
+      statusMsg.textContent = t('status_loading');
+      const customId = clientIdInput.value.trim() || undefined;
+      const redirectUri = window.location.origin + window.location.pathname;
+      startAniSyncOAuth(activeServiceId, redirectUri, customId).then(function (res) {
+        if (res && res.authorizeUrl) {
+          statusMsg.textContent = '';
+          window.open(res.authorizeUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          statusMsg.textContent = t('status_error');
+        }
+      }).catch(function (err) {
+        console.warn('Jellio: could not start Ani-Sync OAuth', err);
+        statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
+      });
+    });
+    actions.appendChild(authBtn);
+
+    // Simkl PIN button
+    if (activeServiceId === 'simkl') {
+      const pinBtn = el('button', 'jellio-settings-button jellio-settings-btn-secondary', t('settings_anisync_pin_btn'));
+      pinBtn.type = 'button';
+      const pinSlot = el('div', 'jellio-anisync-pin-slot');
+
+      pinBtn.addEventListener('click', function () {
+        pinBtn.disabled = true;
+        statusMsg.textContent = t('status_loading');
+        const customId = clientIdInput.value.trim() || undefined;
+        startSimklPin(customId).then(function (pinRes) {
+          pinBtn.disabled = false;
+          statusMsg.textContent = '';
+          pinSlot.textContent = '';
+
+          const pinCard = el('div', 'jellio-anisync-pin-card');
+          const prompt = el('p', '', t('settings_anisync_pin_prompt', { url: pinRes.verificationUrl || 'https://simkl.com/pin' }));
+          const codeEl = el('div', 'jellio-anisync-pin-code', pinRes.userCode);
+          const checkBtn = el('button', 'jellio-settings-button', t('settings_anisync_pin_check'));
+          checkBtn.type = 'button';
+
+          pinCard.appendChild(prompt);
+          pinCard.appendChild(codeEl);
+          pinCard.appendChild(checkBtn);
+          pinSlot.appendChild(pinCard);
+
+          function poll() {
+            if (!wrap.isConnected) {
+              stopPinPolling();
+              return;
+            }
+            pollSimklPin(pinRes.userCode, customId).then(function (pollRes) {
+              if (pollRes && pollRes.approved) {
+                stopPinPolling();
+                statusMsg.textContent = t('settings_anisync_connected_success', { service: 'Simkl', username: pollRes.username || 'Simkl' });
+                if (pollRes.settings) {
+                  currentSettings = pollRes.settings;
+                }
+                renderAll();
+              }
+            }).catch(function () {});
+          }
+
+          checkBtn.addEventListener('click', poll);
+          stopPinPolling();
+          const intervalMs = Math.max(3000, (pinRes.interval || 5) * 1000);
+          pinPollTimer = setInterval(poll, intervalMs);
+        }).catch(function (err) {
+          pinBtn.disabled = false;
+          statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
+        });
+      });
+
+      actions.appendChild(pinBtn);
+      form.appendChild(pinSlot);
+    }
+
+    if (svc.connected) {
+      const testBtn = el('button', 'jellio-settings-button jellio-settings-btn-secondary', t('settings_anisync_test_btn'));
+      testBtn.type = 'button';
+      testBtn.addEventListener('click', function () {
+        testBtn.disabled = true;
+        statusMsg.textContent = t('status_loading');
+        testAniSyncConnection(activeServiceId).then(function (res) {
+          testBtn.disabled = false;
+          statusMsg.textContent = res.message || (res.ok ? t('settings_saved_next_playback') : t('status_error'));
+          if (res.settings) {
+            currentSettings = res.settings;
+            renderAll();
+          }
+        }).catch(function (err) {
+          testBtn.disabled = false;
+          statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
+        });
+      });
+      actions.appendChild(testBtn);
+
+      const syncNowBtn = el('button', 'jellio-settings-button jellio-settings-btn-secondary', t('settings_anisync_sync_now_btn'));
+      syncNowBtn.type = 'button';
+      syncNowBtn.addEventListener('click', function () {
+        syncNowBtn.disabled = true;
+        statusMsg.textContent = t('status_loading');
+        syncAniSyncNow({ service: activeServiceId, limit: 5 }).then(function (res) {
+          syncNowBtn.disabled = false;
+          statusMsg.textContent = res.message || t('settings_anisync_sync_success', { count: res.syncedCount });
+          if (res.settings) {
+            currentSettings = res.settings;
+            renderAll();
+          }
+        }).catch(function (err) {
+          syncNowBtn.disabled = false;
+          statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
+        });
+      });
+      actions.appendChild(syncNowBtn);
+
+      const disconnectBtn = el('button', 'jellio-settings-button jellio-settings-button-danger', t('settings_anisync_disconnect_btn'));
+      disconnectBtn.type = 'button';
+      disconnectBtn.addEventListener('click', function () {
+        disconnectBtn.disabled = true;
+        statusMsg.textContent = t('status_loading');
+        disconnectAniSync(activeServiceId).then(function (updated) {
+          disconnectBtn.disabled = false;
+          statusMsg.textContent = t('settings_anisync_disconnected_success', { service: serviceName });
+          if (updated) {
+            currentSettings = updated;
+          }
+          renderAll();
+        }).catch(function (err) {
+          disconnectBtn.disabled = false;
+          statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
+        });
+      });
+      actions.appendChild(disconnectBtn);
+    }
+
+    form.appendChild(actions);
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const rawToken = tokenInput.value.trim();
+      if (!rawToken && !svc.connected) {
+        statusMsg.textContent = t('settings_anisync_token_placeholder');
+        return;
+      }
+
+      connectBtn.disabled = true;
+      statusMsg.textContent = t('action_saving');
+
+      const payload = {
+        service: activeServiceId,
+        username: usernameInput.value.trim() || undefined,
+        accessToken: rawToken || undefined,
+        clientId: clientIdInput.value.trim() || undefined,
+        clientSecret: clientSecretInput.value.trim() || undefined,
+        refreshToken: refreshTokenInput.value.trim() || undefined,
+      };
+
+      connectAniSync(payload).then(function (res) {
+        connectBtn.disabled = false;
+        if (res && res.connected) {
+          statusMsg.textContent = t('settings_anisync_connected_success', { service: serviceName, username: res.username || '' });
+          if (res.settings) {
+            currentSettings = res.settings;
+          }
+          renderAll();
+        } else {
+          statusMsg.textContent = t('status_error');
+        }
+      }).catch(function (err) {
+        connectBtn.disabled = false;
+        console.warn('Jellio: could not connect Ani-Sync provider', err);
+        statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
+      });
+    });
+
+    formWrap.appendChild(form);
+    body.appendChild(formWrap);
+    accountCardWrap.appendChild(card);
+  }
+
+  function renderActivityList() {
+    activityBody.textContent = '';
+    const logs = currentSettings && Array.isArray(currentSettings.recentLogs) ? currentSettings.recentLogs : [];
+    if (!logs.length) {
+      activityBody.appendChild(el('p', 'jellio-settings-empty-note', t('settings_anisync_no_activity')));
+      return;
+    }
+
+    const list = el('div', 'jellio-anisync-logs-list');
+    logs.slice(0, 15).forEach(function (log) {
+      const item = el('div', 'jellio-anisync-log-item');
+      const left = el('div', 'jellio-anisync-log-left');
+
+      const icon = el('span', 'material-icons jellio-anisync-log-icon ' + (log.success ? 'success' : 'error'), log.success ? 'check_circle' : 'error');
+      left.appendChild(icon);
+
+      const titleText = log.itemTitle + (log.episodeNumber != null ? ' - Ep. ' + log.episodeNumber : '') + ' (' + (log.service || '') + ')';
+      left.appendChild(el('span', 'jellio-anisync-log-title', titleText));
+      item.appendChild(left);
+
+      const timeStr = log.timestampUtc ? new Date(log.timestampUtc).toLocaleTimeString() : '';
+      const right = el('span', 'jellio-anisync-log-meta', (log.message ? log.message + ' · ' : '') + timeStr);
+      item.appendChild(right);
+
+      list.appendChild(item);
+    });
+
+    activityBody.appendChild(list);
+  }
+
+  function renderAll() {
+    renderToggles();
+    renderServicesGrid();
+    renderAccountCard();
+    renderActivityList();
+  }
+
+  getAniSyncSettings().then(function (settings) {
+    if (settings) {
+      currentSettings = settings;
+      if (settings.selectedService) {
+        activeServiceId = settings.selectedService;
+      }
+    }
+    renderAll();
+  }).catch(function (err) {
+    console.warn('Jellio: could not load Ani-Sync settings', err);
+    renderAll();
+  });
+
+  return wrap;
+}
+
 const CATEGORY_ICONS = {
   account: 'person',
   playback: 'play_circle',
   reading: 'menu_book',
+  anisync: 'sync',
   sessions: 'devices',
   recommendations: 'auto_awesome',
   display: 'palette',
@@ -1684,6 +2266,7 @@ export async function renderSettings(root) {
       label: t('settings_cat_sessions'),
       build: function () { return buildSessionsCategory(sleepTimerCard, quickConnectCard); },
     },
+    { id: 'anisync', label: t('settings_cat_anisync'), build: buildAniSyncCategory },
     { id: 'recommendations', label: t('settings_cat_recommendations'), build: buildRecommendationsCategory },
     { id: 'display', label: t('settings_cat_display'), build: buildDisplayCategory },
     { id: 'about', label: t('settings_cat_about'), build: buildAboutCategory },

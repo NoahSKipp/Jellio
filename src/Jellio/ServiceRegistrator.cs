@@ -54,6 +54,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<CommunityWatchingService>();
         services.AddHostedService(sp => sp.GetRequiredService<CommunityWatchingService>());
         services.AddSingleton<GenreCache>();
+        services.AddSingleton<FuzzySearchService>();
+        services.AddSingleton<RecommendationsService>();
 
         services.AddSingleton<GrouplistStore>();
 
@@ -133,5 +135,11 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<VocabularyStore>();
         services.AddHttpClient(nameof(LanguageClient));
         services.AddSingleton<LanguageClient>();
+
+        services.AddSingleton<Jellio.Services.AniSync.AniSyncSecretProtector>();
+        services.AddSingleton<Jellio.Services.AniSync.AniSyncStore>();
+        services.AddSingleton<Jellio.Services.AniSync.AniSyncProviderClients>();
+        services.AddSingleton<Jellio.Services.AniSync.AniSyncService>();
+        services.AddHostedService(sp => sp.GetRequiredService<Jellio.Services.AniSync.AniSyncService>());
     }
 }

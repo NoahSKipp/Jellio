@@ -32,8 +32,7 @@ export function warmItems(itemIds) {
   }), false);
 }
 
-// Stream lists only, several titles in one call.
-export function warmBatch(itemIds, group) {
+export function warmBatch(itemIds, group, probe) {
   const ids = itemIds.filter(function (itemId) {
     return itemId && !queue.isKnownWarm(normalizeId(itemId));
   });
@@ -42,7 +41,7 @@ export function warmBatch(itemIds, group) {
     key: 'batch:' + ids.join(','),
     group: group,
     run: function () {
-      return prefetchStreamsBatch(ids, false).then(function (response) {
+      return prefetchStreamsBatch(ids, !!probe).then(function (response) {
         queue.markWarm(alreadyWarmIds(response));
       });
     },

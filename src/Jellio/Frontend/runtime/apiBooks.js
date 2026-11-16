@@ -1,7 +1,7 @@
 import { getAccessToken, getAuthHeaders, getCurrentUserId, getDeviceId, getServerAddress } from './auth.js';
 import { getDisplayCulture } from './i18n.js';
 import { findDownload, getDownload, getLocalProgress, getOfflineBlob, isOffline, queueSync, setLocalProgress, updateDownload } from './offline.js';
-import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, authedFetch, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, requestJson, rowJson } from './api.js';
+import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, authedFetch, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, putJson, requestJson, rowJson } from './api.js';
 
 // The home screen's personal rows: small, fast, and what a reader is
 // waiting for, so they skip ahead of background lookups.
@@ -604,20 +604,6 @@ export async function fetchBookFile(itemId) {
   };
 }
 
-async function putJson(path, body, timeoutMs) {
-  const response = await requestJson(
-    getServerAddress() + path,
-    {
-      method: 'PUT',
-      headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, getAuthHeaders()),
-      body: JSON.stringify(body || {}),
-    },
-    path,
-    timeoutMs || DEFAULT_TIMEOUT_MS,
-  );
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
-}
 
 // Controllers/ReadingActivityController.cs: one reading or listening
 // session, for the Feed and reading achievements. Fire and forget.

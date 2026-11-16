@@ -233,21 +233,99 @@ export function getSeriesNextUp(seriesId) {
   });
 }
 
-export function getRecentlyCompleted(limit) {
+export async function getRecentlyCompleted(limit) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
-  const params = new URLSearchParams({
+  const fields = 'Genres,People,Studios,ProductionYear,CommunityRating,RunTimeTicks,UserData,DatePlayed';
+  const baseParams = new URLSearchParams({
     Recursive: 'true',
     IncludeItemTypes: 'Movie,Series',
     Filters: 'IsPlayed',
     SortBy: 'DatePlayed',
     SortOrder: 'Descending',
     Limit: String(limit),
-    Fields: 'Genres,People,ProductionYear,CommunityRating,RunTimeTicks',
+    Fields: fields,
   });
-  return rowJson('/Users/' + userId + '/Items?' + params.toString(), 'personal', { rank: 5 }).then(function (result) {
-    return (result && result.Items) || [];
+  const epParams = new URLSearchParams({
+    Recursive: 'true',
+    IncludeItemTypes: 'Episode',
+    Filters: 'IsPlayed',
+    SortBy: 'DatePlayed',
+    SortOrder: 'Descending',
+    Limit: '40',
+    Fields: 'SeriesId,UserData,DatePlayed',
   });
+
+  const [directRes, epRes] = await Promise.all([
+    rowJson('/Users/' + userId + '/Items?' + baseParams.toString(), 'personal', { rank: 5 }).catch(function () { return null; }),
+    rowJson('/Users/' + userId + '/Items?' + epParams.toString(), 'personal', { rank: 5 }).catch(function () { return null; }),
+  ]);
+
+  const directItems = (directRes && directRes.Items) || [];
+  const episodes = (epRes && epRes.Items) || [];
+  const seriesStats = new Map();
+  episodes.forEach(function (ep) {
+    if (!ep || !ep.SeriesId) return;
+    const playedAt = (ep.UserData && ep.UserData.LastPlayedDate) || ep.DatePlayed || '';
+    const existing = seriesStats.get(ep.SeriesId);
+    if (!existing) {
+      seriesStats.set(ep.SeriesId, { count: 1, lastPlayed: playedAt });
+    } else {
+      existing.count += 1;
+      if (playedAt && (!existing.lastPlayed || playedAt > existing.lastPlayed)) {
+        existing.lastPlayed = playedAt;
+      }
+    }
+  });
+
+  const directIds = new Set(directItems.map(function (it) { return it.Id; }));
+  const missingSeriesIds = Array.from(seriesStats.keys()).filter(function (id) {
+    return !directIds.has(id);
+  }).slice(0, 12);
+
+  let parentSeries = [];
+  if (missingSeriesIds.length) {
+    const seriesRes = await getJson(
+      '/Users/' + userId + '/Items?Ids=' + encodeURIComponent(missingSeriesIds.join(',')) + '&Fields=' + encodeURIComponent(fields),
+    ).catch(function () { return null; });
+    parentSeries = (seriesRes && seriesRes.Items) || [];
+  }
+
+  const merged = directItems.concat(parentSeries).map(function (item) {
+    const stat = seriesStats.get(item.Id);
+    if (!stat) return item;
+    return Object.assign({}, item, {
+      _recentEpisodeCount: stat.count,
+      UserData: Object.assign({}, item.UserData || {}, {
+        LastPlayedDate: (item.UserData && item.UserData.LastPlayedDate) || stat.lastPlayed || undefined,
+      }),
+    });
+  });
+
+  merged.sort(function (a, b) {
+    const dateA = (a.UserData && a.UserData.LastPlayedDate) || '';
+    const dateB = (b.UserData && b.UserData.LastPlayedDate) || '';
+    return dateB.localeCompare(dateA);
+  });
+
+  return merged.slice(0, limit || 20);
+}
+
+export function getTopPicksRecommendations(limit) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.resolve([]);
+  const params = new URLSearchParams({
+    userId: userId,
+    limit: String(limit || 20),
+    enableVirtual: 'true',
+  });
+  return getJson('/Jellio/recommendations/top-picks?' + params.toString(), ITEM_DETAILS_TIMEOUT_MS)
+    .then(function (result) {
+      return (result && (result.Items || result.items)) || [];
+    })
+    .catch(function () {
+      return [];
+    });
 }
 
 export async function getRecommendationCandidates(seed, limit) {
@@ -266,7 +344,7 @@ export async function getRecommendationCandidates(seed, limit) {
     userId +
     '/Items?Recursive=true&IncludeItemTypes=Movie,Series&Limit=' +
     (limit || 100) +
-    '&Fields=Genres,ProductionYear,CommunityRating,RunTimeTicks&SortBy=CommunityRating&SortOrder=Descending';
+    '&Fields=Genres,People,Studios,ProductionYear,CommunityRating,RunTimeTicks,UserData&SortBy=CommunityRating&SortOrder=Descending';
 
   const jobs = [];
   if (genres.length) {
@@ -289,7 +367,7 @@ export async function getRecommendationCandidates(seed, limit) {
     jobs.push(
       rowJson(base + '&PersonIds=' + personIds, 'rows')
         .then(function (result) {
-          return { tag: 'person', items: (result && result.Items) || [] };
+          return { tag: 'person', items: (result && result.Items) || [], seedPeople: people };
         })
         .catch(function () {
           return { tag: 'person', items: [] };
@@ -303,8 +381,16 @@ export async function getRecommendationCandidates(seed, limit) {
   results.forEach(function (result) {
     result.items.forEach(function (item) {
       let entry = byId[item.Id];
-      if (!entry) entry = byId[item.Id] = { item: item, viaPerson: false };
-      if (result.tag === 'person') entry.viaPerson = true;
+      if (!entry) entry = byId[item.Id] = { item: item, viaPerson: false, matchedPersonIds: [] };
+      if (result.tag === 'person') {
+        entry.viaPerson = true;
+        const itemPeople = new Set((item.People || []).map(function (p) { return p && p.Id; }).filter(Boolean));
+        (result.seedPeople || []).forEach(function (sp) {
+          if (sp && sp.Id && itemPeople.has(sp.Id) && entry.matchedPersonIds.indexOf(sp.Id) === -1) {
+            entry.matchedPersonIds.push(sp.Id);
+          }
+        });
+      }
     });
   });
   return shuffleInPlace(

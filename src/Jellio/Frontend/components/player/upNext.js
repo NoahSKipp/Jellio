@@ -11,8 +11,10 @@ import {
   getQualityTiers,
   getWarmSources,
   isPlaceholderSource,
+  markLocalSourceWarm,
   prefetchStreams,
   seedItemCache,
+  warmFirstBytes,
 } from '../../runtime/api.js';
 import { buildEndScreenModal, buildUpNextOverlay } from '../playerOverlays.js';
 import { getUpNextCountdownSeconds } from '../../runtime/upNextSettings.js';
@@ -21,7 +23,8 @@ import { isPreferReadyEnabled, normalizeId } from '../../runtime/readySources.js
 import { navigateTo } from '../../runtime/router.js';
 import { notePlayTrigger } from '../../runtime/playStart.js';
 import { orderByLanguage } from '../../runtime/streamLanguage.js';
-import { pickPlaySource, prewarmedPlayback } from '../../runtime/playbackPrefetch.js';
+import { pickPlaySource, pickSecondSource, prewarmedPlayback } from '../../runtime/playbackPrefetch.js';
+import { warmSource } from '../../runtime/warmQueue.js';
 import { playHash, rememberedSourceId, sourceAudioLanguages } from '../streamPicker.js';
 import { preferredAudioIndex } from '../playPrefetch.js';
 import { t } from '../../runtime/i18n.js';
@@ -52,7 +55,7 @@ export function wireUpNext(deps, live) {
 
   let preloadedNextMediaSourceId = null;
 
-  // Negotiates the next episode ahead (T-55 s) and keeps the answer for its
+  // Negotiates the next episode ahead and keeps the answer for its
   // player (From: prewarmed); a stream played as is is also buffered.
   function preloadNextEpisodeStream() {
     if (live.hasInitiatedNextPreload || !live.nextEpisode || live.screenTornDown) return;
@@ -75,7 +78,7 @@ export function wireUpNext(deps, live) {
         Object.keys(results[2] || {}).forEach(function (id) {
           tiers[normalizeId(id)] = results[2][id];
         });
-        const source = pickPlaySource(sources, {
+        const pickerOpts = {
           rememberedId: rememberedSourceId(target.Id),
           isBad: function (candidate) {
             return isBadSource(target.Id, candidate);
@@ -92,9 +95,16 @@ export function wireUpNext(deps, live) {
           tierOf: function (candidate) {
             return tiers[normalizeId(candidate.Id)];
           },
-        });
+        };
+        const source = pickPlaySource(sources, pickerOpts);
         if (!source || isPlaceholderSource(source)) return;
         preloadedNextMediaSourceId = source.Id;
+        const second = pickSecondSource(sources, pickerOpts);
+        if (second && !warm.has(normalizeId(second.Id))) {
+          window.setTimeout(function () {
+            if (!live.screenTornDown) warmSource(target.Id, second.Id);
+          }, 1500);
+        }
         const ticks = (target.UserData && target.UserData.PlaybackPositionTicks) || 0;
         const audioIndex = preferredAudioIndex(source, results[3]);
         const promise = getPlaybackInfo(target.Id, ticks, source.Id, audioIndex);
@@ -102,17 +112,20 @@ export function wireUpNext(deps, live) {
         prewarmedPlayback.put(target.Id, source.Id, ticks, { promise: promise, audioIndex: audioIndex });
         try {
           const info = await promise;
+          markLocalSourceWarm(target.Id, source.Id);
           const nextSource = pickNegotiatedSource(info, source.Id);
           // A transcode would start a server job only to throw it away.
           const asIs = nextSource && ticks === 0 && audioIndex == null && canBrowserDirectPlay(nextSource);
           if (!live.screenTornDown && asIs && !live.preloadedNextVideoEl) {
+            const nextStreamUrl = buildStreamUrl(target.Id, nextSource, 0, {
+              playSessionId: info.PlaySessionId,
+            });
+            warmFirstBytes(nextStreamUrl);
             live.preloadedNextVideoEl = document.createElement('video');
             live.preloadedNextVideoEl.preload = 'auto';
             live.preloadedNextVideoEl.muted = true;
             live.preloadedNextVideoEl.playsInline = true;
-            live.preloadedNextVideoEl.src = buildStreamUrl(target.Id, nextSource, 0, {
-              playSessionId: info.PlaySessionId,
-            });
+            live.preloadedNextVideoEl.src = nextStreamUrl;
           }
         } catch (e) {
           // A failed preload leaves the next player to negotiate itself.

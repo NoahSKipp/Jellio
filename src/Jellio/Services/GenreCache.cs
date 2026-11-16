@@ -56,7 +56,7 @@ public class GenreCache(
         PropertyNameCaseInsensitive = true,
     };
 
-    private const string DefaultTmdbApiKey = "4219e299c89411838049ab0dab19ebd5";
+    internal const string DefaultTmdbApiKey = "4219e299c89411838049ab0dab19ebd5";
 
     private static readonly Dictionary<string, int> MovieGenreMap = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -1121,7 +1121,165 @@ public class GenreCache(
         return (list, payload.TotalPages);
     }
 
-    private static void RegisterVirtualWithGelato(
+    internal static HttpClient CreateTmdbClient(IHttpClientFactory httpClientFactory, string? tokenOverride, out string queryKeyParam)
+    {
+        var token = !string.IsNullOrWhiteSpace(tokenOverride)
+            ? tokenOverride
+            : JellioPlugin.Instance?.Configuration.TmdbAccessToken;
+
+        var useDefaultKey = string.IsNullOrWhiteSpace(token);
+        var activeToken = useDefaultKey ? DefaultTmdbApiKey : token!.Trim();
+
+        var client = httpClientFactory.CreateClient("tmdb");
+        client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+        if (!useDefaultKey && (activeToken.Length > 40 || activeToken.StartsWith("ey", StringComparison.OrdinalIgnoreCase)))
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", activeToken);
+            queryKeyParam = string.Empty;
+        }
+        else
+        {
+            queryKeyParam = $"&api_key={Uri.EscapeDataString(activeToken)}";
+        }
+
+        client.Timeout = TimeSpan.FromSeconds(8);
+        return client;
+    }
+
+    internal static IReadOnlyList<string> ResolveGenreNamesByIds(IEnumerable<int>? genreIds, bool isMovie)
+    {
+        if (genreIds == null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var list = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var gid in genreIds)
+        {
+            var name = (isMovie, gid) switch
+            {
+                (_, 28) => "Action",
+                (_, 12) => "Adventure",
+                (_, 16) => "Animation",
+                (_, 35) => "Comedy",
+                (_, 80) => "Crime",
+                (_, 99) => "Documentary",
+                (_, 18) => "Drama",
+                (_, 10751) => "Family",
+                (_, 14) => "Fantasy",
+                (_, 36) => "History",
+                (_, 27) => "Horror",
+                (_, 10402) => "Music",
+                (_, 9648) => "Mystery",
+                (_, 10749) => "Romance",
+                (_, 878) => "Science Fiction",
+                (_, 10770) => "TV Movie",
+                (_, 53) => "Thriller",
+                (_, 10752) => "War",
+                (_, 37) => "Western",
+                (_, 10759) => "Action & Adventure",
+                (_, 10762) => "Kids",
+                (_, 10763) => "News",
+                (_, 10764) => "Reality",
+                (_, 10765) => "Sci-Fi & Fantasy",
+                (_, 10766) => "Soap",
+                (_, 10767) => "Talk",
+                (_, 10768) => "War & Politics",
+                _ => null,
+            };
+
+            if (name != null && seen.Add(name))
+            {
+                list.Add(name);
+            }
+        }
+
+        return list;
+    }
+
+    internal static BaseItemDto? BuildVirtualItemDto(
+        int id,
+        string? title,
+        string? dateStr,
+        bool isMovie,
+        double? voteAverage,
+        string? overview,
+        string? posterPath,
+        string? backdropPath,
+        IReadOnlyList<string>? genres = null,
+        bool skipUnreleased = true)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        int? year = null;
+        if (!string.IsNullOrWhiteSpace(dateStr))
+        {
+            if (dateStr.Length >= 4 && int.TryParse(dateStr.Substring(0, 4), out var y))
+            {
+                year = y;
+            }
+            else if (DateTime.TryParse(dateStr, out var d))
+            {
+                year = d.Year;
+            }
+
+            if (skipUnreleased && DateTime.TryParse(dateStr, out var releaseDate) && releaseDate > DateTime.UtcNow.AddDays(7))
+            {
+                return null;
+            }
+        }
+
+        var tmdbIdStr = id.ToString(CultureInfo.InvariantCulture);
+        var posterUrl = !string.IsNullOrWhiteSpace(posterPath)
+            ? $"https://image.tmdb.org/t/p/w500{posterPath}"
+            : null;
+        var backdropUrl = !string.IsNullOrWhiteSpace(backdropPath)
+            ? $"https://image.tmdb.org/t/p/w1280{backdropPath}"
+            : null;
+
+        var imageTags = new Dictionary<ImageType, string>();
+        if (posterUrl != null)
+        {
+            imageTags[ImageType.Primary] = posterUrl;
+        }
+
+        var backdropTags = backdropUrl != null ? new[] { backdropUrl } : Array.Empty<string>();
+        var providerIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Tmdb"] = tmdbIdStr,
+        };
+        if (posterUrl != null)
+        {
+            providerIds["TmdbPoster"] = posterUrl;
+        }
+
+        var rating = voteAverage.HasValue && voteAverage.Value > 0 ? (float)voteAverage.Value : (float?)null;
+        var itemId = GenerateDeterministicId(isMovie ? "movie" : "tv", tmdbIdStr);
+        var genreArray = genres != null && genres.Count > 0 ? genres.ToArray() : Array.Empty<string>();
+        RegisterVirtualWithGelato(itemId, title, year, isMovie ? "movie" : "tv", tmdbIdStr, null, posterUrl, backdropUrl, rating, overview, genreArray);
+
+        return new BaseItemDto
+        {
+            Id = itemId,
+            Name = title,
+            ProductionYear = year,
+            CommunityRating = rating,
+            ProviderIds = providerIds,
+            Type = isMovie ? BaseItemKind.Movie : BaseItemKind.Series,
+            LocationType = LocationType.Virtual,
+            Overview = overview,
+            Genres = genreArray,
+            PrimaryImageAspectRatio = 2.0 / 3.0,
+            ImageTags = imageTags,
+            BackdropImageTags = backdropTags,
+        };
+    }
+
+    internal static void RegisterVirtualWithGelato(
         Guid guid,
         string name,
         int? year,

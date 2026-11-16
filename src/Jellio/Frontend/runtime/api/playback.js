@@ -4,8 +4,66 @@ import { hasStreamInfo, filterPlayableSources } from '../quality.js';
 import { getCurrentUserId } from '../auth.js';
 import { isOffline, queueSync } from '../offline.js';
 import { NEGOTIATION_TIMEOUT_MS, authedFetch, getJellioConfig, getJson, invalidateUserDataRows, invalidateUserDataRowsThrottled, postJson } from './core.js';
+import { normalizeId } from '../readySources.js';
 
 export { filterPlayableSources };
+
+const WARM_SOURCE_TTL_MS = 8 * 60 * 1000;
+const localWarmedSources = new Map();
+
+export function markLocalSourceWarm(itemId, mediaSourceId) {
+  if (!itemId || !mediaSourceId) return;
+  const itemKey = String(itemId);
+  const srcKey = normalizeId(mediaSourceId);
+  if (!srcKey) return;
+  let perItem = localWarmedSources.get(itemKey);
+  if (!perItem) {
+    perItem = new Map();
+    localWarmedSources.set(itemKey, perItem);
+  }
+  perItem.set(srcKey, Date.now());
+  warmCache.delete(itemId);
+}
+
+export function getLocalWarmedSources(itemId) {
+  const perItem = localWarmedSources.get(String(itemId));
+  if (!perItem || !perItem.size) return null;
+  const now = Date.now();
+  const result = {};
+  let any = false;
+  perItem.forEach(function (ts, srcKey) {
+    if (now - ts < WARM_SOURCE_TTL_MS) {
+      result[srcKey] = new Date(ts).toISOString();
+      any = true;
+    } else {
+      perItem.delete(srcKey);
+    }
+  });
+  return any ? result : null;
+}
+
+export function warmFirstBytes(streamUrl) {
+  if (!streamUrl || typeof fetch !== 'function') return Promise.resolve();
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timeout = typeof setTimeout === 'function'
+    ? setTimeout(function () { if (controller) controller.abort(); }, 4000)
+    : null;
+  return fetch(streamUrl, {
+    method: 'GET',
+    headers: { Range: 'bytes=0-262143' },
+    credentials: 'same-origin',
+    signal: controller ? controller.signal : undefined,
+  })
+    .then(function (response) {
+      if (response && response.body && typeof response.body.cancel === 'function') {
+        response.body.cancel().catch(function () {});
+      }
+    })
+    .catch(function () {})
+    .finally(function () {
+      if (timeout != null && typeof clearTimeout === 'function') clearTimeout(timeout);
+    });
+}
 
 export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStreamIndex, subtitleStreamIndex) {
   const userId = getCurrentUserId();
@@ -21,7 +79,14 @@ export function getPlaybackInfo(itemId, startTimeTicks, mediaSourceId, audioStre
   if (mediaSourceId) body.MediaSourceId = mediaSourceId;
   if (audioStreamIndex != null) body.AudioStreamIndex = audioStreamIndex;
   if (subtitleStreamIndex != null) body.SubtitleStreamIndex = subtitleStreamIndex;
-  return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
+  return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS).then(function (info) {
+    if (mediaSourceId) {
+      markLocalSourceWarm(itemId, mediaSourceId);
+    } else if (info && Array.isArray(info.MediaSources) && info.MediaSources[0] && info.MediaSources[0].Id) {
+      markLocalSourceWarm(itemId, info.MediaSources[0].Id);
+    }
+    return info;
+  });
 }
 
 // How many downloads the server is converting and whether it has room
@@ -73,10 +138,17 @@ export function getDownloadPlaybackInfo(itemId, mediaSourceId, audioStreamIndex,
   return postJson('/Items/' + itemId + '/PlaybackInfo', body, NEGOTIATION_TIMEOUT_MS);
 }
 
-const prefetchedItemIds = new Set();
+const PREFETCH_TTL_MS = 8 * 60 * 1000;
+const prefetchedItemIds = new Map();
 export function prefetchStreams(itemId) {
-  if (!itemId || prefetchedItemIds.has(itemId)) return Promise.resolve();
-  prefetchedItemIds.add(itemId);
+  if (!itemId) return Promise.resolve();
+  const now = Date.now();
+  const lastPrefetched = prefetchedItemIds.get(itemId);
+  if (lastPrefetched && now - lastPrefetched < PREFETCH_TTL_MS) {
+    return Promise.resolve();
+  }
+  prefetchedItemIds.set(itemId, now);
+  warmCache.delete(itemId);
   return authedFetch('/gelato/prefetch/' + itemId, {
     method: 'POST',
   })
@@ -112,16 +184,25 @@ const WARM_CACHE_MS = 30 * 1000;
 // when the server can't say.
 export function getWarmSources(itemId, options) {
   const hit = warmCache.get(itemId);
-  if (hit && Date.now() - hit.at < WARM_CACHE_MS && !(options && options.forceFresh)) return hit.promise;
+  if (hit && Date.now() - hit.at < WARM_CACHE_MS && !(options && options.forceFresh)) {
+    return hit.promise.then(function (serverData) {
+      const localData = getLocalWarmedSources(itemId);
+      if (!localData) return serverData;
+      return Object.assign({}, localData, serverData || {});
+    });
+  }
   const promise = authedFetch('/gelato/warm/' + itemId, { cache: 'no-store' })
     .then(function (response) {
       return response.ok ? response.json() : null;
     })
     .then(function (data) {
-      return data && typeof data === 'object' ? data : null;
+      const serverData = data && typeof data === 'object' ? data : null;
+      const localData = getLocalWarmedSources(itemId);
+      if (!localData) return serverData;
+      return Object.assign({}, localData, serverData || {});
     })
     .catch(function () {
-      return null;
+      return getLocalWarmedSources(itemId);
     });
   warmCache.set(itemId, { at: Date.now(), promise: promise });
   return promise;

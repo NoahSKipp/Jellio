@@ -17056,3 +17056,282 @@
   background: #3a3a3a;
   color: #fff;
 }
+
+.jellio-search-correction {
+  margin: 0 0 1em;
+  padding: 0.55em 0.9em;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--jellio-text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 0.92em;
+}
+
+.jellio-search-suggestions-slot {
+  margin-top: 1.5em;
+}
+
+/* Ani-Sync Settings */
+.jellio-anisync-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.9em;
+  padding: 1.2em 1.4em;
+}
+
+.jellio-anisync-service-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  padding: 1em 1.1em;
+  border-radius: calc(var(--jellio-card-radius) / 1.5);
+  border: 1px solid var(--jellio-border-color);
+  background: var(--jellio-bg-elevated);
+  color: var(--jellio-text-color);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, transform 120ms var(--jellio-ease-out);
+}
+
+.jellio-anisync-service-card:hover {
+  border-color: rgb(255 255 255 / 0.25);
+  background: rgb(255 255 255 / 0.06);
+}
+
+.jellio-anisync-service-card-active {
+  border-color: var(--jellio-secondary-color);
+  background: rgb(var(--jellio-secondary-rgb, 120 80 240) / 0.14);
+}
+
+.jellio-anisync-service-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+}
+
+.jellio-anisync-service-name {
+  font-weight: 700;
+  font-size: 1.02em;
+}
+
+.jellio-anisync-service-user {
+  font-size: 0.86em;
+  color: var(--jellio-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jellio-anisync-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.74em;
+  font-weight: 600;
+  padding: 0.22em 0.65em;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.jellio-anisync-pill-connected {
+  background: rgb(46 125 50 / 0.22);
+  color: #66bb6a;
+  border: 1px solid rgb(76 175 80 / 0.35);
+}
+
+.jellio-anisync-pill-disconnected {
+  background: rgb(255 255 255 / 0.06);
+  color: var(--jellio-text-secondary);
+  border: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.jellio-anisync-pill-dot {
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.jellio-anisync-account-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  padding: 1.1em 1.4em;
+  background: rgb(255 255 255 / 0.02);
+  border-bottom: 1px solid var(--jellio-border-color);
+}
+
+.jellio-anisync-account-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  flex-wrap: wrap;
+}
+
+.jellio-anisync-account-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 1.05em;
+}
+
+.jellio-anisync-account-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  font-size: 0.88em;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-anisync-account-error {
+  color: #ef5350;
+  font-size: 0.88em;
+}
+
+.jellio-anisync-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
+.jellio-anisync-label {
+  font-size: 0.86em;
+  font-weight: 600;
+  color: var(--jellio-text-secondary);
+}
+
+.jellio-anisync-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.jellio-anisync-input-wrap .jellio-settings-input {
+  padding-right: 2.8em;
+}
+
+.jellio-anisync-reveal-btn {
+  position: absolute;
+  right: 0.6em;
+  background: transparent;
+  border: 0;
+  color: var(--jellio-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3em;
+  border-radius: 4px;
+}
+
+.jellio-anisync-reveal-btn:hover {
+  color: var(--jellio-text-color);
+}
+
+.jellio-anisync-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  margin-top: 0.4em;
+}
+
+.jellio-anisync-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  background: transparent;
+  border: 0;
+  color: var(--jellio-text-secondary);
+  font-family: var(--jellio-font-family);
+  font-size: 0.88em;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4em 0;
+  margin-top: 0.2em;
+}
+
+.jellio-anisync-advanced-toggle:hover {
+  color: var(--jellio-text-color);
+}
+
+.jellio-anisync-advanced-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  padding-top: 0.4em;
+}
+
+.jellio-anisync-pin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  padding: 0.9em 1.1em;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid var(--jellio-border-color);
+  border-radius: calc(var(--jellio-card-radius) / 1.8);
+  margin-top: 0.5em;
+}
+
+.jellio-anisync-pin-code {
+  font-family: monospace;
+  font-size: 1.6em;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--jellio-secondary-color);
+  user-select: all;
+}
+
+.jellio-anisync-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding: 1.1em 1.4em;
+}
+
+.jellio-anisync-log-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  padding: 0.6em 0.8em;
+  background: rgb(255 255 255 / 0.03);
+  border-radius: 8px;
+  font-size: 0.9em;
+}
+
+.jellio-anisync-log-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  min-width: 0;
+}
+
+.jellio-anisync-log-icon {
+  font-size: 1.2em;
+  flex: 0 0 auto;
+}
+
+.jellio-anisync-log-icon.success {
+  color: #66bb6a;
+}
+
+.jellio-anisync-log-icon.error {
+  color: #ef5350;
+}
+
+.jellio-anisync-log-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jellio-anisync-log-meta {
+  color: var(--jellio-text-secondary);
+  font-size: 0.82em;
+  flex: 0 0 auto;
+}
+

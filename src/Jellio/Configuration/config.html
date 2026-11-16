@@ -63,11 +63,34 @@
             <label class="inputLabel" for="txtAniListClientId">AniList Client ID</label>
             <input is="emby-input" type="text" id="txtAniListClientId" autocomplete="off" />
             <div class="fieldDescription">
-              Lets readers link their AniList list to manga series and keep chapters read in sync.
+              Lets readers link their AniList list to manga series and keep anime/manga progress in sync.
               Create an API client at anilist.co/settings/developer with the redirect URL
-              <code>https://anilist.co/api/v2/oauth/pin</code> and paste its ID here. Readers' tokens
-              stay on the server.
+              <code>https://anilist.co/api/v2/oauth/pin</code> and paste its ID here. User tokens
+              are encrypted on the server.
             </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtMyAnimeListClientId">MyAnimeList Client ID (optional, Ani-Sync)</label>
+            <input is="emby-input" type="text" id="txtMyAnimeListClientId" autocomplete="off" />
+            <div class="fieldDescription">
+              Optional default MyAnimeList OAuth Client ID for user Ani-Sync login and token refresh.
+            </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtShikimoriClientId">Shikimori Client ID (optional, Ani-Sync)</label>
+            <input is="emby-input" type="text" id="txtShikimoriClientId" autocomplete="off" />
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtShikimoriClientSecret">Shikimori Client Secret (optional, Ani-Sync)</label>
+            <input is="emby-input" type="password" id="txtShikimoriClientSecret" autocomplete="off" />
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtSimklClientSecret">Simkl Client Secret (optional, Ani-Sync)</label>
+            <input is="emby-input" type="password" id="txtSimklClientSecret" autocomplete="off" />
           </div>
 
           <div class="inputContainer">
@@ -659,6 +682,10 @@
           document.querySelector('#txtChaptarrApiKey').value = withDefault(config.ChaptarrApiKey, '');
           document.querySelector('#txtDeepLApiKey').value = withDefault(config.DeepLApiKey, '');
           document.querySelector('#txtAniListClientId').value = withDefault(config.AniListClientId, '');
+          document.querySelector('#txtMyAnimeListClientId').value = withDefault(config.MyAnimeListClientId, '');
+          document.querySelector('#txtShikimoriClientId').value = withDefault(config.ShikimoriClientId, '');
+          document.querySelector('#txtShikimoriClientSecret').value = withDefault(config.ShikimoriClientSecret, '');
+          document.querySelector('#txtSimklClientSecret').value = withDefault(config.SimklClientSecret, '');
           document.querySelector('#txtSuwayomiUrl').value = withDefault(config.SuwayomiUrl, '');
           document.querySelector('#txtSuwayomiUsername').value = withDefault(config.SuwayomiUsername, '');
           document.querySelector('#txtSuwayomiPassword').value = withDefault(config.SuwayomiPassword, '');
@@ -692,6 +719,10 @@
           config.ChaptarrApiKey = document.querySelector('#txtChaptarrApiKey').value.trim();
           config.DeepLApiKey = document.querySelector('#txtDeepLApiKey').value.trim();
           config.AniListClientId = document.querySelector('#txtAniListClientId').value.trim();
+          config.MyAnimeListClientId = document.querySelector('#txtMyAnimeListClientId').value.trim();
+          config.ShikimoriClientId = document.querySelector('#txtShikimoriClientId').value.trim();
+          config.ShikimoriClientSecret = document.querySelector('#txtShikimoriClientSecret').value.trim();
+          config.SimklClientSecret = document.querySelector('#txtSimklClientSecret').value.trim();
           config.SuwayomiUrl = document.querySelector('#txtSuwayomiUrl').value.trim();
           config.SuwayomiUsername = document.querySelector('#txtSuwayomiUsername').value.trim();
           config.SuwayomiPassword = document.querySelector('#txtSuwayomiPassword').value;

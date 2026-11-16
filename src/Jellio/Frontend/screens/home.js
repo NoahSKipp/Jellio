@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
-import { getCurrentUser, getResumeItems, getNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAddedBy, friendsSupported, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
+import { getCurrentUser, getResumeItems, getNextUp, getSeriesNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAddedBy, friendsSupported, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
 import { getContinueReading, getContinueListening } from '../runtime/apiBooks.js';
 import { getCommunityWatching, invalidateCommunityWatchingCache } from '../runtime/apiSocial.js';
 import {
@@ -617,6 +617,11 @@ async function buildCheapSections() {
       const nextUpItems = results[1].status === 'fulfilled' ? results[1].value : [];
       const items = withoutStaleEpisodes(result.value, nextUpItems);
       homeWarmupIds = pickWarmupItems([items, nextUpItems], WARMUP_COUNT);
+      if (homeWarmupIds.length) {
+        window.setTimeout(function () {
+          warmItems(homeWarmupIds);
+        }, 400);
+      }
       const row = buildRow(t('home_continue_watching'), items, { continueWatching: true });
       if (row) push(wrapRowForCustomization(row, 'continue-watching'), 'continue-watching');
     }

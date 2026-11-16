@@ -75,6 +75,14 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public string AniListClientId { get; set; } = string.Empty;
 
+    public string MyAnimeListClientId { get; set; } = string.Empty;
+
+    public string ShikimoriClientId { get; set; } = string.Empty;
+
+    public string ShikimoriClientSecret { get; set; } = string.Empty;
+
+    public string SimklClientSecret { get; set; } = string.Empty;
+
     // A stream a user added by link that has not worked for this many days
     // is removed from their My streams, with a notification. 0 keeps them.
     public int StreamLinkAutoRemoveDays { get; set; } = 14;

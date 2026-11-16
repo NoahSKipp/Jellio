@@ -1,7 +1,8 @@
 import { t } from '../runtime/i18n.js';
-import { getSearchSuggestions, searchItems, searchLibrary, searchMovies, searchSeries, getSeriesNextUp } from '../runtime/api.js';
+import { getSearchSuggestions, searchItems, searchLibrary, searchMovies, searchSeries, searchFuzzy, getSeriesNextUp } from '../runtime/api.js';
+import { expandSearchQueryVariants, fuzzyScoreTitle } from '../runtime/searchNormalizer.js';
 import { createSearchWarmer } from '../runtime/streamWarmup.js';
-import { warmBatch, cancelWarmGroup } from '../runtime/warmQueue.js';
+import { warmItem, warmBatch, cancelWarmGroup } from '../runtime/warmQueue.js';
 import { buildRow } from '../components/row.js';
 import { buildCard } from '../components/card.js';
 import { buildSkeletonRow } from '../components/homeSkeleton.js';
@@ -188,6 +189,25 @@ export async function renderSearch(root, params) {
 
   // The top results' stream lists are warmed once they stop changing.
   const SEARCH_WARM_COUNT = 3;
+  const resolvedSeriesWarmTargets = new Map();
+  function resolveWarmId(item) {
+    if (!item || !item.Id) return Promise.resolve(null);
+    if (item.Type !== 'Series') return Promise.resolve(item.Id);
+    if (resolvedSeriesWarmTargets.has(item.Id)) {
+      return Promise.resolve(resolvedSeriesWarmTargets.get(item.Id));
+    }
+    return getSeriesNextUp(item.Id).then(
+      function (episode) {
+        const resolved = (episode && episode.Id) || item.Id;
+        resolvedSeriesWarmTargets.set(item.Id, resolved);
+        return resolved;
+      },
+      function () {
+        return item.Id;
+      },
+    );
+  }
+
   const searchWarmer = createSearchWarmer({
     schedule: function (fn, ms) {
       return window.setTimeout(fn, ms);
@@ -206,25 +226,18 @@ export async function renderSearch(root, params) {
           return item && item.Id && (item.Type === 'Movie' || item.Type === 'Episode' || item.Type === 'Series');
         })
         .slice(0, SEARCH_WARM_COUNT);
-      // A series plays its next (or first) episode; one not in the library
-      // yet is sent as is, which adds it.
-      Promise.all(
-        top.map(function (item) {
-          if (item.Type !== 'Series') return item.Id;
-          return getSeriesNextUp(item.Id).then(
-            function (episode) {
-              return (episode && episode.Id) || item.Id;
-            },
-            function () {
-              return item.Id;
-            },
-          );
-        }),
-      ).then(function (ids) {
-        if (mine === requestId) warmBatch(ids, 'search');
+      Promise.all(top.map(resolveWarmId)).then(function (ids) {
+        if (mine !== requestId) return;
+        const clean = ids.filter(Boolean);
+        if (!clean.length) return;
+        // Probe the #1 top hit immediately and batch-prefetch the rest.
+        warmItem(clean[0], true);
+        if (clean.length > 1) warmBatch(clean.slice(1), 'search', true);
       });
     },
-    onFocused: function () {},
+    onFocused: function (itemId) {
+      if (itemId) warmItem(itemId, true);
+    },
   });
 
   function abortInFlight() {
@@ -273,7 +286,15 @@ export async function renderSearch(root, params) {
       }
       const firstPlaceholder = state.grid.querySelector('.jellio-search-skeleton-card');
       fresh.forEach(function (item) {
-        state.grid.insertBefore(buildCard(item), firstPlaceholder);
+        const card = buildCard(item);
+        card.addEventListener('focus', function () {
+          if (item && item.Id) {
+            resolveWarmId(item).then(function (warmId) {
+              if (warmId) searchWarmer.focus(warmId);
+            });
+          }
+        });
+        state.grid.insertBefore(card, firstPlaceholder);
         state.items.push(item);
       });
     }
@@ -314,23 +335,42 @@ export async function renderSearch(root, params) {
     status.textContent = t('status_loading');
     results.textContent = '';
 
+    const variants = expandSearchQueryVariants(term);
+    const expandedAlias = variants.length > 0 && variants[0].toLowerCase() !== term.trim().toLowerCase()
+      ? variants[0]
+      : null;
+    const primaryQuery = expandedAlias || term;
+
+    const correctionBanner = el('div', 'jellio-search-correction');
+    correctionBanner.hidden = true;
+    if (expandedAlias) {
+      correctionBanner.textContent = 'Showing results for "' + expandedAlias + '"';
+      correctionBanner.hidden = false;
+    }
+
     const moviesSlot = el('div', 'jellio-search-type-slot');
     const seriesSlot = el('div', 'jellio-search-type-slot');
+    const suggestionsSlot = el('div', 'jellio-search-suggestions-slot');
+    results.appendChild(correctionBanner);
     results.appendChild(moviesSlot);
     results.appendChild(seriesSlot);
+    results.appendChild(suggestionsSlot);
     currentSlots = { moviesSlot: moviesSlot, seriesSlot: seriesSlot };
     applyCategoryFilter();
 
     const movies = createTypeState(moviesSlot, 'Movies');
     const series = createTypeState(seriesSlot, 'Series');
-    // The library search and the type's own addon search.
-    movies.pending = 2;
-    series.pending = 2;
+    // Library search + per-type addon search + server-side fuzzy search.
+    movies.pending = 3;
+    series.pending = 3;
     paintLoading(movies);
     paintLoading(series);
 
     let anyResults = false;
     let fellBack = false;
+    let fuzzyCorrectedQuery = null;
+    let hasRunCorrectedPass = false;
+    let suggestionsRequested = false;
 
     function current() {
       return thisRequest === requestId;
@@ -345,33 +385,55 @@ export async function renderSearch(root, params) {
       }
     }
 
-    function settle(state) {
-      state.pending = Math.max(0, state.pending - 1);
-      paintLoading(state);
-      if (movies.pending === 0 && series.pending === 0) {
-        status.textContent = anyResults ? '' : 'No results for “' + term + '”.';
-        if (!anyResults) showSuggestions();
-      }
+    function pickBestPrimaryHit() {
+      const combined = movies.items.concat(series.items);
+      if (!combined.length) return null;
+      const compareQuery = fuzzyCorrectedQuery || primaryQuery;
+      return combined.slice().sort(function (a, b) {
+        return fuzzyScoreTitle(compareQuery, b.Name || '') - fuzzyScoreTitle(compareQuery, a.Name || '');
+      })[0];
     }
 
-    // Nothing found: titles related to what the search names, the way
-    // Netflix answers a title it doesn't carry.
     function showSuggestions() {
-      getSearchSuggestions(term)
+      if (suggestionsRequested) return;
+      suggestionsRequested = true;
+      const topHit = pickBestPrimaryHit();
+      const topTmdb = topHit && topHit.ProviderIds && (topHit.ProviderIds.Tmdb || topHit.ProviderIds.tmdb);
+      const topMediaType = topHit ? (topHit.Type === 'Series' ? 'tv' : 'movie') : null;
+      const suggestQuery = (topHit && topHit.Name) || fuzzyCorrectedQuery || primaryQuery;
+
+      const primarySeen = new Set();
+      movies.seen.forEach(function (k) { primarySeen.add(k); });
+      series.seen.forEach(function (k) { primarySeen.add(k); });
+
+      getSearchSuggestions(suggestQuery, {
+        tmdbId: topTmdb,
+        mediaType: topMediaType,
+        enableVirtual: true,
+      })
         .then(function (answer) {
-          if (!current() || !answer.Rows || !answer.Rows.length) return;
-          if (answer.MatchedTitle) {
+          if (!current() || !answer || !answer.Rows || !answer.Rows.length) return;
+          if (!anyResults && answer.MatchedTitle) {
             status.textContent = t('search_suggest_intro', { title: answer.MatchedTitle });
           }
+          suggestionsSlot.textContent = '';
           answer.Rows.forEach(function (row) {
+            const rawItems = row.Items || [];
+            const filtered = rawItems.filter(function (item) {
+              return !identityKeys(item).some(function (k) { return primarySeen.has(k); });
+            });
+            if (!filtered.length) return;
+            filtered.forEach(function (item) {
+              identityKeys(item).forEach(function (k) { primarySeen.add(k); });
+            });
             const title =
               row.Kind === 'similar'
-                ? t('search_suggest_similar', { title: answer.MatchedTitle || term })
+                ? t('search_suggest_similar', { title: answer.MatchedTitle || suggestQuery })
                 : row.Kind === 'person'
                   ? t('search_suggest_person', { name: row.Name })
                   : t('search_suggest_genre', { name: row.Name });
-            const built = buildRow(title, row.Items || []);
-            if (built) results.appendChild(built);
+            const built = buildRow(title, filtered);
+            if (built) suggestionsSlot.appendChild(built);
           });
         })
         .catch(function (err) {
@@ -379,10 +441,55 @@ export async function renderSearch(root, params) {
         });
     }
 
-    function request(fetcher) {
+    function runSpellCorrectedPass(corrected) {
+      hasRunCorrectedPass = true;
+      correctionBanner.textContent = 'Showing results for "' + corrected + '"';
+      correctionBanner.hidden = false;
+      movies.pending += 2;
+      series.pending += 2;
+      paintLoading(movies);
+      paintLoading(series);
+
+      requestFor(corrected, searchMovies)
+        .then(function (items) {
+          if (current()) add(items || []);
+        })
+        .catch(function () {})
+        .finally(function () {
+          if (current()) settle(movies);
+        });
+
+      requestFor(corrected, searchSeries)
+        .then(function (items) {
+          if (current()) add(items || []);
+        })
+        .catch(function () {})
+        .finally(function () {
+          if (current()) settle(series);
+        });
+    }
+
+    function settle(state) {
+      state.pending = Math.max(0, state.pending - 1);
+      paintLoading(state);
+      if (movies.pending === 0 && series.pending === 0) {
+        if (!anyResults && fuzzyCorrectedQuery && !hasRunCorrectedPass && fuzzyCorrectedQuery.toLowerCase() !== primaryQuery.toLowerCase()) {
+          runSpellCorrectedPass(fuzzyCorrectedQuery);
+          return;
+        }
+        status.textContent = anyResults ? '' : 'No results for "' + term + '".';
+        showSuggestions();
+      }
+    }
+
+    function requestFor(queryTerm, fetcher) {
       const controller = new AbortController();
       inFlight.push(controller);
-      return fetcher(term, controller.signal);
+      return fetcher(queryTerm, controller.signal);
+    }
+
+    function request(fetcher) {
+      return requestFor(primaryQuery, fetcher);
     }
 
     function fallBackToCombined(err) {
@@ -414,6 +521,27 @@ export async function renderSearch(root, params) {
       .catch(function (err) {
         if (current()) console.warn('Jellio: library search failed', err);
       })
+      .finally(function () {
+        if (!current()) return;
+        settle(movies);
+        settle(series);
+      });
+
+    requestFor(term, function (q, signal) { return searchFuzzy(q, 24, signal); })
+      .then(function (fuzzyResult) {
+        if (!current() || !fuzzyResult) return;
+        if (fuzzyResult.correctedQuery) {
+          fuzzyCorrectedQuery = fuzzyResult.correctedQuery;
+          if (fuzzyResult.items && fuzzyResult.items.length) {
+            correctionBanner.textContent = 'Showing results for "' + fuzzyCorrectedQuery + '"';
+            correctionBanner.hidden = false;
+          }
+        }
+        if (fuzzyResult.items && fuzzyResult.items.length) {
+          add(fuzzyResult.items);
+        }
+      })
+      .catch(function () {})
       .finally(function () {
         if (!current()) return;
         settle(movies);
