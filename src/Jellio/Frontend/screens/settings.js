@@ -1939,6 +1939,10 @@ function buildAniSyncCategory() {
     const advancedFields = el('div', 'jellio-anisync-advanced-fields');
     advancedFields.style.display = 'none';
 
+    const hasServerId = Boolean(svc.serverClientId);
+    const hasServerSecret = Boolean(svc.hasServerClientSecret);
+    const hideClientSecret = hasServerSecret || (hasServerId && (activeServiceId === 'anilist' || activeServiceId === 'myanimelist'));
+
     // Client ID
     const clientIdGroup = el('div', 'jellio-anisync-field-group');
     clientIdGroup.appendChild(el('label', 'jellio-anisync-label', t('settings_anisync_client_id')));
@@ -1947,7 +1951,9 @@ function buildAniSyncCategory() {
     clientIdInput.className = 'jellio-settings-input';
     clientIdInput.placeholder = svc.serverClientId ? '(Default: ' + svc.serverClientId + ')' : 'Client ID';
     clientIdGroup.appendChild(clientIdInput);
-    advancedFields.appendChild(clientIdGroup);
+    if (!hasServerId) {
+      advancedFields.appendChild(clientIdGroup);
+    }
 
     // Client Secret
     const clientSecretGroup = el('div', 'jellio-anisync-field-group');
@@ -1957,7 +1963,9 @@ function buildAniSyncCategory() {
     clientSecretInput.className = 'jellio-settings-input';
     clientSecretInput.placeholder = 'Client Secret';
     clientSecretGroup.appendChild(clientSecretInput);
-    advancedFields.appendChild(clientSecretGroup);
+    if (!hideClientSecret) {
+      advancedFields.appendChild(clientSecretGroup);
+    }
 
     // Refresh Token
     const refreshTokenGroup = el('div', 'jellio-anisync-field-group');
@@ -2158,49 +2166,83 @@ function buildAniSyncCategory() {
       modal.appendChild(header);
 
       const guideBody = el('div', 'jellio-anisync-guide-body');
+      const allSvcs = (currentSettings && currentSettings.services) || [];
+      function isServerReady(id) {
+        const s = allSvcs.find(function (x) { return x.id === id; });
+        if (!s || !s.serverClientId) return false;
+        if (id === 'shikimori') return Boolean(s.hasServerClientSecret);
+        return true;
+      }
       const guides = [
         {
+          id: 'anilist',
           name: 'AniList',
           url: 'https://anilist.co/settings/developer',
-          steps: [
-            'Open anilist.co/settings/developer and click Create New Client.',
-            'Set Redirect URL to: https://anilist.co/api/v2/oauth/pin',
-            'Copy your Client ID (Client Secret is not needed for AniList).',
-            'Expand Advanced Settings here, paste Client ID, and click Authorize with AniList.',
-            'Approve on AniList, copy the full redirect URL (#access_token=...), paste it into the token box, and click Save & Connect.',
-          ],
+          steps: isServerReady('anilist')
+            ? [
+                'Configured on this server: you only need your own AniList account.',
+                'Click Authorize with AniList, log in to your AniList account, and approve access.',
+                'Copy the full redirect URL (#access_token=...), paste it into the token box, and click Save & Connect.',
+              ]
+            : [
+                'Open anilist.co/settings/developer and click Create New Client.',
+                'Set Redirect URL to: https://anilist.co/api/v2/oauth/pin',
+                'Copy your Client ID (Client Secret is not needed for AniList).',
+                'Expand Advanced Settings here, paste Client ID, and click Authorize with AniList.',
+                'Approve on AniList, copy the full redirect URL (#access_token=...), paste it into the token box, and click Save & Connect.',
+              ],
         },
         {
+          id: 'myanimelist',
           name: 'MyAnimeList',
           url: 'https://myanimelist.net/apiconfig',
-          steps: [
-            'Open myanimelist.net/apiconfig and click Create ID.',
-            'Set App Type to web and App Redirect URL to your Jellio Web URL.',
-            'Copy your Client ID (and Client Secret if shown).',
-            'Expand Advanced Settings here, paste Client ID (and Secret), and click Authorize with MyAnimeList.',
-            'Approve on MyAnimeList, copy the callback URL (?code=...&state=...), paste it into the token box, and click Save & Connect.',
-          ],
+          steps: isServerReady('myanimelist')
+            ? [
+                'Configured on this server: you only need your own MyAnimeList account.',
+                'Click Authorize with MyAnimeList, log in to your MyAnimeList account, and approve access.',
+                'Copy the callback URL (?code=...&state=...), paste it into the token box, and click Save & Connect.',
+              ]
+            : [
+                'Open myanimelist.net/apiconfig and click Create ID.',
+                'Set App Type to web and App Redirect URL to your Jellio Web URL.',
+                'Copy your Client ID (and Client Secret if shown).',
+                'Expand Advanced Settings here, paste Client ID (and Secret), and click Authorize with MyAnimeList.',
+                'Approve on MyAnimeList, copy the callback URL (?code=...&state=...), paste it into the token box, and click Save & Connect.',
+              ],
         },
         {
+          id: 'shikimori',
           name: 'Shikimori',
           url: 'https://shikimori.one/oauth/applications',
-          steps: [
-            'Open shikimori.one/oauth/applications and create a new OAuth application.',
-            'Set Redirect URI to urn:ietf:wg:oauth:2.0:oob (or your Jellio Web URL).',
-            'Copy your Client ID and Client Secret.',
-            'Expand Advanced Settings here, paste Client ID and Client Secret, and click Authorize with Shikimori.',
-            'Approve on Shikimori, copy the authorization code or callback URL, paste it into the token box, and click Save & Connect.',
-          ],
+          steps: isServerReady('shikimori')
+            ? [
+                'Configured on this server: you only need your own Shikimori account.',
+                'Click Authorize with Shikimori, log in to your Shikimori account, and approve access.',
+                'Copy the authorization code or callback URL, paste it into the token box, and click Save & Connect.',
+              ]
+            : [
+                'Open shikimori.one/oauth/applications and create a new OAuth application.',
+                'Set Redirect URI to urn:ietf:wg:oauth:2.0:oob (or your Jellio Web URL).',
+                'Copy your Client ID and Client Secret.',
+                'Expand Advanced Settings here, paste Client ID and Client Secret, and click Authorize with Shikimori.',
+                'Approve on Shikimori, copy the authorization code or callback URL, paste it into the token box, and click Save & Connect.',
+              ],
         },
         {
+          id: 'simkl',
           name: 'Simkl',
           url: 'https://simkl.com/settings/developer/',
-          steps: [
-            'Open simkl.com/settings/developer/ and create an application.',
-            'Set Redirect URI to your Jellio Web URL and copy your Client ID (and Client Secret for OAuth redirect).',
-            'Expand Advanced Settings here and paste your Client ID.',
-            'Click Connect with PIN Code (visit simkl.com/pin and enter the code) or click Authorize with Simkl and paste the callback URL.',
-          ],
+          steps: isServerReady('simkl')
+            ? [
+                'Configured on this server: you only need your own Simkl account.',
+                'Click Connect with PIN Code (visit simkl.com/pin and enter the code) or click Authorize with Simkl.',
+              ]
+            : [
+                'Open simkl.com/settings/developer/ and create an application.',
+                'Set Redirect URI to your Jellio Web URL and copy your Client ID (and Client Secret for OAuth redirect).',
+                'Expand Advanced Settings here and paste your Client ID.',
+                'Click Connect with PIN Code (visit simkl.com/pin and enter the code) or click Authorize with Simkl and paste the callback URL.',
+              ],
         },
       ];
 
@@ -2208,11 +2250,13 @@ function buildAniSyncCategory() {
         const card = el('div', 'jellio-anisync-guide-card');
         const titleRow = el('div', 'jellio-anisync-guide-card-title');
         titleRow.appendChild(el('strong', '', g.name));
-        const link = el('a', 'jellio-anisync-guide-link', g.url);
-        link.href = g.url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        titleRow.appendChild(link);
+        if (!isServerReady(g.id)) {
+          const link = el('a', 'jellio-anisync-guide-link', g.url);
+          link.href = g.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          titleRow.appendChild(link);
+        }
         card.appendChild(titleRow);
 
         const ol = el('ol', 'jellio-anisync-guide-steps');

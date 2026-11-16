@@ -8,11 +8,11 @@ export const CHANGELOG_RELEASES = [
     "version": "1.112.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.1",
-    "summary": "Ani-Sync timeframe sync selector (Recent, Last Week, Last Month, Last Year, All Time), Setup Guide modal, and centered empty activity text.",
+    "summary": "Ani-Sync timeframe sync selector (Recent, Last Week, Last Month, Last Year, All Time), adaptive Setup Guide modal, hidden server-configured Client ID/Secret fields, and centered empty activity text.",
     "highlights": [
       {
-        "title": "Ani-Sync Timeframe Sync & Setup Guide",
-        "description": "Added a timeframe selector next to Sync Now (Recent, Last Week, Last Month, Last Year, All Time), a Setup Guide modal with step-by-step instructions for each provider, and centered the empty Recent Sync Activity text."
+        "title": "Ani-Sync Timeframe Sync & Adaptive Setup Guide",
+        "description": "Added a timeframe selector next to Sync Now (Recent, Last Week, Last Month, Last Year, All Time), a Setup Guide modal that adapts when server-wide Client IDs/Secrets are configured, hid redundant Client ID/Secret inputs when configured on the server, and centered the empty Recent Sync Activity text."
       }
     ]
   },

@@ -37,7 +37,8 @@ public record AniSyncServiceStatusDto(
     DateTime? UpdatedAtUtc,
     DateTime? LastSyncAtUtc,
     string? LastSyncedTitle,
-    string? LastError);
+    string? LastError,
+    bool HasServerClientSecret = false);
 
 public record AniSyncLogEntryDto(
     DateTime TimestampUtc,
@@ -159,6 +160,7 @@ public class AniSyncService(
             record.Providers.TryGetValue(id, out var provider);
             var connected = provider != null && !string.IsNullOrWhiteSpace(provider.EncryptedAccessToken);
             var serverClientId = GetServerClientId(id);
+            var hasServerClientSecret = !string.IsNullOrWhiteSpace(GetServerClientSecret(id));
 
             return new AniSyncServiceStatusDto(
                 id,
@@ -173,7 +175,8 @@ public class AniSyncService(
                 provider?.UpdatedAtUtc,
                 provider?.LastSyncAtUtc,
                 provider?.LastSyncedTitle,
-                provider?.LastError);
+                provider?.LastError,
+                hasServerClientSecret);
         }).ToList();
 
         var logs = record.RecentLogs

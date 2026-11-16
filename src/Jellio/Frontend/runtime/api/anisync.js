@@ -25,6 +25,7 @@ export function normalizeAniSyncSettings(raw) {
       hasRefreshToken: Boolean(svc.HasRefreshToken ?? svc.hasRefreshToken),
       hasCustomClientId: Boolean(svc.HasCustomClientId ?? svc.hasCustomClientId),
       serverClientId: svc.ServerClientId ?? svc.serverClientId ?? null,
+      hasServerClientSecret: Boolean(svc.HasServerClientSecret ?? svc.hasServerClientSecret),
       supportsPinAuth: Boolean(svc.SupportsPinAuth ?? svc.supportsPinAuth),
       updatedAtUtc: svc.UpdatedAtUtc ?? svc.updatedAtUtc ?? null,
       lastSyncAtUtc: svc.LastSyncAtUtc ?? svc.lastSyncAtUtc ?? null,
