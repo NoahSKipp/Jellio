@@ -253,20 +253,20 @@ public partial class AniSyncController(
     }
 
     [HttpGet("oauth/start")]
-    public IActionResult StartOAuth([FromQuery] string service, [FromQuery] string? redirectUri, [FromQuery] string? clientId)
+    public IActionResult StartOAuth([FromQuery(Name = "service")] string serviceName, [FromQuery] string? redirectUri, [FromQuery] string? clientId)
     {
         if (!TryUser(out var userId))
         {
             return Unauthorized();
         }
 
-        var normalized = AniSyncServices.Normalize(service);
+        var normalized = AniSyncServices.Normalize(serviceName);
         if (normalized == null)
         {
             return BadRequest("Unsupported Ani-Sync service.");
         }
 
-        var result = this.service.BuildOAuthStartUrl(userId, normalized, redirectUri, clientId);
+        var result = service.BuildOAuthStartUrl(userId, normalized, redirectUri, clientId);
         return Ok(new
         {
             Service = normalized,

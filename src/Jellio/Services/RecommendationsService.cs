@@ -594,8 +594,6 @@ public class RecommendationsService(
             ItemFields.Overview,
             ItemFields.Studios,
             ItemFields.People,
-            ItemFields.ProductionYear,
-            ItemFields.CommunityRating,
         ],
         EnableUserData = true,
         EnableImages = true,
