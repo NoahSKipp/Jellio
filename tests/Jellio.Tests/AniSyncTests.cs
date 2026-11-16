@@ -109,4 +109,18 @@ public class AniSyncTests : IDisposable
         var afterAnime = _store.Load(userId);
         Assert.Equal("Frieren (Ep 10)", afterAnime.Providers[AniSyncServices.AniList].LastSyncedTitle);
     }
+
+    private class PathsProxy : DispatchProxy
+    {
+        private string _dir = string.Empty;
+
+        public static IApplicationPaths Create(string dir)
+        {
+            var proxy = Create<IApplicationPaths, PathsProxy>();
+            ((PathsProxy)(object)proxy)._dir = dir;
+            return proxy;
+        }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => _dir;
+    }
 }
