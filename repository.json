@@ -9,10 +9,10 @@
     "versions": [
       {
         "changelog": "## [1.112.0] - 2026-11-16\n\n### Features\n\n- Add per-user Ani-Sync for both watched anime and read manga across AniList, MyAnimeList, Shikimori, and Simkl (anime)\n- Expanded stream warmup with Ready badge\n- Smarter personal Top Picks\n- Fuzzy search with spelling suggestions and Similar results\n\n### Bug Fixes\n\n- Fix C# compilation issues in AniSyncController, SearchSuggestionsController, RecommendationsService, and AniSyncTests",
-        "checksum": "306564d71854eba5fa0fd2d0c63d0e1e",
+        "checksum": "04f110a17aa95ee657dc85877165c13c",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.0/jellio_1.112.0.0.zip",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-16T18:48:16Z",
+        "timestamp": "2026-11-16T19:14:02Z",
         "version": "1.112.0"
       },
       {
