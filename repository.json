@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "### Fixes\n- Styled the Ani-Sync timeframe selector next to Sync Now to match Jellio's pill button and dark select styling.",
+        "checksum": "458c398d0e918ddbc0d1272aac09d357",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.2/jellio_1.112.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-16T23:01:45Z",
+        "version": "1.112.2"
+      },
+      {
         "changelog": "### Changes\n- Added Ani-Sync timeframe selector (Recent, Last Week, Last Month, Last Year, All Time) with per-series deduplication for watched anime and read manga.\n- Hid server-configured Client ID and Client Secret inputs in Jellio Web when set in Jellyfin plugin settings.\n- Added an adaptive Ani-Sync Setup Guide modal that shows simplified sign-in steps for server-configured services and full developer setup steps only for unconfigured services.\n- Centered the empty Recent Sync Activity message.",
         "checksum": "614b62e6d9068479109eee92d7146d51",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.1/jellio_1.112.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-02T22:40:32Z",
         "version": "1.104.1"
-      },
-      {
-        "changelog": "## [1.104.0] - 2026-11-02\n\n### 🚀 Features\n\n- *(player)* Show stream switch progress and switch in place\n\n### 📚 Documentation\n\n- *(changelog)* Stream switch progress in 1.104.0\n",
-        "checksum": "479182122546502afb81fbe3491f4a06",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.0/jellio_1.104.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-02T21:39:08Z",
-        "version": "1.104.0"
       }
     ]
   }
