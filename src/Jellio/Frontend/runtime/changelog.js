@@ -5,6 +5,30 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.111.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.111.0",
+    "summary": "Richer actor pages with TMDB filmography, redesigned profile badges and friends section, and player episode transport controls.",
+    "highlights": [
+      {
+        "title": "Rich Actor & Crew Pages",
+        "description": "Actor and director pages now show full TMDB biographies, age and birthplace, IMDb and TMDB links, a weighted Known For row, and department filter tabs across their entire filmography."
+      },
+      {
+        "title": "Redesigned Profile Badges & Friends Card",
+        "description": "Your profile now includes a Friends card with avatars and pending requests, a live badge inspector bar, visible badge descriptions and rarity pills, and a Profile Privacy toggle in Settings and first-run setup."
+      },
+      {
+        "title": "Player Transport & Skip Countdown",
+        "description": "Jump to the previous or next episode right from the player control bar, and Skip Intro / Skip Credits buttons now show a 5-second countdown before hiding."
+      },
+      {
+        "title": "Live Watchlist Updates",
+        "description": "Your Watchlist screen stays in sync automatically when friends add new titles while you browse."
+      }
+    ]
+  },
+  {
     "version": "1.110.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.110.0",
