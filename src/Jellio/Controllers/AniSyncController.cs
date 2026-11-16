@@ -37,7 +37,7 @@ public partial class AniSyncController(
 
     public record ServiceRequest(string? Service);
 
-    public record SyncNowRequest(string? Service, int Limit = 5);
+    public record SyncNowRequest(string? Service, int Limit = 5, string? Range = null);
 
     public record SimklPinRequest(string? ClientId);
 
@@ -241,7 +241,8 @@ public partial class AniSyncController(
             userId,
             body?.Service,
             Math.Clamp(body?.Limit ?? 5, 1, 20),
-            ct).ConfigureAwait(false);
+            ct,
+            body?.Range).ConfigureAwait(false);
 
         return Ok(new
         {

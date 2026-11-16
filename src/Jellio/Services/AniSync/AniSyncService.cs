@@ -318,7 +318,8 @@ public class AniSyncService(
         Guid userId,
         string? serviceOverride,
         int limit,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? range = null)
     {
         var user = userManager.GetUserById(userId);
         if (user == null)
@@ -333,30 +334,71 @@ public class AniSyncService(
             return (0, 0, "Connect an Ani-Sync service first.");
         }
 
+        var normalizedRange = (range ?? "recent").Trim().ToLowerInvariant();
+        DateTime? cutoffUtc = normalizedRange switch
+        {
+            "week" or "last_week" or "7d" => DateTime.UtcNow.AddDays(-7),
+            "month" or "last_month" or "30d" => DateTime.UtcNow.AddDays(-30),
+            "year" or "last_year" or "365d" => DateTime.UtcNow.AddDays(-365),
+            "all" or "all_time" => null,
+            _ => null,
+        };
+        bool isRangeSync = normalizedRange is "week" or "last_week" or "7d" or "month" or "last_month" or "30d" or "year" or "last_year" or "365d" or "all" or "all_time";
+        int effectiveLimit = normalizedRange switch
+        {
+            "week" or "last_week" or "7d" => Math.Max(limit, 100),
+            "month" or "last_month" or "30d" => Math.Max(limit, 250),
+            "year" or "last_year" or "365d" => Math.Max(limit, 500),
+            "all" or "all_time" => Math.Max(limit, 1000),
+            _ => Math.Clamp(limit, 1, 20),
+        };
+        int queryLimit = isRangeSync ? Math.Clamp(effectiveLimit * 4, 200, 4000) : Math.Clamp(effectiveLimit * 4, 10, 80);
+
         var playedItems = libraryManager.GetItemList(new InternalItemsQuery(user)
         {
             IncludeItemTypes = [BaseItemKind.Episode, BaseItemKind.Movie],
             IsPlayed = true,
             OrderBy = [(ItemSortBy.DatePlayed, SortOrder.Descending)],
             Recursive = true,
-            Limit = Math.Clamp(limit * 4, 10, 80),
+            Limit = queryLimit,
         }) ?? [];
 
         int synced = 0;
         int failed = 0;
         int considered = 0;
+        var seenAnimeSeries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in playedItems)
         {
-            if (considered >= limit)
+            if (considered >= effectiveLimit)
             {
                 break;
+            }
+
+            if (cutoffUtc.HasValue)
+            {
+                var playedAt = userDataManager.GetUserData(user, item)?.LastPlayedDate;
+                if (!playedAt.HasValue || playedAt.Value.ToUniversalTime() < cutoffUtc.Value)
+                {
+                    continue;
+                }
             }
 
             var syncTarget = BuildSyncTarget(item, record.OnlyAnimeItems);
             if (syncTarget == null)
             {
                 continue;
+            }
+
+            if (isRangeSync)
+            {
+                var seriesKey = item is Episode ep && ep.SeriesId != Guid.Empty
+                    ? ep.SeriesId.ToString("N")
+                    : item.Id.ToString("N");
+                if (!seenAnimeSeries.Add(seriesKey))
+                {
+                    continue;
+                }
             }
 
             considered++;
@@ -374,17 +416,23 @@ public class AniSyncService(
             }
         }
 
-        if (considered < limit)
+        if (considered < effectiveLimit)
         {
             var seenReadSeries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var completedReads = readingProgressStore.GetAll(userId)
-                .Where(kv => kv.Value.Progress >= 0.98)
+            var completedReadsQuery = readingProgressStore.GetAll(userId)
+                .Where(kv => kv.Value.Progress >= 0.98);
+            if (cutoffUtc.HasValue)
+            {
+                completedReadsQuery = completedReadsQuery.Where(kv => kv.Value.UpdatedAt.UtcDateTime >= cutoffUtc.Value);
+            }
+
+            var completedReads = completedReadsQuery
                 .OrderByDescending(kv => kv.Value.UpdatedAt)
-                .Take(Math.Clamp(limit * 4, 10, 80));
+                .Take(queryLimit);
 
             foreach (var (key, _) in completedReads)
             {
-                if (considered >= limit)
+                if (considered >= effectiveLimit)
                 {
                     break;
                 }
@@ -424,7 +472,7 @@ public class AniSyncService(
 
         if (considered == 0)
         {
-            return (0, 0, "No recently watched anime or read manga items found.");
+            return (0, 0, "No watched anime or read manga items found for that timeframe.");
         }
 
         return (synced, failed, $"Processed {considered} item(s): {synced} synced, {failed} error(s).");

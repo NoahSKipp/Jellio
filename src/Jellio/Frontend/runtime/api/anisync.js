@@ -123,6 +123,7 @@ export async function syncAniSyncNow(options) {
   const body = {
     Service: opts.service ? normalizeAniSyncService(opts.service) : null,
     Limit: typeof opts.limit === 'number' ? opts.limit : 5,
+    Range: opts.range || null,
   };
   const data = await postJson('/Jellio/anisync/sync-now', body);
   return {

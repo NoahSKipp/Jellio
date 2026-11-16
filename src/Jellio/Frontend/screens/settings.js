@@ -2087,13 +2087,31 @@ function buildAniSyncCategory() {
       });
       actions.appendChild(testBtn);
 
+      const syncRangeSelect = document.createElement('select');
+      syncRangeSelect.className = 'jellio-anisync-input jellio-anisync-range-select';
+      [
+        ['recent', t('settings_anisync_range_recent')],
+        ['week', t('settings_anisync_range_week')],
+        ['month', t('settings_anisync_range_month')],
+        ['year', t('settings_anisync_range_year')],
+        ['all', t('settings_anisync_range_all')],
+      ].forEach(function (pair) {
+        const opt = document.createElement('option');
+        opt.value = pair[0];
+        opt.textContent = pair[1];
+        syncRangeSelect.appendChild(opt);
+      });
+      actions.appendChild(syncRangeSelect);
+
       const syncNowBtn = el('button', 'jellio-settings-button jellio-settings-btn-secondary', t('settings_anisync_sync_now_btn'));
       syncNowBtn.type = 'button';
       syncNowBtn.addEventListener('click', function () {
         syncNowBtn.disabled = true;
+        syncRangeSelect.disabled = true;
         statusMsg.textContent = t('status_loading');
-        syncAniSyncNow({ service: activeServiceId, limit: 5 }).then(function (res) {
+        syncAniSyncNow({ service: activeServiceId, limit: 5, range: syncRangeSelect.value }).then(function (res) {
           syncNowBtn.disabled = false;
+          syncRangeSelect.disabled = false;
           statusMsg.textContent = res.message || t('settings_anisync_sync_success', { count: res.syncedCount });
           if (res.settings) {
             currentSettings = res.settings;
@@ -2101,6 +2119,7 @@ function buildAniSyncCategory() {
           }
         }).catch(function (err) {
           syncNowBtn.disabled = false;
+          syncRangeSelect.disabled = false;
           statusMsg.textContent = (err && (err.serverMessage || err.message)) || t('status_error');
         });
       });
@@ -2175,7 +2194,7 @@ function buildAniSyncCategory() {
     activityBody.textContent = '';
     const logs = currentSettings && Array.isArray(currentSettings.recentLogs) ? currentSettings.recentLogs : [];
     if (!logs.length) {
-      activityBody.appendChild(el('p', 'jellio-settings-empty-note', t('settings_anisync_no_activity')));
+      activityBody.appendChild(el('p', 'jellio-settings-empty-note jellio-anisync-empty-note', t('settings_anisync_no_activity')));
       return;
     }
 
