@@ -444,18 +444,26 @@ public class AniSyncProviderClients(
 
     // ---- AniList ----
 
+    private readonly record struct AniListQueryResult(JsonNode? Data, HttpStatusCode? StatusCode);
+
     private async Task<AniSyncVerifyResult> VerifyAniListAsync(string token, CancellationToken ct)
     {
         try
         {
-            var data = await QueryAniListAsync(token, "query { Viewer { id name } }", new JsonObject(), ct).ConfigureAwait(false);
-            if (data == null)
+            var res = await QueryAniListAsync(token, "query { Viewer { id name } }", new JsonObject(), ct).ConfigureAwait(false);
+            if (res.Data == null)
             {
-                return new AniSyncVerifyResult(false, null, null, "AniList rejected that token or could not be reached.");
+                if (res.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    return new AniSyncVerifyResult(false, null, null, "AniList rate-limited the request (HTTP 429). Please wait a moment and try again.");
+                }
+
+                var statusSuffix = res.StatusCode.HasValue ? $" (HTTP {(int)res.StatusCode.Value})" : string.Empty;
+                return new AniSyncVerifyResult(false, null, null, $"AniList rejected that token or could not be reached{statusSuffix}.");
             }
 
-            var name = data["Viewer"]?["name"]?.GetValue<string>();
-            var id = ReadInt(data["Viewer"]?["id"])?.ToString(CultureInfo.InvariantCulture);
+            var name = res.Data["Viewer"]?["name"]?.GetValue<string>();
+            var id = ReadInt(res.Data["Viewer"]?["id"])?.ToString(CultureInfo.InvariantCulture);
             if (string.IsNullOrWhiteSpace(name))
             {
                 return new AniSyncVerifyResult(false, null, null, "Could not read AniList account profile.");
@@ -491,14 +499,54 @@ public class AniSyncProviderClients(
         }
         else
         {
-            var searchQuery = BuildAnimeSearchQuery(target);
             var mediaType = target.IsManga ? "MANGA" : "ANIME";
-            var searchData = await QueryAniListAsync(
-                token,
-                $"query ($search: String) {{ Page(perPage: 5) {{ media(search: $search, type: {mediaType}) {{ id episodes chapters startDate {{ year }} title {{ romaji english }} }} }} }}",
-                new JsonObject { ["search"] = searchQuery },
-                ct).ConfigureAwait(false);
-            var list = searchData?["Page"]?["media"]?.AsArray();
+            var searchCandidates = new List<string>();
+            var primaryQuery = BuildAnimeSearchQuery(target);
+            if (!string.IsNullOrWhiteSpace(primaryQuery))
+            {
+                searchCandidates.Add(primaryQuery);
+            }
+
+            if (!string.IsNullOrWhiteSpace(target.Title) &&
+                !searchCandidates.Contains(target.Title, StringComparer.OrdinalIgnoreCase))
+            {
+                searchCandidates.Add(target.Title);
+            }
+
+            if (!string.IsNullOrWhiteSpace(target.OriginalTitle) &&
+                !searchCandidates.Contains(target.OriginalTitle, StringComparer.OrdinalIgnoreCase))
+            {
+                searchCandidates.Add(target.OriginalTitle);
+            }
+
+            JsonArray? list = null;
+            foreach (var candidate in searchCandidates)
+            {
+                var searchRes = await QueryAniListAsync(
+                    token,
+                    $"query ($search: String) {{ Page(perPage: 5) {{ media(search: $search, type: {mediaType}) {{ id episodes chapters startDate {{ year }} title {{ romaji english }} }} }} }}",
+                    new JsonObject { ["search"] = candidate },
+                    ct).ConfigureAwait(false);
+
+                if (searchRes.Data == null)
+                {
+                    if (searchRes.StatusCode == HttpStatusCode.TooManyRequests)
+                    {
+                        return new AniSyncSyncOutcome(false, false, null, "AniList rate limit reached (HTTP 429). Try again shortly.");
+                    }
+
+                    var statusSuffix = searchRes.StatusCode.HasValue ? $" (HTTP {(int)searchRes.StatusCode.Value})" : string.Empty;
+                    return new AniSyncSyncOutcome(false, false, null, $"AniList search failed{statusSuffix}.");
+                }
+
+                var candidateList = searchRes.Data["Page"]?["media"]?.AsArray();
+                if (candidateList != null && candidateList.Count > 0)
+                {
+                    list = candidateList;
+                    break;
+                }
+            }
+
             if (list == null || list.Count == 0)
             {
                 return new AniSyncSyncOutcome(false, true, null, $"Could not find '{target.Title}' on AniList.");
@@ -520,13 +568,24 @@ public class AniSyncProviderClients(
         }
 
         var mediaIdStr = mediaId.ToString(CultureInfo.InvariantCulture);
-        var entryData = await QueryAniListAsync(
+        var entryRes = await QueryAniListAsync(
             token,
             "query ($id: Int) { Media(id: $id) { episodes chapters mediaListEntry { status progress } } }",
             new JsonObject { ["id"] = mediaId },
             ct).ConfigureAwait(false);
 
-        var media = entryData?["Media"];
+        if (entryRes.Data == null)
+        {
+            if (entryRes.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                return new AniSyncSyncOutcome(false, false, mediaIdStr, "AniList rate limit reached (HTTP 429) while loading media entry.");
+            }
+
+            var statusSuffix = entryRes.StatusCode.HasValue ? $" (HTTP {(int)entryRes.StatusCode.Value})" : string.Empty;
+            return new AniSyncSyncOutcome(false, false, mediaIdStr, $"Failed to query AniList media entry{statusSuffix}.");
+        }
+
+        var media = entryRes.Data["Media"];
         if (media == null)
         {
             return new AniSyncSyncOutcome(false, false, mediaIdStr, "Failed to query AniList media entry.");
@@ -549,7 +608,7 @@ public class AniSyncProviderClients(
             ? "COMPLETED"
             : "CURRENT";
 
-        var savedData = await QueryAniListAsync(
+        var savedRes = await QueryAniListAsync(
             token,
             "mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int) { SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress) { status progress } }",
             new JsonObject
@@ -560,7 +619,18 @@ public class AniSyncProviderClients(
             },
             ct).ConfigureAwait(false);
 
-        if (savedData?["SaveMediaListEntry"] == null)
+        if (savedRes.Data == null)
+        {
+            if (savedRes.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                return new AniSyncSyncOutcome(false, false, mediaIdStr, "AniList rate limit reached (HTTP 429) while saving progress.");
+            }
+
+            var statusSuffix = savedRes.StatusCode.HasValue ? $" (HTTP {(int)savedRes.StatusCode.Value})" : string.Empty;
+            return new AniSyncSyncOutcome(false, false, mediaIdStr, $"AniList rejected progress update{statusSuffix}.");
+        }
+
+        if (savedRes.Data["SaveMediaListEntry"] == null)
         {
             return new AniSyncSyncOutcome(false, false, mediaIdStr, "AniList rejected progress update.");
         }
@@ -568,24 +638,49 @@ public class AniSyncProviderClients(
         return new AniSyncSyncOutcome(true, false, mediaIdStr, $"Synced {unitLabel} {Math.Max(existingProgress, desiredProgress)} ({nextStatus.ToLowerInvariant()}) on AniList.");
     }
 
-    private async Task<JsonNode?> QueryAniListAsync(string token, string query, JsonObject variables, CancellationToken ct)
+    private async Task<AniListQueryResult> QueryAniListAsync(string token, string query, JsonObject variables, CancellationToken ct)
     {
         var client = httpClientFactory.CreateClient();
-        using var req = new HttpRequestMessage(HttpMethod.Post, "https://graphql.anilist.co");
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        req.Headers.TryAddWithoutValidation("Accept", "application/json");
-        req.Content = new StringContent(
-            new JsonObject { ["query"] = query, ["variables"] = variables }.ToJsonString(),
-            Encoding.UTF8,
-            "application/json");
-        using var resp = await client.SendAsync(req, ct).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
+        var payload = new JsonObject { ["query"] = query, ["variables"] = variables }.ToJsonString();
+
+        for (int attempt = 0; attempt < 3; attempt++)
         {
-            return null;
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://graphql.anilist.co");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            req.Headers.TryAddWithoutValidation("Accept", "application/json");
+            req.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+            using var resp = await client.SendAsync(req, ct).ConfigureAwait(false);
+            if (resp.StatusCode == HttpStatusCode.TooManyRequests && attempt < 2)
+            {
+                var delaySeconds = 2 * (attempt + 1);
+                if (resp.Headers.RetryAfter?.Delta is { } delta)
+                {
+                    delaySeconds = (int)Math.Ceiling(delta.TotalSeconds);
+                }
+                else if (resp.Headers.TryGetValues("Retry-After", out var values) &&
+                         int.TryParse(values.FirstOrDefault(), out var headerSeconds))
+                {
+                    delaySeconds = headerSeconds;
+                }
+
+                var clampedDelay = TimeSpan.FromSeconds(Math.Clamp(delaySeconds, 1, 15));
+                logger.LogWarning("Jellio Ani-Sync: AniList rate limited (HTTP 429), retrying in {DelaySeconds}s", clampedDelay.TotalSeconds);
+                await Task.Delay(clampedDelay, ct).ConfigureAwait(false);
+                continue;
+            }
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Jellio Ani-Sync: AniList GraphQL returned HTTP {StatusCode}", (int)resp.StatusCode);
+                return new AniListQueryResult(null, resp.StatusCode);
+            }
+
+            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            return new AniListQueryResult(JsonNode.Parse(body)?["data"], resp.StatusCode);
         }
 
-        var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-        return JsonNode.Parse(body)?["data"];
+        return new AniListQueryResult(null, HttpStatusCode.TooManyRequests);
     }
 
     // ---- MyAnimeList ----

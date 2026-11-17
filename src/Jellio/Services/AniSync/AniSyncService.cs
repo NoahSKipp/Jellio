@@ -404,6 +404,11 @@ public class AniSyncService(
                 }
             }
 
+            if (considered > 0)
+            {
+                await Task.Delay(isRangeSync ? 1200 : 300, ct).ConfigureAwait(false);
+            }
+
             considered++;
             foreach (var service in targets)
             {
