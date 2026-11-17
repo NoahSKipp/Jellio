@@ -87,7 +87,8 @@ test('getHeroLogoUrl: returns Logo URL when ImageTags.Logo exists', () => {
   assert.ok(url);
   assert.ok(url.includes('/Items/movie-1/Images/Logo'));
   assert.ok(url.includes('tag=tag-logo-1'));
-  assert.ok(url.includes('maxWidth=800'));
+  assert.ok(url.includes('maxWidth=1200'));
+  assert.ok(url.includes('quality=100'));
 });
 
 test('getHeroLogoUrl: returns null when item has no Logo tag', () => {

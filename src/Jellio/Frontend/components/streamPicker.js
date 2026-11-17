@@ -585,7 +585,7 @@ export async function openStreamPicker(item, options) {
   logo.onerror = function () {
     logo.classList.add('jellio-stream-picker-logo-hidden');
   };
-  logo.src = getImageUrl(item.Id, 'Logo', { maxWidth: 800 });
+  logo.src = getImageUrl(item.Id, 'Logo', { maxWidth: 1200, quality: 100 });
   hero.appendChild(logo);
   hero.appendChild(el('h2', 'jellio-stream-picker-title', isEpisode ? item.SeriesName : item.Name || ''));
 

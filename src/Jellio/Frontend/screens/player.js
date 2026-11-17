@@ -404,7 +404,7 @@ export async function renderPlayer(root, params) {
     const artId = isEpisodeItem && item.SeriesId ? item.SeriesId : itemId;
     const tag = isEpisodeItem ? item.ParentLogoImageTag : item.ImageTags && item.ImageTags.Logo;
     if (!tag) return null;
-    return getImageUrl(artId, 'Logo', { tag: tag, maxWidth: maxWidth });
+    return getImageUrl(artId, 'Logo', { tag: tag, maxWidth: maxWidth, quality: 100 });
   }
 
   const posterUrl = seriesAwareArtworkUrl(1600);
@@ -416,7 +416,7 @@ export async function renderPlayer(root, params) {
     if (posterUrl) layers.push(cssUrl(posterUrl));
     return layers.join(', ');
   }
-  const logoUrl = seriesAwareLogoUrl(800);
+  const logoUrl = seriesAwareLogoUrl(1200);
 
   root.textContent = '';
   if (posterUrl) {

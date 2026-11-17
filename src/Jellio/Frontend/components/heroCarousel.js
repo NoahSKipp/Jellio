@@ -40,10 +40,10 @@ export function getHeroLogoUrl(item) {
   if (!item || !item.Id) return null;
   const logoTag = item.ImageTags && item.ImageTags.Logo;
   if (logoTag) {
-    return getImageUrl(item.Id, 'Logo', { tag: logoTag, maxWidth: 800 });
+    return getImageUrl(item.Id, 'Logo', { tag: logoTag, maxWidth: 1200, quality: 100 });
   }
   if (item.ParentLogoItemId && item.ParentLogoImageTag) {
-    return getImageUrl(item.ParentLogoItemId, 'Logo', { tag: item.ParentLogoImageTag, maxWidth: 800 });
+    return getImageUrl(item.ParentLogoItemId, 'Logo', { tag: item.ParentLogoImageTag, maxWidth: 1200, quality: 100 });
   }
   return null;
 }

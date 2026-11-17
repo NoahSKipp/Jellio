@@ -11,7 +11,11 @@ export function getImageUrl(itemId, type, options) {
   const params = new URLSearchParams();
   if (opts.tag) params.set('tag', opts.tag);
   if (opts.maxWidth) params.set('maxWidth', String(opts.maxWidth));
-  if (opts.quality) params.set('quality', String(opts.quality));
+  if (opts.quality) {
+    params.set('quality', String(opts.quality));
+  } else if (type === 'Logo') {
+    params.set('quality', '100');
+  }
   const query = params.toString();
   return (
     getServerAddress() +

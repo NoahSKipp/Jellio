@@ -72,7 +72,7 @@ function buildSlide(item) {
     const logo = document.createElement('img');
     logo.className = 'jellio-coverflow-logo';
     logo.alt = item.Name || '';
-    logo.src = getImageUrl(item.Id, 'Logo', { tag: logoTag, maxWidth: 480 });
+    logo.src = getImageUrl(item.Id, 'Logo', { tag: logoTag, maxWidth: 1200, quality: 100 });
     logo.onerror = function () {
       logo.remove();
       info.insertBefore(el('h2', 'jellio-coverflow-title', item.Name || ''), info.firstChild);
