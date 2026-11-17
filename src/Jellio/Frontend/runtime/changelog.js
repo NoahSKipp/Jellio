@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.6",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.6",
+    "summary": "Fixed episode duration inflation and false placeholder failover at the end of playback.",
+    "highlights": [
+      {
+        "title": "Accurate Duration & End-of-Playback Tracking",
+        "description": "Stopped double-counting stream start offsets in video duration reconciliation and end-of-playback reporting, added server-side plausibility bounds in RealDurationController, and automatically pruned previously inflated real-duration entries."
+      }
+    ]
+  },
+  {
     "version": "1.112.5",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.5",
