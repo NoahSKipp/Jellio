@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "### Enhancements\n- **Segmented Plugin Settings UI**: Reorganized the Jellyfin Dashboard plugin configuration into focused segments (General & Libraries, Ani-Sync, Books & Manga, Playback & Live TV, Seasonal Themes, Admin Tools) and moved misplaced playback/Live TV settings into their proper sections.\n- **Library & Reading Shelf Toggles**: Added server-wide toggles to enable or disable individual Jellyfin libraries as well as the Books, Audiobooks, and Manga shelves in Jellio navigation.",
+        "checksum": "acbcc3e0a85738b6b422d307517bc026",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.4/jellio_1.112.4.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-17T00:22:16Z",
+        "version": "1.112.4"
+      },
+      {
         "changelog": "### Fixes\n- **AniList Rate-Limit Handling**: Retry HTTP 429 responses using Retry-After backoff, log non-2xx GraphQL responses, and surface HTTP status codes instead of generic missing-entry errors.\n- **Season 2+ Title Search Fallback**: Fall back to base and original titles when '\"Title Season N\"' returns no results on AniList (such as subtitled sequels like Noragami Aragoto).\n- **Batch Sync Pacing**: Add pacing delays between synced items during batch and range syncs to prevent bursting AniList rate limits.",
         "checksum": "bd9332c965c5ebf57f8e5192498d84b9",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.3/jellio_1.112.3.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-02T23:28:22Z",
         "version": "1.104.3"
-      },
-      {
-        "changelog": "## [1.104.2] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Close automatic picture in picture on return and make the way back clickable\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture fix in 1.104.2\n",
-        "checksum": "5f426ec7efaf23a33462196e1b3db69b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.2/jellio_1.104.2.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-02T23:16:22Z",
-        "version": "1.104.2"
       }
     ]
   }
