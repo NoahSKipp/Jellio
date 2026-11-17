@@ -88,4 +88,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public int StreamLinkAutoRemoveDays { get; set; } = 14;
 
     public string StreamFinderUrl { get; set; } = string.Empty;
+
+    public bool BooksEnabled { get; set; } = true;
+
+    public bool AudiobooksEnabled { get; set; } = true;
+
+    public bool MangaEnabled { get; set; } = true;
+
+    public List<string> DisabledLibraryIds { get; set; } = [];
 }

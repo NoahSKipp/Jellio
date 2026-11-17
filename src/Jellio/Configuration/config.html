@@ -9,640 +9,746 @@
 
 <body>
   <div data-role="page" id="jellioConfigurationPage" class="page type-interior pluginConfigurationPage">
+    <style>
+      #jellioConfigurationPage .jellio-cfg-wrap {
+        max-width: 900px;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1.25em 1.4em;
+        margin-bottom: 1.25em;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-card h2.sectionTitle {
+        margin-top: 0;
+        margin-bottom: 0.25em;
+        font-size: 1.25em;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-card h3 {
+        margin: 1.1em 0 0.5em;
+        font-size: 1.02em;
+        opacity: 0.92;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-intro {
+        margin-bottom: 1em;
+        opacity: 0.85;
+        line-height: 1.45;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 0.75em 1.25em;
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-details {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 0.85em 1.25em;
+        margin-bottom: 1.1em;
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-details > summary {
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 1.1em;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-details > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-details > summary::after {
+        content: "+";
+        font-size: 1.2em;
+        opacity: 0.7;
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-details[open] > summary::after {
+        content: "-";
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-details[open] > summary {
+        margin-bottom: 0.85em;
+        padding-bottom: 0.6em;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-subdetails {
+        background: rgba(0, 0, 0, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 0.7em 1em;
+        margin-bottom: 0.75em;
+      }
+
+      #jellioConfigurationPage details.jellio-cfg-subdetails > summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-lib-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 0.55em;
+        margin-top: 0.6em;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-lib-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75em;
+        padding: 0.55em 0.8em;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-lib-meta {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-lib-name {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-lib-type {
+        font-size: 0.8em;
+        opacity: 0.65;
+        text-transform: capitalize;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-lib-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #00a4dc;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-save-bar {
+        margin: 1.5em 0 2.25em;
+      }
+    </style>
+
     <div data-role="content">
-      <div class="content-primary">
+      <div class="content-primary jellio-cfg-wrap">
         <form id="jellioForm">
           <div class="verticalSection">
             <div class="sectionTitleContainer flex align-items-center">
               <h2 class="sectionTitle">Jellio Configuration</h2>
             </div>
-          </div>
-
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkEnableReskin" />
-              <span>Enable reskin</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">
-              Patches the web client to load Jellio's own runtime. Turn this off to restore
-              the stock Jellyfin interface on next server start.
+            <div class="fieldDescription jellio-cfg-intro">
+              Configure Jellio's interface, visible libraries, and optional self-hosted integrations.
+              All settings below are server-wide unless noted otherwise.
             </div>
           </div>
 
-          <div class="verticalSection">
-            <div class="sectionTitleContainer flex align-items-center">
-              <h2 class="sectionTitle">Integrations</h2>
-            </div>
-            <div class="fieldDescription">
-              Separate self-hosted services Jellio talks to rather than reimplementing. Books and
-              audiobooks themselves need no setup here - add a Jellyfin library of type Books and
-              Jellio reads and plays it natively. Chaptarr below adds book requests on top.
-            </div>
-          </div>
+          <!-- 1. General & Libraries -->
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">General &amp; Playback</h2>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtChaptarrUrl">Chaptarr URL</label>
-            <input is="emby-input" type="url" id="txtChaptarrUrl" autocomplete="off"
-              placeholder="http://192.168.1.10:8789" />
-            <div class="fieldDescription">
-              Must be reachable from the Jellyfin server itself, not just from your browser.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtChaptarrApiKey">Chaptarr API Key</label>
-            <input is="emby-input" type="password" id="txtChaptarrApiKey" autocomplete="off" />
-            <div class="fieldDescription">
-              From Chaptarr's Settings &gt; General. Adds a "Request a book" search to the Books
-              shelf; requested books are added to Chaptarr using your root folder's default
-              profiles and searched for right away. Stays on the server, never sent to readers.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtAniListClientId">AniList Client ID</label>
-            <input is="emby-input" type="text" id="txtAniListClientId" autocomplete="off" />
-            <div class="fieldDescription">
-              Lets readers link their AniList list to manga series and keep anime/manga progress in sync.
-              Create an API client at anilist.co/settings/developer with the redirect URL
-              <code>https://anilist.co/api/v2/oauth/pin</code> and paste its ID here. User tokens
-              are encrypted on the server.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtMyAnimeListClientId">MyAnimeList Client ID (optional, Ani-Sync)</label>
-            <input is="emby-input" type="text" id="txtMyAnimeListClientId" autocomplete="off" />
-            <div class="fieldDescription">
-              Optional default MyAnimeList OAuth Client ID for user Ani-Sync login and token refresh.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtShikimoriClientId">Shikimori Client ID (optional, Ani-Sync)</label>
-            <input is="emby-input" type="text" id="txtShikimoriClientId" autocomplete="off" />
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtShikimoriClientSecret">Shikimori Client Secret (optional, Ani-Sync)</label>
-            <input is="emby-input" type="password" id="txtShikimoriClientSecret" autocomplete="off" />
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSimklClientSecret">Simkl Client Secret (optional, Ani-Sync)</label>
-            <input is="emby-input" type="password" id="txtSimklClientSecret" autocomplete="off" />
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtDeepLApiKey">DeepL API Key</label>
-            <input is="emby-input" type="password" id="txtDeepLApiKey" autocomplete="off" />
-            <div class="fieldDescription">
-              Powers Translate in the book reader's selection popup. Free keys (ending in
-              <code>:fx</code>) from deepl.com/pro-api give 500,000 characters a month. Stays on the
-              server, never sent to readers. Dictionary definitions work without it.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSuwayomiUrl">Suwayomi URL</label>
-            <input is="emby-input" type="url" id="txtSuwayomiUrl" autocomplete="off"
-              placeholder="http://192.168.1.10:4567" />
-            <div class="fieldDescription">
-              Suwayomi-Server (self-hosted Tachiyomi/Mihon) for manga, manhwa and manhua: the Manga shelf
-              searches its sources and adds series to its library, and chapters are read straight from
-              the source, like Mihon. Series saved to the server are downloaded into Suwayomi's downloads
-              folder: point it at the Jellyfin library the Manga shelf reads and turn on "Download as
-              CBZ". Must be reachable from the Jellyfin server.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSuwayomiUsername">Suwayomi Username</label>
-            <input is="emby-input" type="text" id="txtSuwayomiUsername" autocomplete="off" />
-            <div class="fieldDescription">Only if Suwayomi uses basic auth or UI login. Leave blank for none.</div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSuwayomiPassword">Suwayomi Password</label>
-            <input is="emby-input" type="password" id="txtSuwayomiPassword" autocomplete="off" />
-            <div class="fieldDescription">Stays on the server, never sent to readers.</div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSuwayomiLanguages">Suwayomi Source Languages</label>
-            <input is="emby-input" type="text" id="txtSuwayomiLanguages" autocomplete="off" placeholder="en" />
-            <div class="fieldDescription">
-              Which source languages to search, comma separated (for example <code>en</code> or
-              <code>en,es</code>). Multi-language sources are always included.
-            </div>
-          </div>
-
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkSuwayomiIncludeNsfw" />
-              <span>Include NSFW Suwayomi sources</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">
-              Suwayomi flags whole sources as NSFW, including most general manga sites that host some adult
-              titles. Leave off to skip them in manga searches.
-            </div>
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtMangaSourcePriority">Preferred manga sources</label>
-            <input is="emby-input" type="text" id="txtMangaSourcePriority" autocomplete="off" placeholder="MangaDex, Comick" />
-            <div class="fieldDescription">
-              When the same series is in Suwayomi's library from more than one source, the first source
-              listed here is read; otherwise the one with the most chapters. Comma separated.
-            </div>
-          </div>
-
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkSuwayomiDownloadRequests" />
-              <span>Download requested manga to the server</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">
-              Off: requested series are streamed from their source and take no space. On: every chapter
-              of a requested series is also downloaded into the library. Readers can save single series
-              either way.
-            </div>
-          </div>
-
-          <div class="verticalSection">
-            <div class="sectionTitleContainer flex align-items-center">
-              <h2 class="sectionTitle">Seasonal Themes</h2>
-            </div>
-            <div class="fieldDescription">
-              Applies to every user on this server. Reskins the whole page (background wash,
-              badge and focus colors, a themed ambient layer sitting behind the real content
-              rather than over it) to match whichever of these four occasions is active today,
-              one at a time. Never shown during playback. Each one has its own Start/End date so
-              it can run for a single day or stretch across a whole week; per user overrides may
-              come later, for now this is the one shared, server wide switch.
-            </div>
-          </div>
-
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkSeasonalEffectsEnabled" />
-              <span>Enable seasonal themes</span>
-            </label>
-          </div>
-
-          <!-- Static per theme, same real convention the previous 34-theme
-               catalogue already used: a dynamically created is="emby-checkbox"/
-               is="emby-input" row (document.createElement(tag, { is }) after the
-               DOM's own initial parse) never picked up this dashboard's own real
-               is= enhancement, real bug found live once an actual server ran this
-               rather than only a bare headless Chromium check of the raw HTML,
-               the row simply never showing at all. Static markup upgrades the
-               same way every other real plugin's own config page already relies
-               on. -->
-
-          <details open>
-            <summary>Halloween</summary>
             <div class="checkboxContainer checkboxContainer-withDescription">
               <label class="emby-checkbox-label">
-                <input is="emby-checkbox" type="checkbox" id="chkSeasonalHalloweenEnabled" />
-                <span>Enable Halloween</span>
+                <input is="emby-checkbox" type="checkbox" id="chkEnableReskin" />
+                <span>Enable Jellio reskin</span>
               </label>
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalHalloweenStartMonth">Start month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalHalloweenStartMonth" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalHalloweenStartDay">Start day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalHalloweenStartDay" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalHalloweenEndMonth">End month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalHalloweenEndMonth" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalHalloweenEndDay">End day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalHalloweenEndDay" />
-            </div>
-          </details>
-
-          <details open>
-            <summary>New Year's</summary>
-            <div class="checkboxContainer checkboxContainer-withDescription">
-              <label class="emby-checkbox-label">
-                <input is="emby-checkbox" type="checkbox" id="chkSeasonalNewYearEnabled" />
-                <span>Enable New Year's</span>
-              </label>
-              <div class="fieldDescription">
-                A start month after the end month (December into January, the default) wraps
-                across the year boundary rather than needing two separate ranges.
+              <div class="fieldDescription checkboxFieldDescription">
+                Patches the web client to load Jellio's own runtime. Turn this off to restore
+                the stock Jellyfin interface on next server start.
               </div>
             </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalNewYearStartMonth">Start month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalNewYearStartMonth" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalNewYearStartDay">Start day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalNewYearStartDay" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalNewYearEndMonth">End month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalNewYearEndMonth" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalNewYearEndDay">End day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalNewYearEndDay" />
-            </div>
-          </details>
 
-          <details open>
-            <summary>Valentine's Day</summary>
             <div class="checkboxContainer checkboxContainer-withDescription">
               <label class="emby-checkbox-label">
-                <input is="emby-checkbox" type="checkbox" id="chkSeasonalValentineEnabled" />
-                <span>Enable Valentine's Day</span>
+                <input is="emby-checkbox" type="checkbox" id="chkHomeRowCache" />
+                <span>Home row cache</span>
               </label>
+              <div class="fieldDescription checkboxFieldDescription">
+                Browsers keep home screen rows and share them between tabs, showing them at
+                once and refreshing in the background. Turn off to fetch every row on each load.
+              </div>
             </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalValentineStartMonth">Start month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalValentineStartMonth" />
+
+            <div class="selectContainer">
+              <label class="selectLabel" for="selVideoTranscodePolicy">Video transcode policy</label>
+              <select is="emby-select" id="selVideoTranscodePolicy" class="emby-select-withcolor emby-select">
+                <option value="Allow">Allow (home server, default)</option>
+                <option value="Avoid">Avoid</option>
+                <option value="Block">Block</option>
+              </select>
+              <div class="fieldDescription">
+                For servers without hardware transcoding. Avoid prefers direct-play video and
+                audio-only conversions; Block skips sources that require video re-encoding.
+              </div>
             </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalValentineStartDay">Start day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalValentineStartDay" />
+          </div>
+
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">Libraries &amp; Reading Shelves</h2>
+            <div class="fieldDescription jellio-cfg-intro">
+              Choose which reading shelves and Jellyfin libraries appear in Jellio's navigation.
+              Disabling a shelf or library hides it from the sidebar and mobile bar for all users.
             </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalValentineEndMonth">End month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalValentineEndMonth" />
+
+            <h3>Reading Shelves</h3>
+            <div class="jellio-cfg-grid">
+              <div class="checkboxContainer">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkBooksEnabled" />
+                  <span>Enable Books shelf</span>
+                </label>
+              </div>
+              <div class="checkboxContainer">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkAudiobooksEnabled" />
+                  <span>Enable Audiobooks shelf</span>
+                </label>
+              </div>
+              <div class="checkboxContainer">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkMangaEnabled" />
+                  <span>Enable Manga shelf</span>
+                </label>
+              </div>
             </div>
+
+            <h3>Jellyfin Libraries</h3>
+            <div class="fieldDescription">
+              Uncheck any library you want to hide from Jellio navigation.
+            </div>
+            <div id="jellioLibraryToggles" class="jellio-cfg-lib-list">
+              <div class="fieldDescription">Loading libraries...</div>
+            </div>
+          </div>
+
+          <!-- 2. Ani-Sync -->
+          <details class="jellio-cfg-details" open>
+            <summary>Ani-Sync (Per-User Anime &amp; Manga Tracking)</summary>
+            <div class="fieldDescription jellio-cfg-intro">
+              Setting OAuth Client IDs and Secrets here lets every user connect their own AniList,
+              MyAnimeList, Shikimori, or Simkl account with one click. All watched/read progress
+              still syncs strictly to each user's own account, and fields left blank can still be
+              entered by individual users.
+            </div>
+
             <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalValentineEndDay">End day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalValentineEndDay" />
+              <label class="inputLabel" for="txtAniListClientId">AniList Client ID</label>
+              <input is="emby-input" type="text" id="txtAniListClientId" autocomplete="off" />
+              <div class="fieldDescription">
+                Create an API client at <code>anilist.co/settings/developer</code> with redirect URL
+                <code>https://anilist.co/api/v2/oauth/pin</code> and paste its ID here.
+              </div>
+            </div>
+
+            <div class="inputContainer">
+              <label class="inputLabel" for="txtMyAnimeListClientId">MyAnimeList Client ID (optional)</label>
+              <input is="emby-input" type="text" id="txtMyAnimeListClientId" autocomplete="off" />
+              <div class="fieldDescription">
+                Optional default MyAnimeList OAuth Client ID for user Ani-Sync login and token refresh.
+              </div>
+            </div>
+
+            <div class="jellio-cfg-grid">
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtShikimoriClientId">Shikimori Client ID (optional)</label>
+                <input is="emby-input" type="text" id="txtShikimoriClientId" autocomplete="off" />
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtShikimoriClientSecret">Shikimori Client Secret (optional)</label>
+                <input is="emby-input" type="password" id="txtShikimoriClientSecret" autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="inputContainer">
+              <label class="inputLabel" for="txtSimklClientSecret">Simkl Client Secret (optional)</label>
+              <input is="emby-input" type="password" id="txtSimklClientSecret" autocomplete="off" />
+              <div class="fieldDescription">
+                Paired with the Simkl Client ID under Skip Intro/Credits below when using Simkl Ani-Sync.
+              </div>
             </div>
           </details>
 
-          <details open>
-            <summary>Christmas</summary>
+          <!-- 3. Books & Manga Services -->
+          <details class="jellio-cfg-details">
+            <summary>Books &amp; Manga Services (Chaptarr, DeepL, Suwayomi)</summary>
+            <div class="fieldDescription jellio-cfg-intro">
+              Optional self-hosted integrations for book requests, in-reader translation, and manga sources.
+              Books and audiobooks themselves need no setup here: add a Jellyfin library of type Books
+              and Jellio reads and plays it natively.
+            </div>
+
+            <h3>Chaptarr (Book Requests)</h3>
+            <div class="jellio-cfg-grid">
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtChaptarrUrl">Chaptarr URL</label>
+                <input is="emby-input" type="url" id="txtChaptarrUrl" autocomplete="off"
+                  placeholder="http://192.168.1.10:8789" />
+                <div class="fieldDescription">Must be reachable from the Jellyfin server.</div>
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtChaptarrApiKey">Chaptarr API Key</label>
+                <input is="emby-input" type="password" id="txtChaptarrApiKey" autocomplete="off" />
+                <div class="fieldDescription">From Chaptarr Settings &gt; General.</div>
+              </div>
+            </div>
+
+            <h3>DeepL (Book Reader Translation)</h3>
+            <div class="inputContainer">
+              <label class="inputLabel" for="txtDeepLApiKey">DeepL API Key</label>
+              <input is="emby-input" type="password" id="txtDeepLApiKey" autocomplete="off" />
+              <div class="fieldDescription">
+                Powers Translate in the book reader's selection popup. Free keys (ending in
+                <code>:fx</code>) from <code>deepl.com/pro-api</code> give 500,000 chars/month.
+              </div>
+            </div>
+
+            <h3>Suwayomi (Manga, Manhwa &amp; Manhua)</h3>
+            <div class="inputContainer">
+              <label class="inputLabel" for="txtSuwayomiUrl">Suwayomi URL</label>
+              <input is="emby-input" type="url" id="txtSuwayomiUrl" autocomplete="off"
+                placeholder="http://192.168.1.10:4567" />
+              <div class="fieldDescription">
+                Suwayomi-Server for manga searches and chapter streaming. For downloads, point
+                Suwayomi's downloads folder at your Manga library and enable "Download as CBZ".
+              </div>
+            </div>
+
+            <div class="jellio-cfg-grid">
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtSuwayomiUsername">Suwayomi Username</label>
+                <input is="emby-input" type="text" id="txtSuwayomiUsername" autocomplete="off" />
+                <div class="fieldDescription">Only if Suwayomi uses basic auth or UI login.</div>
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtSuwayomiPassword">Suwayomi Password</label>
+                <input is="emby-input" type="password" id="txtSuwayomiPassword" autocomplete="off" />
+                <div class="fieldDescription">Stays on the server, never sent to readers.</div>
+              </div>
+            </div>
+
+            <div class="jellio-cfg-grid">
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtSuwayomiLanguages">Suwayomi Source Languages</label>
+                <input is="emby-input" type="text" id="txtSuwayomiLanguages" autocomplete="off" placeholder="en" />
+                <div class="fieldDescription">Comma separated (for example <code>en</code> or <code>en,es</code>).</div>
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtMangaSourcePriority">Preferred manga sources</label>
+                <input is="emby-input" type="text" id="txtMangaSourcePriority" autocomplete="off" placeholder="MangaDex, Comick" />
+                <div class="fieldDescription">Comma separated priority order when multiple sources exist.</div>
+              </div>
+            </div>
+
             <div class="checkboxContainer checkboxContainer-withDescription">
               <label class="emby-checkbox-label">
-                <input is="emby-checkbox" type="checkbox" id="chkSeasonalChristmasEnabled" />
-                <span>Enable Christmas</span>
+                <input is="emby-checkbox" type="checkbox" id="chkSuwayomiIncludeNsfw" />
+                <span>Include NSFW Suwayomi sources</span>
               </label>
+              <div class="fieldDescription checkboxFieldDescription">
+                Leave off to skip sources flagged NSFW in manga searches.
+              </div>
             </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalChristmasStartMonth">Start month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalChristmasStartMonth" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalChristmasStartDay">Start day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalChristmasStartDay" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalChristmasEndMonth">End month</label>
-              <input is="emby-input" type="number" min="1" max="12" id="numSeasonalChristmasEndMonth" />
-            </div>
-            <div class="inputContainer">
-              <label class="inputLabel" for="numSeasonalChristmasEndDay">End day</label>
-              <input is="emby-input" type="number" min="1" max="31" id="numSeasonalChristmasEndDay" />
+
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSuwayomiDownloadRequests" />
+                <span>Download requested manga to the server</span>
+              </label>
+              <div class="fieldDescription checkboxFieldDescription">
+                Off: chapters stream from their source. On: requested series download to the library.
+              </div>
             </div>
           </details>
 
-          <div class="verticalSection">
-            <div class="sectionTitleContainer flex align-items-center">
-              <h2 class="sectionTitle">Calendar</h2>
+          <!-- 4. Calendar & Live TV -->
+          <details class="jellio-cfg-details">
+            <summary>Calendar &amp; Live TV</summary>
+
+            <div class="inputContainer">
+              <label class="inputLabel" for="txtTmdbAccessToken">TMDB API Read Access Token</label>
+              <input is="emby-input" type="password" id="txtTmdbAccessToken" autocomplete="off" />
+              <div class="fieldDescription">
+                Powers the Coming Soon row and Calendar page using each Watchlist item's TMDB ID.
+                Use the long Read Access Token from <code>themoviedb.org</code> under Settings &gt; API.
+              </div>
             </div>
-            <div class="fieldDescription">
-              Powers the Coming Soon row and the Calendar page: upcoming episode air dates and
-              movie digital release dates for whatever is on a user's own Watchlist, read
-              straight off each item's own ProviderIds.Tmdb (every Gelato import already carries
-              one). Needs a free TMDB API Read Access Token, from
-              themoviedb.org under Settings &gt; API, the long token, not the short v3 key. Left
-              blank, both the row and the page just stay empty, nothing else is affected.
+
+            <div class="jellio-cfg-grid">
+              <div class="inputContainer">
+                <label class="inputLabel" for="numStreamLinkAutoRemoveDays">Remove broken My streams after (days)</label>
+                <input is="emby-input" type="number" min="0" max="365" id="numStreamLinkAutoRemoveDays" />
+                <div class="fieldDescription">
+                  Broken Live TV links are removed after this many days (0 keeps them).
+                </div>
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtStreamFinderUrl">Stream finder address</label>
+                <input is="emby-input" type="text" id="txtStreamFinderUrl" placeholder="http://gluetun-sf:8780" />
+                <div class="fieldDescription">
+                  Optional headless-browser service for Add Stream when pages build streams via JS.
+                </div>
+              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtTmdbAccessToken">TMDB API Read Access Token</label>
-            <input is="emby-input" type="password" id="txtTmdbAccessToken" autocomplete="off" />
-          </div>
-
-          <div class="verticalSection">
-            <div class="sectionTitleContainer flex align-items-center">
-              <h2 class="sectionTitle">Skip Intro/Credits</h2>
+          <!-- 5. Skip Intro / Credits -->
+          <details class="jellio-cfg-details">
+            <summary>Skip Intro / Credits</summary>
+            <div class="fieldDescription jellio-cfg-intro">
+              Community timestamp databases tried before Jellio's own cross-episode audio analysis.
+              TheIntroDB works anonymously out of the box; all keys below are optional.
             </div>
-            <div class="fieldDescription">
-              Real community timestamp databases, tried before this plugin's own cross-episode
-              audio analysis: no stream or ffmpeg access needed, so a title gets a real Skip
-              Intro/Credits button the very first time it is opened. TheIntroDB
-              (theintrodb.org) covers general TV/movies and already works anonymously straight
-              off this item's own TMDB id, no key required. An optional API key from TheIntroDB's
-              own website just weights a reader's own submissions higher. SkipMe.db is a second,
-              independently crowdsourced general TV/movie database on the same TMDB id, but its
-              public endpoint currently rejects every request without a private credential this
-              plugin cannot obtain - left off below until that changes, since leaving it on today
-              would only add a guaranteed-failed lookup to every scan. IntroDB (introdb.app) adds a third
-              TV-specific database, keyed by IMDb id instead - it needs the TMDB Access Token
-              above configured to resolve one first, and an optional API key from its own
-              website works the same graceful-blank way TheIntroDB's does. AniSkip and Anime-Skip
-              (the same approach NuvioTV itself uses) cover anime specifically, whatever none of
-              the three above have: a free Simkl client ID (simkl.com, under Settings &gt;
-              Developer) maps a title onto the MyAnimeList/AniList id they key off, and a
-              separate free Anime-Skip client ID (anime-skip.com) adds its own fallback coverage
-              for whatever AniSkip alone does not have. Any of these left blank, that one piece
-              is skipped and everything else keeps working as before.
+
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSkipIntroCreditsAdminMenuEnabled" />
+                <span>Show "Find Skip Intro/Credits" on Movie/Series right click</span>
+              </label>
+              <div class="fieldDescription">
+                Admin-only context menu action to run the cross-episode audio analyzer on a Movie or Series.
+              </div>
             </div>
-          </div>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="numStreamLinkAutoRemoveDays">Remove broken My streams after (days)</label>
-            <input is="emby-input" type="number" min="0" max="365" id="numStreamLinkAutoRemoveDays" />
-            <div class="fieldDescription">
-              Links users added to Live TV are checked every few hours. One that has not worked
-              for this many days is removed from that user's My streams and they get a
-              notification. 0 keeps broken links until the user removes them.
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkEnableSkipMeDb" />
+                <span>Try SkipMe.db (off by default)</span>
+              </label>
+              <div class="fieldDescription">
+                SkipMe.db's public endpoint currently rejects unauthenticated requests; keep off unless needed.
+              </div>
             </div>
-          </div>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtStreamFinderUrl">Stream finder address</label>
-            <input is="emby-input" type="text" id="txtStreamFinderUrl" placeholder="http://gluetun-sf:8780" />
-            <div class="fieldDescription">
-              Optional. A headless-browser service Add Stream asks when a linked page has no stream in
-              its HTML (players that build the address with scripts). Leave empty to keep Add Stream to
-              its own crawl.
+            <div class="jellio-cfg-grid">
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtTheIntroDbApiKey">TheIntroDB API Key (optional)</label>
+                <input is="emby-input" type="password" id="txtTheIntroDbApiKey" autocomplete="off" />
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtIntroDbApiKey">IntroDB API Key (optional)</label>
+                <input is="emby-input" type="password" id="txtIntroDbApiKey" autocomplete="off" />
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtSimklClientId">Simkl Client ID</label>
+                <input is="emby-input" type="password" id="txtSimklClientId" autocomplete="off" />
+              </div>
+              <div class="inputContainer">
+                <label class="inputLabel" for="txtAnimeSkipClientId">Anime-Skip Client ID</label>
+                <input is="emby-input" type="password" id="txtAnimeSkipClientId" autocomplete="off" />
+              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="selectContainer">
-            <label class="selectLabel" for="selVideoTranscodePolicy">Video transcode policy</label>
-            <select is="emby-select" id="selVideoTranscodePolicy" class="emby-select-withcolor emby-select">
-              <option value="Allow">Allow (home server, default)</option>
-              <option value="Avoid">Avoid</option>
-              <option value="Block">Block</option>
-            </select>
-            <div class="fieldDescription">
-              For servers without hardware transcoding. Avoid: Jellio picks sources and stream
-              settings that copy the video and only convert audio or the container, flags image
-              subtitles as slow, and moves on from a stalled re-encode. Block: Jellio never asks
-              the server to re-encode video; sources that would need it are skipped. Allow keeps
-              the usual behaviour.
+          <!-- 6. Seasonal Themes -->
+          <details class="jellio-cfg-details">
+            <summary>Seasonal Themes</summary>
+            <div class="fieldDescription jellio-cfg-intro">
+              Applies server-wide ambient themes during active date ranges (never shown during playback).
             </div>
-          </div>
 
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkHomeRowCache" />
-              <span>Home row cache</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">
-              Browsers keep the home screen's rows and share them between tabs, showing them at
-              once and refreshing them in the background a few at a time (one at a time while
-              someone is watching). Turn off to have every tab ask the server for every row on
-              each load, as before.
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkSeasonalEffectsEnabled" />
+                <span>Enable seasonal themes</span>
+              </label>
             </div>
-          </div>
 
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkSkipIntroCreditsAdminMenuEnabled" />
-              <span>Show "Find Skip Intro/Credits" on Movie/Series right click</span>
-            </label>
-            <div class="fieldDescription">
-              An admin only entry that runs this plugin's own last-resort cross-episode audio
-              analyzer against a whole Movie or Series (every season). Off by default so it does
-              not sit on every single card's own right click menu - turn it on while actually
-              running a sweep, then back off again once done.
-            </div>
-          </div>
+            <!-- Static per theme so Jellyfin's is="emby-checkbox"/is="emby-input" upgrade runs on initial DOM parse. -->
+            <details class="jellio-cfg-subdetails">
+              <summary>Halloween</summary>
+              <div class="checkboxContainer" style="margin-top:0.6em;">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkSeasonalHalloweenEnabled" />
+                  <span>Enable Halloween</span>
+                </label>
+              </div>
+              <div class="jellio-cfg-grid">
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalHalloweenStartMonth">Start month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalHalloweenStartMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalHalloweenStartDay">Start day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalHalloweenStartDay" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalHalloweenEndMonth">End month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalHalloweenEndMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalHalloweenEndDay">End day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalHalloweenEndDay" />
+                </div>
+              </div>
+            </details>
 
-          <div class="checkboxContainer checkboxContainer-withDescription">
-            <label class="emby-checkbox-label">
-              <input is="emby-checkbox" type="checkbox" id="chkEnableSkipMeDb" />
-              <span>Try SkipMe.db (currently rejects every request, off by default)</span>
-            </label>
-            <div class="fieldDescription">
-              Leave this off unless a working credential for SkipMe.db's public endpoint ever
-              becomes available - enabling it today adds a guaranteed-failed network round trip
-              to every episode of every scan for no benefit.
-            </div>
-          </div>
+            <details class="jellio-cfg-subdetails">
+              <summary>New Year's</summary>
+              <div class="checkboxContainer checkboxContainer-withDescription" style="margin-top:0.6em;">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkSeasonalNewYearEnabled" />
+                  <span>Enable New Year's</span>
+                </label>
+                <div class="fieldDescription">
+                  A start month after the end month (December into January) wraps across the year boundary.
+                </div>
+              </div>
+              <div class="jellio-cfg-grid">
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalNewYearStartMonth">Start month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalNewYearStartMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalNewYearStartDay">Start day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalNewYearStartDay" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalNewYearEndMonth">End month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalNewYearEndMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalNewYearEndDay">End day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalNewYearEndDay" />
+                </div>
+              </div>
+            </details>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtTheIntroDbApiKey">TheIntroDB API Key (optional)</label>
-            <input is="emby-input" type="password" id="txtTheIntroDbApiKey" autocomplete="off" />
-          </div>
+            <details class="jellio-cfg-subdetails">
+              <summary>Valentine's Day</summary>
+              <div class="checkboxContainer" style="margin-top:0.6em;">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkSeasonalValentineEnabled" />
+                  <span>Enable Valentine's Day</span>
+                </label>
+              </div>
+              <div class="jellio-cfg-grid">
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalValentineStartMonth">Start month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalValentineStartMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalValentineStartDay">Start day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalValentineStartDay" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalValentineEndMonth">End month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalValentineEndMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalValentineEndDay">End day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalValentineEndDay" />
+                </div>
+              </div>
+            </details>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtIntroDbApiKey">IntroDB API Key (optional)</label>
-            <input is="emby-input" type="password" id="txtIntroDbApiKey" autocomplete="off" />
-          </div>
+            <details class="jellio-cfg-subdetails">
+              <summary>Christmas</summary>
+              <div class="checkboxContainer" style="margin-top:0.6em;">
+                <label class="emby-checkbox-label">
+                  <input is="emby-checkbox" type="checkbox" id="chkSeasonalChristmasEnabled" />
+                  <span>Enable Christmas</span>
+                </label>
+              </div>
+              <div class="jellio-cfg-grid">
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalChristmasStartMonth">Start month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalChristmasStartMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalChristmasStartDay">Start day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalChristmasStartDay" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalChristmasEndMonth">End month</label>
+                  <input is="emby-input" type="number" min="1" max="12" id="numSeasonalChristmasEndMonth" />
+                </div>
+                <div class="inputContainer">
+                  <label class="inputLabel" for="numSeasonalChristmasEndDay">End day</label>
+                  <input is="emby-input" type="number" min="1" max="31" id="numSeasonalChristmasEndDay" />
+                </div>
+              </div>
+            </details>
+          </details>
 
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtSimklClientId">Simkl Client ID</label>
-            <input is="emby-input" type="password" id="txtSimklClientId" autocomplete="off" />
-          </div>
-
-          <div class="inputContainer">
-            <label class="inputLabel" for="txtAnimeSkipClientId">Anime-Skip Client ID</label>
-            <input is="emby-input" type="password" id="txtAnimeSkipClientId" autocomplete="off" />
-          </div>
-
-          <div>
+          <div class="jellio-cfg-save-bar">
             <button is="emby-button" type="submit" class="raised button-submit block emby-button">
-              <span>Save</span>
+              <span>Save Settings</span>
             </button>
           </div>
         </form>
 
-        <div class="verticalSection">
-          <div class="sectionTitleContainer flex align-items-center">
-            <h2 class="sectionTitle">Announcements</h2>
+        <!-- Admin Broadcast Tools (one-time actions, separate from saved plugin config) -->
+        <details class="jellio-cfg-details">
+          <summary>Announcements</summary>
+          <div class="fieldDescription jellio-cfg-intro">
+            Sends a one-time message to every user on this server, or to one user. Delivered as a
+            toast to anyone with Jellio or Jellio TV open, and left in their Notifications.
           </div>
-          <div class="fieldDescription">
-            Sends a one time message to every user on this server, or to one of them (a
-            restart, planned maintenance, anything worth a heads up). Delivered as a toast to
-            anyone with Jellio or Jellio TV open, and left in their Notifications either way.
+
+          <div class="selectContainer">
+            <label class="selectLabel" for="selAnnouncementUser">Send to</label>
+            <select is="emby-select" id="selAnnouncementUser" class="emby-select-withcolor emby-select">
+              <option value="">All users</option>
+            </select>
           </div>
-        </div>
 
-        <div class="selectContainer">
-          <label class="selectLabel" for="selAnnouncementUser">Send to</label>
-          <select is="emby-select" id="selAnnouncementUser" class="emby-select-withcolor emby-select">
-            <option value="">All users</option>
-          </select>
-        </div>
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtAnnouncementMessage">Message</label>
+            <textarea is="emby-textarea" id="txtAnnouncementMessage" rows="3" maxlength="300"></textarea>
+          </div>
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="txtAnnouncementMessage">Message</label>
-          <textarea is="emby-textarea" id="txtAnnouncementMessage" rows="3" maxlength="300"></textarea>
-        </div>
+          <div class="inputContainer">
+            <div class="inputLabel">Image (optional)</div>
+            <input type="file" id="fileAnnouncementImage" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
+            <button is="emby-button" type="button" id="btnChooseAnnouncementImage" class="raised emby-button">
+              <span>Choose image</span>
+            </button>
+            <div class="fieldDescription">Or paste (Ctrl+V) or drop an image onto the message box.</div>
+            <div id="announcementImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
+              <img id="imgAnnouncementPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
+              <button is="emby-button" type="button" id="btnClearAnnouncementImage" class="emby-button">
+                <span>Remove image</span>
+              </button>
+            </div>
+          </div>
 
-        <div class="inputContainer">
-          <div class="inputLabel">Image (optional)</div>
-          <input type="file" id="fileAnnouncementImage" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
-          <button is="emby-button" type="button" id="btnChooseAnnouncementImage" class="raised emby-button">
-            <span>Choose image</span>
-          </button>
-          <div class="fieldDescription">Or paste (Ctrl+V) or drop an image onto the message box. Shown with the message, shrunk to fit; the original isn't kept.</div>
-          <div id="announcementImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
-            <img id="imgAnnouncementPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
-            <button is="emby-button" type="button" id="btnClearAnnouncementImage" class="emby-button">
-              <span>Remove image</span>
+          <div>
+            <button is="emby-button" type="button" id="btnSendAnnouncement" class="raised block emby-button">
+              <span id="lblSendAnnouncement">Send to all users</span>
             </button>
           </div>
-        </div>
+        </details>
 
-        <div>
-          <button is="emby-button" type="button" id="btnSendAnnouncement" class="raised block emby-button">
-            <span id="lblSendAnnouncement">Send to all users</span>
-          </button>
-        </div>
-
-        <div class="verticalSection" style="margin-top:2.5em;">
-          <div class="sectionTitleContainer flex align-items-center">
-            <h2 class="sectionTitle">Sounds</h2>
+        <details class="jellio-cfg-details">
+          <summary>Sounds</summary>
+          <div class="fieldDescription jellio-cfg-intro">
+            Plays a sound on a user's Jellio or Jellio TV wherever they are in the app.
           </div>
-          <div class="fieldDescription">
-            Plays a sound on a user's Jellio or Jellio TV, wherever they are in the app. No
-            message is shown. Anything they're watching or listening to is turned down while it
-            plays, then back up.
+
+          <div class="selectContainer">
+            <label class="selectLabel" for="selSoundUser">Play for</label>
+            <select is="emby-select" id="selSoundUser" class="emby-select-withcolor emby-select">
+              <option value="">All users</option>
+            </select>
           </div>
-        </div>
 
-        <div class="selectContainer">
-          <label class="selectLabel" for="selSoundUser">Play for</label>
-          <select is="emby-select" id="selSoundUser" class="emby-select-withcolor emby-select">
-            <option value="">All users</option>
-          </select>
-        </div>
-
-        <div class="inputContainer">
-          <div class="inputLabel">Sound</div>
-          <input type="file" id="fileSound" accept="audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,audio/x-wav,.mp3,.m4a,.ogg,.wav" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
-          <button is="emby-button" type="button" id="btnChooseSound" class="raised emby-button">
-            <span>Choose sound</span>
-          </button>
-          <span id="lblSoundName" style="margin-left:0.8em;opacity:0.8;"></span>
-          <div class="fieldDescription">MP3, M4A, OGG or WAV, up to 10 MB.</div>
-          <audio id="audSoundPreview" controls style="display:none;margin-top:0.6em;max-width:100%;"></audio>
-        </div>
-
-        <div class="selectContainer">
-          <label class="selectLabel" for="selSoundDirection">Direction</label>
-          <select is="emby-select" id="selSoundDirection" class="emby-select-withcolor emby-select">
-            <option value="both">Both sides</option>
-            <option value="left">Left</option>
-            <option value="right">Right</option>
-            <option value="rear">Behind (surround speakers)</option>
-          </select>
-          <div class="fieldDescription">Behind needs a surround setup; on plain stereo it plays from both sides.</div>
-        </div>
-
-        <div class="inputContainer">
-          <label class="inputLabel" for="rngSoundVolume">Sound volume: <span id="lblSoundVolume">100</span>%</label>
-          <input type="range" id="rngSoundVolume" min="5" max="100" step="5" value="100" style="width:100%;" />
-        </div>
-
-        <div class="inputContainer">
-          <label class="inputLabel" for="rngDuckVolume">Their playback while it plays: <span id="lblDuckVolume">30</span>%</label>
-          <input type="range" id="rngDuckVolume" min="0" max="100" step="5" value="30" style="width:100%;" />
-          <div class="fieldDescription">Only matters if they're watching or listening to something. 0 mutes it, 100 leaves it as is.</div>
-        </div>
-
-        <div>
-          <button is="emby-button" type="button" id="btnSendSound" class="raised block emby-button">
-            <span id="lblSendSound">Play for all users</span>
-          </button>
-        </div>
-
-        <div class="verticalSection" style="margin-top:2.5em;">
-          <div class="sectionTitleContainer flex align-items-center">
-            <h2 class="sectionTitle">Screen overlays</h2>
+          <div class="inputContainer">
+            <div class="inputLabel">Sound</div>
+            <input type="file" id="fileSound" accept="audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,audio/x-wav,.mp3,.m4a,.ogg,.wav" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
+            <button is="emby-button" type="button" id="btnChooseSound" class="raised emby-button">
+              <span>Choose sound</span>
+            </button>
+            <span id="lblSoundName" style="margin-left:0.8em;opacity:0.8;"></span>
+            <div class="fieldDescription">MP3, M4A, OGG or WAV, up to 10 MB.</div>
+            <audio id="audSoundPreview" controls style="display:none;margin-top:0.6em;max-width:100%;"></audio>
           </div>
-          <div class="fieldDescription">
-            Puts a picture or a line of text in the middle of a user's screen on Jellio or Jellio
-            TV for a few seconds, over whatever they're doing. Nothing is left in their
-            notifications.
+
+          <div class="selectContainer">
+            <label class="selectLabel" for="selSoundDirection">Direction</label>
+            <select is="emby-select" id="selSoundDirection" class="emby-select-withcolor emby-select">
+              <option value="both">Both sides</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+              <option value="rear">Behind (surround speakers)</option>
+            </select>
+            <div class="fieldDescription">Behind needs a surround setup; on plain stereo it plays from both sides.</div>
           </div>
-        </div>
 
-        <div class="selectContainer">
-          <label class="selectLabel" for="selOverlayUser">Show to</label>
-          <select is="emby-select" id="selOverlayUser" class="emby-select-withcolor emby-select">
-            <option value="">All users</option>
-          </select>
-        </div>
+          <div class="inputContainer">
+            <label class="inputLabel" for="rngSoundVolume">Sound volume: <span id="lblSoundVolume">100</span>%</label>
+            <input type="range" id="rngSoundVolume" min="5" max="100" step="5" value="100" style="width:100%;" />
+          </div>
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="txtOverlayText">Text (optional)</label>
-          <input is="emby-input" type="text" id="txtOverlayText" maxlength="200" />
-        </div>
+          <div class="inputContainer">
+            <label class="inputLabel" for="rngDuckVolume">Their playback while it plays: <span id="lblDuckVolume">30</span>%</label>
+            <input type="range" id="rngDuckVolume" min="0" max="100" step="5" value="30" style="width:100%;" />
+            <div class="fieldDescription">0 mutes active playback, 100 leaves it as is.</div>
+          </div>
 
-        <div class="inputContainer">
-          <div class="inputLabel">Image (optional)</div>
-          <input type="file" id="fileOverlayImage" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
-          <button is="emby-button" type="button" id="btnChooseOverlayImage" class="raised emby-button">
-            <span>Choose image</span>
-          </button>
-          <div class="fieldDescription">Or paste (Ctrl+V) an image into the text box. GIFs keep their animation.</div>
-          <div id="overlayImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
-            <img id="imgOverlayPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
-            <button is="emby-button" type="button" id="btnClearOverlayImage" class="emby-button">
-              <span>Remove image</span>
+          <div>
+            <button is="emby-button" type="button" id="btnSendSound" class="raised block emby-button">
+              <span id="lblSendSound">Play for all users</span>
             </button>
           </div>
-        </div>
+        </details>
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="rngOverlayOpacity">Opacity: <span id="lblOverlayOpacity">80</span>%</label>
-          <input type="range" id="rngOverlayOpacity" min="10" max="100" step="5" value="80" style="width:100%;" />
-        </div>
+        <details class="jellio-cfg-details">
+          <summary>Screen Overlays</summary>
+          <div class="fieldDescription jellio-cfg-intro">
+            Displays an image or line of text in the middle of a user's screen for a few seconds.
+          </div>
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="rngOverlaySeconds">Shown for: <span id="lblOverlaySeconds">5</span> seconds</label>
-          <input type="range" id="rngOverlaySeconds" min="1" max="60" step="1" value="5" style="width:100%;" />
-        </div>
+          <div class="selectContainer">
+            <label class="selectLabel" for="selOverlayUser">Show to</label>
+            <select is="emby-select" id="selOverlayUser" class="emby-select-withcolor emby-select">
+              <option value="">All users</option>
+            </select>
+          </div>
 
-        <div>
-          <button is="emby-button" type="button" id="btnSendOverlay" class="raised block emby-button">
-            <span id="lblSendOverlay">Show to all users</span>
-          </button>
-        </div>
+          <div class="inputContainer">
+            <label class="inputLabel" for="txtOverlayText">Text (optional)</label>
+            <input is="emby-input" type="text" id="txtOverlayText" maxlength="200" />
+          </div>
+
+          <div class="inputContainer">
+            <div class="inputLabel">Image (optional)</div>
+            <input type="file" id="fileOverlayImage" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" />
+            <button is="emby-button" type="button" id="btnChooseOverlayImage" class="raised emby-button">
+              <span>Choose image</span>
+            </button>
+            <div class="fieldDescription">Or paste (Ctrl+V) an image into the text box. GIFs keep their animation.</div>
+            <div id="overlayImagePreview" style="display:none;margin-top:0.6em;align-items:center;gap:0.8em;">
+              <img id="imgOverlayPreview" alt="" style="max-width:160px;max-height:120px;border-radius:8px;" />
+              <button is="emby-button" type="button" id="btnClearOverlayImage" class="emby-button">
+                <span>Remove image</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="rngOverlayOpacity">Opacity: <span id="lblOverlayOpacity">80</span>%</label>
+            <input type="range" id="rngOverlayOpacity" min="10" max="100" step="5" value="80" style="width:100%;" />
+          </div>
+
+          <div class="inputContainer">
+            <label class="inputLabel" for="rngOverlaySeconds">Shown for: <span id="lblOverlaySeconds">5</span> seconds</label>
+            <input type="range" id="rngOverlaySeconds" min="1" max="60" step="1" value="5" style="width:100%;" />
+          </div>
+
+          <div>
+            <button is="emby-button" type="button" id="btnSendOverlay" class="raised block emby-button">
+              <span id="lblSendOverlay">Show to all users</span>
+            </button>
+          </div>
+        </details>
       </div>
     </div>
 
-    <!-- Jellyfin's own dashboard page loader (viewContainer.js's own real
-         parseHtml/loadView) fetches this whole file as plain text and keeps
-         only wrapper.querySelector('div[data-role="page"]') from it, real
-         source read to find this out rather than assumed after three
-         earlier fixes here all landed on a real server and changed nothing:
-         anything outside that one div, a script included, is silently
-         dropped before it ever reaches the live document, so this script
-         was never executing at all up to now, every value this page's own
-         form ever showed was just its own raw, empty HTML default, entirely
-         disconnected from the real saved config the whole time. Has to sit
-         inside this real div for that same reason. -->
+    <!-- Keep script inside div[data-role="page"] because Jellyfin's viewContainer.js
+         only retains the div[data-role="page"] element when loading plugin pages. -->
     <script type="text/javascript">
     (function () {
       const pluginId = 'f2937f08-0595-40d1-a74b-a44656cbc6de';
 
-      // One entry per Frontend/components/seasons.js theme key, same real
-      // shape ConfigController's own real GetConfig endpoint already
-      // returns to every client. Every row this walks already exists as
-      // static markup above; this only ever reads or writes values on ids
-      // that are already real, upgraded elements by the time either
-      // function runs.
-      //
-      // Real defaults, kept in sync by hand with Configuration/PluginConfiguration.cs's
-      // own field initializers: an admin's already-saved config.xml written before
-      // these properties existed comes back from ApiClient.getPluginConfiguration()
-      // with every one of them undefined, real Jellyfin behaviour this page's own
-      // withDefault() below guards against. Without that guard, undefined reads as
-      // false on a checkbox and as an empty, non numeric value on a number input,
-      // an existing install's own real per theme settings (already true, already
-      // the right real dates server side) showing as every theme disabled and
-      // every date blank instead.
       const THEMES = [
         { key: 'Halloween', enabled: true, range: [10, 24, 11, 2] },
         { key: 'NewYear', enabled: true, range: [12, 28, 1, 2] },
@@ -674,10 +780,86 @@
         });
       }
 
+      function renderLibraryToggles(disabledIds) {
+        var container = document.querySelector('#jellioLibraryToggles');
+        if (!container) return;
+        var disabledSet = new Set((Array.isArray(disabledIds) ? disabledIds : []).map(function (id) {
+          return String(id || '').toLowerCase();
+        }));
+
+        window.ApiClient.getVirtualFolders().then(function (folders) {
+          container.textContent = '';
+          var list = Array.isArray(folders) ? folders : [];
+          if (list.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'fieldDescription';
+            empty.textContent = 'No Jellyfin libraries found.';
+            container.appendChild(empty);
+            return;
+          }
+
+          list.forEach(function (folder) {
+            var id = String(folder.ItemId || folder.Id || '');
+            if (!id) return;
+
+            var label = document.createElement('label');
+            label.className = 'jellio-cfg-lib-item';
+
+            var meta = document.createElement('span');
+            meta.className = 'jellio-cfg-lib-meta';
+
+            var nameEl = document.createElement('span');
+            nameEl.className = 'jellio-cfg-lib-name';
+            nameEl.textContent = folder.Name || 'Library';
+
+            var typeEl = document.createElement('span');
+            typeEl.className = 'jellio-cfg-lib-type';
+            typeEl.textContent = folder.CollectionType || 'mixed';
+
+            meta.appendChild(nameEl);
+            meta.appendChild(typeEl);
+
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.dataset.libraryId = id;
+            checkbox.checked = !disabledSet.has(id.toLowerCase());
+
+            label.appendChild(meta);
+            label.appendChild(checkbox);
+            container.appendChild(label);
+          });
+        }).catch(function () {
+          container.textContent = '';
+          var err = document.createElement('div');
+          err.className = 'fieldDescription';
+          err.textContent = 'Could not load Jellyfin libraries.';
+          container.appendChild(err);
+        });
+      }
+
+      function readDisabledLibraryIds() {
+        var container = document.querySelector('#jellioLibraryToggles');
+        if (!container) return null;
+        var checkboxes = container.querySelectorAll('input[type="checkbox"][data-library-id]');
+        if (!checkboxes.length) return null;
+        var disabled = [];
+        checkboxes.forEach(function (cb) {
+          if (!cb.checked && cb.dataset.libraryId) {
+            disabled.push(cb.dataset.libraryId);
+          }
+        });
+        return disabled;
+      }
+
       function loadConfig() {
         Dashboard.showLoadingMsg();
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           document.querySelector('#chkEnableReskin').checked = withDefault(config.EnableReskin, true);
+          document.querySelector('#chkBooksEnabled').checked = withDefault(config.BooksEnabled, true);
+          document.querySelector('#chkAudiobooksEnabled').checked = withDefault(config.AudiobooksEnabled, true);
+          document.querySelector('#chkMangaEnabled').checked = withDefault(config.MangaEnabled, true);
+          renderLibraryToggles(config.DisabledLibraryIds);
+
           document.querySelector('#txtChaptarrUrl').value = withDefault(config.ChaptarrUrl, '');
           document.querySelector('#txtChaptarrApiKey').value = withDefault(config.ChaptarrApiKey, '');
           document.querySelector('#txtDeepLApiKey').value = withDefault(config.DeepLApiKey, '');
@@ -715,6 +897,14 @@
         Dashboard.showLoadingMsg();
         window.ApiClient.getPluginConfiguration(pluginId).then(function (config) {
           config.EnableReskin = document.querySelector('#chkEnableReskin').checked;
+          config.BooksEnabled = document.querySelector('#chkBooksEnabled').checked;
+          config.AudiobooksEnabled = document.querySelector('#chkAudiobooksEnabled').checked;
+          config.MangaEnabled = document.querySelector('#chkMangaEnabled').checked;
+          var disabledLibs = readDisabledLibraryIds();
+          if (disabledLibs !== null) {
+            config.DisabledLibraryIds = disabledLibs;
+          }
+
           config.ChaptarrUrl = document.querySelector('#txtChaptarrUrl').value.trim();
           config.ChaptarrApiKey = document.querySelector('#txtChaptarrApiKey').value.trim();
           config.DeepLApiKey = document.querySelector('#txtDeepLApiKey').value.trim();
@@ -751,13 +941,6 @@
         return false;
       }
 
-      // Controllers/NotificationsController.cs's own POST broadcast,
-      // RequiresElevation gated: this dashboard route is already only
-      // ever reachable by a real admin, same as every other row on this
-      // page, so nothing here needs its own separate real auth check.
-      // Deliberately not part of the form/saveConfig above: a message is
-      // a one time action, not a persisted setting PluginConfiguration
-      // should carry forward.
       function sendAnnouncement() {
         var input = document.querySelector('#txtAnnouncementMessage');
         var message = input.value.trim();
@@ -781,13 +964,6 @@
           clearAnnouncementImage();
           Dashboard.alert(userName ? 'Message sent to ' + userName + '.' : 'Announcement sent to every user.');
         }).catch(function (err) {
-          // Same real JSON encoded string BadRequest(string) already
-          // returns everywhere else in this codebase, unwrapped the
-          // same way runtime/api.js's own setProfileBannerFromFile does
-          // for the identical real reason: err.text() is not guaranteed
-          // to exist on every real rejection shape ajax() can produce
-          // (a genuine network failure included), so this still falls
-          // back to a plain message rather than throwing again here.
           var readBody = err && typeof err.text === 'function' ? err.text() : Promise.resolve('');
           return readBody.then(function (text) {
             var parsedMessage = text;
@@ -795,7 +971,7 @@
               var parsed = JSON.parse(text);
               if (typeof parsed === 'string') parsedMessage = parsed;
             } catch (parseErr) {
-              // Not JSON: text already is the real message to show.
+              // Not JSON: text already is the message.
             }
             Dashboard.alert(parsedMessage || 'Could not send that announcement.');
           });
@@ -804,16 +980,6 @@
         });
       }
 
-      // Real dashboard behaviour: pageshow is a real, native browser event
-      // tied to actual navigation/history, not something the dashboard's
-      // own fetch-this-page-and-inject-it-into-the-SPA-shell loader
-      // necessarily ever fires, so this also calls loadConfig once,
-      // immediately and unconditionally, right here, rather than relying
-      // on pageshow alone for the first real load. The retry loop below
-      // covers a real, once seen case: this whole inline script executing
-      // before its own page container has actually landed in the live
-      // document yet.
-      // The optional picture, read as a data URL; the server shrinks it.
       var announcementImage = null;
       function clearAnnouncementImage() {
         announcementImage = null;
@@ -850,7 +1016,6 @@
         document.querySelector('#btnChooseAnnouncementImage').addEventListener('click', function () {
           file.click();
         });
-        // Paste or drop straight onto the message box.
         var textBox = document.querySelector('#txtAnnouncementMessage');
         textBox.addEventListener('paste', function (event) {
           var items = (event.clipboardData && event.clipboardData.items) || [];
@@ -875,7 +1040,6 @@
         document.querySelector('#btnClearAnnouncementImage').addEventListener('click', clearAnnouncementImage);
       }
 
-      // The Send to lists: All users, then each user by name.
       function loadAnnouncementUsers() {
         fillUserSelect('#selAnnouncementUser', '#lblSendAnnouncement', 'Send to ', 'Send to all users');
         fillUserSelect('#selSoundUser', '#lblSendSound', 'Play for ', 'Play for all users');

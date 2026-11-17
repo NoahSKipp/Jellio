@@ -13,7 +13,19 @@ public class ConfigController : ControllerBase
 
     public record SeasonalEffectConfig(bool Enabled, SeasonalRange Range);
 
-    public record ClientConfig(bool SeasonalEffectsEnabled, Dictionary<string, SeasonalEffectConfig> SeasonalEffects, bool SkipIntroCreditsAdminMenuEnabled, bool BookRequestsEnabled, bool TranslationEnabled, bool MangaRequestsEnabled, string VideoTranscodePolicy, bool HomeRowCache);
+    public record ClientConfig(
+        bool SeasonalEffectsEnabled,
+        Dictionary<string, SeasonalEffectConfig> SeasonalEffects,
+        bool SkipIntroCreditsAdminMenuEnabled,
+        bool BookRequestsEnabled,
+        bool TranslationEnabled,
+        bool MangaRequestsEnabled,
+        string VideoTranscodePolicy,
+        bool HomeRowCache,
+        bool BooksEnabled,
+        bool AudiobooksEnabled,
+        bool MangaEnabled,
+        IReadOnlyList<string> DisabledLibraryIds);
 
     [HttpGet]
     public ActionResult<ClientConfig> Get()
@@ -40,9 +52,23 @@ public class ConfigController : ControllerBase
             ),
         };
 
-        // Only whether book requests are available, never the token itself.
-        var bookRequestsEnabled = !string.IsNullOrWhiteSpace(cfg.ChaptarrUrl) && !string.IsNullOrWhiteSpace(cfg.ChaptarrApiKey);
+        // Only whether book/manga requests are available, never the token itself.
+        var bookRequestsEnabled = cfg.BooksEnabled && !string.IsNullOrWhiteSpace(cfg.ChaptarrUrl) && !string.IsNullOrWhiteSpace(cfg.ChaptarrApiKey);
+        var mangaRequestsEnabled = cfg.MangaEnabled && !string.IsNullOrWhiteSpace(cfg.SuwayomiUrl);
         var policy = cfg.VideoTranscodePolicy is "Avoid" or "Block" ? cfg.VideoTranscodePolicy : "Allow";
-        return Ok(new ClientConfig(cfg.SeasonalEffectsEnabled, effects, cfg.SkipIntroCreditsAdminMenuEnabled, bookRequestsEnabled, !string.IsNullOrWhiteSpace(cfg.DeepLApiKey), !string.IsNullOrWhiteSpace(cfg.SuwayomiUrl), policy, cfg.HomeRowCache));
+        var disabledLibraries = (IReadOnlyList<string>)(cfg.DisabledLibraryIds ?? []);
+        return Ok(new ClientConfig(
+            cfg.SeasonalEffectsEnabled,
+            effects,
+            cfg.SkipIntroCreditsAdminMenuEnabled,
+            bookRequestsEnabled,
+            !string.IsNullOrWhiteSpace(cfg.DeepLApiKey),
+            mangaRequestsEnabled,
+            policy,
+            cfg.HomeRowCache,
+            cfg.BooksEnabled,
+            cfg.AudiobooksEnabled,
+            cfg.MangaEnabled,
+            disabledLibraries));
     }
 }

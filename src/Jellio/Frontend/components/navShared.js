@@ -9,7 +9,7 @@ import { t } from '../runtime/i18n.js';
 // (originally sourced from Harbor, harborstremio/harbor, MIT, and
 // NuvioMobile's own real vector drawables, see that file's own header
 // for the full provenance), not re-derived here.
-import { getUserViews, getCollections, getCurrentUser, getUserImageUrl, friendsSupported, friendsIncomingCount } from '../runtime/api.js';
+import { getUserViews, getCollections, getCurrentUser, getUserImageUrl, friendsSupported, friendsIncomingCount, getJellioConfig } from '../runtime/api.js';
 import { currentHash } from '../runtime/router.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -101,12 +101,27 @@ export function isActive(hash) {
   return hashHasKind === currentHasKind;
 }
 
+function isLibraryDisabled(view, disabledSet) {
+  return Boolean(view && view.Id && disabledSet.has(String(view.Id).toLowerCase()));
+}
+
+function buildDisabledSet(config) {
+  const raw = config && Array.isArray(config.DisabledLibraryIds) ? config.DisabledLibraryIds : [];
+  return new Set(raw.map(function (id) { return String(id || '').toLowerCase(); }).filter(Boolean));
+}
+
 // The Manga shelf's address (the same library getPrimaryNavLinks links
 // to), for opening a series from elsewhere; null without one.
 export async function getMangaShelfHash() {
-  const views = await getUserViews().catch(() => []);
-  const mangaView = views.find((view) => view.CollectionType === 'books' && MANGA_LIBRARY.test(view.Name || ''));
-  const source = mangaView || views.find((view) => view.CollectionType === 'books');
+  const [views, config] = await Promise.all([
+    getUserViews().catch(() => []),
+    getJellioConfig().catch(() => null),
+  ]);
+  if (config && config.MangaEnabled === false) return null;
+  const disabledSet = buildDisabledSet(config);
+  const enabledViews = views.filter((view) => !isLibraryDisabled(view, disabledSet));
+  const mangaView = enabledViews.find((view) => view.CollectionType === 'books' && MANGA_LIBRARY.test(view.Name || ''));
+  const source = mangaView || enabledViews.find((view) => view.CollectionType === 'books');
   return source ? libraryHash(source) + '&bookKind=manga' + (mangaView ? '&mangaLibrary=1' : '') : null;
 }
 
@@ -117,12 +132,23 @@ export async function getPrimaryNavLinks() {
     return [];
   });
 
-  let views = [];
-  try {
-    views = await getUserViews();
-  } catch (err) {
-    console.warn('Jellio: nav could not load libraries', err);
-  }
+  const [rawViews, config] = await Promise.all([
+    getUserViews().catch(function (err) {
+      console.warn('Jellio: nav could not load libraries', err);
+      return [];
+    }),
+    getJellioConfig().catch(function () {
+      return null;
+    }),
+  ]);
+
+  const booksEnabled = !config || config.BooksEnabled !== false;
+  const audiobooksEnabled = !config || config.AudiobooksEnabled !== false;
+  const mangaEnabled = !config || config.MangaEnabled !== false;
+  const disabledSet = buildDisabledSet(config);
+  const views = rawViews.filter(function (view) {
+    return !isLibraryDisabled(view, disabledSet);
+  });
 
   const moviesView = views.filter(function (view) {
     return view.CollectionType === 'movies';
@@ -153,7 +179,7 @@ export async function getPrimaryNavLinks() {
   })[0];
   let mangaLinkAdded = false;
   function pushMangaLink() {
-    if (mangaLinkAdded) return;
+    if (!mangaEnabled || mangaLinkAdded) return;
     mangaLinkAdded = true;
     const source = mangaView || booksView;
     if (!source) return;
@@ -175,8 +201,12 @@ export async function getPrimaryNavLinks() {
     }
     if (view.CollectionType === 'books') {
       if (view === mangaView) return;
-      links.push({ icon: 'auto_stories', label: t('nav_books'), hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
-      links.push({ icon: 'headphones', label: t('nav_audiobooks'), hash: libraryHash(view) + '&bookKind=audiobook', group: 'reading' });
+      if (booksEnabled) {
+        links.push({ icon: 'auto_stories', label: t('nav_books'), hash: libraryHash(view) + '&bookKind=ebook', group: 'reading' });
+      }
+      if (audiobooksEnabled) {
+        links.push({ icon: 'headphones', label: t('nav_audiobooks'), hash: libraryHash(view) + '&bookKind=audiobook', group: 'reading' });
+      }
       if (view === booksView) pushMangaLink();
       return;
     }
