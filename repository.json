@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "### Fixes\n- **AniList Rate-Limit Handling**: Retry HTTP 429 responses using Retry-After backoff, log non-2xx GraphQL responses, and surface HTTP status codes instead of generic missing-entry errors.\n- **Season 2+ Title Search Fallback**: Fall back to base and original titles when '\"Title Season N\"' returns no results on AniList (such as subtitled sequels like Noragami Aragoto).\n- **Batch Sync Pacing**: Add pacing delays between synced items during batch and range syncs to prevent bursting AniList rate limits.",
+        "checksum": "bd9332c965c5ebf57f8e5192498d84b9",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.3/jellio_1.112.3.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-17T00:08:55Z",
+        "version": "1.112.3"
+      },
+      {
         "changelog": "### Fixes\n- Styled the Ani-Sync timeframe selector next to Sync Now to match Jellio's pill button and dark select styling.",
         "checksum": "458c398d0e918ddbc0d1272aac09d357",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.2/jellio_1.112.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-02T23:16:22Z",
         "version": "1.104.2"
-      },
-      {
-        "changelog": "## [1.104.1] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Hide party overlays outside a group and keep them off the controls\n- *(player)* Make automatic picture in picture reliable and reversible\n\n### 📚 Documentation\n\n- *(changelog)* Player fixes in 1.104.1\n",
-        "checksum": "43c6cb22bb2446a4313991970cf5c5f0",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.1/jellio_1.104.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-02T22:40:32Z",
-        "version": "1.104.1"
       }
     ]
   }
