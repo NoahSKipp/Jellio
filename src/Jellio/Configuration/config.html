@@ -147,6 +147,51 @@
       #jellioConfigurationPage .jellio-cfg-save-bar {
         margin: 1.5em 0 2.25em;
       }
+
+      #jellioConfigurationPage .jellio-cfg-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45em;
+        margin: 0.75em 0 1.35em;
+        padding: 0.4em;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 12px;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-tab {
+        appearance: none;
+        border: 1px solid transparent;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.78);
+        font-family: inherit;
+        font-size: 0.92em;
+        font-weight: 500;
+        padding: 0.55em 0.95em;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-tab:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-tab.is-active {
+        background: rgba(0, 164, 220, 0.22);
+        border-color: rgba(0, 164, 220, 0.55);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-panel {
+        display: none;
+      }
+
+      #jellioConfigurationPage .jellio-cfg-panel.is-active {
+        display: block;
+      }
     </style>
 
     <div data-role="content">
@@ -162,7 +207,17 @@
             </div>
           </div>
 
+          <div class="jellio-cfg-tabs" role="tablist" aria-label="Jellio configuration sections">
+            <button type="button" class="jellio-cfg-tab is-active" role="tab" aria-selected="true" data-tab="general">General &amp; Libraries</button>
+            <button type="button" class="jellio-cfg-tab" role="tab" aria-selected="false" data-tab="anisync">Ani-Sync</button>
+            <button type="button" class="jellio-cfg-tab" role="tab" aria-selected="false" data-tab="books-manga">Books &amp; Manga</button>
+            <button type="button" class="jellio-cfg-tab" role="tab" aria-selected="false" data-tab="playback-tv">Playback &amp; Live TV</button>
+            <button type="button" class="jellio-cfg-tab" role="tab" aria-selected="false" data-tab="seasonal">Seasonal Themes</button>
+            <button type="button" class="jellio-cfg-tab" role="tab" aria-selected="false" data-tab="admin">Admin Tools</button>
+          </div>
+
           <!-- 1. General & Libraries -->
+          <section class="jellio-cfg-panel is-active" data-panel="general">
           <div class="jellio-cfg-card">
             <h2 class="sectionTitle">General &amp; Playback</h2>
 
@@ -239,10 +294,12 @@
               <div class="fieldDescription">Loading libraries...</div>
             </div>
           </div>
+          </section>
 
           <!-- 2. Ani-Sync -->
-          <details class="jellio-cfg-details" open>
-            <summary>Ani-Sync (Per-User Anime &amp; Manga Tracking)</summary>
+          <section class="jellio-cfg-panel" data-panel="anisync">
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">Ani-Sync (Per-User Anime &amp; Manga Tracking)</h2>
             <div class="fieldDescription jellio-cfg-intro">
               Setting OAuth Client IDs and Secrets here lets every user connect their own AniList,
               MyAnimeList, Shikimori, or Simkl account with one click. All watched/read progress
@@ -282,14 +339,16 @@
               <label class="inputLabel" for="txtSimklClientSecret">Simkl Client Secret (optional)</label>
               <input is="emby-input" type="password" id="txtSimklClientSecret" autocomplete="off" />
               <div class="fieldDescription">
-                Paired with the Simkl Client ID under Skip Intro/Credits below when using Simkl Ani-Sync.
+                Paired with the Simkl Client ID under Playback &amp; Live TV when using Simkl Ani-Sync.
               </div>
             </div>
-          </details>
+          </div>
+          </section>
 
           <!-- 3. Books & Manga Services -->
-          <details class="jellio-cfg-details">
-            <summary>Books &amp; Manga Services (Chaptarr, DeepL, Suwayomi)</summary>
+          <section class="jellio-cfg-panel" data-panel="books-manga">
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">Books &amp; Manga Services</h2>
             <div class="fieldDescription jellio-cfg-intro">
               Optional self-hosted integrations for book requests, in-reader translation, and manga sources.
               Books and audiobooks themselves need no setup here: add a Jellyfin library of type Books
@@ -377,11 +436,13 @@
                 Off: chapters stream from their source. On: requested series download to the library.
               </div>
             </div>
-          </details>
+          </div>
+          </section>
 
-          <!-- 4. Calendar & Live TV -->
-          <details class="jellio-cfg-details">
-            <summary>Calendar &amp; Live TV</summary>
+          <!-- 4. Playback & Live TV -->
+          <section class="jellio-cfg-panel" data-panel="playback-tv">
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">Calendar &amp; Live TV</h2>
 
             <div class="inputContainer">
               <label class="inputLabel" for="txtTmdbAccessToken">TMDB API Read Access Token</label>
@@ -408,11 +469,10 @@
                 </div>
               </div>
             </div>
-          </details>
+          </div>
 
-          <!-- 5. Skip Intro / Credits -->
-          <details class="jellio-cfg-details">
-            <summary>Skip Intro / Credits</summary>
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">Skip Intro / Credits</h2>
             <div class="fieldDescription jellio-cfg-intro">
               Community timestamp databases tried before Jellio's own cross-episode audio analysis.
               TheIntroDB works anonymously out of the box; all keys below are optional.
@@ -456,11 +516,13 @@
                 <input is="emby-input" type="password" id="txtAnimeSkipClientId" autocomplete="off" />
               </div>
             </div>
-          </details>
+          </div>
+          </section>
 
-          <!-- 6. Seasonal Themes -->
-          <details class="jellio-cfg-details">
-            <summary>Seasonal Themes</summary>
+          <!-- 5. Seasonal Themes -->
+          <section class="jellio-cfg-panel" data-panel="seasonal">
+          <div class="jellio-cfg-card">
+            <h2 class="sectionTitle">Seasonal Themes</h2>
             <div class="fieldDescription jellio-cfg-intro">
               Applies server-wide ambient themes during active date ranges (never shown during playback).
             </div>
@@ -587,9 +649,10 @@
                 </div>
               </div>
             </details>
-          </details>
+          </div>
+          </section>
 
-          <div class="jellio-cfg-save-bar">
+          <div class="jellio-cfg-save-bar" id="jellioSaveBar">
             <button is="emby-button" type="submit" class="raised button-submit block emby-button">
               <span>Save Settings</span>
             </button>
@@ -597,7 +660,8 @@
         </form>
 
         <!-- Admin Broadcast Tools (one-time actions, separate from saved plugin config) -->
-        <details class="jellio-cfg-details">
+        <section class="jellio-cfg-panel" data-panel="admin">
+        <details class="jellio-cfg-details" open>
           <summary>Announcements</summary>
           <div class="fieldDescription jellio-cfg-intro">
             Sends a one-time message to every user on this server, or to one user. Delivered as a
@@ -1241,6 +1305,36 @@
         });
       }
 
+      function bindTabs() {
+        var page = document.querySelector('#jellioConfigurationPage');
+        if (!page || page.dataset.jellioTabsBound) return;
+        page.dataset.jellioTabsBound = 'true';
+
+        var tabs = page.querySelectorAll('.jellio-cfg-tab');
+        var panels = page.querySelectorAll('.jellio-cfg-panel');
+        var saveBar = page.querySelector('#jellioSaveBar');
+
+        function activateTab(tabId) {
+          tabs.forEach(function (btn) {
+            var active = btn.dataset.tab === tabId;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+          panels.forEach(function (panel) {
+            panel.classList.toggle('is-active', panel.dataset.panel === tabId);
+          });
+          if (saveBar) {
+            saveBar.style.display = tabId === 'admin' ? 'none' : '';
+          }
+        }
+
+        tabs.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            activateTab(btn.dataset.tab);
+          });
+        });
+      }
+
       function bindJellioPageEvents() {
         var page = document.querySelector('#jellioConfigurationPage');
         if (!page) {
@@ -1253,6 +1347,7 @@
           document.querySelector('#jellioForm').addEventListener('submit', saveConfig);
           document.querySelector('#btnSendAnnouncement').addEventListener('click', sendAnnouncement);
         }
+        bindTabs();
         loadConfig();
         loadAnnouncementUsers();
         bindAnnouncementImage();
