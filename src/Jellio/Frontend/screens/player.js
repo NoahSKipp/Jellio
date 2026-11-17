@@ -2475,7 +2475,7 @@ export async function renderPlayer(root, params) {
     }
     lastVideoDuration = real;
     if (!videoDurationIsFinal()) return;
-    durationSeconds = streamOffsetTicks / TICKS_PER_SECOND + real;
+    durationSeconds = real;
     paintDuration();
     reportRealDurationIfUseful(durationSeconds, true);
   }
@@ -2567,7 +2567,11 @@ export async function renderPlayer(root, params) {
       flagPlaceholder('placeholder: ended after ' + Math.round(endedAtSeconds) + 's');
       if (failoverStarted) return;
     }
-    reportRealDurationIfUseful(streamOffsetTicks / TICKS_PER_SECOND + (video.currentTime || 0), true);
+    const finalDurationSeconds =
+      videoDurationIsFinal() && video.duration && isFinite(video.duration) && video.duration > 0
+        ? video.duration
+        : endedAtSeconds;
+    reportRealDurationIfUseful(finalDurationSeconds, true);
     markRealWatchComplete();
     showEndScreenModal();
   });

@@ -137,6 +137,42 @@ public class RealDurationStoreTests : IDisposable
         Assert.Empty(tmpFiles);
     }
 
+    [Fact]
+    public void IsPlausibleDuration_RejectsInflatedAndPlaceholderDurations()
+    {
+        var twentyOneMin = TimeSpan.FromMinutes(21).Ticks;
+
+        Assert.True(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(22).Ticks, twentyOneMin));
+        Assert.True(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(25).Ticks, null));
+        Assert.True(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(25).Ticks, 0));
+
+        // 2x or 3x inflated duration from streamOffsetTicks double-counting must be rejected
+        Assert.False(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(42).Ticks, twentyOneMin));
+        Assert.False(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(63).Ticks, twentyOneMin));
+
+        // Placeholder duration (< 25% of >=10m metadata) must be rejected
+        Assert.False(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(2).Ticks, twentyOneMin));
+        Assert.False(RealDurationStore.IsPlausibleDuration(0, twentyOneMin));
+
+        // Short items allow up to +5 minutes variance
+        var twoMin = TimeSpan.FromMinutes(2).Ticks;
+        Assert.True(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(5).Ticks, twoMin));
+        Assert.False(RealDurationStore.IsPlausibleDuration(TimeSpan.FromMinutes(10).Ticks, twoMin));
+    }
+
+    [Fact]
+    public void Remove_DeletesPoisonedEntryFromStore()
+    {
+        var store = new RealDurationStore(_appPaths);
+        var id = Guid.NewGuid();
+
+        store.Set(id, TimeSpan.FromMinutes(63).Ticks, exact: true);
+        Assert.True(store.GetMany([id]).ContainsKey(id.ToString("N")));
+
+        store.Remove(id);
+        Assert.Empty(store.GetMany([id]));
+    }
+
     private class PathsProxy : DispatchProxy
     {
         private string _dir = string.Empty;

@@ -49,6 +49,49 @@ public class RealDurationStore(IApplicationPaths applicationPaths)
         }
     }
 
+    private static readonly long MinRuntimeForPlaceholderCheckTicks = TimeSpan.FromMinutes(10).Ticks;
+    private static readonly long ShortItemExtraAllowanceTicks = TimeSpan.FromMinutes(5).Ticks;
+
+    public static bool IsPlausibleDuration(long reportedTicks, long? metadataRuntimeTicks)
+    {
+        if (reportedTicks <= 0)
+        {
+            return false;
+        }
+
+        if (metadataRuntimeTicks is not > 0)
+        {
+            return true;
+        }
+
+        var metadata = metadataRuntimeTicks.Value;
+        var maxAllowed = Math.Max((long)(metadata * 1.5), metadata + ShortItemExtraAllowanceTicks);
+        if (reportedTicks > maxAllowed)
+        {
+            return false;
+        }
+
+        if (metadata >= MinRuntimeForPlaceholderCheckTicks && reportedTicks < (long)(metadata * 0.25))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public void Remove(Guid itemId)
+    {
+        lock (_lock)
+        {
+            var overrides = LoadLocked();
+            var key = itemId.ToString("N");
+            if (overrides.Remove(key))
+            {
+                SaveLocked(overrides);
+            }
+        }
+    }
+
     public void ClearCache()
     {
         lock (_lock)

@@ -50,6 +50,12 @@ public class RealDurationController(RealDurationStore store, DurationProbeServic
             return BadRequest();
         }
 
+        var item = libraryManager.GetItemById(request.ItemId);
+        if (!RealDurationStore.IsPlausibleDuration(request.DurationTicks, item?.RunTimeTicks))
+        {
+            return BadRequest("Reported duration is outside plausible bounds.");
+        }
+
         store.Set(request.ItemId, request.DurationTicks, request.Exact);
         return Ok();
     }
@@ -67,6 +73,23 @@ public class RealDurationController(RealDurationStore store, DurationProbeServic
             .Select(id => Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty)
             .Where(id => id != Guid.Empty);
 
-        return Ok(store.GetMany(itemIds));
+        var raw = store.GetMany(itemIds);
+        var filtered = new Dictionary<string, long>(raw.Count);
+        foreach (var (key, ticks) in raw)
+        {
+            if (Guid.TryParseExact(key, "N", out var guid))
+            {
+                var item = libraryManager.GetItemById(guid);
+                if (!RealDurationStore.IsPlausibleDuration(ticks, item?.RunTimeTicks))
+                {
+                    store.Remove(guid);
+                    continue;
+                }
+            }
+
+            filtered[key] = ticks;
+        }
+
+        return Ok(filtered);
     }
 }
