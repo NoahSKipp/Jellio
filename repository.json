@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "Improved logo image sharpness across Jellio Web by requesting full-quality 1200px logos in the player loading overlay, hero carousel, stream picker, and library coverflow.",
+        "checksum": "7390d1067378da459f947548b8eadbc2",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.5/jellio_1.112.5.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-17T13:45:13Z",
+        "version": "1.112.5"
+      },
+      {
         "changelog": "### Enhancements\n- **Segmented Plugin Settings UI**: Reorganized the Jellyfin Dashboard plugin configuration into focused segments (General & Libraries, Ani-Sync, Books & Manga, Playback & Live TV, Seasonal Themes, Admin Tools) and moved misplaced playback/Live TV settings into their proper sections.\n- **Library & Reading Shelf Toggles**: Added server-wide toggles to enable or disable individual Jellyfin libraries as well as the Books, Audiobooks, and Manga shelves in Jellio navigation.",
         "checksum": "acbcc3e0a85738b6b422d307517bc026",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.4/jellio_1.112.4.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-02T23:40:27Z",
         "version": "1.104.4"
-      },
-      {
-        "changelog": "## [1.104.3] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(home)* Put the night greeting's question mark after the name\n\n### 📚 Documentation\n\n- *(changelog)* Greeting fix in 1.104.3\n",
-        "checksum": "a7979f6830c84d361aa9bca84d581ccc",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.3/jellio_1.104.3.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-02T23:28:22Z",
-        "version": "1.104.3"
       }
     ]
   }
