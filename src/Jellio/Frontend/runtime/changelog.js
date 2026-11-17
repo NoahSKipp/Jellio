@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.3",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.3",
+    "summary": "Improved AniList batch sync reliability with rate-limit retries, pacing delays, and Season 2+ title fallbacks.",
+    "highlights": [
+      {
+        "title": "AniList Rate-Limit Handling & Batch Pacing",
+        "description": "Added automatic HTTP 429 retry-after backoff, detailed HTTP error reporting, pacing delays between batch sync items, and fallback title searches for Season 2+ anime with subtitled AniList names."
+      }
+    ]
+  },
+  {
     "version": "1.112.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.2",
