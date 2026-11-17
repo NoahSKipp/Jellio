@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.5",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.5",
+    "summary": "Improved logo image sharpness across Jellio Web by requesting full-quality 1200px logos.",
+    "highlights": [
+      {
+        "title": "Crisp High-Quality Logos",
+        "description": "Updated Jellio Web to request full-quality (quality=100) 1200px logos in the player loading overlay, hero carousel, stream picker, and library coverflow."
+      }
+    ]
+  },
+  {
     "version": "1.112.4",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.4",
