@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.4",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.4",
+    "summary": "Reorganized Jellyfin plugin settings into segmented tabs and added toggles for individual libraries and Books, Audiobooks, and Manga shelves.",
+    "highlights": [
+      {
+        "title": "Segmented Plugin Settings & Library Toggles",
+        "description": "Organized the Jellyfin Dashboard plugin configuration into focused segments (General & Libraries, Ani-Sync, Books & Manga, Playback & Live TV, Seasonal Themes, Admin Tools) and added server-wide toggles to hide specific libraries or Books, Audiobooks, and Manga shelves."
+      }
+    ]
+  },
+  {
     "version": "1.112.3",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.3",
