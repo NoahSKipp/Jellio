@@ -11,3 +11,8 @@ artifacts/
 *.md5
 *.sha256
 *.asc
+
+# Internal agent rules
+CLAUDE.md
+GEMINI.md
+AGENTS.md
