@@ -26,7 +26,14 @@ public class AchievementService(
     private const int MaxRecentActivity = 20;
     private static readonly TimeSpan BingeGap = TimeSpan.FromMinutes(45);
     private static readonly TimeSpan RecentCreditGuard = TimeSpan.FromMinutes(30);
+    internal static readonly TimeSpan RewatchCooldown = TimeSpan.FromHours(12);
     private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    internal static bool IsWithinRewatchCooldown(UserAchievementStats stats, Guid itemId, DateTime nowUtc)
+    {
+        var lastEntry = stats.RecentActivity.FirstOrDefault(entry => entry.ItemId == itemId);
+        return lastEntry is not null && nowUtc - lastEntry.CompletedAtUtc < RewatchCooldown;
+    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -142,6 +149,11 @@ public class AchievementService(
             var stats = store.Load(userId);
             var now = DateTime.Now;
             var nowUtc = DateTime.UtcNow;
+
+            if (IsWithinRewatchCooldown(stats, item.Id, nowUtc))
+            {
+                return;
+            }
 
             if (isMovie)
             {
