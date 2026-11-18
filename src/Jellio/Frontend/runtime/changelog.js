@@ -8,11 +8,15 @@ export const CHANGELOG_RELEASES = [
     "version": "1.112.7",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.7",
-    "summary": "Fixed Cast device discovery to hide offline or stale TVs and stop tagging macOS and desktop clients as Smart TVs.",
+    "summary": "Fixed Cast device discovery and added a persistent 12-hour rewatch cooldown to prevent duplicate feed entries.",
     "highlights": [
       {
         "title": "Accurate Cast Device Discovery",
         "description": "Filtered /Sessions queries to active devices within 5 minutes, excluded inactive or non-controllable sessions, and updated Smart TV detection so Jellio for macOS and web clients are no longer labeled as Smart TV."
+      },
+      {
+        "title": "Rewatch Feed Cooldown",
+        "description": "Added a persistent 12-hour cooldown in AchievementService between finishing a title and posting a rewatch, and between individual rewatches, preventing duplicate 'rewatched' feed spam."
       }
     ]
   },
