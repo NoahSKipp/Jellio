@@ -8,11 +8,11 @@
     "owner": "NoahSKipp",
     "versions": [
       {
-        "changelog": "Fixed Cast device discovery to filter out offline/stale sessions and stop tagging Jellio for macOS and web clients as Smart TV.",
-        "checksum": "e9ce0b2f41246f7ab25deb8364bdeaed",
+        "changelog": "Fixed Cast device discovery (filter offline/stale sessions and stop tagging Jellio for macOS/web as Smart TV) and added a persistent 12-hour rewatch cooldown in AchievementService to prevent duplicate 'rewatched' feed spam.",
+        "checksum": "5390adb1944beb682ee2c9a3c0f74cfd",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.7/jellio_1.112.7.0.zip",
         "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-18T18:44:18Z",
+        "timestamp": "2026-11-18T19:29:10Z",
         "version": "1.112.7"
       },
       {
