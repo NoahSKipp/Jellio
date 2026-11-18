@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "Fixed Cast device discovery to filter out offline/stale sessions and stop tagging Jellio for macOS and web clients as Smart TV.",
+        "checksum": "e9ce0b2f41246f7ab25deb8364bdeaed",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.7/jellio_1.112.7.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-18T18:44:18Z",
+        "version": "1.112.7"
+      },
+      {
         "changelog": "Fixed episode duration inflation and false placeholder failover at the end of playback by preventing streamOffsetTicks double-counting in player.js, adding server-side plausibility bounds in RealDurationController, and pruning previously inflated entries.",
         "checksum": "2a07a3a0d23df1999c3f0633a104da21",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.6/jellio_1.112.6.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-03T10:14:44Z",
         "version": "1.104.6"
-      },
-      {
-        "changelog": "## [1.104.5] - 2026-11-02\n\n### 🐛 Bug Fixes\n\n- *(player)* Recover from Chrome keeping the video in picture in picture\n\n### 📚 Documentation\n\n- *(changelog)* Picture in picture recovery in 1.104.5\n",
-        "checksum": "fa67dda583aa969e5fc2af61e241c46c",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.5/jellio_1.104.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-02T23:57:07Z",
-        "version": "1.104.5"
       }
     ]
   }
