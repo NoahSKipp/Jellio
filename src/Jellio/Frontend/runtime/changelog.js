@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.7",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.7",
+    "summary": "Fixed Cast device discovery to hide offline or stale TVs and stop tagging macOS and desktop clients as Smart TVs.",
+    "highlights": [
+      {
+        "title": "Accurate Cast Device Discovery",
+        "description": "Filtered /Sessions queries to active devices within 5 minutes, excluded inactive or non-controllable sessions, and updated Smart TV detection so Jellio for macOS and web clients are no longer labeled as Smart TV."
+      }
+    ]
+  },
+  {
     "version": "1.112.6",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.6",
