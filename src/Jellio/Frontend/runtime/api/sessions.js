@@ -21,13 +21,15 @@ export async function getRemoteSessions(controllableOnly) {
 
   if (userId) {
     try {
-      const userSessions = await getJson('/Sessions?ControllableByUserId=' + encodeURIComponent(userId));
+      const userSessions = await getJson(
+        '/Sessions?ActiveWithinSeconds=300&ControllableByUserId=' + encodeURIComponent(userId),
+      );
       addSessions(userSessions);
     } catch (_) {}
   }
 
   try {
-    const allSessions = await getJson('/Sessions');
+    const allSessions = await getJson('/Sessions?ActiveWithinSeconds=300');
     addSessions(allSessions);
   } catch (_) {}
 

@@ -219,12 +219,19 @@ export function isAirPlaySupported(video) {
 
 // === Smart TV & Controllable Client Discovery ===
 export const TV_PATTERN =
-  /tv|android\s*tv|google\s*tv|webos|lg|tizen|samsung|roku|fire\s*tv|firetv|apple\s*tv|appletv|shield|bravia|chromecast|kodi|jellyfin media player|theater|smart|jellio/i;
+  /\btv\b|android\s*tv|google\s*tv|webos|\blg\b|tizen|samsung|roku|fire\s*tv|firetv|apple\s*tv|appletv|shield|bravia|chromecast|kodi|jellyfin media player|theater|smart\s*tv|jellio[\s-]*tv|jellio[\s-]*tizen/i;
+
+const NON_TV_PATTERN = /\b(macos|mac\s*os|macbook|imac|windows|linux|iphone|ipad|web|firefox|chrome|safari|edge)\b/i;
+const EXPLICIT_TV_PATTERN = /\b(android\s*tv|google\s*tv|apple\s*tv|fire\s*tv|smart\s*tv|jellio[\s-]*tv|jellio[\s-]*tizen)\b/i;
+const SESSION_MAX_IDLE_MS = 5 * 60 * 1000;
 
 export function isTvSession(session) {
   if (!session) return false;
   const name =
     (session.DeviceName || '') + ' ' + (session.Client || '') + ' ' + (session.ApplicationVersion || '');
+  if (NON_TV_PATTERN.test(name) && !EXPLICIT_TV_PATTERN.test(name)) {
+    return false;
+  }
   return TV_PATTERN.test(name);
 }
 
@@ -234,18 +241,25 @@ export async function getAvailableCastTargets() {
     if (!Array.isArray(sessions)) return [];
 
     const localDeviceId = getDeviceId();
+    const now = Date.now();
     const targets = [];
 
     sessions.forEach(function (s) {
       if (!s || !s.Id) return;
       // Skip the local browser session
       if (localDeviceId && s.DeviceId === localDeviceId) return;
+      // Skip offline or stale sessions (e.g. TV turned off or app closed)
+      if (s.IsActive === false) return;
+      if (s.LastActivityDate && !s.NowPlayingItem) {
+        const lastActiveMs = Date.parse(s.LastActivityDate);
+        if (isFinite(lastActiveMs) && now - lastActiveMs > SESSION_MAX_IDLE_MS) return;
+      }
 
       const isTv = isTvSession(s);
-      const isControllable = s.SupportsRemoteControl !== false;
+      const isControllable = s.SupportsRemoteControl === true;
 
-      // Include all TVs and all explicitly controllable sessions
-      if (isTv || isControllable) {
+      // Only include sessions that actually accept remote control commands
+      if (isControllable) {
         targets.push({
           id: s.Id,
           name: s.DeviceName || s.Client || 'Smart TV',

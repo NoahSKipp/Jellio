@@ -140,7 +140,7 @@ const {
   VIEWPORT_DEDUPE_LIMIT,
   SLIDING_WINDOW_ROW_COUNT,
 } = await import('../../src/Jellio/Frontend/screens/home.js');
-const { isTvSession, TV_PATTERN } = await import('../../src/Jellio/Frontend/runtime/cast.js');
+const { isTvSession, getAvailableCastTargets, TV_PATTERN } = await import('../../src/Jellio/Frontend/runtime/cast.js');
 const { getRemoteSessions } = await import('../../src/Jellio/Frontend/runtime/api.js');
 const { setSession, clearSession } = await import('../../src/Jellio/Frontend/runtime/auth.js');
 
@@ -356,9 +356,8 @@ test('dedupeRow: intra-row duplicates (same Id or same titleKey) are always elim
 test('isTvSession correctly identifies Jellio TV and Smart TV client sessions', () => {
   // Jellio TV variations
   assert.equal(isTvSession({ Client: 'Jellio TV', DeviceName: 'Living Room TV' }), true);
-  assert.equal(isTvSession({ Client: 'Jellio', DeviceName: 'Living Room' }), true);
   assert.equal(isTvSession({ Client: 'Jellio-TV', ApplicationVersion: '0.43.0' }), true);
-  assert.equal(isTvSession({ DeviceName: 'Bedroom Screen', ApplicationVersion: 'Jellio 1.80.0' }), true);
+  assert.equal(isTvSession({ Client: 'Jellio Tizen', DeviceName: 'Living Room' }), true);
 
   // Common Smart TV / Streaming devices
   assert.equal(isTvSession({ DeviceName: 'Android TV' }), true);
@@ -373,7 +372,9 @@ test('isTvSession correctly identifies Jellio TV and Smart TV client sessions', 
   assert.equal(isTvSession({ Client: 'Kodi', DeviceName: 'HTPC' }), true);
   assert.equal(isTvSession({ Client: 'Jellyfin Media Player', DeviceName: 'Living Room' }), true);
 
-  // Non-TV sessions
+  // Non-TV sessions (including Jellio desktop/web clients)
+  assert.equal(isTvSession({ DeviceName: 'jellio-macOS', Client: 'Jellio for macOS' }), false);
+  assert.equal(isTvSession({ DeviceName: 'MacBook Pro', Client: 'Jellio Web' }), false);
   assert.equal(isTvSession({ DeviceName: 'MacBook Pro', Client: 'Jellyfin Web' }), false);
   assert.equal(isTvSession({ DeviceName: 'Workstation', Client: 'Firefox' }), false);
   assert.equal(isTvSession(null), false);
@@ -400,7 +401,7 @@ test('getRemoteSessions: query construction and deduplication when signed in', a
           ],
         };
       }
-      if (url.endsWith('/Sessions')) {
+      if (url.endsWith('/Sessions?ActiveWithinSeconds=300')) {
         return {
           ok: true,
           status: 200,
@@ -417,8 +418,8 @@ test('getRemoteSessions: query construction and deduplication when signed in', a
 
     // Verify both endpoints were called in order with correct parameters
     assert.equal(requestedUrls.length, 2);
-    assert.ok(requestedUrls[0].includes('/Sessions?ControllableByUserId=user-guid-456'));
-    assert.ok(requestedUrls[1].endsWith('/Sessions'));
+    assert.ok(requestedUrls[0].includes('/Sessions?ActiveWithinSeconds=300&ControllableByUserId=user-guid-456'));
+    assert.ok(requestedUrls[1].endsWith('/Sessions?ActiveWithinSeconds=300'));
 
     // Verify deduplication: sess-1 appears only once; sess-2 and sess-3 are retained
     assert.equal(sessions.length, 3);
@@ -438,7 +439,7 @@ test('getRemoteSessions: query construction without user session (anonymous)', a
   try {
     globalThis.fetch = async (url) => {
       requestedUrls.push(url);
-      if (url.endsWith('/Sessions')) {
+      if (url.endsWith('/Sessions?ActiveWithinSeconds=300')) {
         return {
           ok: true,
           status: 200,
@@ -451,11 +452,80 @@ test('getRemoteSessions: query construction without user session (anonymous)', a
     const sessions = await getRemoteSessions();
 
     assert.equal(requestedUrls.length, 1);
-    assert.ok(requestedUrls[0].endsWith('/Sessions'));
+    assert.ok(requestedUrls[0].endsWith('/Sessions?ActiveWithinSeconds=300'));
     assert.equal(sessions.length, 1);
     assert.equal(sessions[0].Id, 'sess-anon');
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test('getAvailableCastTargets filters offline, stale, and non-controllable sessions and does not tag macOS as Smart TV', async () => {
+  setSession('test-token', { Id: 'user-guid-999', Name: 'Noah' });
+  const originalFetch = globalThis.fetch;
+  const nowIso = new Date().toISOString();
+  const staleIso = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+  try {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [
+        {
+          Id: 'tv-online',
+          DeviceName: 'Android TV',
+          Client: 'Jellio TV',
+          IsActive: true,
+          SupportsRemoteControl: true,
+          LastActivityDate: nowIso,
+        },
+        {
+          Id: 'tv-off',
+          DeviceName: 'Android TV (Off)',
+          Client: 'Jellio TV',
+          IsActive: false,
+          SupportsRemoteControl: true,
+          LastActivityDate: nowIso,
+        },
+        {
+          Id: 'tv-stale',
+          DeviceName: 'Bedroom TV',
+          Client: 'Jellio TV',
+          IsActive: true,
+          SupportsRemoteControl: true,
+          LastActivityDate: staleIso,
+        },
+        {
+          Id: 'macos-active',
+          DeviceName: 'jellio-macOS',
+          Client: 'Jellio for macOS',
+          IsActive: true,
+          SupportsRemoteControl: true,
+          LastActivityDate: nowIso,
+        },
+        {
+          Id: 'macos-nocontrol',
+          DeviceName: 'jellio-macOS-idle',
+          Client: 'Jellio for macOS',
+          IsActive: true,
+          SupportsRemoteControl: false,
+          LastActivityDate: nowIso,
+        },
+      ],
+    });
+
+    const targets = await getAvailableCastTargets();
+    assert.equal(targets.length, 2);
+    assert.deepEqual(
+      targets.map((t) => ({ id: t.id, isTv: t.isTv })),
+      [
+        { id: 'tv-online', isTv: true },
+        { id: 'macos-active', isTv: false },
+      ],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSession();
   }
 });
 
