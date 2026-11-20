@@ -914,6 +914,7 @@ export default {
   detail_watch_youtube: 'Regarder sur YouTube',
   detail_play_episode_aria: 'Lire l’épisode {number}',
   detail_play_episode: 'Lire l’épisode',
+  detail_current_episode: 'Épisode actuel',
   detail_resume_episode: 'Reprendre S{s} É{e}',
   detail_skip_notifications_show: 'Ignorer les notifications de nouveaux épisodes pour cette série',
   detail_notifications_muted: 'Notifications coupées pour ce titre.',

@@ -587,7 +587,14 @@ function buildEpisodeCard(episode, context) {
   if (episode.IndexNumber != null) {
     thumb.appendChild(el('span', 'jellio-episode-badge', 'E' + episode.IndexNumber));
   }
-  paintEpisodeWatched(thumb, episode);
+  const isCurrent = !!(context && context.currentEpisodeId && String(context.currentEpisodeId) === String(episode.Id));
+  if (isCurrent) {
+    card.classList.add('jellio-episode-card-current');
+    card.setAttribute('aria-current', 'true');
+    thumb.appendChild(el('span', 'jellio-episode-current', t('detail_current_episode')));
+  } else {
+    paintEpisodeWatched(thumb, episode);
+  }
 
   const releaseLabel = (context && context.releaseLabels && context.releaseLabels[episode.Id]) || episodeReleaseLabel(episode);
   if (releaseLabel) {
@@ -757,7 +764,7 @@ async function resolveSeasonPlayTarget(item) {
   return { episode: episode, resume: resume };
 }
 
-async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, initialSeasonId, initialSeasonNumber) {
+async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, initialSeasonId, initialSeasonNumber, currentEpisodeId) {
   let seasons;
   try {
     seasons = await getSeasons(seriesId);
@@ -788,7 +795,31 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, in
   attachScrollArrows(tabsWrap, tabs);
   const refreshTrackArrows = attachScrollArrows(trackWrap, track);
 
+  // The episode being watched or next to watch; the row opens on it once,
+  // unless the viewer has already picked a season or moved the row.
+  let currentId = currentEpisodeId || null;
+  let renderedSeason = null;
+  let renderedEpisodes = null;
+  let scrolledFor = null;
+  let userMovedTrack = false;
+  track.addEventListener('wheel', function () { userMovedTrack = true; }, { passive: true });
+  track.addEventListener('pointerdown', function () { userMovedTrack = true; });
+  track.addEventListener('keydown', function () { userMovedTrack = true; });
+
+  function scrollToCurrent() {
+    if (!currentId || scrolledFor === currentId || userMovedTrack || userSelectedTab) return;
+    const card = track.querySelector('.jellio-episode-card-current');
+    if (!card) return;
+    scrolledFor = currentId;
+    const offset = card.getBoundingClientRect().left - track.getBoundingClientRect().left;
+    const gutter = parseFloat(window.getComputedStyle(track).paddingLeft) || 0;
+    track.scrollLeft += offset - gutter;
+  }
+
   function renderTrack(season, episodes) {
+    const keepScroll = renderedSeason === season ? track.scrollLeft : 0;
+    renderedSeason = season;
+    renderedEpisodes = episodes;
     track.textContent = '';
     const releaseLabels = seasonEpisodeReleaseLabels(episodes);
     episodes.forEach(function (episode, index) {
@@ -798,12 +829,15 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, in
           index: index,
           season: season,
           releaseLabels: releaseLabels,
+          currentEpisodeId: currentId,
           onChanged: function () {
             renderTrack(season, episodes);
           },
         }),
       );
     });
+    if (keepScroll) track.scrollLeft = keepScroll;
+    scrollToCurrent();
     window.requestAnimationFrame(refreshTrackArrows);
   }
 
@@ -931,6 +965,10 @@ async function buildSeasonsSection(seriesId, targetPromise, onSeasonSelected, in
     Promise.resolve(targetPromise)
       .then(function (target) {
         if (userSelectedTab || !target || !target.episode) return;
+        if (target.episode.Id && !currentId) {
+          currentId = target.episode.Id;
+          if (renderedSeason && renderedEpisodes) renderTrack(renderedSeason, renderedEpisodes);
+        }
         let activeSeasonId = target.episode.SeasonId || null;
         if (!activeSeasonId && typeof target.episode.ParentIndexNumber === 'number') {
           const match = orderedSeasons.find(function (s) {
@@ -1859,7 +1897,7 @@ export async function renderDetail(root, params, signal) {
   if (item.Type === 'Series') {
     seasonsPromise = buildSeasonsSection(canonicalId, seriesTargetPromise, showSeasonDetails);
   } else if (item.Type === 'Episode' && item.SeriesId) {
-    seasonsPromise = buildSeasonsSection(item.SeriesId, null, null, item.SeasonId, item.ParentIndexNumber);
+    seasonsPromise = buildSeasonsSection(item.SeriesId, null, null, item.SeasonId, item.ParentIndexNumber, item.Id);
   }
 
   const castRow = buildCastRow(item.People);

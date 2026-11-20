@@ -937,6 +937,7 @@ export default {
   detail_watch_youtube: 'Auf YouTube ansehen',
   detail_play_episode_aria: 'Folge {number} abspielen',
   detail_play_episode: 'Folge abspielen',
+  detail_current_episode: 'Aktuelle Folge',
   detail_resume_episode: 'Fortsetzen S{s} E{e}',
   detail_skip_notifications_show: 'Benachrichtigungen über neue Folgen für diese Serie überspringen',
   detail_notifications_muted: 'Benachrichtigungen für diesen Titel stummgeschaltet.',

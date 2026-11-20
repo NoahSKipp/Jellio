@@ -914,6 +914,7 @@ export default {
   detail_watch_youtube: 'Assistir no YouTube',
   detail_play_episode_aria: 'Reproduzir episódio {number}',
   detail_play_episode: 'Reproduzir episódio',
+  detail_current_episode: 'Episódio atual',
   detail_resume_episode: 'Retomar T{s} E{e}',
   detail_skip_notifications_show: 'Ignorar notificações de novos episódios desta série',
   detail_notifications_muted: 'Notificações silenciadas para este título.',

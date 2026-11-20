@@ -937,6 +937,7 @@ export default {
   detail_watch_youtube: 'Oglądaj na YouTube',
   detail_play_episode_aria: 'Odtwórz odcinek {number}',
   detail_play_episode: 'Odtwórz odcinek',
+  detail_current_episode: 'Bieżący odcinek',
   detail_resume_episode: 'Wznów S{s} O{e}',
   detail_skip_notifications_show: 'Pomiń powiadomienia o nowych odcinkach tego serialu',
   detail_notifications_muted: 'Wyciszono powiadomienia dla tego tytułu.',

@@ -1005,6 +1005,7 @@ const STRINGS = {
     detail_watch_youtube: 'Watch on YouTube',
     detail_play_episode_aria: 'Play episode {number}',
     detail_play_episode: 'Play episode',
+    detail_current_episode: 'Current episode',
     detail_resume_episode: 'Resume S{s} E{e}',
     detail_skip_notifications_show: 'Skip new-episode notifications for this show',
     detail_notifications_muted: 'Notifications muted for this title.',
