@@ -72,6 +72,11 @@ public class SeriesPrefs
     // Mihon's "delete after reading": a chapter downloaded to a device is
     // removed from it once it's finished.
     public bool? DeleteAfterRead { get; set; }
+
+    // Set when the series is removed from Continue reading: the last read
+    // time it was removed at. Reading the series again changes that time
+    // and brings the card back.
+    public string? ContinueDismissedAt { get; set; }
 }
 
 public class ShelfData

@@ -42,7 +42,8 @@ public class ShelfController(ShelfStore store) : ControllerBase
         string? ChapterDisplay = null,
         bool? Reset = null,
         bool? SkipUpdates = null,
-        bool? DeleteAfterRead = null);
+        bool? DeleteAfterRead = null,
+        string? ContinueDismissedAt = null);
 
     public record DefaultsBody(
         bool? ChapterDescending,
@@ -274,6 +275,12 @@ public class ShelfController(ShelfStore store) : ControllerBase
             prefs.ChapterDisplay = Text(body.ChapterDisplay, prefs.ChapterDisplay);
             prefs.SkipUpdates = body.SkipUpdates ?? prefs.SkipUpdates;
             prefs.DeleteAfterRead = body.DeleteAfterRead ?? prefs.DeleteAfterRead;
+            if (body.ContinueDismissedAt is not null)
+            {
+                var at = body.ContinueDismissedAt.Trim();
+                prefs.ContinueDismissedAt = at.Length == 0 ? null : at.Length > 64 ? at[..64] : at;
+            }
+
             data.Series[body.Key!] = prefs;
         });
         return Ok(prefs);
