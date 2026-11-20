@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.112.8] - 2026-11-20\n\n### 🚀 Features\n\n- *(detail)* Open the episode row on the current episode and mark it\n- *(shelf)* Remember a manga series removed from continue reading on the server\n\n### 📚 Documentation\n\n- Refresh README with current features, companion apps, and clean punctuation\n\n### ⚙️ Miscellaneous Tasks\n\n- Remove internal agent guidelines from repository\n",
+        "checksum": "da2544ca26fef168612a3a8509eea26a",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.8/jellio_1.112.8.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-20T19:51:57Z",
+        "version": "1.112.8"
+      },
+      {
         "changelog": "Fixed Cast device discovery (filter offline/stale sessions and stop tagging Jellio for macOS/web as Smart TV) and added a persistent 12-hour rewatch cooldown in AchievementService to prevent duplicate 'rewatched' feed spam.",
         "checksum": "5390adb1944beb682ee2c9a3c0f74cfd",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.7/jellio_1.112.7.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-03T16:05:36Z",
         "version": "1.105.0"
-      },
-      {
-        "changelog": "## [1.104.6] - 2026-11-03\n\n### 🐛 Bug Fixes\n\n- *(streams)* Ask the browser finder even when the plain fetch is refused, and allow it the time it needs\n\n### 📚 Documentation\n\n- *(changelog)* Note Add Stream on bot-checked pages in 1.104.6\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.104.6\n",
-        "checksum": "39c1bad9105c2b2daf74a3f9e5a13516",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.104.6/jellio_1.104.6.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-03T10:14:44Z",
-        "version": "1.104.6"
       }
     ]
   }
