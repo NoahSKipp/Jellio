@@ -5,6 +5,22 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.8",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.8",
+    "summary": "The episode row opens on the episode you are up to, and removing a manga series from Continue reading now follows you across devices.",
+    "highlights": [
+      {
+        "title": "Current Episode in the Episode Row",
+        "description": "Opening an episode or a series scrolls the episode row to the current or next episode to watch and marks it with a Current episode label."
+      },
+      {
+        "title": "Continue Reading Removals Sync",
+        "description": "A manga series removed from Continue reading is remembered on the server, so the removal applies on every device until you read it again."
+      }
+    ]
+  },
+  {
     "version": "1.112.7",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.7",
