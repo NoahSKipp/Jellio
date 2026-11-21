@@ -21,7 +21,9 @@ public record WatchlistNotification(
     // Friend notifications: who it is from (N format id), their name and avatar tag.
     string? FromUserId = null,
     string? FromUserName = null,
-    string? FromImageTag = null
+    string? FromImageTag = null,
+    // A reading item added by a friend: its reading list key ("i:...", "s:...", "w:...").
+    string? ReadingKey = null
 );
 
 public class NotificationStore(IApplicationPaths applicationPaths)

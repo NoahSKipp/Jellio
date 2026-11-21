@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Jellio.Configuration;
 using Jellio.Services.Achievements;
+using Jellio.Services.Reading;
 using Jellyfin.Data.Enums;
 using Jellyfin.Database.Implementations.Entities;
 using MediaBrowser.Controller.Drawing;
@@ -22,6 +24,7 @@ public record AddResult(Guid UserId, string Result);
 public class FriendsService(
     FriendsStore store,
     AddedByStore addedByStore,
+    ReadingListStore readingList,
     NotificationStore notifications,
     ProfileSettingsStore profileSettings,
     IUserManager userManager,
@@ -166,6 +169,8 @@ public class FriendsService(
         {
             addedByStore.RemoveSender(user, friend);
             addedByStore.RemoveSender(friend, user);
+            readingList.RemoveSender(user, friend);
+            readingList.RemoveSender(friend, user);
         }
 
         logger.LogInformation("Jellio friends: remove {User} and {Friend} removed {Removed}", user, friend, removed);
@@ -293,6 +298,116 @@ public class FriendsService(
         }
 
         return result;
+    }
+
+    // The reading-list twin of AddToWatchlists: same friends rules, the same
+    // rate-limit counters and notification kind, but the item lands on the
+    // friend's reading list and never touches IsFavorite. A null target is an
+    // item that cannot be resolved.
+    public List<AddResult> AddToReadingLists(Guid sender, ReadingTarget? target, IEnumerable<Guid> recipients)
+    {
+        var senderPerson = GetPerson(sender);
+        var results = new List<AddResult>();
+        var friendsData = Snapshot();
+
+        foreach (var recipientId in recipients.Where(r => r != sender).Distinct())
+        {
+            string result;
+            try
+            {
+                result = AddReadingOne(sender, senderPerson, recipientId, target, friendsData);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Jellio friends: reading add for {Recipient} failed", recipientId);
+                result = WatchlistAddResults.NotVisible;
+            }
+
+            logger.LogInformation(
+                "Jellio friends: reading add {Sender} to {Recipient} key {Key} result {Result}",
+                sender, recipientId, target?.Key, result);
+            results.Add(new AddResult(recipientId, result));
+        }
+
+        return results;
+    }
+
+    private string AddReadingOne(Guid sender, Person? senderPerson, Guid recipientId, ReadingTarget? target, FriendsData friends)
+    {
+        if (target == null)
+        {
+            return WatchlistAddResults.Unsupported;
+        }
+
+        var areFriends = FriendsGraph.AreFriends(friends, sender, recipientId);
+        var recipient = areFriends ? userManager.GetUserById(recipientId) : null;
+        if (recipient == null)
+        {
+            return WatchlistAddResults.NotFriends;
+        }
+
+        var now = DateTime.UtcNow;
+        var config = ReaderConfig;
+        var onList = readingList.Has(recipientId, target.Key);
+        var full = !onList && readingList.Count(recipientId) >= ReadingListLogic.MaxItems;
+
+        var facts = new WatchlistAddFacts(
+            Supported: true,
+            AreFriends: true,
+            MutedByRecipient: FriendsGraph.IsMuted(friends, recipientId, sender),
+            RecipientAllows: profileSettings.Load(recipientId).FriendsCanAddToWatchlist,
+            Visible: ReaderAccess.FeatureEnabled(config, target.Kind) && CanSeeReadingTarget(recipient, target, config),
+            OnList: onList,
+            Watched: false,
+            RateLimited: full || _rateLimiter.IsLimited(sender, recipientId, now));
+
+        var result = WatchlistAddRules.Decide(facts);
+        if (result == WatchlistAddResults.AlreadyOnList)
+        {
+            readingList.Add(recipientId, target, sender, now);
+            return result;
+        }
+
+        if (result != WatchlistAddResults.Added)
+        {
+            return result;
+        }
+
+        var (outcome, _) = readingList.Add(recipientId, target, sender, now);
+        if (outcome == ReadingAddOutcome.Full)
+        {
+            return WatchlistAddResults.Limit;
+        }
+
+        if (outcome == ReadingAddOutcome.Exists)
+        {
+            return WatchlistAddResults.AlreadyOnList;
+        }
+
+        _rateLimiter.Record(sender, recipientId, now);
+        if (senderPerson != null)
+        {
+            var itemId = target.ItemId is not null && Guid.TryParse(target.ItemId, out var parsed) ? parsed : Guid.Empty;
+            notifications.Update(recipientId, l => FriendNotifications.AddWatchlistAdded(
+                l, sender, senderPerson.UserName, senderPerson.PrimaryImageTag,
+                itemId, target.Title, ReadingKinds.NotificationType(target.Kind), now,
+                readingKey: target.Key, mangaId: target.MangaId));
+        }
+
+        return result;
+    }
+
+    protected virtual PluginConfiguration? ReaderConfig => JellioPlugin.Instance?.Configuration;
+
+    protected virtual bool CanSeeReadingTarget(User recipient, ReadingTarget target, PluginConfiguration? config)
+    {
+        if (target.Key.StartsWith("i:", StringComparison.Ordinal) && Guid.TryParse(target.ItemId, out var itemId))
+        {
+            return libraryManager.GetItemById(itemId) is { } item && item.IsVisible(recipient);
+        }
+
+        return ReaderAccess.HasReaderLibrary(
+            libraryManager.GetUserRootFolder().GetChildren(recipient, true), config);
     }
 
     private BaseItem? ResolveTarget(BaseItem? item) => item switch

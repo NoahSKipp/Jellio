@@ -49,7 +49,8 @@ public static class FriendNotifications
     // is at most ten minutes old; returns the resulting count.
     public static int AddWatchlistAdded(
         List<WatchlistNotification> list, Guid from, string fromName, string? fromImageTag,
-        Guid itemId, string itemName, string itemType, DateTime now)
+        Guid itemId, string itemName, string itemType, DateTime now,
+        string? readingKey = null, int? mangaId = null)
     {
         var fromKey = from.ToString("N");
         var existingIndex = list.FindIndex(n =>
@@ -74,7 +75,8 @@ public static class FriendNotifications
         list.Insert(0, new WatchlistNotification(
             id, itemId, itemName, itemType, now, FriendNotificationKinds.WatchlistAdded,
             count.ToString(System.Globalization.CultureInfo.InvariantCulture), now, false,
-            FromUserId: fromKey, FromUserName: fromName, FromImageTag: fromImageTag));
+            MangaId: mangaId, FromUserId: fromKey, FromUserName: fromName, FromImageTag: fromImageTag,
+            ReadingKey: readingKey));
         return count;
     }
 }
