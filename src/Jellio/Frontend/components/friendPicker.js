@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { loadFriends, addToFriendsWatchlists } from '../runtime/api.js';
+import { loadFriends, addToFriendsWatchlists, addReadingToFriends } from '../runtime/api.js';
 import { resultMessageKey, resultTone, friendMatches } from '../runtime/friendsHelpers.js';
 import { buildFriendAvatar } from './friendAvatar.js';
 import { navigateTo } from '../runtime/router.js';
@@ -44,21 +44,25 @@ function onKey(event) {
   }
 }
 
-// The dialog for sending a Movie or Series to friends' watchlists.
+// The dialog for sending a Movie or Series to friends' watchlists, or (an
+// item with `Reading`, a target from readingListHelpers) a book, audiobook
+// or manga to their reading lists.
 export function openFriendPicker(item, trigger) {
   close();
   returnFocus = trigger || document.activeElement;
+  const reading = item.Reading || null;
+  const pickerTitle = t(reading ? 'reading_picker_title' : 'friends_picker_title');
 
   const overlay = el('div', 'jellio-avatar-picker-overlay');
   overlay.id = OVERLAY_ID;
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', t('friends_picker_title'));
+  overlay.setAttribute('aria-label', pickerTitle);
   overlay.addEventListener('click', function (event) {
     if (event.target === overlay) close();
   });
   const panel = el('div', 'jellio-avatar-picker-panel jellio-friend-picker');
-  panel.appendChild(el('h2', 'jellio-avatar-picker-title', t('friends_picker_title')));
+  panel.appendChild(el('h2', 'jellio-avatar-picker-title', pickerTitle));
   panel.appendChild(el('p', 'jellio-friend-picker-item', item.Name || ''));
   const body = el('div', 'jellio-friend-picker-body');
   panel.appendChild(body);
@@ -125,7 +129,7 @@ export function openFriendPicker(item, trigger) {
     }
     const list = el('ul', 'jellio-friend-picker-list');
     list.setAttribute('role', 'group');
-    list.setAttribute('aria-label', t('friends_picker_title'));
+    list.setAttribute('aria-label', pickerTitle);
     body.appendChild(list);
     const empty = el('p', 'jellio-friend-picker-note', t('friends_find_none_title'));
     empty.hidden = true;
@@ -181,7 +185,7 @@ export function openFriendPicker(item, trigger) {
       const ids = Array.from(selected);
       send.disabled = true;
       send.textContent = t('status_loading');
-      addToFriendsWatchlists(item.Id, ids).then(
+      (reading ? addReadingToFriends(reading, ids) : addToFriendsWatchlists(item.Id, ids)).then(
         function (results) {
           if (!overlay.isConnected) return;
           paintResults(friends, results);
@@ -218,7 +222,7 @@ export function openFriendPicker(item, trigger) {
       li.appendChild(buildFriendAvatar(friend, 'jellio-people-avatar', 96));
       const text = el('span', 'jellio-people-text');
       text.appendChild(el('span', 'jellio-people-name', friend.UserName || ''));
-      text.appendChild(el('span', 'jellio-people-sub', t(resultMessageKey(entry.Result))));
+      text.appendChild(el('span', 'jellio-people-sub', t(resultMessageKey(entry.Result, !!reading))));
       li.appendChild(text);
       li.appendChild(el('span', 'material-icons jellio-friend-picker-result-icon', TONE_ICON[tone]));
       list.appendChild(li);

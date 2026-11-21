@@ -71,7 +71,7 @@ function buildPersonAvatar(person) {
 
 // Friends who put a title on the Watchlist (item.AddedBy, set by the
 // Watchlist screen); a bookmark corner tells it from the watchers badge.
-function buildAddedByBadge(entries) {
+export function buildAddedByBadge(entries) {
   const wrap = document.createElement('div');
   wrap.className = 'jellio-card-addedby';
   const names = entries.map((e) => e.UserName || '').filter(Boolean).join(', ');

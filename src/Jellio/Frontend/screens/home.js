@@ -1,7 +1,7 @@
 import { t, translateGenre } from '../runtime/i18n.js';
 import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
-import { getCurrentUser, getResumeItems, getNextUp, getSeriesNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAddedBy, friendsSupported, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
+import { getCurrentUser, getResumeItems, getNextUp, getSeriesNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAddedBy, friendsSupported, readingListSupported, getReadingList, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
 import { getContinueReading, getContinueListening } from '../runtime/apiBooks.js';
 import { getCommunityWatching, invalidateCommunityWatchingCache } from '../runtime/apiSocial.js';
 import {
@@ -13,6 +13,8 @@ import {
 import { streamRecommendationRows } from '../runtime/recommend.js';
 import { dedupe, titleKey } from '../runtime/dedupe.js';
 import { buildCard } from '../components/card.js';
+import { buildReadingCard } from '../components/readingCard.js';
+import { splitReadingEntries, readingEntriesSignature } from '../runtime/readingListHelpers.js';
 import { appendCardsLazily } from '../components/lazyGrid.js';
 import { buildRow } from '../components/row.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
@@ -373,6 +375,30 @@ function buildWatchlistSection(title, items, onSectionEmpty) {
   return section;
 }
 
+// The Reading and Listening rows of the Watchlist screen: books, manga and
+// audiobooks kept on the reading list, which is separate from the watchlist.
+function buildReadingSection(title, entries, onSectionEmpty) {
+  if (!entries.length) return null;
+  const section = el('section', 'jellio-row jellio-reading-section');
+  section.appendChild(el('h2', 'jellio-row-title', title));
+  const grid = el('div', 'jellio-library-grid');
+  section.appendChild(grid);
+  entries.forEach(function (entry) {
+    grid.appendChild(
+      buildReadingCard(entry, function () {
+        // The card fades out on its own; drop the row once it is empty.
+        window.setTimeout(function () {
+          if (!grid.querySelector('.jellio-card') && section.parentNode) {
+            section.remove();
+            if (onSectionEmpty) onSectionEmpty();
+          }
+        }, 1300);
+      }),
+    );
+  });
+  return section;
+}
+
 function buildListsHeader(activeList) {
   const header = el('header', 'jellio-home-header');
   if (!isGrouplistEnabled()) {
@@ -421,9 +447,13 @@ async function renderWatchlist(root, activeList) {
     const addedByRequest = !isGroup && friendsSupported() !== false
       ? getAddedBy().catch(function () { return {}; })
       : null;
+    const readingRequest = !isGroup && readingListSupported() !== false
+      ? getReadingList().catch(function () { return []; })
+      : null;
     const items = await (isGroup ? getGrouplistItems() : getWatchlistItems(undefined, fresh ? { fresh: true } : undefined));
     if (!active) return;
     const addedBy = addedByRequest ? await addedByRequest : {};
+    const readingEntries = readingRequest ? await readingRequest : [];
     if (!active) return;
 
     const nextIds = items.map(function (item) {
@@ -432,6 +462,7 @@ async function renderWatchlist(root, activeList) {
       if (entries && entries.length) item.AddedBy = entries;
       return id + ':' + ((item.AddedBy && item.AddedBy.length) || 0);
     });
+    nextIds.push('reading:' + readingEntriesSignature(readingEntries));
     if (shownIds !== null && !watchlistIdsChanged(shownIds, nextIds)) {
       return;
     }
@@ -447,22 +478,26 @@ async function renderWatchlist(root, activeList) {
       return item.Type === 'Series';
     });
 
-    function checkBothEmpty() {
-      const hasMovie = movieSection && movieSection.parentNode;
-      const hasSeries = seriesSection && seriesSection.parentNode;
-      if (!hasMovie && !hasSeries) {
-        if (!listBody.querySelector('.jellio-service-empty')) {
-          listBody.appendChild(el('p', 'jellio-service-empty', emptyMessage));
-        }
+    function checkAllEmpty() {
+      if (!listBody.querySelector('section.jellio-row') && !listBody.querySelector('.jellio-service-empty')) {
+        listBody.appendChild(el('p', 'jellio-service-empty', emptyMessage));
       }
     }
 
-    const movieSection = buildWatchlistSection(t('nav_movies', null, 'Movies'), movies, checkBothEmpty);
+    const movieSection = buildWatchlistSection(t('nav_movies', null, 'Movies'), movies, checkAllEmpty);
     if (movieSection) listBody.appendChild(movieSection);
-    const seriesSection = buildWatchlistSection(t('type_series', null, 'Series'), series, checkBothEmpty);
+    const seriesSection = buildWatchlistSection(t('type_series', null, 'Series'), series, checkAllEmpty);
     if (seriesSection) listBody.appendChild(seriesSection);
 
-    if (!movieSection && !seriesSection) {
+    // Books and manga read, audiobooks listened to: below the video rows,
+    // and only when there is something on them.
+    const split = splitReadingEntries(readingEntries);
+    const readingSection = buildReadingSection(t('reading_section_reading'), split.reading, checkAllEmpty);
+    if (readingSection) listBody.appendChild(readingSection);
+    const listeningSection = buildReadingSection(t('reading_section_listening'), split.listening, checkAllEmpty);
+    if (listeningSection) listBody.appendChild(listeningSection);
+
+    if (!listBody.querySelector('section.jellio-row')) {
       listBody.appendChild(el('p', 'jellio-service-empty', emptyMessage));
     }
   }
