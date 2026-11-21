@@ -28,6 +28,12 @@ public static class AddedByLogic
             map[key] = list;
         }
 
+        RecordIn(list, sender, at);
+    }
+
+    // Newest first, one entry per sender, at most MaxPerItem.
+    public static void RecordIn(List<AddedByEntry> list, Guid sender, DateTime at)
+    {
         list.RemoveAll(e => e.FromUserId == sender);
         list.Insert(0, new AddedByEntry { FromUserId = sender, At = at });
         if (list.Count > MaxPerItem)

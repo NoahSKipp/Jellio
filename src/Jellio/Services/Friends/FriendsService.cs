@@ -351,25 +351,7 @@ public class FriendsService(
                 continue;
             }
 
-            var list = new List<object>();
-            foreach (var entry in entries)
-            {
-                if (!FriendsGraph.AreFriends(friends, recipient, entry.FromUserId))
-                {
-                    continue;
-                }
-
-                if (!people.TryGetValue(entry.FromUserId, out var person))
-                {
-                    person = GetPerson(entry.FromUserId);
-                    people[entry.FromUserId] = person;
-                }
-
-                if (person != null)
-                {
-                    list.Add(new { person.UserId, person.UserName, person.PrimaryImageTag, At = entry.At });
-                }
-            }
+            var list = AddedByPeople(recipient, entries, friends, people);
 
             if (list.Count > 0)
             {
@@ -378,6 +360,34 @@ public class FriendsService(
         }
 
         return items;
+    }
+
+    // Friends still connected to the recipient, newest first, as the added-by
+    // shape clients draw. `people` caches lookups across calls.
+    public List<object> AddedByPeople(
+        Guid recipient, IEnumerable<AddedByEntry> entries, FriendsData friends, Dictionary<Guid, Person?> people)
+    {
+        var list = new List<object>();
+        foreach (var entry in entries)
+        {
+            if (!FriendsGraph.AreFriends(friends, recipient, entry.FromUserId))
+            {
+                continue;
+            }
+
+            if (!people.TryGetValue(entry.FromUserId, out var person))
+            {
+                person = GetPerson(entry.FromUserId);
+                people[entry.FromUserId] = person;
+            }
+
+            if (person != null)
+            {
+                list.Add(new { person.UserId, person.UserName, person.PrimaryImageTag, At = entry.At });
+            }
+        }
+
+        return list;
     }
 
     public void OnFavoriteRemoved(Guid userId, Guid itemId) => addedByStore.RemoveItem(userId, itemId);
