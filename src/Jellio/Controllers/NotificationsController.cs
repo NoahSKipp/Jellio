@@ -22,8 +22,6 @@ namespace Jellio.Controllers;
 public partial class NotificationsController(
     NotificationStore store,
     IUserManager userManager,
-    CalendarService calendarService,
-    ShelfStore shelfStore,
     MediaBrowser.Common.Configuration.IApplicationPaths applicationPaths
 ) : ControllerBase
 {
@@ -42,8 +40,11 @@ public partial class NotificationsController(
 
     private const int MaxAnnouncementLength = 300;
 
+    // Only returns the stored list. Episode and release notifications are
+    // created by PlayableNotifyService once the media can be played; their
+    // Date is the air date, CreatedUtc when the stream was found.
     [HttpGet]
-    public async Task<ActionResult<List<WatchlistNotification>>> Get()
+    public ActionResult<List<WatchlistNotification>> Get()
     {
         var userId = GetUserId();
         if (userId == Guid.Empty)
@@ -51,74 +52,7 @@ public partial class NotificationsController(
             return BadRequest("Invalid user session");
         }
 
-        var accessToken = JellioPlugin.Instance?.Configuration.TmdbAccessToken;
-        var user = string.IsNullOrWhiteSpace(accessToken) ? null : userManager.GetUserById(userId);
-        List<WatchlistCalendarItem>? entries = null;
-        if (user != null)
-        {
-            var monitored = calendarService.GetMonitoredItems(user);
-            entries = await calendarService.GetWatchlistCalendarAsync(monitored, accessToken!, user).ConfigureAwait(false);
-        }
-
-        var shelfData = entries == null ? null : shelfStore.Load(userId);
-        var notifications = store.UpdateIfChanged(userId, notifications =>
-        {
-            if (entries == null)
-            {
-                return false;
-            }
-
-            var added = false;
-
-            var today = DateTime.UtcNow.Date;
-            var known = notifications.Select(n => n.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var entry in entries)
-            {
-                if (entry.Date.Date != today)
-                {
-                    continue;
-                }
-
-                // Check if user has muted notifications (SkipUpdates) for this show or movie
-                var itemKey = entry.ItemId.ToString("N").ToLowerInvariant();
-                if (shelfData!.Series.TryGetValue("s:" + itemKey, out var prefs) ||
-                    shelfData.Series.TryGetValue(itemKey, out prefs) ||
-                    shelfData.Series.TryGetValue(entry.ItemId.ToString(), out prefs))
-                {
-                    if (prefs.SkipUpdates == true)
-                    {
-                        continue;
-                    }
-                }
-
-                var id = entry.ItemId + ":" + entry.Date.ToString("yyyy-MM-dd");
-                if (!known.Add(id))
-                {
-                    continue;
-                }
-
-                notifications.Insert(
-                    0,
-                    new WatchlistNotification(
-                        id,
-                        entry.ItemId,
-                        entry.Name,
-                        entry.Type,
-                        entry.Date,
-                        entry.Kind,
-                        entry.Detail,
-                        DateTime.UtcNow,
-                        false
-                    )
-                );
-                added = true;
-            }
-
-            return added;
-        });
-
-        return Ok(notifications);
+        return Ok(store.Load(userId));
     }
 
     [HttpPost("broadcast")]
