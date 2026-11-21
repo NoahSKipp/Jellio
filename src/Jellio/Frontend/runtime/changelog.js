@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.112.9",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.112.9",
+    "summary": "New episode notifications now wait until the episode actually has working streams.",
+    "highlights": [
+      {
+        "title": "Notified When It Is Playable",
+        "description": "A new episode or release is announced after its air date once the server can find working streams for it, instead of on the air date. Admins can switch back to air-date notifications in the plugin settings."
+      }
+    ]
+  },
+  {
     "version": "1.112.8",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.8",
