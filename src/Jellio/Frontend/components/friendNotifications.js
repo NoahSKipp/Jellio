@@ -1,5 +1,7 @@
 import { t } from '../runtime/i18n.js';
-import { getImageUrl, acceptFriendRequest, declineFriendRequest } from '../runtime/api.js';
+import { getImageUrl, acceptFriendRequest, declineFriendRequest, getReadingList } from '../runtime/api.js';
+import { readingCoverSrc } from '../runtime/readingListHelpers.js';
+import { getServerAddress, getAccessToken } from '../runtime/auth.js';
 import { readString, writeString } from '../runtime/storage.js';
 import {
   notificationText,
@@ -8,7 +10,11 @@ import {
   requestErrorKey,
   startupSummary,
   watchlistAddedCount,
+  isReadingNotification,
+  readingNotificationTypeKey,
+  notificationSeriesKey,
 } from '../runtime/friendsHelpers.js';
+import { getMangaShelfHash } from './navShared.js';
 import { buildFriendAvatar } from './friendAvatar.js';
 import { navigateTo } from '../runtime/router.js';
 import { showToast } from './toast.js';
@@ -27,6 +33,19 @@ export function messageFor(n) {
 }
 
 export function openTarget(n) {
+  const seriesKey = notificationSeriesKey(n);
+  if (seriesKey) {
+    // A manga series opens on the Manga shelf; without one, the Watchlist.
+    getMangaShelfHash().then(
+      function (shelf) {
+        navigateTo(shelf ? shelf + '&series=' + encodeURIComponent(seriesKey) : '#/home?tab=1');
+      },
+      function () {
+        navigateTo('#/home?tab=1');
+      },
+    );
+    return;
+  }
   const target = notificationTarget(n);
   if (target) navigateTo(target);
 }
@@ -34,9 +53,33 @@ export function openTarget(n) {
 function subtitleFor(n) {
   if (n.Kind === 'friend_request') return t('friends_notice_request_sub');
   if (n.Kind === 'friend_accepted') return t('friends_notice_accepted_sub');
-  return watchlistAddedCount(n) === 1
-    ? t(n.Type === 'Series' ? 'type_series' : 'type_movie')
-    : t('friends_notice_open_watchlist');
+  if (watchlistAddedCount(n) !== 1) return t('friends_notice_open_watchlist');
+  if (isReadingNotification(n)) return t(readingNotificationTypeKey(n));
+  return t(n.Type === 'Series' ? 'type_series' : 'type_movie');
+}
+
+const EMPTY_ID = /^0{8}-?(0{4}-?){3}0{12}$/;
+
+// A friend's book, audiobook or manga: the item's own image for a library
+// item, otherwise the cover on the reading list entry, else an icon.
+function paintReadingPoster(poster, n) {
+  if (n.ItemId && !EMPTY_ID.test(n.ItemId) && n.ReadingKey.indexOf('i:') === 0) {
+    poster.style.backgroundImage = cssUrl(getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 }));
+    return;
+  }
+  const icon = n.Type === 'AudioBook' ? 'headphones' : n.Type === 'Manga' ? 'collections_bookmark' : 'menu_book';
+  poster.appendChild(el('span', 'material-icons jellio-notifications-row-poster-icon', icon));
+  getReadingList().then(
+    function (entries) {
+      const entry = entries.find(function (e) { return e.Key === n.ReadingKey; });
+      const src = entry && readingCoverSrc(entry.Cover, getServerAddress(), getAccessToken());
+      if (src && poster.isConnected) {
+        poster.textContent = '';
+        poster.style.backgroundImage = cssUrl(src);
+      }
+    },
+    function () {},
+  );
 }
 
 // A row for one of the friends notifications; ctx.remove(id) drops it from
@@ -54,7 +97,11 @@ export function buildRow(n, ctx) {
   const lead = el('div', 'jellio-notifications-row-lead');
   if (n.Kind === 'watchlist_added') {
     const poster = el('div', 'jellio-notifications-row-poster');
-    if (n.ItemId) poster.style.backgroundImage = cssUrl(getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 }));
+    if (isReadingNotification(n)) {
+      paintReadingPoster(poster, n);
+    } else if (n.ItemId) {
+      poster.style.backgroundImage = cssUrl(getImageUrl(n.ItemId, 'Primary', { maxWidth: 200 }));
+    }
     lead.appendChild(poster);
     lead.appendChild(buildFriendAvatar(sender(n), 'jellio-notifications-row-sender', 64));
   } else {
