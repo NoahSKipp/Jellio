@@ -6,6 +6,8 @@ import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '..
 import { isAdminSync } from '../runtime/adminStatus.js';
 import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from './toast.js';
+import { readingMenuOptions } from './readingListControls.js';
+import { readingTargetForItem, isMangaItem } from '../runtime/readingListHelpers.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { canDownload } from './downloadSupport.js';
 import { el } from '../runtime/dom.js';
@@ -272,47 +274,54 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       );
     }
   } else {
-    const isWatchlisted = !!(item.UserData && item.UserData.IsFavorite);
-    menu.appendChild(
-      buildOption(
-        isWatchlisted ? t('menu_remove_watchlist') : t('menu_add_watchlist'),
-        isWatchlisted ? 'bookmark_added' : 'bookmark_add',
-        function () {
-          toggleWatchlist(item, onChanged).catch(function (err) {
-            console.warn('Jellio: could not update watchlist state', err);
-            showToast(t('toast_watchlist_error'));
-          });
-        },
-      ),
-    );
-    if (isGrouplistEnabled()) {
-      ensureGrouplistIdsLoaded();
-      const isGrouplisted = isOnGrouplistSync(item.Id);
+    if (item.Type === 'Book' || item.Type === 'AudioBook') {
+      // Books, audiobooks and manga have a reading list, not a watchlist.
+      readingMenuOptions(readingTargetForItem(item, isMangaItem(item))).forEach(function (option) {
+        menu.appendChild(buildOption(option.label, option.icon, option.onClick));
+      });
+    } else {
+      const isWatchlisted = !!(item.UserData && item.UserData.IsFavorite);
       menu.appendChild(
         buildOption(
-          isGrouplisted ? t('menu_remove_grouplist') : t('menu_add_grouplist'),
-          isGrouplisted ? 'playlist_add_check' : 'playlist_add',
+          isWatchlisted ? t('menu_remove_watchlist') : t('menu_add_watchlist'),
+          isWatchlisted ? 'bookmark_added' : 'bookmark_add',
           function () {
-            toggleGrouplist(item.Id).catch(function (err) {
-              console.warn('Jellio: could not update grouplist state', err);
-              showToast(t('toast_grouplist_error'));
+            toggleWatchlist(item, onChanged).catch(function (err) {
+              console.warn('Jellio: could not update watchlist state', err);
+              showToast(t('toast_watchlist_error'));
             });
           },
         ),
       );
-    }
-    // Friends load in the background; until they have, the entry waits.
-    if (friendsSupported() !== false && (item.Type === 'Movie' || item.Type === 'Series')) {
-      const friends = getFriendsSnapshot();
-      if (!friends) loadFriends().catch(function () {});
-      else if (friends.Friends.length) {
-        menu.appendChild(buildOption(t('friends_menu_add_to_friend'), 'person_add', function () {
-          import('./friendPicker.js').then(function (m) { m.openFriendPicker(item); }).catch(function (err) {
-            console.warn('Jellio: could not open the friend picker', err);
-          });
-        }));
-      } else {
-        menu.appendChild(buildOption(t('friends_menu_find'), 'group_add', function () { navigateTo('#/people?tab=find'); }));
+      if (isGrouplistEnabled()) {
+        ensureGrouplistIdsLoaded();
+        const isGrouplisted = isOnGrouplistSync(item.Id);
+        menu.appendChild(
+          buildOption(
+            isGrouplisted ? t('menu_remove_grouplist') : t('menu_add_grouplist'),
+            isGrouplisted ? 'playlist_add_check' : 'playlist_add',
+            function () {
+              toggleGrouplist(item.Id).catch(function (err) {
+                console.warn('Jellio: could not update grouplist state', err);
+                showToast(t('toast_grouplist_error'));
+              });
+            },
+          ),
+        );
+      }
+      // Friends load in the background; until they have, the entry waits.
+      if (friendsSupported() !== false && (item.Type === 'Movie' || item.Type === 'Series')) {
+        const friends = getFriendsSnapshot();
+        if (!friends) loadFriends().catch(function () {});
+        else if (friends.Friends.length) {
+          menu.appendChild(buildOption(t('friends_menu_add_to_friend'), 'person_add', function () {
+            import('./friendPicker.js').then(function (m) { m.openFriendPicker(item); }).catch(function (err) {
+              console.warn('Jellio: could not open the friend picker', err);
+            });
+          }));
+        } else {
+          menu.appendChild(buildOption(t('friends_menu_find'), 'group_add', function () { navigateTo('#/people?tab=find'); }));
+        }
       }
     }
     const isPlayed = !!(item.UserData && item.UserData.Played);

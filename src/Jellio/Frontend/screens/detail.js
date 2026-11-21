@@ -17,6 +17,9 @@ import { getAvailableEditions, getPreferredEdition, setPreferredEdition } from '
 import { renderLoading, renderRetry } from '../components/networkState.js';
 import { describeNetworkFailure } from '../runtime/network.js';
 import { toggleWatched, toggleWatchlist, toggleRating, findSkipTimestamps } from '../components/cardOptionsMenu.js';
+import { buildReadingToggle, buildReadingFriendButton } from '../components/readingListControls.js';
+import { readingTargetForItem, readingTargetForSeries, isMangaItem } from '../runtime/readingListHelpers.js';
+import { mangaSeriesTitle, mangaSeriesKey } from '../components/mangaSeries.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { buildRatingBadge } from '../components/ratingBadge.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
@@ -1493,7 +1496,30 @@ export async function renderDetail(root, params, signal) {
         watchlistPending = false;
       });
   });
-  actionsIcons.appendChild(watchlistButton);
+  if (!isBook) {
+    actionsIcons.appendChild(watchlistButton);
+  } else {
+    // Books, audiobooks and manga keep their own reading list instead of
+    // the watchlist.
+    const readingTarget = function () {
+      if (isMangaItem(item)) {
+        const title = mangaSeriesTitle(item);
+        const key = title ? mangaSeriesKey(title) : '';
+        if (key) {
+          return readingTargetForSeries({
+            key: key,
+            title: title,
+            author: item.AlbumArtist,
+            mangaId: (item.Stream && item.Stream.MangaId) || item.MangaId,
+            itemId: item.Id,
+          });
+        }
+      }
+      return readingTargetForItem(item, isMangaItem(item));
+    };
+    actionsIcons.appendChild(buildReadingToggle(readingTarget, iconActionClass, 'jellio-detail-icon-action-active'));
+    actionsIcons.appendChild(buildReadingFriendButton(readingTarget, iconActionClass));
+  }
 
   // Send this title to a friend's watchlist (components/friendPicker.js).
   if (friendsSupported() !== false && (item.Type === 'Movie' || item.Type === 'Series')) {

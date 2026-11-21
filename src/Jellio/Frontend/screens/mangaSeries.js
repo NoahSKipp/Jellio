@@ -29,6 +29,8 @@ import { buildDownloadButton, downloadBook } from '../components/downloads.js';
 import { findAnyDownload, removeDownload } from '../runtime/offline.js';
 import { loadShelf, onShelfChange, setInLibrary, isInLibrary, saveSeriesPrefs, saveSeriesDefaults, seriesShelfKey, isBookmarked, setBookmark, categoriesOf } from '../runtime/shelf.js';
 import { openCategoryPicker } from '../components/shelfCategories.js';
+import { buildReadingToggle, buildReadingFriendButton } from '../components/readingListControls.js';
+import { readingTargetForSeries } from '../runtime/readingListHelpers.js';
 import { showToast } from '../components/toast.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
 import { el } from '../runtime/dom.js';
@@ -484,6 +486,20 @@ export function renderMangaSeries(root, params, parentId) {
       });
     });
     actions.appendChild(libraryButton);
+
+    // The reading list (separate from the shelf's library) and sharing it.
+    const readingTarget = function () {
+      const localFile = group.chapters.find((chapter) => !chapter.Stream && !chapter.StreamId);
+      return readingTargetForSeries({
+        key: group.key,
+        title: group.title,
+        author: group.stream && group.stream.Author,
+        mangaId: group.stream && group.stream.MangaId,
+        itemId: localFile && localFile.Id,
+      });
+    };
+    actions.appendChild(buildReadingToggle(readingTarget, iconActionClass, 'jellio-detail-icon-action-active'));
+    actions.appendChild(buildReadingFriendButton(readingTarget, iconActionClass));
 
     const categoriesButton = el('button', iconActionClass);
     categoriesButton.type = 'button';

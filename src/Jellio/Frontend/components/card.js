@@ -14,6 +14,8 @@ import {
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { openListMembershipMenu } from './listMembershipMenu.js';
 import { showToast } from './toast.js';
+import { buildReadingToggle } from './readingListControls.js';
+import { readingTargetForItem, isMangaItem } from '../runtime/readingListHelpers.js';
 import { buildRatingBadge } from './ratingBadge.js';
 import { el } from '../runtime/dom.js';
 import { episodeReleaseLabel } from '../runtime/releaseDate.js';
@@ -640,10 +642,25 @@ export function buildCard(item, options) {
       options.onChanged(updatedItem, card);
     }
   }
-  // Books and manga have no watchlist or watched state.
+  // Books and manga have no watchlist or watched state; a book outside the
+  // shelves offers the reading list in its place.
   if (!(options && options.reading)) {
-    cardActionsBar = buildCardActions(item, card, imageWrap, options, handleChanged);
-    imageWrap.appendChild(cardActionsBar);
+    if (item.Type === 'Book' || item.Type === 'AudioBook') {
+      const readingBar = el('div', 'jellio-card-actions');
+      readingBar.appendChild(
+        buildReadingToggle(
+          function () {
+            return readingTargetForItem(item, isMangaItem(item));
+          },
+          'jellio-card-action jellio-card-action-watchlist',
+          'jellio-card-action-active',
+        ),
+      );
+      imageWrap.appendChild(readingBar);
+    } else {
+      cardActionsBar = buildCardActions(item, card, imageWrap, options, handleChanged);
+      imageWrap.appendChild(cardActionsBar);
+    }
   }
 
   card.appendChild(imageWrap);

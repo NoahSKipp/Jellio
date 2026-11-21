@@ -5,6 +5,8 @@ import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { el } from '../runtime/dom.js';
 import { renderMangaDiscover } from './discoverManga.js';
+import { buildDiscoverActions } from '../components/readingListControls.js';
+import { readingTargetForWork } from '../runtime/readingListHelpers.js';
 
 // Open Library subjects; labels are what the chips say.
 const GENRES = [
@@ -178,6 +180,7 @@ export async function renderDiscover(root, params) {
     } else {
       cover.appendChild(el('span', 'material-icons menu_book'));
     }
+    cover.appendChild(buildDiscoverActions(() => readingTargetForWork(book, kind)));
     card.appendChild(cover);
     card.appendChild(el('div', 'jellio-discover-title', book.Title));
     if (book.Author) {

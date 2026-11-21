@@ -5,6 +5,8 @@ import { navigateTo, setTitle } from '../runtime/router.js';
 import { attachScrollArrows } from '../components/scrollArrows.js';
 import { openMangaRequestSheet } from '../components/mangaRequest.js';
 import { mangaSeriesKey } from '../components/mangaSeries.js';
+import { buildDiscoverActions } from '../components/readingListControls.js';
+import { readingTargetForSeries } from '../runtime/readingListHelpers.js';
 import { el } from '../runtime/dom.js';
 import { normalizeTitle } from '../runtime/util.js';
 
@@ -160,6 +162,16 @@ export async function renderMangaDiscover(root, params) {
     }
     const kindLabel = countryLabel(series.Country);
     if (kindLabel) cover.appendChild(el('span', 'jellio-manga-kind', kindLabel));
+    cover.appendChild(
+      buildDiscoverActions(() =>
+        readingTargetForSeries({
+          key: mangaSeriesKey(series.Title),
+          title: series.Title,
+          author: series.Author,
+          coverUrl: series.CoverUrl,
+        }),
+      ),
+    );
     card.appendChild(cover);
     card.appendChild(el('div', 'jellio-discover-title', series.Title));
     if (series.Author) card.appendChild(el('div', 'jellio-discover-year', series.Author));

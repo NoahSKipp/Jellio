@@ -13,6 +13,8 @@ import {
   chapterNumberOf,
 } from '../components/mangaSeries.js';
 import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
+import { readingMenuOptions } from '../components/readingListControls.js';
+import { readingTargetForItem, readingTargetForSeries } from '../runtime/readingListHelpers.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
 import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary, invalidateShelf } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
@@ -543,6 +545,23 @@ export function renderBookshelf(root, params, parentId) {
     return options;
   }
 
+  // What the reading list stores for a card: the series for a grouped
+  // manga entry, otherwise the book, audiobook or comic file itself.
+  function readingTargetFor(entry, item) {
+    if (entry && entry.seriesGroup && entry.key && entry.key.indexOf('s:') === 0) {
+      const group = entry.seriesGroup;
+      const firstFile = group.chapters && group.chapters[0];
+      return readingTargetForSeries({
+        key: group.key,
+        title: group.title,
+        author: entry.author,
+        mangaId: group.stream && group.stream.MangaId,
+        itemId: firstFile && firstFile.Id,
+      });
+    }
+    return readingTargetForItem(item, kind === 'manga');
+  }
+
   const shelfCardOptions = {
     reading: true,
     onlyExtra: true,
@@ -581,7 +600,9 @@ export function renderBookshelf(root, params, parentId) {
           },
         });
       }
-      return readOptions(item, entry && (entry.seriesGroup || entry.item.Id === item.Id) ? entry : null).concat(options);
+      return readOptions(item, entry && (entry.seriesGroup || entry.item.Id === item.Id) ? entry : null)
+        .concat(readingMenuOptions(readingTargetFor(entry, item)))
+        .concat(options);
     },
   };
 
