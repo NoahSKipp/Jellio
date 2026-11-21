@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.112.9] - 2026-11-21\n\n### 🚀 Features\n\n- *(notifications)* Add pure decision logic for playable notifications\n- *(notifications)* Notify once media has a working stream\n\n### 🚜 Refactor\n\n- *(notifications)* Stop creating day-of notifications on GET\n",
+        "checksum": "52a53df626a7b0fdea48ae163bc3c56c",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.9/jellio_1.112.9.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-21T00:46:50Z",
+        "version": "1.112.9"
+      },
+      {
         "changelog": "## [1.112.8] - 2026-11-20\n\n### 🚀 Features\n\n- *(detail)* Open the episode row on the current episode and mark it\n- *(shelf)* Remember a manga series removed from continue reading on the server\n\n### 📚 Documentation\n\n- Refresh README with current features, companion apps, and clean punctuation\n\n### ⚙️ Miscellaneous Tasks\n\n- Remove internal agent guidelines from repository\n",
         "checksum": "da2544ca26fef168612a3a8509eea26a",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.112.8/jellio_1.112.8.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-04T00:02:27Z",
         "version": "1.105.1"
-      },
-      {
-        "changelog": "## [1.105.0] - 2026-11-03\n\n### 🚀 Features\n\n- *(player)* Catch AIOStreams' placeholder clip behind a remux or HLS\n- *(live)* Show that adding or opening your own stream can take a couple of minutes\n- *(playback)* Warm streams from search and the detail page through one queue\n- *(streams)* Show which sources are ready and start with one of the same quality\n\n### 📚 Documentation\n\n- *(changelog)* Placeholder clip, faster starts and Add Stream in 1.105.0\n- *(changelog)* Ready sources and faster starts from search in 1.106.0\n- *(changelog)* Fold 1.106.0 into 1.105.0, the next release\n\n### ⚡ Performance\n\n- *(home)* Warm streams for Continue Watching, Next Up and the hero\n\n### ⚙️ Miscellaneous Tasks\n\n- *(release)* Bump version to 1.105.0\n- *(release)* Bump version to 1.106.0\n",
-        "checksum": "c646f0756d1d43a68feafc98cd2a5113",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.0/jellio_1.105.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-03T16:05:36Z",
-        "version": "1.105.0"
       }
     ]
   }
