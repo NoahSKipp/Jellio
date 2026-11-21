@@ -196,6 +196,16 @@ export {
   saveFriendsSettings,
 } from './api/friends.js';
 export {
+  readingListSupported,
+  loadReadingListKeys,
+  isOnReadingList,
+  getReadingList,
+  addToReadingList,
+  removeFromReadingList,
+  addReadingToFriends,
+  searchBooksByTitle,
+} from './api/readingList.js';
+export {
   normalizeAniSyncService,
   normalizeAniSyncSettings,
   getAniSyncSettings,

@@ -41,7 +41,15 @@ const RESULT_KEYS = {
   unsupported: 'friends_result_unsupported',
 };
 
-export function resultMessageKey(result) {
+// Reading items say "reading list" where the watchlist says "watchlist".
+const READING_RESULT_KEYS = {
+  added: 'reading_result_added',
+  not_visible: 'reading_result_not_visible',
+  unsupported: 'reading_result_unsupported',
+};
+
+export function resultMessageKey(result, reading) {
+  if (reading && READING_RESULT_KEYS[result]) return READING_RESULT_KEYS[result];
   return RESULT_KEYS[result] || 'friends_result_unknown';
 }
 
@@ -58,13 +66,28 @@ export function watchlistAddedCount(n) {
   return Number.isFinite(count) && count > 1 ? count : 1;
 }
 
+// A watchlist_added notification about a book, audiobook or manga carries
+// ReadingKey (Type Book, AudioBook or Manga); old entries do not.
+export function isReadingNotification(n) {
+  return !!(n && n.Kind === 'watchlist_added' && n.ReadingKey);
+}
+
+export function readingNotificationTypeKey(n) {
+  if (n.Type === 'AudioBook') return 'reading_kind_audiobook';
+  if (n.Type === 'Manga') return 'reading_kind_manga';
+  return 'reading_kind_ebook';
+}
+
 export function notificationText(n) {
   const name = (n && n.FromUserName) || '';
   if (n.Kind === 'friend_request') return { key: 'friends_notice_request', params: { name } };
   if (n.Kind === 'friend_accepted') return { key: 'friends_notice_accepted', params: { name } };
   if (n.Kind === 'watchlist_added') {
     const count = watchlistAddedCount(n);
-    if (count === 1) return { key: 'friends_notice_added_one', params: { name, title: n.Name || '' } };
+    if (count === 1) {
+      const key = isReadingNotification(n) ? 'friends_notice_added_reading_one' : 'friends_notice_added_one';
+      return { key, params: { name, title: n.Name || '' } };
+    }
     return { key: 'friends_notice_added_many', params: { name, count } };
   }
   return null;
@@ -79,9 +102,18 @@ export function notificationTarget(n) {
   if (n.Kind === 'friend_request') return '#/people?tab=requests';
   if (n.Kind === 'friend_accepted') return n.FromUserId ? '#/profile?id=' + n.FromUserId : '#/people';
   if (n.Kind === 'watchlist_added') {
-    return watchlistAddedCount(n) === 1 && n.ItemId ? '#/item?id=' + n.ItemId : '#/home?tab=1';
+    if (watchlistAddedCount(n) !== 1) return '#/home?tab=1';
+    if (isReadingNotification(n)) return n.ReadingKey.indexOf('i:') === 0 && n.ItemId ? '#/item?id=' + n.ItemId : '#/home?tab=1';
+    return n.ItemId ? '#/item?id=' + n.ItemId : '#/home?tab=1';
   }
   return null;
+}
+
+// A manga series added by a friend opens its series sheet, which needs the
+// Manga shelf's address; null for everything else.
+export function notificationSeriesKey(n) {
+  if (!isReadingNotification(n) || watchlistAddedCount(n) !== 1) return null;
+  return n.ReadingKey.indexOf('s:') === 0 ? n.ReadingKey.slice(2) : null;
 }
 
 export function countIncomingRequests(items) {
@@ -125,10 +157,10 @@ export function startupSummary(items, lastAnnouncedId) {
     text =
       senders.length === 1
         ? titles === 1
-          ? { key: 'friends_notice_added_one', params: { name: senders[0], title: adds[0].Name || '' } }
+          ? notificationText(adds[0])
           : { key: 'friends_notice_added_many', params: { name: senders[0], count: titles } }
         : { key: 'friends_toast_added_multi', params: { count: titles } };
-    target = titles === 1 && adds.length === 1 && adds[0].ItemId ? '#/item?id=' + adds[0].ItemId : '#/home?tab=1';
+    target = titles === 1 && adds.length === 1 ? notificationTarget(adds[0]) : '#/home?tab=1';
   } else {
     text = requests.length === 1
       ? { key: 'friends_toast_request_one', params: {} }
