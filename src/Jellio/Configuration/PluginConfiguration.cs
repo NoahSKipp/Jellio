@@ -87,6 +87,10 @@ public class PluginConfiguration : BasePluginConfiguration
     // is removed from their My streams, with a notification. 0 keeps them.
     public int StreamLinkAutoRemoveDays { get; set; } = 14;
 
+    // New episode and release notifications wait until the media has a working
+    // stream. Off: they are created on the air date, as before.
+    public bool NotifyOnlyWhenPlayable { get; set; } = true;
+
     public string StreamFinderUrl { get; set; } = string.Empty;
 
     public bool BooksEnabled { get; set; } = true;

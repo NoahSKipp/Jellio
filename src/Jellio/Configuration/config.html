@@ -234,6 +234,18 @@
 
             <div class="checkboxContainer checkboxContainer-withDescription">
               <label class="emby-checkbox-label">
+                <input is="emby-checkbox" type="checkbox" id="chkNotifyOnlyWhenPlayable" />
+                <span>Notify only when playable</span>
+              </label>
+              <div class="fieldDescription checkboxFieldDescription">
+                New episode and release notifications wait until the title has a working
+                stream, checked in the background for up to 14 days after the air date. Turn
+                off to notify on the air date.
+              </div>
+            </div>
+
+            <div class="checkboxContainer checkboxContainer-withDescription">
+              <label class="emby-checkbox-label">
                 <input is="emby-checkbox" type="checkbox" id="chkHomeRowCache" />
                 <span>Home row cache</span>
               </label>
@@ -950,6 +962,7 @@
           document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked = withDefault(config.SkipIntroCreditsAdminMenuEnabled, false);
           document.querySelector('#selVideoTranscodePolicy').value = withDefault(config.VideoTranscodePolicy, 'Allow');
           document.querySelector('#chkHomeRowCache').checked = withDefault(config.HomeRowCache, true);
+          document.querySelector('#chkNotifyOnlyWhenPlayable').checked = withDefault(config.NotifyOnlyWhenPlayable, true);
           document.querySelector('#numStreamLinkAutoRemoveDays').value = withDefault(config.StreamLinkAutoRemoveDays, 14);
           document.querySelector('#txtStreamFinderUrl').value = withDefault(config.StreamFinderUrl, '');
           Dashboard.hideLoadingMsg();
@@ -995,6 +1008,7 @@
           config.SkipIntroCreditsAdminMenuEnabled = document.querySelector('#chkSkipIntroCreditsAdminMenuEnabled').checked;
           config.VideoTranscodePolicy = document.querySelector('#selVideoTranscodePolicy').value || 'Allow';
           config.HomeRowCache = document.querySelector('#chkHomeRowCache').checked;
+          config.NotifyOnlyWhenPlayable = document.querySelector('#chkNotifyOnlyWhenPlayable').checked;
           const removeDays = parseInt(document.querySelector('#numStreamLinkAutoRemoveDays').value, 10);
           config.StreamLinkAutoRemoveDays = isNaN(removeDays) ? 14 : Math.min(365, Math.max(0, removeDays));
           config.StreamFinderUrl = document.querySelector('#txtStreamFinderUrl').value.trim();
