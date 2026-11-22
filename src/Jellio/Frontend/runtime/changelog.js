@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.113.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.113.1",
+    "summary": "Removing a book nobody else reads now says so when its files could not be deleted.",
+    "highlights": [
+      {
+        "title": "Honest Book Removal",
+        "description": "When a book's files cannot be deleted from the server, the book is now taken out of the library and hidden, and the app says the files were kept. A removal that fails completely reports an error instead of success."
+      }
+    ]
+  },
+  {
     "version": "1.113.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.113.0",
