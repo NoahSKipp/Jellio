@@ -5,6 +5,22 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.113.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.113.0",
+    "summary": "A reading list for books, audiobooks and manga that you can share with friends.",
+    "highlights": [
+      {
+        "title": "Reading List",
+        "description": "Add books, audiobooks and manga to your own reading list from their pages, card menus and Discover. The Watchlist screen shows them in Reading and Listening rows below your movies and shows."
+      },
+      {
+        "title": "Share Books With Friends",
+        "description": "Add a book, audiobook or manga to a friend's reading list the same way you add a movie to their watchlist. They get a notification and see who added it."
+      }
+    ]
+  },
+  {
     "version": "1.112.9",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.112.9",
