@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.113.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.113.2",
+    "summary": "Rewatching a show now keeps it in Continue Watching and Play resumes it.",
+    "highlights": [
+      {
+        "title": "Rewatching Works",
+        "description": "A show you are rewatching stays in Continue Watching even though its episodes are marked as watched, and a show watched all the way through continues after the last episode played instead of going back to episode 1."
+      }
+    ]
+  },
+  {
     "version": "1.113.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.113.1",
