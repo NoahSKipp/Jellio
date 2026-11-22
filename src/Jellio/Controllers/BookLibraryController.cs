@@ -323,6 +323,7 @@ public class BookLibraryController(
         }
 
         var deleted = 0;
+        var libraryOnly = 0;
         var folders = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in items)
         {
@@ -341,6 +342,19 @@ public class BookLibraryController(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Jellio: could not delete {Path}", file.Path);
+
+                // The file could not be deleted (often a read-only or
+                // unwritable library folder): take it out of the library
+                // anyway and hide it, the file itself stays.
+                try
+                {
+                    libraryManager.DeleteItem(file, new DeleteOptions { DeleteFileLocation = false });
+                    libraryOnly++;
+                }
+                catch (Exception inner)
+                {
+                    logger.LogWarning(inner, "Jellio: could not remove {Path} from the library either", file.Path);
+                }
             }
         }
 
@@ -364,7 +378,7 @@ public class BookLibraryController(
         {
             if (key is not null)
             {
-                shelfStore.ForgetItem(id, key, hidden: false);
+                shelfStore.ForgetItem(id, key, hidden: libraryOnly > 0);
             }
 
             progressStore.RemoveMany(id, items.Select(file => file.Id));
@@ -380,7 +394,12 @@ public class BookLibraryController(
             chaptarrId,
             chaptarrRemoved,
             deleted);
-        return Ok(new { Mode = "full", ChaptarrRemoved = chaptarrRemoved, Deleted = deleted });
+        if (items.Count > 0 && deleted + libraryOnly == 0)
+        {
+            return StatusCode(500, "The server could not remove it");
+        }
+
+        return Ok(new { Mode = "full", ChaptarrRemoved = chaptarrRemoved, Deleted = deleted, LibraryOnly = libraryOnly });
     }
 
     // Whether another reader still has this book: on their shelf (not
