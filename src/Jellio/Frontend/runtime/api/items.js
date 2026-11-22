@@ -214,7 +214,8 @@ export function hideSeriesFromNextUp(seriesId) {
   });
 }
 
-export function getSeriesNextUp(seriesId) {
+// rewatching: when every episode is watched, the one after the last played.
+export function getSeriesNextUp(seriesId, rewatching) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   const params = new URLSearchParams({
@@ -223,6 +224,7 @@ export function getSeriesNextUp(seriesId) {
     Limit: '1',
     Fields: 'PrimaryImageAspectRatio,RunTimeTicks,PremiereDate,EndDate',
   });
+  if (rewatching) params.set('enableRewatching', 'true');
   const path = '/Shows/NextUp?' + params.toString();
   return cached(path, function () {
     return getJson(path);

@@ -689,6 +689,16 @@ async function resolveSeriesPlayTarget(seriesId) {
     episode = await verifyItemHasStreamIfToday(episode);
   }
 
+  // A series watched all the way through has no Next Up: carry on after the last one played.
+  if (!episode) {
+    try {
+      episode = await getSeriesNextUp(seriesId, true);
+      if (episode) episode = await verifyItemHasStreamIfToday(episode);
+    } catch (err) {
+      // fall back to the first episode
+    }
+  }
+
   if (!episode) {
     try {
       const seasons = await getSeasons(seriesId);
