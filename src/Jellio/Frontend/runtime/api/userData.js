@@ -24,6 +24,25 @@ export async function setPlayed(itemId, isPlayed) {
   return response.json();
 }
 
+// Off Continue Watching without marking the title watched: only its resume
+// position is cleared. Servers that refuse the user data update fall back to
+// marking it played and then unplayed, which resets the position too.
+export async function clearResumePosition(itemId) {
+  const userId = getCurrentUserId();
+  if (!userId) return Promise.reject(new Error('Not signed in'));
+  const response = await authedFetch('/UserItems/' + itemId + '/UserData?userId=' + userId, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ PlaybackPositionTicks: 0 }),
+  });
+  if (!response.ok) {
+    await setPlayed(itemId, true);
+    return setPlayed(itemId, false);
+  }
+  invalidateUserDataRows();
+  return response.json();
+}
+
 const KNOWN_ANTHOLOGIES = [
   'black mirror',
   'love, death & robots',

@@ -71,6 +71,7 @@ export {
 } from './api/library.js';
 export {
   setPlayed,
+  clearResumePosition,
   isEpisodicAnthology,
   autoCompletePreviousEpisodesIfSkipped,
   setItemRating,

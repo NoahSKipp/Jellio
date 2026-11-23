@@ -6,6 +6,7 @@ import { isReleasedToday, isTodayItemStreamVerified, markTodayItemHasStream, isU
 import { ITEM_DETAILS_TIMEOUT_MS, SHORT_CACHE_TTL_MS, authedFetch, cache, cached, cachedRecent, getJson, invalidateCache, invalidateUserDataRows, rowJson } from './core.js';
 import { earlierSeasonIndexes, isSpecialsSeason } from '../episodeNav.js';
 import { getMediaSources } from './playback.js';
+import { recentlyPlayedFirst } from '../continueWatching.js';
 
 export function getItem(itemId) {
   const userId = getCurrentUserId();
@@ -102,7 +103,7 @@ export function getResumeItems(limit) {
     '&Fields=PrimaryImageAspectRatio,RunTimeTicks&EnableImageTypes=Primary,Backdrop,Thumb' +
     (getDisplayCulture() ? '&Culture=' + encodeURIComponent(getDisplayCulture()) : '');
   return rowJson(query, 'personal', { priority: true, rank: 0 }).then(function (result) {
-    return applyRealDurationOverrides((result && result.Items) || []);
+    return applyRealDurationOverrides(recentlyPlayedFirst((result && result.Items) || []));
   });
 }
 

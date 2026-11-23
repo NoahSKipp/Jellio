@@ -1,5 +1,5 @@
 import { t } from '../runtime/i18n.js';
-import { setPlayed, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem, friendsSupported, getFriendsSnapshot, loadFriends } from '../runtime/api.js';
+import { setPlayed, clearResumePosition, setWatchlist, setItemRating, hideSeriesFromNextUp, scanIntroCreditsForItem, friendsSupported, getFriendsSnapshot, loadFriends } from '../runtime/api.js';
 import { navigateTo } from '../runtime/router.js';
 import { isGrouplistEnabled } from '../runtime/grouplistSettings.js';
 import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '../runtime/grouplistMembership.js';
@@ -70,9 +70,9 @@ export function toggleWatched(item, options, onChanged) {
   const prevUserData = item.UserData ? Object.assign({}, item.UserData) : undefined;
   const isPlayed = !!(item.UserData && item.UserData.Played);
   if (opts.continueWatching) {
-    item.UserData = Object.assign({}, item.UserData, { Played: true });
+    item.UserData = Object.assign({}, item.UserData, { PlaybackPositionTicks: 0 });
     if (opts.onRemoved) opts.onRemoved();
-    return setPlayed(item.Id, true).then(
+    return clearResumePosition(item.Id).then(
       function (updated) {
         if (updated && typeof updated === 'object') {
           item.UserData = Object.assign({}, item.UserData, updated);

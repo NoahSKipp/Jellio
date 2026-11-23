@@ -31,3 +31,24 @@ export function withoutStaleEpisodes(resumeItems, nextUpItems) {
     return !next || episodeOrder(item) >= episodeOrder(next);
   });
 }
+
+// Most recently played first; items without a date go last, order otherwise kept.
+export function recentlyPlayedFirst(items) {
+  const list = (items || []).slice();
+  const played = function (item) {
+    return (item && item.UserData && item.UserData.LastPlayedDate) || '';
+  };
+  return list
+    .map(function (item, index) {
+      return { item: item, index: index };
+    })
+    .sort(function (a, b) {
+      const pa = played(a.item);
+      const pb = played(b.item);
+      if (pa === pb) return a.index - b.index;
+      return pa < pb ? 1 : -1;
+    })
+    .map(function (entry) {
+      return entry.item;
+    });
+}
