@@ -6,8 +6,7 @@ import { ensureGrouplistIdsLoaded, isOnGrouplistSync, toggleGrouplist } from '..
 import { isAdminSync } from '../runtime/adminStatus.js';
 import { isSkipIntroCreditsMenuEnabled } from '../runtime/introCreditsMenuSetting.js';
 import { showToast } from './toast.js';
-import { readingMenuOptions } from './readingListControls.js';
-import { readingTargetForItem, isMangaItem } from '../runtime/readingListHelpers.js';
+import { readerItemOptions } from './readerMenu.js';
 import { shareItem } from '../runtime/shareLink.js';
 import { canDownload } from './downloadSupport.js';
 import { el } from '../runtime/dom.js';
@@ -54,6 +53,16 @@ function positionMenu(menu, anchorRect) {
   let top = anchorRect.bottom + 6;
   menu.style.left = Math.max(16, left) + 'px';
   menu.style.top = top + 'px';
+}
+
+// A long menu under a card near the bottom of the screen opens above it,
+// or as high as it fits.
+function keepMenuOnScreen(menu, anchorRect) {
+  const margin = 12;
+  const height = menu.offsetHeight;
+  if (anchorRect.bottom + 6 + height <= window.innerHeight - margin) return;
+  const above = anchorRect.top - 6 - height;
+  menu.style.top = Math.max(margin, above >= margin ? above : window.innerHeight - height - margin) + 'px';
 }
 
 export function toggleWatched(item, options, onChanged) {
@@ -178,9 +187,13 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
 
   // Screen-specific actions first (e.g. a shelf's Categories), and only
   // those for cards that aren't one playable item.
-  const extraOptions = typeof opts.extraOptions === 'function' ? opts.extraOptions(item) : opts.extraOptions;
+  const isReaderItem = !!item && (item.Type === 'Book' || item.Type === 'AudioBook');
+  const readerOptions = isReaderItem && !opts.onlyExtra && !opts.continueWatching && !opts.upNext
+    ? readerItemOptions(item, { continueRow: !!opts.continueReading, onRemoved: opts.onRemoved, onChanged: onChanged })
+    : [];
+  const extraOptions = typeof opts.extraOptions === 'function' ? opts.extraOptions(item, undefined, opts) : opts.extraOptions;
   (extraOptions || []).forEach(function (option) {
-    menu.appendChild(buildOption(option.label, option.icon, option.onClick));
+    menu.appendChild(buildOption(option.label, option.icon, option.onClick, option.danger));
   });
 
   if (!opts.onlyExtra && item && item.Id) {
@@ -274,11 +287,14 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
       );
     }
   } else {
-    if (item.Type === 'Book' || item.Type === 'AudioBook') {
-      // Books, audiobooks and manga have a reading list, not a watchlist.
-      readingMenuOptions(readingTargetForItem(item, isMangaItem(item))).forEach(function (option) {
-        menu.appendChild(buildOption(option.label, option.icon, option.onClick));
-      });
+    if (isReaderItem) {
+      // Books, audiobooks and manga read, not watch: their own state and a
+      // reading list instead of a watchlist.
+      readerOptions
+        .filter((option) => !option.danger)
+        .forEach(function (option) {
+          menu.appendChild(buildOption(option.label, option.icon, option.onClick));
+        });
     } else {
       const isWatchlisted = !!(item.UserData && item.UserData.IsFavorite);
       menu.appendChild(
@@ -324,15 +340,17 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
         }
       }
     }
-    const isPlayed = !!(item.UserData && item.UserData.Played);
-    menu.appendChild(
-      buildOption(isPlayed ? t('detail_mark_unwatched') : t('detail_mark_watched'), 'check', function () {
-        toggleWatched(item, opts, onChanged).catch(function (err) {
-          console.warn('Jellio: could not update watched state', err);
-          showToast(t('toast_watched_error'));
-        });
-      }),
-    );
+    if (!isReaderItem) {
+      const isPlayed = !!(item.UserData && item.UserData.Played);
+      menu.appendChild(
+        buildOption(isPlayed ? t('detail_mark_unwatched') : t('detail_mark_watched'), 'check', function () {
+          toggleWatched(item, opts, onChanged).catch(function (err) {
+            console.warn('Jellio: could not update watched state', err);
+            showToast(t('toast_watched_error'));
+          });
+        }),
+      );
+    }
     // Keep it on this device (components/downloads.js): an episode or
     // film asks for the quality, a season or series which episodes.
     if (canDownload(item)) {
@@ -347,6 +365,13 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
             });
         }),
       );
+    }
+    if (isReaderItem) {
+      readerOptions
+        .filter((option) => option.danger)
+        .forEach(function (option) {
+          menu.appendChild(buildOption(option.label, option.icon, option.onClick, true));
+        });
     }
     if (isAdminSync() && isSkipIntroCreditsMenuEnabled() && item.Type === 'Movie') {
       menu.appendChild(
@@ -369,6 +394,7 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
   }
 
   document.body.appendChild(menu);
+  keepMenuOnScreen(menu, anchorRect);
   document.addEventListener('keydown', handleKeydown);
   window.setTimeout(function () {
     document.addEventListener('pointerdown', handleOutsideClick, true);
@@ -378,11 +404,18 @@ export function openCardOptionsMenu(item, anchorRect, onChanged, options) {
   if (first) first.focus();
 }
 
+// A row whose last card left has nothing to show.
+function hideRowIfEmpty(row) {
+  if (row && !row.querySelector('.jellio-card')) row.style.display = 'none';
+}
+
 function plainRemoval(card) {
   card.classList.add('jellio-card-removing');
+  const row = card.closest('.jellio-row');
   function finish() {
     card.removeEventListener('transitionend', finish);
     if (card.parentNode) card.parentNode.removeChild(card);
+    hideRowIfEmpty(row);
   }
   card.addEventListener('transitionend', finish);
   window.setTimeout(finish, 400);
@@ -401,6 +434,7 @@ export function animateCardRemoval(card) {
   }
 
   const rect = card.getBoundingClientRect();
+  const row = card.closest('.jellio-row');
   const overlay = document.createElement('div');
   overlay.className = 'jellio-card-snap-overlay';
   overlay.style.left = rect.left + 'px';
@@ -440,6 +474,7 @@ export function animateCardRemoval(card) {
     function () {
       overlay.remove();
       if (card.parentNode) card.parentNode.removeChild(card);
+      hideRowIfEmpty(row);
     },
     maxDelayMs + SNAP_SHARD_MS + 50,
   );

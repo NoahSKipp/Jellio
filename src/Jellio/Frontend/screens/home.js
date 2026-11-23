@@ -664,14 +664,14 @@ async function buildCheapSections() {
 
   const reading = settle(loadVisibleContinueReading(20)).then(function (result) {
     if (result.status === 'fulfilled') {
-      const row = buildRow(t('home_continue_reading'), result.value, { openReader: true });
+      const row = buildRow(t('home_continue_reading'), result.value, { openReader: true, continueReading: true });
       if (row) push(wrapRowForCustomization(row, 'continue-reading'), 'continue-reading');
     }
   });
 
   const listening = settle(loadVisibleContinueListening(20)).then(function (result) {
     if (result.status === 'fulfilled') {
-      const row = buildRow(t('home_continue_listening'), result.value, { openReader: true });
+      const row = buildRow(t('home_continue_listening'), result.value, { openReader: true, continueReading: true });
       if (row) push(wrapRowForCustomization(row, 'continue-listening'), 'continue-listening');
     }
   });

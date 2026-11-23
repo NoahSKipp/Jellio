@@ -1,7 +1,7 @@
 import { getAccessToken, getAuthHeaders, getCurrentUserId, getDeviceId, getServerAddress } from './auth.js';
 import { getDisplayCulture } from './i18n.js';
 import { findDownload, getDownload, getLocalProgress, getOfflineBlob, isOffline, queueSync, setLocalProgress, updateDownload } from './offline.js';
-import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, authedFetch, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, putJson, requestJson, rowJson } from './api.js';
+import { DEFAULT_TIMEOUT_MS, SHORT_CACHE_TTL_MS, audiobookGroupKey, authedFetch, cache, cached, collapseAudiobookTracks, deleteJson, getJson, invalidateCache, invalidateUserDataRows, invalidateUserDataRowsThrottled, isUnreachable, postJson, putJson, requestJson, rowJson, setPlayed } from './api.js';
 
 // The home screen's personal rows: small, fast, and what a reader is
 // waiting for, so they skip ahead of background lookups.
@@ -152,6 +152,25 @@ export function getContinueReading(limit) {
       });
     });
   });
+}
+
+// Takes an audiobook out of Continue listening: the resume position of
+// every track back to the start, without marking it listened.
+export async function clearAudiobookResume(item) {
+  const tracks = await getAudiobookTracks(item).catch(() => [item]);
+  await Promise.all(
+    (tracks && tracks.length ? tracks : [item]).map(function (track) {
+      return postJson('/UserItems/' + track.Id + '/UserData', { PlaybackPositionTicks: 0 });
+    }),
+  );
+  invalidateUserDataRows();
+}
+
+// Every track of an audiobook listened or not.
+export async function markAudiobookListened(item, listened) {
+  const tracks = await getAudiobookTracks(item).catch(() => [item]);
+  await Promise.all((tracks && tracks.length ? tracks : [item]).map((track) => setPlayed(track.Id, listened)));
+  invalidateUserDataRows();
 }
 
 export function getAudiobookTracks(item) {
