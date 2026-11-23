@@ -2,7 +2,7 @@ import { t, translateGenre } from '../runtime/i18n.js';
 import { withoutStaleEpisodes } from '../runtime/continueWatching.js';
 import { createRowGate } from '../runtime/rowGate.js';
 import { getCurrentUser, getResumeItems, getNextUp, getSeriesNextUp, getWatchlistItems, getGrouplistItems, getCollections, collectionKind, getCollectionItems, discoverGenres, getGenreItems, getGenreItemsPage, isAnimeCollection, getCalendarEntries, setUpcomingHidden, getImageUrl, getAddedBy, friendsSupported, readingListSupported, getReadingList, getAnimeIds, withoutAnime, isHomeRowCacheEnabled, markHomeRowPainted } from '../runtime/api.js';
-import { getContinueReading, getContinueListening } from '../runtime/apiBooks.js';
+import { loadVisibleContinueReading, loadVisibleContinueListening } from '../components/continueRows.js';
 import { getCommunityWatching, invalidateCommunityWatchingCache } from '../runtime/apiSocial.js';
 import {
   isCommunityRowEnabled,
@@ -662,14 +662,14 @@ async function buildCheapSections() {
     }
   });
 
-  const reading = settle(getContinueReading(20)).then(function (result) {
+  const reading = settle(loadVisibleContinueReading(20)).then(function (result) {
     if (result.status === 'fulfilled') {
       const row = buildRow(t('home_continue_reading'), result.value, { openReader: true });
       if (row) push(wrapRowForCustomization(row, 'continue-reading'), 'continue-reading');
     }
   });
 
-  const listening = settle(getContinueListening(20)).then(function (result) {
+  const listening = settle(loadVisibleContinueListening(20)).then(function (result) {
     if (result.status === 'fulfilled') {
       const row = buildRow(t('home_continue_listening'), result.value, { openReader: true });
       if (row) push(wrapRowForCustomization(row, 'continue-listening'), 'continue-listening');

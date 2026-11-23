@@ -25,12 +25,12 @@ export function getContinueListening(limit) {
   });
 }
 
-function getItemsByIds(ids, rowClass) {
+function getItemsByIds(ids, rowClass, fields) {
   const userId = getCurrentUserId();
   if (!userId) return Promise.reject(new Error('Not signed in'));
   if (!ids || !ids.length) return Promise.resolve([]);
   const culture = getDisplayCulture();
-  const params = new URLSearchParams({ Ids: ids.join(','), Fields: 'PrimaryImageAspectRatio' });
+  const params = new URLSearchParams({ Ids: ids.join(','), Fields: fields || 'PrimaryImageAspectRatio' });
   if (culture) params.set('Culture', culture);
   const path = '/Users/' + userId + '/Items?' + params.toString();
   return (rowClass ? rowJson(path, rowClass, { priority: true, rank: 2 }) : getPriorityJson(path)).then(function (result) {
@@ -124,8 +124,10 @@ export function getContinueReading(limit) {
     const list = entries || [];
     const progressById = new Map();
     const pagesById = new Map();
+    const updatedById = new Map();
     list.forEach(function (entry) {
       progressById.set(entry.ItemId, entry.Progress);
+      if (entry.UpdatedAt) updatedById.set(entry.ItemId, entry.UpdatedAt);
       if (entry.TotalPages) pagesById.set(entry.ItemId, entry.TotalPages);
     });
     return getItemsByIds(
@@ -133,6 +135,8 @@ export function getContinueReading(limit) {
         return entry.ItemId;
       }),
       'personal',
+      // The path tells a comic chapter from a book, and its series.
+      'PrimaryImageAspectRatio,Path',
     ).then(function (items) {
       return items.map(function (item) {
         const key = String(item.Id).replace(/-/g, '');
@@ -142,6 +146,8 @@ export function getContinueReading(limit) {
           UserData: Object.assign({}, item.UserData, { PlayedPercentage: progress * 100 }),
           // Pages still to read, for the card's "Xp left" badge.
           JellioPagesLeft: pages ? Math.max(1, Math.round(pages * (1 - progress))) : null,
+          // When it was last read, the marker a dismissed series is kept under.
+          JellioUpdatedAt: updatedById.get(key) || null,
         });
       });
     });

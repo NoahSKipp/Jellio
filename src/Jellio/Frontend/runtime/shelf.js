@@ -1,8 +1,13 @@
 import { authedFetch } from './api.js';
 import { idKey } from './util.js';
+import { dismissalMarker } from './readerContinue.js';
 
 const EMPTY = { Categories: [], Series: {}, Bookmarks: [], Library: [], LibraryRemoved: [], SeriesDefaults: null };
 const loaded = new Map();
+// A shelf another device changed (a book removed, a series taken out of
+// Continue reading) shows up here after this long.
+const SHELF_TTL_MS = 30000;
+const loadedAt = new Map();
 
 export function itemShelfKey(item) {
   return 'i:' + idKey(item.Id);
@@ -36,12 +41,15 @@ async function send(method, path, body) {
 function changed(kind) {
   if (kind) loaded.delete(kind);
   else loaded.clear();
+  loadedAt.clear();
   document.dispatchEvent(new CustomEvent('jellio:shelf-changed', { detail: { kind: kind || null } }));
 }
 
 // { Categories (this shelf's, in order), Series, Bookmarks }.
 export function loadShelf(kind) {
+  if (loaded.has(kind) && Date.now() - (loadedAt.get(kind) || 0) > SHELF_TTL_MS) loaded.delete(kind);
   if (!loaded.has(kind)) {
+    loadedAt.set(kind, Date.now());
     const promise = send('GET', '/' + kind).then(
       (data) => Object.assign({}, EMPTY, data),
       function (err) {
@@ -101,6 +109,12 @@ export async function saveSeriesPrefs(key, patch) {
   const prefs = await send('PUT', '/series', Object.assign({ Key: key }, patch));
   changed(null);
   return prefs;
+}
+
+// Takes a manga series out of Continue reading on every device. It comes
+// back once the series is read again (its last read time changes).
+export function dismissSeriesContinue(key, lastReadAt) {
+  return saveSeriesPrefs(key, { ContinueDismissedAt: dismissalMarker(lastReadAt) });
 }
 
 // Mihon's "set as default" for chapter settings, and optionally every

@@ -16,6 +16,7 @@ import { attachCardOptionsTrigger } from '../components/cardOptionsMenu.js';
 import { readingMenuOptions } from '../components/readingListControls.js';
 import { readingTargetForItem, readingTargetForSeries } from '../runtime/readingListHelpers.js';
 import { openCategoryPicker, openCategoryManager } from '../components/shelfCategories.js';
+import { isContinueDismissed, latestRead } from '../runtime/readerContinue.js';
 import { loadShelf, onShelfChange, updateCategory, itemShelfKey, seriesShelfKey, setInLibrary, invalidateShelf } from '../runtime/shelf.js';
 import { renderMangaSeries } from './mangaSeries.js';
 import { renderMangaUpdates } from './mangaUpdates.js';
@@ -341,7 +342,7 @@ function mangaEntries(items, info, progress, shelf, stream) {
       { Id: series.Resume.Id, ChapterId: series.Resume.ChapterId, MangaId: series.MangaId, Name: series.Resume.Name },
       series.Title,
     );
-    continueEntries.push({ item: item, key: seriesShelfKey(series.Key), author: series.Title, lastRead: lastRead });
+    continueEntries.push({ item: item, key: seriesShelfKey(series.Key), author: series.Title, lastRead: lastRead, lastReadMarker: series.LastReadAt || null });
   }
   const entries = grouped.series.map(function (group) {
     const coverItem = group.chapters.find((item) => item.ImageTags && item.ImageTags.Primary) || group.chapters[0];
@@ -358,7 +359,12 @@ function mangaEntries(items, info, progress, shelf, stream) {
       streamContinue(streamed, streamLastRead);
     } else if (resume.lastRead && resume.chapter) {
       const entry = describe(resume.chapter, info, progress);
-      continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead, seriesKey: seriesShelfKey(group.key) }));
+      // What the dismissal is stored under: the source's read time for a
+      // series it has, else the newest saved chapter's.
+      const marker = streamed
+        ? streamed.LastReadAt || null
+        : latestRead(group.chapters.map((chapter) => (progress[idKey(chapter.Id).toLowerCase()] || {}).UpdatedAt));
+      continueEntries.push(Object.assign(entry, { author: group.title, lastRead: resume.lastRead, seriesKey: seriesShelfKey(group.key), lastReadMarker: marker }));
     }
     const latest = Math.max(
       streamed ? streamed.LatestUpload || 0 : 0,
@@ -424,7 +430,10 @@ function mangaEntries(items, info, progress, shelf, stream) {
       !removed.has(entry.key) &&
       (mine.has(entry.key) || (entry.seriesGroup && entry.seriesGroup.stream) || entry.lastRead > 0 || entry.readCount > 0),
   );
-  const continuing = continueEntries.filter((entry) => !removed.has(entry.seriesKey || entry.key));
+  // A series taken out of Continue reading stays out until it is read again.
+  const continuing = continueEntries.filter(
+    (entry) => !removed.has(entry.seriesKey || entry.key) && !isContinueDismissed(shelf.Series, entry.seriesKey || entry.key, entry.lastReadMarker),
+  );
   return { entries: kept, continueEntries: continuing.slice(0, ROW_LIMIT) };
 }
 
