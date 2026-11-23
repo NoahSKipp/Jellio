@@ -16,7 +16,7 @@ public record StreamChapter(string Id, int ChapterId, int MangaId, string Name, 
 
 // Source and SourceName say where the chapters come from, so saved files
 // from another source aren't mixed in.
-public record StreamSeries(int MangaId, string Title, string? Author, string? Status, string Key, IReadOnlyList<StreamChapter> Chapters, string? Source = null, string? SourceName = null);
+public record StreamSeries(int MangaId, string Title, string? Author, string? Status, string Key, IReadOnlyList<StreamChapter> Chapters, string? Source = null, string? SourceName = null, string? Artist = null, string? Description = null, IReadOnlyList<string>? Genres = null);
 
 public record StreamTitle(int MangaId, string Title, string Key, string? Source = null, string? SourceName = null, int ChapterCount = 0);
 
@@ -121,6 +121,7 @@ public class MangaStreamService(SuwayomiClient suwayomi)
             return null;
         }
 
+        var detailsTask = suwayomi.GetMangaDetailsAsync(mangaId, cancellationToken);
         var chapters = await suwayomi.GetChaptersAsync(mangaId, cancellationToken).ConfigureAwait(false);
         if (chapters is { Count: 0 })
         {
@@ -133,7 +134,15 @@ public class MangaStreamService(SuwayomiClient suwayomi)
             return cached.Series;
         }
 
-        var series = ToSeries(mangaId, title.Title, null, null, chapters) with { Source = title.Source, SourceName = title.SourceName };
+        var details = await detailsTask.ConfigureAwait(false);
+        var series = ToSeries(mangaId, title.Title, details?.Author, details?.Status, chapters) with
+        {
+            Source = title.Source,
+            SourceName = title.SourceName,
+            Artist = details?.Artist,
+            Description = details?.Description,
+            Genres = details?.Genres,
+        };
         _series[mangaId] = (DateTime.UtcNow, series);
         foreach (var chapter in series.Chapters)
         {

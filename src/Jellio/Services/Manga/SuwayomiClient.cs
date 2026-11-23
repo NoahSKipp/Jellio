@@ -23,6 +23,10 @@ public record SuwayomiLibraryEntry(int Id, string Title, string? Source, string?
 
 public record SuwayomiManga(int Id, string Title, string? Author, string? Status, bool InLibrary, string? Url = null);
 
+// What Suwayomi knows about a series beyond its chapters. Status is already
+// a display word ("Ongoing"); a missing field is null.
+public record SuwayomiMangaDetails(string? Author, string? Artist, string? Description, IReadOnlyList<string> Genres, string? Status);
+
 public record SuwayomiChapter(int Id, string Url, string Name, string? Scanlator, float ChapterNumber, bool IsDownloaded);
 
 // A chapter as the stream shelf needs it. UploadDate: unix milliseconds.
@@ -217,6 +221,38 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
                 ReadStreamChapters(node["chapters"]?["nodes"] as JsonArray)))
             .Where(manga => manga.Id > 0 && manga.Title.Length > 0)
             .ToList();
+    }
+
+    // Author, artist, description, genres and status of one series.
+    public async Task<SuwayomiMangaDetails?> GetMangaDetailsAsync(int mangaId, CancellationToken cancellationToken)
+    {
+        var data = await QueryAsync(
+            "query ($id: Int!) { manga(id: $id) { author artist description genre status } }",
+            new JsonObject { ["id"] = mangaId },
+            cancellationToken).ConfigureAwait(false);
+        return ReadMangaDetails(data?["manga"] as JsonObject);
+    }
+
+    public static SuwayomiMangaDetails? ReadMangaDetails(JsonObject? manga)
+    {
+        if (manga is null)
+        {
+            return null;
+        }
+
+        var genres = (manga["genre"] as JsonArray)?
+            .Select(ChaptarrClient.ReadString)
+            .OfType<string>()
+            .Select(genre => genre.Trim())
+            .Where(genre => genre.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? new List<string>();
+        return new SuwayomiMangaDetails(
+            ChaptarrClient.ReadString(manga["author"])?.Trim(),
+            ChaptarrClient.ReadString(manga["artist"])?.Trim(),
+            ChaptarrClient.ReadString(manga["description"])?.Trim(),
+            genres,
+            MangaStatusText.Format(ChaptarrClient.ReadString(manga["status"])));
     }
 
     public async Task<IReadOnlyList<SuwayomiStreamChapter>?> GetChaptersAsync(int mangaId, CancellationToken cancellationToken)
