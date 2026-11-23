@@ -24,6 +24,9 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddScoped<Filters.SingleGroupWatchFilter>();
         services.PostConfigure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
             options.Filters.AddService<Filters.SingleGroupWatchFilter>());
+        services.AddScoped<Filters.HiddenBooksResumeFilter>();
+        services.PostConfigure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+            options.Filters.AddService<Filters.HiddenBooksResumeFilter>());
         services.AddHostedService<IndexHtmlPatchService>();
 
         services.AddSingleton<SleepTimerService>();

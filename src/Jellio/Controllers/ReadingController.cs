@@ -13,7 +13,7 @@ namespace Jellio.Controllers;
 [ApiController]
 [Route("Jellio/reading")]
 [Authorize]
-public class ReadingController(ReadingProgressStore store, ILibraryManager libraryManager, IUserManager userManager, ComicArchiveService comicArchives) : ControllerBase
+public class ReadingController(ReadingProgressStore store, ShelfStore shelfStore, ILibraryManager libraryManager, IUserManager userManager, ComicArchiveService comicArchives) : ControllerBase
 {
     private static readonly Dictionary<string, string> BookContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -109,7 +109,14 @@ public class ReadingController(ReadingProgressStore store, ILibraryManager libra
             return BadRequest("Invalid user session");
         }
 
-        var entries = store.GetInProgress(userId, limit <= 0 ? 20 : Math.Min(limit, 100));
+        // Books this reader removed from their library stay out of Continue
+        // reading, whatever progress is still stored for them.
+        var hidden = HiddenBooks.Ids(shelfStore, userId);
+        var wanted = limit <= 0 ? 20 : Math.Min(limit, 100);
+        var entries = store.GetInProgress(userId, hidden.Count == 0 ? wanted : wanted + hidden.Count)
+            .Where(entry => !hidden.Contains(entry.ItemId))
+            .Take(wanted)
+            .ToList();
         return Ok(entries.Select(entry => new
         {
             ItemId = entry.ItemId.ToString("N"),
