@@ -5,6 +5,26 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.114.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.114.0",
+    "summary": "Removed books stay out of Continue Reading, reader cards get Remove actions, and Continue Watching is tidier.",
+    "highlights": [
+      {
+        "title": "Removed Books Stay Removed",
+        "description": "A book you remove from your library no longer returns to Continue Reading or Continue Listening, on any device. Manga you remove from Continue Reading stay removed everywhere until you read them again."
+      },
+      {
+        "title": "Remove Actions on Reader Cards",
+        "description": "Books, audiobooks and manga cards now offer Remove from continue reading, Remove from library and Mark as read or unread in their menu."
+      },
+      {
+        "title": "Continue Watching Fixes",
+        "description": "Remove from continue watching now only clears your place instead of marking the title watched, and the row is sorted by what you played most recently. A series shows richer details in the Jellio apps."
+      }
+    ]
+  },
+  {
     "version": "1.113.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.113.2",
