@@ -230,8 +230,31 @@ public class SuwayomiClient(IHttpClientFactory httpClientFactory, ILogger<Suwayo
             "query ($id: Int!) { manga(id: $id) { author artist description genre status } }",
             new JsonObject { ["id"] = mangaId },
             cancellationToken).ConfigureAwait(false);
-        return ReadMangaDetails(data?["manga"] as JsonObject);
+        var details = ReadMangaDetails(data?["manga"] as JsonObject);
+        if (details is null || !LacksSourceDetails(details))
+        {
+            return details;
+        }
+
+        // A series added from a search has only what the search list gave
+        // (title, cover); Suwayomi loads the rest when asked to fetch it.
+        const string FetchMutation = @"mutation ($input: FetchMangaInput!) {
+  fetchManga(input: $input) { manga { author artist description genre status } }
+}";
+        var fetched = await QueryAsync(
+            FetchMutation,
+            new JsonObject { ["input"] = new JsonObject { ["id"] = mangaId } },
+            cancellationToken).ConfigureAwait(false);
+        return ReadMangaDetails(fetched?["fetchManga"]?["manga"] as JsonObject) ?? details;
     }
+
+    // True while there is no author, artist, description or genre, which is how
+    // a series Suwayomi has not loaded from its source yet reads.
+    public static bool LacksSourceDetails(SuwayomiMangaDetails details) =>
+        string.IsNullOrWhiteSpace(details.Author)
+        && string.IsNullOrWhiteSpace(details.Artist)
+        && string.IsNullOrWhiteSpace(details.Description)
+        && details.Genres.Count == 0;
 
     public static SuwayomiMangaDetails? ReadMangaDetails(JsonObject? manga)
     {

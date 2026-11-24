@@ -71,4 +71,26 @@ public class MangaDetailsTests
         Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("Artist").ValueKind);
         Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("Genres").ValueKind);
     }
+
+    [Fact]
+    public void ASeriesWithNoDetailsIsFetchedFromItsSource()
+    {
+        var bare = SuwayomiClient.ReadMangaDetails(JsonNode.Parse("""{ "author": "", "artist": null, "description": " ", "genre": [], "status": "UNKNOWN" }""")!.AsObject());
+
+        Assert.NotNull(bare);
+        Assert.True(SuwayomiClient.LacksSourceDetails(bare));
+    }
+
+    [Theory]
+    [InlineData("""{ "author": "Lim Hyeong", "genre": [] }""")]
+    [InlineData("""{ "description": "A tower.", "genre": [] }""")]
+    [InlineData("""{ "genre": ["Action"] }""")]
+    [InlineData("""{ "artist": "Studio 389", "genre": [] }""")]
+    public void ASeriesWithAnyDetailIsNotFetchedAgain(string json)
+    {
+        var details = SuwayomiClient.ReadMangaDetails(JsonNode.Parse(json)!.AsObject());
+
+        Assert.NotNull(details);
+        Assert.False(SuwayomiClient.LacksSourceDetails(details));
+    }
 }
