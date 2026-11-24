@@ -12,7 +12,7 @@ import {
   disconnectCast,
   getActiveCast,
 } from '../runtime/cast.js';
-import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped, getPreviousEpisode, prefetchStreams, seedItemCache } from '../runtime/api.js';
+import { getItemDetails, getPlaybackInfo, getMediaSources, getLastMediaSources, logFailoverDecision, isPlaceholderSource, buildStreamUrl, canBrowserDirectPlay, loadVideoTranscodePolicy, logPlaybackDecision, supportsNativeHls, reportPlaybackStart, reportPlaybackProgress, reportPlaybackStopped, reportPlaybackStoppedOnExit, startSleepTimer, cancelSleepTimer, getSleepTimerStatus, getImageUrl, getAudioStreams, matchAudioStreamIndex, matchSubtitleStream, getCommunitySkipSegments, getIntroSkipperSegments, getJellioIntroCredits, getCurrentUser, TICKS_PER_SECOND, creditRealWatch, reportRealDuration, probeRealDuration, setPlayed, setPlaybackActive, autoCompletePreviousEpisodesIfSkipped, getPreviousEpisode, prefetchStreams, seedItemCache } from '../runtime/api.js';
 import { creditGroupWatchTogether, startJoinSync, clearJoinSync } from '../runtime/apiSocial.js';
 import { syncTracker } from '../runtime/apiBooks.js';
 import { navigateTo, setTitle } from '../runtime/router.js';
@@ -2726,6 +2726,13 @@ export async function renderPlayer(root, params) {
     }
   }, PROGRESS_REPORT_MS);
 
+  // Closing or leaving the page mid-playback still ends the session on the server.
+  const onPageHide = function () {
+    if (screenTornDown || !hasReportedStart) return;
+    reportPlaybackStoppedOnExit(itemId, mediaSource.Id, hasCreditedRealWatch ? 0 : currentPositionTicks());
+  };
+  window.addEventListener('pagehide', onPageHide);
+
   let unsubscribeSyncCommand = null;
   let unsubscribeSyncGroupChange = null;
   const { clearScheduledSync } = wireGroupSync(
@@ -2838,6 +2845,7 @@ export async function renderPlayer(root, params) {
       subtitleStyleTag = null;
     }
     stopProgressTimer(progressInterval);
+    window.removeEventListener('pagehide', onPageHide);
     if (upNextCountdownInterval) window.clearInterval(upNextCountdownInterval);
     if (endScreenModalInstance) {
       endScreenModalInstance.cleanup();

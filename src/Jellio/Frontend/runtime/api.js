@@ -115,6 +115,7 @@ export {
   reportPlaybackStart,
   reportPlaybackProgress,
   reportPlaybackStopped,
+  reportPlaybackStoppedOnExit,
   startSleepTimer,
   cancelSleepTimer,
   getSleepTimerStatus,

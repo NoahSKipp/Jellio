@@ -327,6 +327,26 @@ export function reportPlaybackStopped(itemId, mediaSourceId, positionTicks) {
   });
 }
 
+// The page is going away (closed, reloaded, left): the stop report is sent in a
+// request that outlives the page, so an abandoned session still ends.
+export function reportPlaybackStoppedOnExit(itemId, mediaSourceId, positionTicks) {
+  if (isOffline()) return;
+  try {
+    authedFetch('/Sessions/Playing/Stopped', {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ItemId: itemId,
+        MediaSourceId: mediaSourceId,
+        PositionTicks: positionTicks || 0,
+      }),
+    }).catch(function () {});
+  } catch (_) {
+    // nothing more can be done while the page unloads
+  }
+}
+
 export function startSleepTimer(minutes) {
   return postJson('/Jellio/sleep-timer/start', { Minutes: minutes });
 }
