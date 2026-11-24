@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.114.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.114.1",
+    "summary": "Manga details such as author, artist, description and genres are now loaded from the source when they are missing.",
+    "highlights": [
+      {
+        "title": "Fuller Manga Details",
+        "description": "A manga whose details were never loaded now has them fetched from its source once, so the Jellio apps can show its author, artist, status, description and genres."
+      }
+    ]
+  },
+  {
     "version": "1.114.0",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.114.0",
