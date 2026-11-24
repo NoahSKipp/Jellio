@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.114.2] - 2026-11-24\n\n### 🐛 Bug Fixes\n\n- *(playback)* Stamp the last played date when playback starts or stops part way\n- *(player)* Report a stop when the page is closed during playback\n",
+        "checksum": "d8578709c4e3b46ec4616f8b571bc9b2",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.114.2/jellio_1.114.2.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-24T08:07:48Z",
+        "version": "1.114.2"
+      },
+      {
         "changelog": "## [1.114.1] - 2026-11-24\n\n### 🐛 Bug Fixes\n\n- *(manga)* Load a series' details from its source when Suwayomi has none\n",
         "checksum": "219df73de9f175bfd76b7e937e07b205",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.114.1/jellio_1.114.1.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-06T20:33:38Z",
         "version": "1.106.1"
-      },
-      {
-        "changelog": "## [1.106.0] - 2026-11-06\n\n### 🚀 Features\n\n- Improve data safety, recovery, caching, and fix navigation interruption\n- Upgrade TMDB rating badge and implement infinite virtual rows\n\n### 🐛 Bug Fixes\n\n- *(cast)* Improve remote session discovery and Smart TV identification\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.0 and macOS 0.7.0\n\n### 💼 Other\n\n- Add tiered isolation and sliding window deduplication to Home screen\n\nIntroduce Tiered Isolation so recommendations deduplicate amongst themselves\nusing recSeen and do not block items in catalog or genre rows. Implement\nSliding Window Distance Deduplication for catalogs and genres using dedupeRow\nwith a 2-row history window and 6-item viewport deduplication limit, while\npreserving intra-row duplicate protection and full catalogs beyond the viewport.\n",
-        "checksum": "4331d83aeaba3b43bc0263518bfbd0cc",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.106.0/jellio_1.106.0.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-06T18:26:33Z",
-        "version": "1.106.0"
       }
     ]
   }
