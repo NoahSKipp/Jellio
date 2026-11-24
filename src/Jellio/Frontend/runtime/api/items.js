@@ -520,6 +520,22 @@ export function getEpisodes(seriesId, seasonId) {
   });
 }
 
+// Titles the server finds similar to a movie or series.
+export function getSimilarItems(sourceId, limit) {
+  const userId = getCurrentUserId();
+  if (!userId || !sourceId) return Promise.resolve([]);
+  const culture = getDisplayCulture();
+  const path =
+    '/Items/' + sourceId + '/Similar?userId=' + userId + '&limit=' + (limit || 12) +
+    '&Fields=Overview,Genres,ProductionYear,CommunityRating' +
+    (culture ? '&Culture=' + encodeURIComponent(culture) : '');
+  return cached(path, function () {
+    return getJson(path);
+  }, 5 * 60 * 1000).then(function (result) {
+    return (result && result.Items) || [];
+  });
+}
+
 export async function getNextEpisode(item) {
   if (!item || item.Type !== 'Episode' || !item.SeriesId) return null;
 

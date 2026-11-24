@@ -48,6 +48,7 @@ export {
   getSeriesEpisodes,
   getEpisodes,
   getNextEpisode,
+  getSimilarItems,
   getPreviousEpisode,
   getPerson,
   getPersonFilmography,
