@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.115.0] - 2026-11-24\n\n### 🚀 Features\n\n- *(web)* Add Similar items api and end screen recommendation helpers\n- *(i18n)* Add more like this string for the end screen\n- *(web)* Show a more like this row on the player end screen\n- *(web)* Source end screen recommendations from TMDB suggestions\n",
+        "checksum": "7dbdbc05a7fe28267b2ee544917acd2b",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.115.0/jellio_1.115.0.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-24T13:57:37Z",
+        "version": "1.115.0"
+      },
+      {
         "changelog": "## [1.114.2] - 2026-11-24\n\n### 🐛 Bug Fixes\n\n- *(playback)* Stamp the last played date when playback starts or stops part way\n- *(player)* Report a stop when the page is closed during playback\n",
         "checksum": "d8578709c4e3b46ec4616f8b571bc9b2",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.114.2/jellio_1.114.2.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-07T00:36:55Z",
         "version": "1.107.0"
-      },
-      {
-        "changelog": "## [1.106.1] - 2026-11-06\n\n### 🐛 Bug Fixes\n\n- *(rows)* Support infinite pagination, poster rendering, and multi-page TMDB discovery\n\n### 📚 Documentation\n\n- *(changelog)* Update What's New for 1.106.1\n",
-        "checksum": "1c41a56fdc5d61d9bc0d8f7cefa6d516",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.106.1/jellio_1.106.1.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-06T20:33:38Z",
-        "version": "1.106.1"
       }
     ]
   }
