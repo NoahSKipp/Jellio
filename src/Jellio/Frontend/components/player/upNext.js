@@ -7,6 +7,7 @@ import {
   canBrowserDirectPlay,
   getMediaSources,
   getNextEpisode,
+  getSimilarItems,
   getPlaybackInfo,
   getQualityTiers,
   getWarmSources,
@@ -28,6 +29,7 @@ import { warmSource } from '../../runtime/warmQueue.js';
 import { playHash, rememberedSourceId, sourceAudioLanguages } from '../streamPicker.js';
 import { preferredAudioIndex } from '../playPrefetch.js';
 import { t } from '../../runtime/i18n.js';
+import { RECS_LIMIT, pickRecommendations, similarSourceId } from '../../runtime/endScreenRecs.js';
 
 export function wireUpNext(deps, live) {
   const {
@@ -263,6 +265,13 @@ export function wireUpNext(deps, live) {
           navigateTo('#/home');
         }
       },
+      onOpenRecommendation: function (rec) {
+        if (live.endScreenModalInstance) {
+          live.endScreenModalInstance.cleanup();
+          live.endScreenModalInstance = null;
+        }
+        navigateTo('#/item?id=' + rec.Id);
+      },
       initialCountdown: initialCountdown,
     });
 
@@ -271,6 +280,19 @@ export function wireUpNext(deps, live) {
       live.endScreenModalInstance.primaryBtn.focus();
     }
     wakeControls();
+    if (!live.nextEpisode) loadRecommendations(live.endScreenModalInstance);
+  }
+
+  // Quietly leaves the end screen as is when nothing comes back.
+  function loadRecommendations(modal) {
+    const sourceId = similarSourceId(live.item);
+    if (!sourceId) return;
+    getSimilarItems(sourceId, RECS_LIMIT + 6)
+      .then(function (items) {
+        if (live.screenTornDown || live.endScreenModalInstance !== modal) return;
+        modal.setRecommendations(pickRecommendations(items, live.item, RECS_LIMIT));
+      })
+      .catch(function () {});
   }
 
   function updateUpNextCountdown() {

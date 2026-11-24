@@ -18,6 +18,8 @@ export function createPlayerKeydown(deps, live) {
         return;
       }
       if (event.key === 'Enter') {
+        // A focused recommendation opens itself through its own click.
+        if (event.target && event.target.closest && event.target.closest('.jellio-player-endscreen-recs')) return;
         event.preventDefault();
         if (live.endScreenModalInstance.primaryBtn) {
           live.endScreenModalInstance.primaryBtn.click();

@@ -3,6 +3,7 @@ import { TICKS_PER_SECOND, getImageUrl } from '../runtime/api.js';
 import { t } from '../runtime/i18n.js';
 import { navigateTo } from '../runtime/router.js';
 import { cssUrl } from '../runtime/safeUrl.js';
+import { RECS_CLASS, buildRecsRow } from './endScreenRecsRow.js';
 
 export function buildUpNextOverlay(episode, onPlayNow, onDismiss) {
   const overlay = el('div', 'jellio-player-upnext jellio-player-upnext-hidden');
@@ -230,17 +231,46 @@ export function buildEndScreenModal(options) {
     }
   });
 
+  let recsRow = null;
+
+  // Adds the "More like this" row once the titles are known.
+  function setRecommendations(items) {
+    if (recsRow || !items || !items.length) return;
+    const previews = el('div', 'jellio-player-endscreen-previews');
+    recsRow = buildRecsRow(items, previews, options.onOpenRecommendation);
+    overlay.classList.add('jellio-player-endscreen-has-recs');
+    overlay.insertBefore(previews, card);
+    overlay.appendChild(recsRow.section);
+    const active = document.activeElement;
+    if (!active || active === document.body || (primaryBtn && active === primaryBtn)) {
+      recsRow.focusFirst();
+    }
+  }
+
+  overlay.addEventListener('keydown', function (event) {
+    if (!recsRow) return;
+    if (event.key === 'ArrowDown' && actions.contains(event.target)) {
+      event.preventDefault();
+      recsRow.focusFirst();
+    } else if (event.key === 'ArrowUp' && event.target.closest && event.target.closest('.' + RECS_CLASS)) {
+      event.preventDefault();
+      if (primaryBtn) primaryBtn.focus();
+    }
+  });
+
   function cleanup() {
     if (countdownTimer) {
       window.clearInterval(countdownTimer);
       countdownTimer = null;
     }
+    if (recsRow) recsRow.cleanup();
     overlay.remove();
   }
 
   return {
     overlay: overlay,
     primaryBtn: primaryBtn,
+    setRecommendations: setRecommendations,
     cleanup: cleanup,
   };
 }
