@@ -7,6 +7,8 @@ import {
   canBrowserDirectPlay,
   getMediaSources,
   getNextEpisode,
+  getItem,
+  getSearchSuggestions,
   getSimilarItems,
   getPlaybackInfo,
   getQualityTiers,
@@ -29,7 +31,7 @@ import { warmSource } from '../../runtime/warmQueue.js';
 import { playHash, rememberedSourceId, sourceAudioLanguages } from '../streamPicker.js';
 import { preferredAudioIndex } from '../playPrefetch.js';
 import { t } from '../../runtime/i18n.js';
-import { RECS_LIMIT, pickRecommendations, similarSourceId } from '../../runtime/endScreenRecs.js';
+import { RECS_LIMIT, needsSeriesLookup, pickRecommendations, similarRowItems, similarSourceId, tmdbSeed } from '../../runtime/endScreenRecs.js';
 
 export function wireUpNext(deps, live) {
   const {
@@ -283,16 +285,37 @@ export function wireUpNext(deps, live) {
     if (!live.nextEpisode) loadRecommendations(live.endScreenModalInstance);
   }
 
-  // Quietly leaves the end screen as is when nothing comes back.
+  // TMDB recommendations first (they include titles outside the library),
+  // Jellyfin's Similar when that gives nothing. Silent when both do.
+  async function fetchRecommendations() {
+    const item = live.item;
+    try {
+      const series = needsSeriesLookup(item) ? await getItem(item.SeriesId).catch(function () { return null; }) : null;
+      const seed = tmdbSeed(item, series);
+      if (seed) {
+        const exclude = [item.Id, item.SeriesId].filter(Boolean);
+        const answer = await getSearchSuggestions(seed.query, {
+          tmdbId: seed.tmdbId,
+          mediaType: seed.mediaType,
+          enableVirtual: true,
+          excludeIds: exclude,
+        }).catch(function () { return null; });
+        const picked = pickRecommendations(similarRowItems(answer), item, RECS_LIMIT);
+        if (picked.length) return picked;
+      }
+      const sourceId = similarSourceId(item);
+      if (!sourceId) return [];
+      return pickRecommendations(await getSimilarItems(sourceId, RECS_LIMIT + 6), item, RECS_LIMIT);
+    } catch (e) {
+      return [];
+    }
+  }
+
   function loadRecommendations(modal) {
-    const sourceId = similarSourceId(live.item);
-    if (!sourceId) return;
-    getSimilarItems(sourceId, RECS_LIMIT + 6)
-      .then(function (items) {
-        if (live.screenTornDown || live.endScreenModalInstance !== modal) return;
-        modal.setRecommendations(pickRecommendations(items, live.item, RECS_LIMIT));
-      })
-      .catch(function () {});
+    fetchRecommendations().then(function (items) {
+      if (live.screenTornDown || live.endScreenModalInstance !== modal) return;
+      modal.setRecommendations(items);
+    });
   }
 
   function updateUpNextCountdown() {

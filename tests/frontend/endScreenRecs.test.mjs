@@ -4,7 +4,10 @@ import {
   PREVIEW_DELAY_MS,
   createFocusPreview,
   nextFocusIndex,
+  needsSeriesLookup,
   pickRecommendations,
+  similarRowItems,
+  tmdbSeed,
   similarSourceId,
 } from '../../src/Jellio/Frontend/runtime/endScreenRecs.js';
 
@@ -92,4 +95,33 @@ test('moving focus restarts the wait and cancel drops it', () => {
   preview.cancel();
   timers.advance(5000);
   assert.deepEqual(fired, ['b']);
+});
+
+test('seed uses the item tmdb id for movies and the series for episodes', () => {
+  const movie = { Type: 'Movie', Id: 'm', Name: 'M', ProviderIds: { Tmdb: '5' } };
+  assert.deepEqual(tmdbSeed(movie), { tmdbId: '5', mediaType: 'movie', query: 'M' });
+  const ep = { Type: 'Episode', Id: 'e', SeriesId: 's', SeriesName: 'S', ProviderIds: { Tmdb: '9' } };
+  assert.equal(tmdbSeed(ep, null), null);
+  assert.deepEqual(tmdbSeed(ep, { Name: 'Show', ProviderIds: { tmdb: 7 } }), { tmdbId: '7', mediaType: 'tv', query: 'Show' });
+  assert.equal(tmdbSeed({ Type: 'Movie', Id: 'x' }), null);
+  assert.equal(needsSeriesLookup(ep), true);
+  assert.equal(needsSeriesLookup(movie), false);
+});
+
+test('reads only the similar row, keeping its order', () => {
+  const answer = { Rows: [{ Kind: 'genre', Items: [{ Id: 'g' }] }, { Kind: 'similar', Items: [{ Id: 'a' }, { Id: 'b' }] }] };
+  assert.deepEqual(similarRowItems(answer).map((i) => i.Id), ['a', 'b']);
+  assert.deepEqual(similarRowItems({ Rows: [] }), []);
+  assert.deepEqual(similarRowItems(null), []);
+});
+
+test('dedupes by tmdb id, keeps virtual titles and ignores the title itself by tmdb id', () => {
+  const items = [
+    { Id: 'v1', Type: 'Movie', ProviderIds: { Tmdb: '1' }, LocationType: 'Virtual' },
+    { Id: 'lib1', Type: 'Movie', ProviderIds: { Tmdb: '1' } },
+    { Id: 'tvx', Type: 'Series', ProviderIds: { Tmdb: '1' } },
+    { Id: 'same', Type: 'Movie', ProviderIds: { Tmdb: '99' } },
+  ];
+  const picked = pickRecommendations(items, { Id: 'self', Type: 'Movie', ProviderIds: { Tmdb: '99' } });
+  assert.deepEqual(picked.map((i) => i.Id), ['v1', 'tvx']);
 });

@@ -37,7 +37,8 @@ export function buildRecsRow(items, previewHost, onOpen) {
     const card = el('button', RECS_CLASS + '-card');
     card.type = 'button';
     card.setAttribute('aria-label', item.Name || '');
-    const tag = item.ImageTags && item.ImageTags.Primary;
+    // Titles outside the library carry a TMDB poster URL instead of a tag.
+    const tag = (item.ImageTags && item.ImageTags.Primary) || (item.ProviderIds && item.ProviderIds.TmdbPoster);
     if (tag) {
       const img = el('img', RECS_CLASS + '-img');
       img.alt = '';
