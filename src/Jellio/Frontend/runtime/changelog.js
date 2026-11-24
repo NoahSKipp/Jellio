@@ -5,6 +5,18 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.114.2",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.114.2",
+    "summary": "Continue Watching sorts correctly even when a session was never closed cleanly.",
+    "highlights": [
+      {
+        "title": "Continue Watching Order",
+        "description": "A title you started but never finished now gets its last played date as soon as playback starts or stops part way, so it sorts by when you really watched it instead of last. Closing the web player mid-playback now also ends the session properly."
+      }
+    ]
+  },
+  {
     "version": "1.114.1",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.114.1",
