@@ -655,6 +655,7 @@ export default {
   player_dismiss_skip: "Descartar aviso de omitir",
   player_dismiss_upnext: "Descartar vista previa del siguiente episodio",
   player_close_endscreen: "Cerrar pantalla final",
+  player_more_like_this: "Más como esto",
   player_close_shortcuts: "Cerrar atajos de teclado",
   player_stop_after: "Detener después de",
   player_or_stop_after: "O detener después de",

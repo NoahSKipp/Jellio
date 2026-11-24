@@ -723,6 +723,7 @@ const STRINGS = {
     player_dismiss_skip: "Dismiss skip prompt",
     player_dismiss_upnext: "Dismiss next episode preview",
     player_close_endscreen: "Close end screen",
+    player_more_like_this: "More like this",
     player_close_shortcuts: "Close keyboard shortcuts",
     player_stop_after: "Stop after",
     player_or_stop_after: "Or stop after",

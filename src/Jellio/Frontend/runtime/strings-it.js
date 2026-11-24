@@ -632,6 +632,7 @@ export default {
   player_dismiss_skip: "Ignora avviso di salto",
   player_dismiss_upnext: "Ignora anteprima prossimo episodio",
   player_close_endscreen: "Chiudi schermata finale",
+  player_more_like_this: "Simili a questo",
   player_close_shortcuts: "Chiudi scorciatoie da tastiera",
   player_stop_after: "Interrompi dopo",
   player_or_stop_after: "O interrompi dopo",

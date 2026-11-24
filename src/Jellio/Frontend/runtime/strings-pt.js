@@ -632,6 +632,7 @@ export default {
   player_dismiss_skip: "Descartar aviso de pulo",
   player_dismiss_upnext: "Descartar prévia do próximo episódio",
   player_close_endscreen: "Fechar tela final",
+  player_more_like_this: "Mais como este",
   player_close_shortcuts: "Fechar atalhos de teclado",
   player_stop_after: "Parar após",
   player_or_stop_after: "Ou parar após",

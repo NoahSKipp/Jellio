@@ -655,6 +655,7 @@ export default {
   player_dismiss_skip: "Überspringen-Hinweis verwerfen",
   player_dismiss_upnext: "Vorschau auf nächste Episode verwerfen",
   player_close_endscreen: "Abspann schließen",
+  player_more_like_this: "Ähnliche Titel",
   player_close_shortcuts: "Tastaturkürzel schließen",
   player_stop_after: "Stoppen nach",
   player_or_stop_after: "Oder stoppen nach",

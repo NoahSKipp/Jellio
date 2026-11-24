@@ -655,6 +655,7 @@ export default {
   player_dismiss_skip: "Odrzuć komunikat pomijania",
   player_dismiss_upnext: "Odrzuć podgląd następnego odcinka",
   player_close_endscreen: "Zamknij ekran końcowy",
+  player_more_like_this: "Podobne tytuły",
   player_close_shortcuts: "Zamknij skróty klawiszowe",
   player_stop_after: "Zatrzymaj po",
   player_or_stop_after: "Lub zatrzymaj po",
