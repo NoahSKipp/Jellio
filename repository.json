@@ -8,6 +8,14 @@
     "owner": "NoahSKipp",
     "versions": [
       {
+        "changelog": "## [1.114.1] - 2026-11-24\n\n### 🐛 Bug Fixes\n\n- *(manga)* Load a series' details from its source when Suwayomi has none\n",
+        "checksum": "219df73de9f175bfd76b7e937e07b205",
+        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.114.1/jellio_1.114.1.0.zip",
+        "targetAbi": "10.11.11.0",
+        "timestamp": "2026-11-24T00:32:26Z",
+        "version": "1.114.1"
+      },
+      {
         "changelog": "## [1.114.0] - 2026-11-23\n\n### 🚀 Features\n\n- *(manga)* Send author, artist, description, genres and status with a series\n- *(web)* Remove from continue reading and library in the reader card menu\n\n### 🐛 Bug Fixes\n\n- *(books)* Keep books removed from a reader's library out of their Continue lists\n- *(web)* Keep removed books and dismissed manga out of the Continue rows\n- *(home)* Remove from continue watching without marking watched, newest first\n",
         "checksum": "6b2cd1d98360e60a054819d25d4b0558",
         "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.114.0/jellio_1.114.0.0.zip",
@@ -238,14 +246,6 @@
         "targetAbi": "10.11.11.0",
         "timestamp": "2026-11-06T18:26:33Z",
         "version": "1.106.0"
-      },
-      {
-        "changelog": "## [1.105.5] - 2026-11-06\n\n### 🚀 Features\n\n- Auto-remove watched items from Watchlist and regenerate Watchlist view\n\n### 🐛 Bug Fixes\n\n- Filter streamless today episodes and ignore past digital windows\n- (community) Handle IsVisible exceptions gracefully during watching build\n\n### ⚙️ Miscellaneous Tasks\n\n- (release) Bump version to 1.105.5",
-        "checksum": "594f8eb23f0027f70ad0ad64b37d156b",
-        "sourceUrl": "https://github.com/NoahSKipp/Jellio/releases/download/1.105.5/jellio_1.105.5.0.zip",
-        "targetAbi": "10.11.11.0",
-        "timestamp": "2026-11-06T03:31:55Z",
-        "version": "1.105.5"
       }
     ]
   }
