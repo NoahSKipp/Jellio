@@ -9124,7 +9124,9 @@
   display: flex;
   gap: 0.75em;
   overflow-x: auto;
-  padding: 6px 4px 10px;
+  /* Room for the focus ring and 1.06 scale, which overflow-x would clip. */
+  padding: 14px 20px 24px;
+  scroll-padding-inline: 20px;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
