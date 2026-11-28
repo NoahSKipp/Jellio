@@ -31,7 +31,8 @@ import { warmSource } from '../../runtime/warmQueue.js';
 import { playHash, rememberedSourceId, sourceAudioLanguages } from '../streamPicker.js';
 import { preferredAudioIndex } from '../playPrefetch.js';
 import { t } from '../../runtime/i18n.js';
-import { RECS_LIMIT, isTitleFinished, needsSeriesLookup, pickRecommendations, similarRowItems, similarSourceId, tmdbSeed } from '../../runtime/endScreenRecs.js';
+import { recPosterUrl } from '../endScreenRecsRow.js';
+import { RECS_LIMIT, createRecsPreloader, pickRecommendations, similarRowItems, similarSourceId, tmdbSeed } from '../../runtime/endScreenRecs.js';
 
 export function wireUpNext(deps, live) {
   const {
@@ -287,34 +288,43 @@ export function wireUpNext(deps, live) {
 
   // TMDB recommendations first (they include titles outside the library),
   // Jellyfin's Similar when that gives nothing. Silent when both do.
-  async function fetchRecommendations() {
-    const item = live.item;
-    try {
-      const series = needsSeriesLookup(item) ? await getItem(item.SeriesId).catch(function () { return null; }) : null;
-      if (!isTitleFinished(item, series, !!live.nextEpisode)) return [];
-      const seed = tmdbSeed(item, series);
-      if (seed) {
-        const exclude = [item.Id, item.SeriesId].filter(Boolean);
-        const answer = await getSearchSuggestions(seed.query, {
-          tmdbId: seed.tmdbId,
-          mediaType: seed.mediaType,
-          enableVirtual: true,
-          excludeIds: exclude,
-        }).catch(function () { return null; });
-        const picked = pickRecommendations(similarRowItems(answer), item, RECS_LIMIT);
-        if (picked.length) return picked;
-      }
-      const sourceId = similarSourceId(item);
-      if (!sourceId) return [];
-      return pickRecommendations(await getSimilarItems(sourceId, RECS_LIMIT + 6), item, RECS_LIMIT);
-    } catch (e) {
-      return [];
+  async function fetchRecommendations(item, series) {
+    const seed = tmdbSeed(item, series);
+    if (seed) {
+      const exclude = [item.Id, item.SeriesId].filter(Boolean);
+      const answer = await getSearchSuggestions(seed.query, {
+        tmdbId: seed.tmdbId,
+        mediaType: seed.mediaType,
+        enableVirtual: true,
+        excludeIds: exclude,
+      }).catch(function () { return null; });
+      const picked = pickRecommendations(similarRowItems(answer), item, RECS_LIMIT);
+      if (picked.length) return picked;
     }
+    const sourceId = similarSourceId(item);
+    if (!sourceId) return [];
+    return pickRecommendations(await getSimilarItems(sourceId, RECS_LIMIT + 6), item, RECS_LIMIT);
   }
 
+  // Runs during playback; the end screen only picks up the result.
+  const recsPreloader = createRecsPreloader({
+    loadSeries: getItem,
+    loadRecs: fetchRecommendations,
+    warm: function (items) {
+      items.forEach(function (entry) {
+        const url = recPosterUrl(entry);
+        if (url) new Image().src = url;
+      });
+    },
+  });
+  recsPreloader.start(live.item);
+  let nextSettled = Promise.resolve();
+
   function loadRecommendations(modal) {
-    fetchRecommendations().then(function (items) {
-      if (live.screenTornDown || live.endScreenModalInstance !== modal) return;
+    nextSettled.then(function () {
+      return recsPreloader.result();
+    }).then(function (items) {
+      if (live.screenTornDown || live.endScreenModalInstance !== modal || live.nextEpisode) return;
       modal.setRecommendations(items);
     });
   }
@@ -370,10 +380,11 @@ export function wireUpNext(deps, live) {
   }
 
   if (live.item.Type === 'Episode') {
-    getNextEpisode(live.item)
+    nextSettled = getNextEpisode(live.item)
       .then(function (result) {
         if (!result) return;
         live.nextEpisode = result;
+        recsPreloader.invalidate();
         prefetchStreams(result.Id);
         const built = buildUpNextOverlay(result, playNextEpisode, dismissUpNext);
         upNextOverlay = built.overlay;

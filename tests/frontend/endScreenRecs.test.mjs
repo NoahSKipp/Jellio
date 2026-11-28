@@ -6,6 +6,7 @@ import {
   nextFocusIndex,
   needsSeriesLookup,
   isTitleFinished,
+  createRecsPreloader,
   pickRecommendations,
   similarRowItems,
   tmdbSeed,
@@ -153,4 +154,51 @@ test('missing status falls back to the age of the episode', () => {
   assert.equal(isTitleFinished({ Type: 'Episode', PremiereDate: daysAgo(30) }, {}, false, NOW), false);
   assert.equal(isTitleFinished({ Type: 'Episode' }, {}, false, NOW), false);
   assert.equal(isTitleFinished({ Type: 'Episode', PremiereDate: daysAgo(400) }, {}, true, NOW), false);
+});
+
+function preloaderDeps(overrides) {
+  const calls = { recs: 0, warmed: [] };
+  const deps = Object.assign({
+    now: () => NOW,
+    loadSeries: async () => ({ Status: 'Ended' }),
+    loadRecs: async () => {
+      calls.recs += 1;
+      return Array.from({ length: 12 }, (_, i) => ({ Id: 'r' + i }));
+    },
+    warm: (items) => calls.warmed.push(...items),
+  }, overrides);
+  return { deps, calls };
+}
+
+test('preloader loads and warms the first posters for a finished show', async () => {
+  const { deps, calls } = preloaderDeps();
+  const loader = createRecsPreloader(deps);
+  const items = await loader.start({ Type: 'Episode', SeriesId: 's' });
+  assert.equal(items.length, 12);
+  assert.equal(calls.warmed.length, 8);
+});
+
+test('preloader skips the recommendations call for a continuing series', async () => {
+  const { deps, calls } = preloaderDeps({ loadSeries: async () => ({ Status: 'Continuing' }) });
+  const items = await createRecsPreloader(deps).start({ Type: 'Episode', SeriesId: 's' });
+  assert.deepEqual(items, []);
+  assert.equal(calls.recs, 0);
+});
+
+test('preloader needs no series for a movie and stays silent on failures', async () => {
+  const { deps, calls } = preloaderDeps({ loadSeries: async () => { throw new Error('x'); } });
+  assert.equal((await createRecsPreloader(deps).start({ Type: 'Movie' })).length, 12);
+  assert.equal(calls.recs, 1);
+  const failing = preloaderDeps({ loadRecs: async () => { throw new Error('x'); } });
+  assert.deepEqual(await createRecsPreloader(failing.deps).start({ Type: 'Movie' }), []);
+});
+
+test('invalidate drops the result of a pending load', async () => {
+  const { deps, calls } = preloaderDeps();
+  const loader = createRecsPreloader(deps);
+  const pending = loader.start({ Type: 'Movie' });
+  loader.invalidate();
+  assert.deepEqual(await pending, []);
+  assert.deepEqual(await loader.result(), []);
+  assert.equal(calls.warmed.length, 0);
 });

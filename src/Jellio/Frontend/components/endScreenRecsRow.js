@@ -20,6 +20,12 @@ function logoUrl(item) {
   return tag ? getImageUrl(item.Id, 'Logo', { tag: tag, maxWidth: 400, quality: 100 }) : null;
 }
 
+// Titles outside the library carry a TMDB poster URL instead of a tag.
+export function recPosterUrl(item) {
+  const tag = (item.ImageTags && item.ImageTags.Primary) || (item.ProviderIds && item.ProviderIds.TmdbPoster);
+  return tag ? getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 320, quality: 85 }) : null;
+}
+
 // previewHost receives the crossfading backdrop layers.
 export function buildRecsRow(items, previewHost, onOpen) {
   const section = el('section', RECS_CLASS);
@@ -37,13 +43,12 @@ export function buildRecsRow(items, previewHost, onOpen) {
     const card = el('button', RECS_CLASS + '-card');
     card.type = 'button';
     card.setAttribute('aria-label', item.Name || '');
-    // Titles outside the library carry a TMDB poster URL instead of a tag.
-    const tag = (item.ImageTags && item.ImageTags.Primary) || (item.ProviderIds && item.ProviderIds.TmdbPoster);
-    if (tag) {
+    const poster = recPosterUrl(item);
+    if (poster) {
       const img = el('img', RECS_CLASS + '-img');
       img.alt = '';
       img.loading = 'lazy';
-      img.src = getImageUrl(item.Id, 'Primary', { tag: tag, maxWidth: 320, quality: 85 });
+      img.src = poster;
       card.appendChild(img);
     } else {
       card.appendChild(el('span', RECS_CLASS + '-fallback', item.Name || ''));

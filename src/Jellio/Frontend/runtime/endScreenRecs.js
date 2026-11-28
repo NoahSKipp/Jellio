@@ -4,6 +4,7 @@ import { isFinished } from './continueWatching.js';
 
 export const RECS_LIMIT = 12;
 export const PREVIEW_DELAY_MS = 5000;
+export const WARM_COUNT = 8;
 
 // The id to ask Similar for: the series for an episode, the item otherwise.
 export function similarSourceId(item) {
@@ -122,6 +123,44 @@ export function createFocusPreview(onFire, delayMs, timers) {
     cancel: function () {
       cancel();
       current = null;
+    },
+  };
+}
+
+// Loads the end screen recommendations ahead of time. loadSeries(id) and
+// loadRecs(item, series) are injected; warm(items) preloads artwork.
+// result() always resolves, with an empty list when nothing qualifies.
+export function createRecsPreloader(deps) {
+  let token = 0;
+  let pending = Promise.resolve([]);
+
+  async function run(item, mine) {
+    try {
+      let series = null;
+      if (needsSeriesLookup(item)) series = await deps.loadSeries(item.SeriesId).catch(function () { return null; });
+      if (mine !== token || !isTitleFinished(item, series, false, deps.now && deps.now())) return [];
+      const items = await deps.loadRecs(item, series);
+      if (mine !== token) return [];
+      const list = items || [];
+      if (deps.warm) deps.warm(list.slice(0, WARM_COUNT));
+      return list;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  return {
+    start: function (item) {
+      token += 1;
+      pending = item ? run(item, token) : Promise.resolve([]);
+      return pending;
+    },
+    invalidate: function () {
+      token += 1;
+      pending = Promise.resolve([]);
+    },
+    result: function () {
+      return pending;
     },
   };
 }
