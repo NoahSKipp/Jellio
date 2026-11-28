@@ -76,6 +76,7 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<NotificationStore>();
         services.AddHostedService<PlayableNotifyService>();
         services.AddHostedService<LastPlayedStampService>();
+        services.AddHostedService<StalePausedSessionService>();
         services.AddSingleton<Jellio.Services.Reading.ReadingListStore>();
         services.AddSingleton<Jellio.Services.Reading.ReadingTargets>();
         services.AddSingleton<Jellio.Services.Friends.FriendsStore>();

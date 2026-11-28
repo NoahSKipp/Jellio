@@ -100,4 +100,7 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool MangaEnabled { get; set; } = true;
 
     public List<string> DisabledLibraryIds { get; set; } = [];
+
+    /// <summary>Hours a session may sit paused before its playback state is ended. 0 disables.</summary>
+    public int StalePausedSessionHours { get; set; } = 4;
 }
