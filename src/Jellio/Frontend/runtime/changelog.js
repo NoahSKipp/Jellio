@@ -5,6 +5,34 @@ export { shouldShowChangelogNotification, hasSeenLatestChangelog, markLatestChan
 // LATEST_BIG_CHANGELOG_VERSION in runtime/changelogState.js.
 export const CHANGELOG_RELEASES = [
   {
+    "version": "1.115.1",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.115.1",
+    "summary": "The More like this row now appears only when a title is really over, and it is ready when the credits roll.",
+    "highlights": [
+      {
+        "title": "Only When a Show Is Over",
+        "description": "Recommendations after a title now appear for movies and for series that have ended. A show that is still airing no longer shows them after its latest episode."
+      },
+      {
+        "title": "Ready at the End",
+        "description": "The suggestions and their posters are prepared while you watch, so the row is already there when playback ends. The selection highlight on the first and last poster is no longer cut off."
+      }
+    ]
+  },
+  {
+    "version": "1.115.0",
+    "title": "What's New in Jellio",
+    "subtitle": "Version 1.115.0",
+    "summary": "After a movie or a series finale, a row of recommendations slides up with the first title selected.",
+    "highlights": [
+      {
+        "title": "More Like This",
+        "description": "When a movie or a series ends with nothing to play next, a row of recommendations rises from the bottom. Arrow keys move along it, Enter opens a title, and resting on one for a few seconds shows its artwork behind the row. Suggestions come from TMDB first, including titles you do not have yet, with similar titles from your library as a fallback."
+      }
+    ]
+  },
+  {
     "version": "1.114.2",
     "title": "What's New in Jellio",
     "subtitle": "Version 1.114.2",
