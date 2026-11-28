@@ -5,6 +5,7 @@ import {
   createFocusPreview,
   nextFocusIndex,
   needsSeriesLookup,
+  isTitleFinished,
   pickRecommendations,
   similarRowItems,
   tmdbSeed,
@@ -124,4 +125,32 @@ test('dedupes by tmdb id, keeps virtual titles and ignores the title itself by t
   ];
   const picked = pickRecommendations(items, { Id: 'self', Type: 'Movie', ProviderIds: { Tmdb: '99' } });
   assert.deepEqual(picked.map((i) => i.Id), ['v1', 'tvx']);
+});
+
+const NOW = Date.parse('2026-06-01T00:00:00Z');
+const daysAgo = (n) => new Date(NOW - n * 86400000).toISOString();
+
+test('a movie is finished unless something follows', () => {
+  assert.equal(isTitleFinished({ Type: 'Movie' }, null, false, NOW), true);
+  assert.equal(isTitleFinished({ Type: 'Movie' }, null, true, NOW), false);
+});
+
+test('an episode of an Ended series without a next episode is finished', () => {
+  const ep = { Type: 'Episode', PremiereDate: daysAgo(5) };
+  assert.equal(isTitleFinished(ep, { Status: 'Ended' }, false, NOW), true);
+  assert.equal(isTitleFinished(ep, { Status: 'ended' }, false, NOW), true);
+  assert.equal(isTitleFinished(ep, { Status: 'Ended' }, true, NOW), false);
+});
+
+test('a Continuing series never counts, however old the episode', () => {
+  const ep = { Type: 'Episode', PremiereDate: daysAgo(900) };
+  assert.equal(isTitleFinished(ep, { Status: 'Continuing' }, false, NOW), false);
+});
+
+test('missing status falls back to the age of the episode', () => {
+  assert.equal(isTitleFinished({ Type: 'Episode', PremiereDate: daysAgo(400) }, {}, false, NOW), true);
+  assert.equal(isTitleFinished({ Type: 'Episode', PremiereDate: daysAgo(400) }, null, false, NOW), true);
+  assert.equal(isTitleFinished({ Type: 'Episode', PremiereDate: daysAgo(30) }, {}, false, NOW), false);
+  assert.equal(isTitleFinished({ Type: 'Episode' }, {}, false, NOW), false);
+  assert.equal(isTitleFinished({ Type: 'Episode', PremiereDate: daysAgo(400) }, {}, true, NOW), false);
 });

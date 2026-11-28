@@ -17,6 +17,23 @@ function tmdbOf(entry) {
   return ids.Tmdb || ids.tmdb || null;
 }
 
+const OLD_EPISODE_DAYS = 120;
+const DAY_MS = 86400000;
+
+// Whether the title is truly finished: a movie, or the last episode of a
+// series that is over. An unknown series status falls back to the episode's
+// age; no next episode yet on a running series never counts.
+export function isTitleFinished(item, series, hasNext, now) {
+  if (!item || hasNext) return false;
+  if (item.Type === 'Movie') return true;
+  if (item.Type !== 'Episode') return false;
+  const status = series && typeof series.Status === 'string' ? series.Status.trim().toLowerCase() : '';
+  if (status) return status === 'ended';
+  const premiere = item.PremiereDate ? Date.parse(item.PremiereDate) : NaN;
+  if (Number.isNaN(premiere)) return false;
+  return (now == null ? Date.now() : now) - premiere > OLD_EPISODE_DAYS * DAY_MS;
+}
+
 // Whether an episode needs its series fetched to learn the TMDB id.
 export function needsSeriesLookup(item) {
   return !!item && item.Type === 'Episode' && !!item.SeriesId;

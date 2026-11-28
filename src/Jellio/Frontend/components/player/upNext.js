@@ -31,7 +31,7 @@ import { warmSource } from '../../runtime/warmQueue.js';
 import { playHash, rememberedSourceId, sourceAudioLanguages } from '../streamPicker.js';
 import { preferredAudioIndex } from '../playPrefetch.js';
 import { t } from '../../runtime/i18n.js';
-import { RECS_LIMIT, needsSeriesLookup, pickRecommendations, similarRowItems, similarSourceId, tmdbSeed } from '../../runtime/endScreenRecs.js';
+import { RECS_LIMIT, isTitleFinished, needsSeriesLookup, pickRecommendations, similarRowItems, similarSourceId, tmdbSeed } from '../../runtime/endScreenRecs.js';
 
 export function wireUpNext(deps, live) {
   const {
@@ -291,6 +291,7 @@ export function wireUpNext(deps, live) {
     const item = live.item;
     try {
       const series = needsSeriesLookup(item) ? await getItem(item.SeriesId).catch(function () { return null; }) : null;
+      if (!isTitleFinished(item, series, !!live.nextEpisode)) return [];
       const seed = tmdbSeed(item, series);
       if (seed) {
         const exclude = [item.Id, item.SeriesId].filter(Boolean);
